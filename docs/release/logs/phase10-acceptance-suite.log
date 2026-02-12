@@ -1,0 +1,42 @@
+
+   PASS  Tests\Feature\AgentDispatchDueCommandTest
+  ✓ dispatch due creates queued run and heartbeat                        0.24s  
+  ✓ dispatch records deferred capacity audit when global cap is reached  0.04s  
+  ✓ dispatch reconciles orphaned active runs                             0.01s  
+  ✓ reconcile uses launch fingerprint when job changes                   0.02s  
+  ✓ dst spring forward nonexistent local time is not dispatched          0.01s  
+  ✓ dst fall back repeated hour dispatches twice across two ticks        0.01s  
+  ✓ overlap precedence wins over cooldown when both apply                0.01s  
+  ✓ delayed scheduler backfill is bounded to lookback and per job cap    0.01s  
+  ✓ duplicate dispatch is idempotent for same due window                 0.01s  
+
+   PASS  Tests\Feature\AgentRunnerLifecycleTest
+  ✓ job auto disables after three scheduled path failures                0.02s  
+  ✓ manual path failures do not increment streak and success resets it   0.28s  
+  ✓ approval detection is cleared when run reaches terminal state        0.27s  
+  ✓ run times out when exceeding max runtime                             2.03s  
+
+   PASS  Tests\Feature\AgentApiWorkflowTest
+  ✓ job lifecycle endpoints work for owner                               0.06s  
+  ✓ run now returns conflict when overlap active                         0.01s  
+  ✓ stop with missing pid is terminal and idempotent                     0.01s  
+  ✓ events return rfc3339 millisecond timestamps                         0.01s  
+  ✓ non versioned agent api routes return not found                      0.01s  
+  ✓ dashboard metrics window formulas and global backlog are correct     0.01s  
+  ✓ job show can include task markdown content                           0.01s  
+
+   PASS  Tests\Feature\AgentMaintenancePruneTest
+  ✓ mutating job actions write audit rows                                0.02s  
+  ✓ prune runs respects last 20 per job and writes checkpoint            0.03s  
+  ✓ prune events skips active runs and prune jobs cascades children      0.02s  
+  ✓ prune audit removes rows older than ninety days                      0.01s  
+
+   PASS  Tests\Feature\AgentApiContractCoverageTest
+  ✓ api returns 401 when request is not authenticated                    0.01s  
+  ✓ required endpoint status contracts are covered                       0.03s  
+  ✓ mutation rate limit returns 429                                      0.05s  
+  ✓ run now returns 503 when cache backend is unavailable                0.01s  
+
+  Tests:    28 passed (118 assertions)
+  Duration: 3.32s
+

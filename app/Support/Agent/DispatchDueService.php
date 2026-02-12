@@ -182,6 +182,9 @@ class DispatchDueService
                 if (! $cron->isDue($zoned)) {
                     continue;
                 }
+                if (! $this->matchesCronMinuteAndHour($job->cron_expression, $zoned)) {
+                    continue;
+                }
 
                 $windows->push([
                     'job' => $job,
@@ -194,6 +197,73 @@ class DispatchDueService
         }
 
         return $windows;
+    }
+
+    private function matchesCronMinuteAndHour(string $cronExpression, CarbonImmutable $zoned): bool
+    {
+        $parts = preg_split('/\s+/', trim($cronExpression)) ?: [];
+        if (count($parts) < 2) {
+            return false;
+        }
+
+        $minuteField = (string) $parts[0];
+        $hourField = (string) $parts[1];
+
+        return $this->matchesNumericField($minuteField, $zoned->minute, 0, 59)
+            && $this->matchesNumericField($hourField, $zoned->hour, 0, 23);
+    }
+
+    private function matchesNumericField(string $field, int $value, int $min, int $max): bool
+    {
+        foreach (explode(',', $field) as $segment) {
+            $segment = trim($segment);
+            if ($segment === '') {
+                continue;
+            }
+
+            $step = null;
+            if (str_contains($segment, '/')) {
+                [$segmentBase, $stepToken] = explode('/', $segment, 2);
+                $segment = trim($segmentBase);
+                $step = (int) trim($stepToken);
+
+                if ($step <= 0) {
+                    continue;
+                }
+            }
+
+            $rangeStart = $min;
+            $rangeEnd = $max;
+
+            if ($segment !== '*') {
+                if (str_contains($segment, '-')) {
+                    [$startToken, $endToken] = explode('-', $segment, 2);
+                    $rangeStart = (int) trim($startToken);
+                    $rangeEnd = (int) trim($endToken);
+                } else {
+                    $rangeStart = (int) $segment;
+                    $rangeEnd = $rangeStart;
+                }
+            }
+
+            if ($rangeStart < $min || $rangeEnd > $max || $rangeStart > $rangeEnd) {
+                continue;
+            }
+
+            if ($value < $rangeStart || $value > $rangeEnd) {
+                continue;
+            }
+
+            if ($step === null) {
+                return true;
+            }
+
+            if ((($value - $rangeStart) % $step) === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function createScheduledRun(AgentJob $job, CarbonImmutable $dueWindow, CarbonImmutable $tickTimestamp): string

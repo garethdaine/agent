@@ -252,6 +252,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
   - DB idempotency remains safety net.
 - Due source of truth: `dragonmantank/cron-expression`.
 - Due computation in job timezone; normalize to UTC minute window.
+- Scheduler due matching must also satisfy exact cron minute/hour field matches after timezone conversion; this prevents DST spring-forward nonexistent local times from dispatching at shifted local hours.
 - Watermark key: `dispatch_last_minute_utc` in `agent_system_state`.
 - Window scanned per tick: `(watermark, now]` (start exclusive, end inclusive).
 - First tick with no watermark scans current minute only.

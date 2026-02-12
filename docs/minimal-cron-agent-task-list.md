@@ -18,6 +18,10 @@
   - jobs index p95: `16.52ms` (`<500ms`)
   - run-now ACK p95: `9.59ms` (`<400ms`)
   - monitor poll p95: `25.41ms` (`<700ms`)
+- Phase 10 acceptance/sign-off artifacts are now complete:
+  - mandatory acceptance scenarios are covered by feature tests and passing
+  - endpoint status-code contract coverage includes `200/201/202/401/404/409/422/429/503`
+  - release artifacts published under `docs/release/` (`phase10-test-report.md`, logs, screenshots)
 - DB compatibility smoke checks were executed on all supported engines:
   - SQLite (`php artisan test` / in-memory)
   - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)
@@ -228,19 +232,19 @@ Definition of done:
 - Manual release checklist includes passing performance measurements for all required SLOs.
 
 ## Phase 10: Acceptance and Sign-Off Artifacts
-- [ ] Execute mandatory tests:
-- [ ] DST spring-forward skip
-- [ ] DST fall-back double window
-- [ ] overlap/cooldown precedence
-- [ ] delayed scheduler bounded backfill
-- [ ] stop/timeouts races and idempotent stop
-- [ ] duplicate dispatch idempotency
-- [ ] soft-delete/restore/hard-prune paths
-- [ ] Validate endpoint code coverage for `200/201/202/401/404/409/422/429/503`.
-- [ ] Produce required sign-off artifacts:
-- [ ] test report
-- [ ] UI screenshots
-- [ ] command/runtime logs
+- [x] Execute mandatory tests:
+- [x] DST spring-forward skip
+- [x] DST fall-back double window
+- [x] overlap/cooldown precedence
+- [x] delayed scheduler bounded backfill
+- [x] stop/timeouts races and idempotent stop
+- [x] duplicate dispatch idempotency
+- [x] soft-delete/restore/hard-prune paths
+- [x] Validate endpoint code coverage for `200/201/202/401/404/409/422/429/503`.
+- [x] Produce required sign-off artifacts:
+- [x] test report
+- [x] UI screenshots
+- [x] command/runtime logs
 
 Definition of done:
 - All baseline acceptance criteria are met and sign-off artifacts are present.

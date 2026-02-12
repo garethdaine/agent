@@ -1,0 +1,15 @@
+
+   PASS  Tests\Feature\AgentDispatchDueCommandTest
+  ✓ dispatch due creates queued run and heartbeat                        0.24s  
+  ✓ dispatch records deferred capacity audit when global cap is reached  0.04s  
+  ✓ dispatch reconciles orphaned active runs                             0.01s  
+  ✓ reconcile uses launch fingerprint when job changes                   0.02s  
+  ✓ dst spring forward nonexistent local time is not dispatched          0.01s  
+  ✓ dst fall back repeated hour dispatches twice across two ticks        0.01s  
+  ✓ overlap precedence wins over cooldown when both apply                0.01s  
+  ✓ delayed scheduler backfill is bounded to lookback and per job cap    0.01s  
+  ✓ duplicate dispatch is idempotent for same due window                 0.01s  
+
+  Tests:    9 passed (20 assertions)
+  Duration: 0.43s
+

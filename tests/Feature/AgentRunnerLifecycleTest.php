@@ -227,6 +227,67 @@ class AgentRunnerLifecycleTest extends TestCase
         $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $metadata['approval_resolution'] ?? null);
     }
 
+    public function test_run_times_out_when_exceeding_max_runtime(): void
+    {
+        $slowExec = $this->sandboxBase.'/bin/slow-runner';
+        file_put_contents($slowExec, "#!/bin/sh\nsleep 2\nexit 0\n");
+        chmod($slowExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $slowExec,
+            'codex' => $slowExec,
+            'custom' => $slowExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $slowExec.' -p {{task_markdown_path}}',
+            'codex' => $slowExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/timeout.md';
+        file_put_contents($taskFile, "# Timeout\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Timeout Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 1,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_TIMED_OUT, $run->status);
+        $this->assertSame('timeout', $metadata['termination_mode'] ?? null);
+    }
+
     private function runExecuteAgentRunJob(int $runId): void
     {
         $job = new ExecuteAgentRunJob($runId);

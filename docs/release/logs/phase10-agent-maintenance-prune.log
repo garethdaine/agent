@@ -1,0 +1,10 @@
+
+   PASS  Tests\Feature\AgentMaintenancePruneTest
+  ✓ mutating job actions write audit rows                                0.26s  
+  ✓ prune runs respects last 20 per job and writes checkpoint            0.03s  
+  ✓ prune events skips active runs and prune jobs cascades children      0.02s  
+  ✓ prune audit removes rows older than ninety days                      0.01s  
+
+  Tests:    4 passed (26 assertions)
+  Duration: 0.37s
+
