@@ -23,6 +23,7 @@ class AgentJob extends Model
             'is_enabled' => 'boolean',
             'max_runtime_seconds' => 'integer',
             'cooldown_seconds' => 'integer',
+            'scheduled_path_failure_streak' => 'integer',
             'env_json' => 'array',
         ];
     }

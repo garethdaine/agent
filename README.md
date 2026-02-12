@@ -9,6 +9,9 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Reverb / Echo configured for websocket support
 - Initial Phase 1 schema + models + ownership policies added
 - Versioned API base scaffolded at `/agent/api/v1` with job-create validation guardrails
+- Dispatcher command (`agent:dispatch-due`) and queue runner pipeline implemented
+- Jobs CRUD + run-now/stop APIs + Inertia Jobs/Monitor pages implemented
+- Phases 0-7 checklist completed in `docs/minimal-cron-agent-task-list.md`
 
 ## Prerequisites
 - PHP 8.3+
@@ -52,6 +55,13 @@ npm run dev
 ```bash
 php artisan test
 php artisan route:list --path=agent/api/v1
+php artisan agent:dispatch-due
+```
+
+DB compatibility smoke checks:
+```bash
+php artisan migrate:fresh --database=pgsql --force
+DB_PORT=3306 php artisan migrate:fresh --database=mysql --force --no-interaction
 ```
 
 ## Notes

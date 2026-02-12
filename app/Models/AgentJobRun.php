@@ -9,6 +9,28 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AgentJobRun extends Model
 {
+    public const STATUS_QUEUED = 'queued';
+
+    public const STATUS_STARTING = 'starting';
+
+    public const STATUS_RUNNING = 'running';
+
+    public const STATUS_STOPPING = 'stopping';
+
+    public const STATUS_SUCCEEDED = 'succeeded';
+
+    public const STATUS_FAILED = 'failed';
+
+    public const STATUS_KILLED = 'killed';
+
+    public const STATUS_TIMED_OUT = 'timed_out';
+
+    public const STATUS_SKIPPED = 'skipped';
+
+    public const TRIGGER_SCHEDULE = 'schedule';
+
+    public const TRIGGER_MANUAL = 'manual';
+
     public const ACTIVE_STATUSES = ['queued', 'starting', 'running', 'stopping'];
 
     public const TERMINAL_STATUSES = ['succeeded', 'failed', 'killed', 'timed_out', 'skipped'];

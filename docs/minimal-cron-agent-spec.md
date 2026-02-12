@@ -76,6 +76,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
 - `working_directory`
 - `env_json` nullable
 - `last_validated_executable_path` nullable
+- `scheduled_path_failure_streak` default `0` (system-managed consecutive scheduled path-failure counter)
 - soft delete column `deleted_at`
 - `created_at`, `updated_at`
 
@@ -193,6 +194,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
   - `error.code`: `RUN_PATH_NOT_FOUND`
 - Scheduled path-failure auto-disable policy:
   - after 3 consecutive scheduled `RUN_PATH_NOT_FOUND` failures, job is auto-disabled.
+  - implementation tracks this with `agent_jobs.scheduled_path_failure_streak`.
   - counter resets on any successful run (scheduled or manual).
   - manual `RUN_PATH_NOT_FOUND` failures do not increment this counter.
 

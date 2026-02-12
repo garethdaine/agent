@@ -1,0 +1,201 @@
+<?php
+
+namespace App\Support\Agent;
+
+use App\Models\AgentJobRun;
+use Carbon\CarbonImmutable;
+
+class ReconcileActiveRunsService
+{
+    public function __construct(
+        private RunStateTransitionService $transitions,
+        private CommandTemplateRenderer $renderer,
+    ) {}
+
+    /**
+     * @return array{reconciled:int,failed:int,killed:int,mismatch:int}
+     */
+    public function reconcile(string $phase = 'tick'): array
+    {
+        $runs = AgentJobRun::query()
+            ->with('job')
+            ->whereIn('status', [
+                AgentJobRun::STATUS_STARTING,
+                AgentJobRun::STATUS_RUNNING,
+                AgentJobRun::STATUS_STOPPING,
+            ])
+            ->orderBy('id')
+            ->get();
+
+        $summary = [
+            'reconciled' => 0,
+            'failed' => 0,
+            'killed' => 0,
+            'mismatch' => 0,
+        ];
+
+        foreach ($runs as $run) {
+            $reconcileReason = null;
+            $errorCode = null;
+            $errorSummary = null;
+
+            $targetStatus = $run->status === AgentJobRun::STATUS_STOPPING
+                ? AgentJobRun::STATUS_KILLED
+                : AgentJobRun::STATUS_FAILED;
+
+            if ($run->pid === null || (int) $run->pid <= 0) {
+                $reconcileReason = 'pid_missing';
+                $errorCode = $targetStatus === AgentJobRun::STATUS_FAILED ? 'PID_MISSING' : null;
+                $errorSummary = 'Active run has no PID during reconciliation.';
+            } elseif (! $this->processExists((int) $run->pid)) {
+                $reconcileReason = 'process_not_found';
+                $errorCode = $targetStatus === AgentJobRun::STATUS_FAILED ? 'PROCESS_NOT_FOUND' : null;
+                $errorSummary = 'Run PID no longer exists during reconciliation.';
+            } else {
+                $commandLine = $this->readProcessCommandLine((int) $run->pid);
+
+                if ($commandLine !== null && ! $this->matchesFingerprint($run, $commandLine)) {
+                    $reconcileReason = 'pid_reused_or_mismatch';
+                    $errorCode = 'PID_MISMATCH';
+                    $errorSummary = 'Process fingerprint does not match the expected command.';
+                    $targetStatus = AgentJobRun::STATUS_FAILED;
+                    $summary['mismatch']++;
+                }
+            }
+
+            if ($reconcileReason === null) {
+                continue;
+            }
+
+            $metadata = (array) ($run->metadata_json ?? []);
+            $metadata['reconcile_reason'] = $reconcileReason;
+
+            if ($reconcileReason === 'pid_missing') {
+                $metadata['pid_not_found'] = true;
+
+                if ($targetStatus === AgentJobRun::STATUS_KILLED) {
+                    $metadata['termination_mode'] = 'pid_missing';
+                }
+            }
+
+            $finishedAt = CarbonImmutable::now('UTC');
+            $durationMs = $run->started_at
+                ? max(0, CarbonImmutable::parse($run->started_at, 'UTC')->diffInMilliseconds($finishedAt))
+                : 0;
+
+            $transitioned = $this->transitions->transition(
+                (int) $run->id,
+                AgentJobRun::ACTIVE_STATUSES,
+                $targetStatus,
+                [
+                    'finished_at' => $finishedAt,
+                    'duration_ms' => $durationMs,
+                    'error_code' => $errorCode,
+                    'error_summary' => $errorSummary,
+                    'metadata_json' => $metadata,
+                ]
+            );
+
+            if (! $transitioned) {
+                continue;
+            }
+
+            $run->refresh();
+            $writer = new RunEventWriter($run);
+            $writer->appendLifecycle([
+                'type' => 'system_notice',
+                'notice' => 'reconciled_terminal',
+                'phase' => $phase,
+                'reason' => $reconcileReason,
+                'to' => $targetStatus,
+                'at' => $finishedAt->toIso8601String(),
+            ]);
+
+            $summary['reconciled']++;
+
+            if ($targetStatus === AgentJobRun::STATUS_KILLED) {
+                $summary['killed']++;
+            }
+
+            if ($targetStatus === AgentJobRun::STATUS_FAILED) {
+                $summary['failed']++;
+            }
+        }
+
+        return $summary;
+    }
+
+    private function processExists(int $pid): bool
+    {
+        if ($pid <= 0) {
+            return false;
+        }
+
+        if (function_exists('posix_kill')) {
+            return @posix_kill($pid, 0);
+        }
+
+        $output = [];
+        $code = 1;
+        exec(sprintf('ps -p %d -o pid=', $pid), $output, $code);
+
+        return $code === 0 && trim(implode("\n", $output)) !== '';
+    }
+
+    private function readProcessCommandLine(int $pid): ?string
+    {
+        $procPath = sprintf('/proc/%d/cmdline', $pid);
+
+        if (is_readable($procPath)) {
+            $raw = @file_get_contents($procPath);
+
+            if (is_string($raw) && $raw !== '') {
+                return str_replace("\0", ' ', trim($raw));
+            }
+        }
+
+        $output = [];
+        $code = 1;
+        exec(sprintf('ps -p %d -o command=', $pid), $output, $code);
+
+        if ($code !== 0) {
+            return null;
+        }
+
+        $commandLine = trim(implode("\n", $output));
+
+        return $commandLine === '' ? null : $commandLine;
+    }
+
+    private function matchesFingerprint(AgentJobRun $run, string $commandLine): bool
+    {
+        if ($run->job === null) {
+            return false;
+        }
+
+        $tokens = $this->renderer->renderTokens($run->job, $run);
+
+        if ($tokens === []) {
+            return false;
+        }
+
+        $expectedExecutable = $run->resolved_executable_path;
+
+        if (! is_string($expectedExecutable) || $expectedExecutable === '') {
+            $resolved = realpath($tokens[0]);
+            $expectedExecutable = $resolved !== false ? $resolved : $tokens[0];
+        }
+
+        if (! str_contains($commandLine, $expectedExecutable)) {
+            return false;
+        }
+
+        if (in_array('{{task_markdown_path}}', config('agent.allowed_placeholders', []), true)
+            && str_contains($run->job->command_template, '{{task_markdown_path}}')
+            && ! str_contains($commandLine, $run->job->task_markdown_path)) {
+            return false;
+        }
+
+        return true;
+    }
+}

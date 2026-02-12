@@ -1,0 +1,274 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Jobs\ExecuteAgentRunJob;
+use App\Models\AgentJob;
+use App\Models\AgentJobRun;
+use App\Models\AgentRunEvent;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
+
+class AgentApiWorkflowTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private string $sandboxBase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->sandboxBase = storage_path('framework/testing/agent-api');
+        @mkdir($this->sandboxBase.'/bin', 0777, true);
+        @mkdir($this->sandboxBase.'/tasks', 0777, true);
+        @mkdir($this->sandboxBase.'/work', 0777, true);
+
+        $exec = $this->sandboxBase.'/bin/runner';
+        file_put_contents($exec, "#!/bin/sh\nexit 0\n");
+        chmod($exec, 0755);
+
+        config()->set('agent.allowed_task_markdown_bases', [$this->sandboxBase.'/tasks']);
+        config()->set('agent.allowed_working_directory_bases', [$this->sandboxBase.'/work']);
+        config()->set('agent.runner_executables', [
+            'claude' => $exec,
+            'codex' => $exec,
+            'custom' => $exec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $exec.' -p {{task_markdown_path}}',
+            'codex' => $exec.' exec {{task_markdown_path}}',
+        ]);
+
+        config()->set('cache.stores.redis', ['driver' => 'array']);
+    }
+
+    public function test_job_lifecycle_endpoints_work_for_owner(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $taskFile = $this->sandboxBase.'/tasks/job.md';
+        file_put_contents($taskFile, "# Job\n");
+
+        $create = $this->postJson('/agent/api/v1/jobs', [
+            'name' => 'Workflow Job',
+            'description' => 'test',
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+            'env_json' => ['MODE' => 'test'],
+        ]);
+
+        $create->assertCreated();
+        $jobId = $create->json('data.id');
+
+        $this->postJson('/agent/api/v1/jobs/'.$jobId.'/run-now')
+            ->assertStatus(202)
+            ->assertJsonPath('data.idempotent_replay', false);
+
+        Queue::assertPushed(ExecuteAgentRunJob::class);
+
+        $this->postJson('/agent/api/v1/jobs/'.$jobId.'/toggle')
+            ->assertOk()
+            ->assertJsonPath('data.is_enabled', false);
+
+        $run = AgentJobRun::query()->where('agent_job_id', $jobId)->latest('id')->firstOrFail();
+
+        $this->postJson('/agent/api/v1/runs/'.$run->id.'/stop')
+            ->assertStatus(202)
+            ->assertJsonPath('data.accepted', true);
+
+        $this->deleteJson('/agent/api/v1/jobs/'.$jobId)
+            ->assertOk();
+
+        $this->postJson('/agent/api/v1/jobs/'.$jobId.'/restore')
+            ->assertOk()
+            ->assertJsonPath('data.deleted_at', null);
+
+        $this->getJson('/agent/api/v1/jobs/'.$jobId.'/runs')
+            ->assertOk();
+
+        $this->getJson('/agent/api/v1/runs/'.$run->id)
+            ->assertOk();
+
+        $this->getJson('/agent/api/v1/runs/'.$run->id.'/events')
+            ->assertOk();
+    }
+
+    public function test_run_now_returns_conflict_when_overlap_active(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Conflict Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'command_template' => config('agent.default_templates.codex'),
+            'task_markdown_path' => $this->sandboxBase.'/tasks/conflict.md',
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        file_put_contents($job->task_markdown_path, "# conflict\n");
+
+        AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_RUNNING,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->postJson('/agent/api/v1/jobs/'.$job->id.'/run-now')
+            ->assertStatus(409)
+            ->assertJsonPath('error.code', 'RUN_OVERLAP_ACTIVE');
+    }
+
+    public function test_stop_with_missing_pid_is_terminal_and_idempotent(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Stop Missing PID',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'command_template' => config('agent.default_templates.codex'),
+            'task_markdown_path' => $this->sandboxBase.'/tasks/stop-missing-pid.md',
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        file_put_contents($job->task_markdown_path, "# stop\n");
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_RUNNING,
+            'pid' => null,
+            'started_at' => now('UTC')->subSeconds(5),
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->postJson('/agent/api/v1/runs/'.$run->id.'/stop')
+            ->assertStatus(202)
+            ->assertJsonPath('data.status', AgentJobRun::STATUS_KILLED);
+
+        $run->refresh();
+        $this->assertSame(AgentJobRun::STATUS_KILLED, $run->status);
+        $this->assertSame('pid_missing', $run->metadata_json['termination_mode'] ?? null);
+
+        $this->postJson('/agent/api/v1/runs/'.$run->id.'/stop')
+            ->assertOk()
+            ->assertJsonPath('data.already_terminal', true);
+    }
+
+    public function test_events_return_rfc3339_millisecond_timestamps(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Event Timestamps',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'command_template' => config('agent.default_templates.codex'),
+            'task_markdown_path' => $this->sandboxBase.'/tasks/event-ts.md',
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        file_put_contents($job->task_markdown_path, "# event\n");
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_SUCCEEDED,
+            'started_at' => now('UTC')->subSecond(),
+            'finished_at' => now('UTC'),
+            'duration_ms' => 1000,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'lifecycle',
+            'sequence' => 1,
+            'payload' => json_encode(['type' => 'state_transition']) ?: '{}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        $response = $this->getJson('/agent/api/v1/runs/'.$run->id.'/events')
+            ->assertOk();
+
+        $eventTs = (string) $response->json('data.0.event_ts');
+        $createdAt = (string) $response->json('data.0.created_at');
+
+        $this->assertMatchesRegularExpression('/\\.\\d{3}Z$/', $eventTs);
+        $this->assertMatchesRegularExpression('/\\.\\d{3}Z$/', $createdAt);
+    }
+
+    public function test_non_versioned_agent_api_routes_return_not_found(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->getJson('/agent/api/jobs')->assertNotFound();
+        $this->postJson('/agent/api/jobs', [])->assertNotFound();
+    }
+}

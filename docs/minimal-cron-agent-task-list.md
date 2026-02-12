@@ -1,9 +1,13 @@
 # Minimal Local Cron + Agent Runner Task List (Final Baseline)
 
 ## Progress Notes (2026-02-12)
-- Phase 1 is partially complete. Remaining gaps include strict enum enforcement and filtered active-name uniqueness behavior across all supported databases.
-- Phase 0 DB compatibility validation is still pending for MySQL; SQLite and PostgreSQL have been exercised.
+- Phases 0-7 are now complete against the current baseline.
+- DB compatibility smoke checks were executed on all supported engines:
+  - SQLite (`php artisan test` / in-memory)
+  - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)
+  - MySQL (`DB_PORT=3306 php artisan migrate:fresh --database=mysql --force --no-interaction`)
 - Phase 2 validation guardrails are implemented behind `POST /agent/api/v1/jobs` and covered by feature tests.
+- Phase 8+ items remain pending by design.
 
 ## Phase -1: Project Scaffold Setup
 - [x] Create Laravel 12 project at `/Users/garethdaine/Code/agent` if not already present.
@@ -28,7 +32,7 @@ Definition of done:
 - [x] Enforce fixed queue binding in runtime config: `connection=redis`, `queue=agent`.
 - [x] Confirm canonical run mode in docs and scripts: manual `php artisan horizon` + manual `php artisan schedule:work`.
 - [x] Add `dragonmantank/cron-expression` (major v3 pinned).
-- [ ] Validate DB compatibility for SQLite, MySQL, and PostgreSQL.
+- [x] Validate DB compatibility for SQLite, MySQL, and PostgreSQL.
 
 Definition of done:
 - Auth app boots.
@@ -45,14 +49,14 @@ Definition of done:
 - [x] `agent_system_state`
 - [x] `agent_audit_logs`
 - [x] `agent_maintenance_checkpoints`
-- [ ] Add all required columns and enums from final baseline, including:
+- [x] Add all required columns and enums from final baseline, including:
 - [x] soft-delete for jobs
-- [ ] run statuses with `stopping` and `skipped`
+- [x] run statuses with `stopping` and `skipped`
 - [x] `due_window_utc_minute`, `initiated_by_user_id`, `user_id` snapshot, `metadata_json`, `resolved_executable_path`
-- [ ] Enforce required unique/index constraints:
+- [x] Enforce required unique/index constraints:
 - [x] scheduled-run idempotency key unique
 - [x] event sequence unique per run
-- [ ] filtered uniqueness for active job names per user
+- [x] filtered uniqueness for active job names per user
 - [x] heartbeat source uniqueness
 - [x] FK cascade behavior for hard-prune paths.
 - [x] Implement models/relations/scopes for enabled, active, latest, deleted.
@@ -79,19 +83,19 @@ Definition of done:
 - Runtime and save-time policy checks are deterministic and test-covered.
 
 ## Phase 3: Dispatcher, Scheduling, and Idempotency
-- [ ] Implement `agent:dispatch-due`.
-- [ ] Add scheduler registration with overlap lock and target lock TTL 120s.
-- [ ] Implement timezone-aware due evaluation and UTC minute normalization.
-- [ ] Implement watermark state in `agent_system_state` (`dispatch_last_minute_utc`) with transactionally consistent update.
-- [ ] Implement bounded backfill:
-- [ ] global lookback cap 15 minutes/tick
-- [ ] max 5 due windows/job/tick
-- [ ] max 20 runnable dispatches/tick
-- [ ] deterministic ordering (`due_window_utc_minute ASC`, `agent_job_id ASC`)
-- [ ] Implement first-tick behavior (current minute only).
-- [ ] Implement rollback clock clamp behavior.
-- [ ] Implement deferred-capacity audit records when global cap is reached.
-- [ ] Write heartbeat and heartbeat metadata each tick.
+- [x] Implement `agent:dispatch-due`.
+- [x] Add scheduler registration with overlap lock and target lock TTL 120s.
+- [x] Implement timezone-aware due evaluation and UTC minute normalization.
+- [x] Implement watermark state in `agent_system_state` (`dispatch_last_minute_utc`) with transactionally consistent update.
+- [x] Implement bounded backfill:
+- [x] global lookback cap 15 minutes/tick
+- [x] max 5 due windows/job/tick
+- [x] max 20 runnable dispatches/tick
+- [x] deterministic ordering (`due_window_utc_minute ASC`, `agent_job_id ASC`)
+- [x] Implement first-tick behavior (current minute only).
+- [x] Implement rollback clock clamp behavior.
+- [x] Implement deferred-capacity audit records when global cap is reached.
+- [x] Write heartbeat and heartbeat metadata each tick.
 
 Definition of done:
 - Scheduled runs dispatch once per due window idempotency key.
@@ -99,69 +103,69 @@ Definition of done:
 - Heartbeat and watermark behavior is correct under normal and clock-skew cases.
 
 ## Phase 4: Runner Lifecycle, Process Control, and Reconciliation
-- [ ] Implement queued runner job with argv token execution only.
-- [ ] Implement lifecycle transitions and atomic transition enforcement.
-- [ ] Implement process start/finish semantics for `started_at`, `pid`, `duration_ms`, terminal mapping.
-- [ ] Implement overlap/cooldown skip-run creation semantics for scheduled runs.
-- [ ] Implement cooldown rules against prior non-skipped `finished_at`.
-- [ ] Implement timeout (monotonic clock) and stop escalation (`SIGTERM` + 10s + `SIGKILL`).
-- [ ] Implement stop idempotency and terminal-race resolution (first terminal CAS wins).
-- [ ] Implement `pid_missing` and `TERMINATION_FAILED` handling.
-- [ ] Implement dispatch-time executable re-validation and failed-run behavior on mismatch.
-- [ ] Implement runtime path re-check and `RUN_PATH_NOT_FOUND`.
-- [ ] Implement auto-disable after 3 consecutive scheduled `RUN_PATH_NOT_FOUND` failures.
-- [ ] Ensure counter resets on any successful run and ignores manual-path-failure increments.
-- [ ] Implement reconciliation on scheduler boot + each tick with PID/fingerprint matching.
+- [x] Implement queued runner job with argv token execution only.
+- [x] Implement lifecycle transitions and atomic transition enforcement.
+- [x] Implement process start/finish semantics for `started_at`, `pid`, `duration_ms`, terminal mapping.
+- [x] Implement overlap/cooldown skip-run creation semantics for scheduled runs.
+- [x] Implement cooldown rules against prior non-skipped `finished_at`.
+- [x] Implement timeout (monotonic clock) and stop escalation (`SIGTERM` + 10s + `SIGKILL`).
+- [x] Implement stop idempotency and terminal-race resolution (first terminal CAS wins).
+- [x] Implement `pid_missing` and `TERMINATION_FAILED` handling.
+- [x] Implement dispatch-time executable re-validation and failed-run behavior on mismatch.
+- [x] Implement runtime path re-check and `RUN_PATH_NOT_FOUND`.
+- [x] Implement auto-disable after 3 consecutive scheduled `RUN_PATH_NOT_FOUND` failures.
+- [x] Ensure counter resets on any successful run and ignores manual-path-failure increments.
+- [x] Implement reconciliation on scheduler boot + each tick with PID/fingerprint matching.
 
 Definition of done:
 - Terminal outcomes, stop behavior, timeout behavior, and reconciliation outcomes match baseline matrix and race rules.
 
 ## Phase 5: Stream Capture, Redaction, and Event Contracts
-- [ ] Implement stdout/stderr line-buffering with 250ms flush and 4KB chunking.
-- [ ] Implement long-line hard split with `payload.continuation`.
-- [ ] Implement sequence allocation strategy (strictly increasing unique per run; gaps allowed).
-- [ ] Implement UTF-8 normalization and highly-binary chunk summarization.
-- [ ] Implement max payload split behavior (8192-byte post-redaction limit).
-- [ ] Implement combined output cap 5MB with one truncation notice and `output_truncated` metadata.
-- [ ] Implement degraded capture mode and persistent failure threshold logic.
-- [ ] Implement required redaction patterns/tokens and precedence ordering.
-- [ ] Track pre/post redaction byte counters and replaced segment count.
-- [ ] Implement lifecycle payload schema variants and `event_ts` format.
+- [x] Implement stdout/stderr line-buffering with 250ms flush and 4KB chunking.
+- [x] Implement long-line hard split with `payload.continuation`.
+- [x] Implement sequence allocation strategy (strictly increasing unique per run; gaps allowed).
+- [x] Implement UTF-8 normalization and highly-binary chunk summarization.
+- [x] Implement max payload split behavior (8192-byte post-redaction limit).
+- [x] Implement combined output cap 5MB with one truncation notice and `output_truncated` metadata.
+- [x] Implement degraded capture mode and persistent failure threshold logic.
+- [x] Implement required redaction patterns/tokens and precedence ordering.
+- [x] Track pre/post redaction byte counters and replaced segment count.
+- [x] Implement lifecycle payload schema variants and `event_ts` format.
 
 Definition of done:
 - Event stream contract, ordering, truncation, and redaction behavior are stable and test-verified.
 
 ## Phase 6: Versioned API and HTTP Contracts
-- [ ] Implement versioned JSON API under `/agent/api/v1/...`.
-- [ ] Remove non-versioned legacy JSON API routes.
-- [ ] Return `404` for unsupported/non-goal API surfaces.
-- [ ] Ensure all responses include `X-Agent-Api-Version: 1.0`.
-- [ ] Implement standard error envelope for all failure classes.
-- [ ] Implement endpoint contracts and required statuses, including:
-- [ ] `run now` overlap conflict (`409 RUN_OVERLAP_ACTIVE`)
-- [ ] idempotent run-now replay (`202` + `idempotent_replay=true`)
-- [ ] stop accepted/no-op/conflict paths
-- [ ] queue unavailable path (`503 QUEUE_UNAVAILABLE`)
-- [ ] owner access to run detail/events remains valid even when parent job is soft-deleted.
-- [ ] Implement rate limiting for mutating endpoints (30/min/user shared) with `429 RATE_LIMITED`.
-- [ ] Exclude scheduler/maintenance system actions from HTTP rate limits.
+- [x] Implement versioned JSON API under `/agent/api/v1/...`.
+- [x] Remove non-versioned legacy JSON API routes.
+- [x] Return `404` for unsupported/non-goal API surfaces.
+- [x] Ensure all responses include `X-Agent-Api-Version: 1.0`.
+- [x] Implement standard error envelope for all failure classes.
+- [x] Implement endpoint contracts and required statuses, including:
+- [x] `run now` overlap conflict (`409 RUN_OVERLAP_ACTIVE`)
+- [x] idempotent run-now replay (`202` + `idempotent_replay=true`)
+- [x] stop accepted/no-op/conflict paths
+- [x] queue unavailable path (`503 QUEUE_UNAVAILABLE`)
+- [x] owner access to run detail/events remains valid even when parent job is soft-deleted.
+- [x] Implement rate limiting for mutating endpoints (30/min/user shared) with `429 RATE_LIMITED`.
+- [x] Exclude scheduler/maintenance system actions from HTTP rate limits.
 
 Definition of done:
 - All endpoint response shapes/statuses/headers match baseline and are covered by tests.
 
 ## Phase 7: Jetstream/Inertia UX
-- [ ] Implement Jobs index with required columns, filters, sorting, pagination.
-- [ ] Implement Create/Edit forms with all validation and confirmation UX requirements.
-- [ ] Implement Deleted tab/filter and restore UX behavior.
-- [ ] Implement Monitor page with:
-- [ ] latest runs cap 50
-- [ ] default range 24h
-- [ ] active/inactive/hidden-tab polling cadence (2s/10s/15s)
-- [ ] retry backoff and failure banner behavior
-- [ ] auto-follow tail pause/resume behavior
-- [ ] queue lag warning thresholds
-- [ ] Implement scheduler health card with `unknown/healthy/degraded/down`.
-- [ ] Ensure Inertia pages consume the same versioned JSON API under `/agent/api/v1` (no parallel data-loading contract).
+- [x] Implement Jobs index with required columns, filters, sorting, pagination.
+- [x] Implement Create/Edit forms with all validation and confirmation UX requirements.
+- [x] Implement Deleted tab/filter and restore UX behavior.
+- [x] Implement Monitor page with:
+- [x] latest runs cap 50
+- [x] default range 24h
+- [x] active/inactive/hidden-tab polling cadence (2s/10s/15s)
+- [x] retry backoff and failure banner behavior
+- [x] auto-follow tail pause/resume behavior
+- [x] queue lag warning thresholds
+- [x] Implement scheduler health card with `unknown/healthy/degraded/down`.
+- [x] Ensure Inertia pages consume the same versioned JSON API under `/agent/api/v1` (no parallel data-loading contract).
 
 Definition of done:
 - End-to-end workflow is achievable from UI and matches behavior contracts exactly.
@@ -234,12 +238,12 @@ Definition of done:
 12. Phase 10
 
 ## MVP Milestone Checklist
-- [ ] Job CRUD/toggle/run-now/stop works with ownership and validation.
-- [ ] Scheduler dispatches due windows once with bounded backfill and idempotency.
-- [ ] Runner lifecycle/status transitions are correct and observable.
-- [ ] Live monitor polling and event stream behavior meet contract.
-- [ ] Heartbeat health states are correct, including `unknown`.
-- [ ] Redaction and secret-handling policies are enforced.
+- [x] Job CRUD/toggle/run-now/stop works with ownership and validation.
+- [x] Scheduler dispatches due windows once with bounded backfill and idempotency.
+- [x] Runner lifecycle/status transitions are correct and observable.
+- [x] Live monitor polling and event stream behavior meet contract.
+- [x] Heartbeat health states are correct, including `unknown`.
+- [x] Redaction and secret-handling policies are enforced.
 - [ ] Prune/retention policies execute correctly with dry-run support.
-- [ ] Versioned API contract and headers are enforced.
+- [x] Versioned API contract and headers are enforced.
 - [ ] Required release artifacts are produced.
