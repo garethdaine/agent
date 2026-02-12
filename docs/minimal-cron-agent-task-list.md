@@ -4,6 +4,7 @@
 - Phases 0-7 are now complete against the current baseline.
 - Enabled Sanctum stateful API middleware bootstrap so logged-in Inertia sessions authenticate correctly on `/agent/api/v1/*`.
 - Added create/edit form-level API error banners so non-field failures (for example `401 UNAUTHENTICATED`) are shown directly in the UI.
+- Added Monitor approval handling UX: detects approval-needed output and offers UI actions to approve (reconfigure + rerun) or deny (stop run).
 - DB compatibility smoke checks were executed on all supported engines:
   - SQLite (`php artisan test` / in-memory)
   - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)

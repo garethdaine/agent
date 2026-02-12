@@ -13,6 +13,8 @@ const errorMessage = ref('');
 const failureCount = ref(0);
 const autoFollow = ref(true);
 const pollTimer = ref(null);
+const approvalBusy = ref(false);
+const approvalError = ref('');
 
 const BASE_POLL_MS = 2000;
 const INACTIVE_POLL_MS = 10000;
@@ -22,6 +24,30 @@ const BACKOFF = [2000, 4000, 8000, 15000];
 const consecutiveFailureWarning = computed(() => failureCount.value >= 3);
 
 const activeRuns = computed(() => runs.value.filter((run) => ['queued', 'starting', 'running', 'stopping'].includes(run.status)));
+const selectedRun = computed(() => runs.value.find((run) => run.id === selectedRunId.value) ?? null);
+
+const approvalHint = computed(() => {
+    if (!selectedRun.value) {
+        return null;
+    }
+
+    const match = [...events.value].reverse().find((event) => {
+        if (event.event_type !== 'stdout' && event.event_type !== 'stderr') {
+            return false;
+        }
+
+        return /need permission|requires permission|could you approve|approval/i.test(String(event.payload ?? ''));
+    });
+
+    if (!match) {
+        return null;
+    }
+
+    return {
+        sequence: match.sequence,
+        excerpt: String(match.payload ?? '').slice(0, 500),
+    };
+});
 
 const queueLag = computed(() => {
     const queued = runs.value.filter((run) => run.status === 'queued');
@@ -133,6 +159,86 @@ const stopRun = async (runId) => {
     await loadMonitor();
 };
 
+const pollUntilTerminal = async (runId, attempts = 12) => {
+    for (let i = 0; i < attempts; i += 1) {
+        const { data } = await axios.get(`/agent/api/v1/runs/${runId}`);
+        const status = data?.data?.status ?? null;
+
+        if (['succeeded', 'failed', 'killed', 'timed_out', 'skipped'].includes(status)) {
+            return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+};
+
+const buildNonInteractiveTemplate = (run, job) => {
+    if (job.runner_type === 'codex') {
+        return '/opt/homebrew/bin/codex --dangerously-bypass-approvals-and-sandbox --search exec {{task_markdown_path}}';
+    }
+
+    if (job.runner_type === 'claude') {
+        return '/Users/garethdaine/.local/bin/claude -p {{task_markdown_path}}';
+    }
+
+    return job.command_template ?? '';
+};
+
+const approveAndRerun = async () => {
+    if (!selectedRun.value) {
+        return;
+    }
+
+    approvalBusy.value = true;
+    approvalError.value = '';
+
+    try {
+        const run = selectedRun.value;
+        const { data } = await axios.get(`/agent/api/v1/jobs/${run.agent_job_id}`, {
+            params: { include_task_content: 1 },
+        });
+        const job = data?.data;
+
+        if (!job) {
+            throw new Error('Job details could not be loaded.');
+        }
+
+        const updatePayload = {
+            name: job.name,
+            description: job.description ?? '',
+            cron_expression: job.cron_expression,
+            timezone: job.timezone,
+            is_enabled: job.is_enabled,
+            max_runtime_seconds: job.max_runtime_seconds,
+            cooldown_seconds: job.cooldown_seconds,
+            runner_type: job.runner_type,
+            command_template: buildNonInteractiveTemplate(run, job),
+            working_directory: job.working_directory,
+            env_json: job.env_json ?? {},
+        };
+
+        if ((job.task_markdown_content ?? '').trim() !== '') {
+            updatePayload.task_markdown_content = job.task_markdown_content;
+        } else {
+            updatePayload.task_markdown_path = job.task_markdown_path;
+        }
+
+        await axios.put(`/agent/api/v1/jobs/${run.agent_job_id}`, updatePayload);
+
+        if (['queued', 'starting', 'running', 'stopping'].includes(run.status)) {
+            await axios.post(`/agent/api/v1/runs/${run.id}/stop`);
+            await pollUntilTerminal(run.id);
+        }
+
+        await axios.post(`/agent/api/v1/jobs/${run.agent_job_id}/run-now`);
+        await loadMonitor();
+    } catch (error) {
+        approvalError.value = error?.response?.data?.error?.message ?? error?.message ?? 'Approval action failed.';
+    } finally {
+        approvalBusy.value = false;
+    }
+};
+
 const selectRun = async (runId) => {
     selectedRunId.value = runId;
     events.value = [];
@@ -175,6 +281,35 @@ onBeforeUnmount(() => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
+            <div
+                v-if="approvalHint"
+                class="mx-auto mb-4 max-w-7xl rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200"
+            >
+                <p class="font-semibold">Approval Required</p>
+                <p class="mt-1 whitespace-pre-wrap break-words text-xs opacity-90">{{ approvalHint.excerpt }}</p>
+                <p class="mt-1 text-xs opacity-80">
+                    Approve updates this job to a non-interactive command template, stops the current run, then re-runs it.
+                </p>
+                <p v-if="approvalError" class="mt-2 text-xs text-red-700 dark:text-red-300">{{ approvalError }}</p>
+                <div class="mt-3 flex items-center gap-2">
+                    <button
+                        class="rounded bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        :disabled="approvalBusy"
+                        @click="approveAndRerun"
+                    >
+                        {{ approvalBusy ? 'Processing…' : 'Approve & Re-run' }}
+                    </button>
+                    <button
+                        v-if="selectedRunId"
+                        class="rounded border border-amber-600 px-3 py-1.5 text-xs font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-amber-300"
+                        :disabled="approvalBusy"
+                        @click="stopRun(selectedRunId)"
+                    >
+                        Deny (Stop Run)
+                    </button>
+                </div>
+            </div>
+
             <div class="mx-auto grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-3">
                 <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                     <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500">Scheduler Health</h3>
