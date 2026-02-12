@@ -173,7 +173,8 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
 - `cron_expression`: required, max 100 chars, printable ASCII only, 5-part numeric cron syntax (numbers with `*`, ranges, lists, and step values; no month/day names).
 - `timezone`: required valid IANA identifier, max 64 chars.
 - `command_template`: single-line, max 2000 chars, required for `custom`, optional override for `claude`/`codex`.
-- `task_markdown_path`: required absolute path, max 1024 chars, existing readable regular file, extension `.md|.markdown`, UTF-8 text-like.
+- `task_markdown_path`: required absolute path (unless inline markdown content is supplied), max 1024 chars, existing readable regular file, extension `.md|.markdown`, UTF-8 text-like.
+- `task_markdown_content`: optional inline markdown text. When provided, server persists it to a managed `.md` file under allowed task bases and stores the resolved file path in `task_markdown_path`.
 - `working_directory`: required absolute path, max 1024 chars, existing readable/executable directory.
 - `max_runtime_seconds`: 10..86400.
 - `cooldown_seconds`: 0..86400.

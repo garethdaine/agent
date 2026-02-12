@@ -19,6 +19,7 @@ const model = reactive({
     runner_type: 'codex',
     command_template: '',
     task_markdown_path: '/Users/garethdaine/Code/agent/tasks/',
+    task_markdown_content: '',
     working_directory: '/Users/garethdaine/Code/agent',
     env_json: {},
 });
@@ -27,11 +28,21 @@ const clearErrors = () => {
     Object.keys(errors).forEach((key) => delete errors[key]);
 };
 
-const onSubmit = async ({ payload, invalidEnvJson }) => {
+const onSubmit = async ({ payload, invalidEnvJson, invalidTaskMarkdown }) => {
     clearErrors();
 
     if (invalidEnvJson) {
         errors.env_json = ['env_json must be valid JSON.'];
+        return;
+    }
+
+    if (invalidTaskMarkdown === 'path_empty') {
+        errors.task_markdown_path = ['Task markdown path is required when using file-path mode.'];
+        return;
+    }
+
+    if (invalidTaskMarkdown === 'inline_empty') {
+        errors.task_markdown_content = ['Inline markdown content is required when using editor mode.'];
         return;
     }
 

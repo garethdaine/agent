@@ -19,6 +19,7 @@ Route::middleware([AgentApiVersionHeader::class])
 
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/jobs', [AgentJobController::class, 'index']);
+            Route::get('/jobs/{id}', [AgentJobController::class, 'show']);
             Route::post('/jobs', [AgentJobController::class, 'store'])->middleware('throttle:agent-mutations');
             Route::put('/jobs/{id}', [AgentJobController::class, 'update'])->middleware('throttle:agent-mutations');
             Route::post('/jobs/{id}/toggle', [AgentJobController::class, 'toggle'])->middleware('throttle:agent-mutations');

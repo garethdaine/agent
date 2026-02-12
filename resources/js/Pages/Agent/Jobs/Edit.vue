@@ -27,6 +27,7 @@ const model = reactive({
     runner_type: 'codex',
     command_template: '',
     task_markdown_path: '',
+    task_markdown_content: '',
     working_directory: '',
     env_json: {},
 });
@@ -37,10 +38,12 @@ const clearErrors = () => {
 
 const load = async () => {
     loading.value = true;
-    const { data } = await axios.get('/agent/api/v1/jobs', { params: { deleted: 'all', per_page: 100 } });
-    const job = data.data.find((item) => item.id === props.jobId);
+    let job = null;
 
-    if (!job) {
+    try {
+        const response = await axios.get(`/agent/api/v1/jobs/${props.jobId}`, { params: { include_task_content: 1 } });
+        job = response.data?.data ?? null;
+    } catch {
         router.visit(route('agent.jobs.index'));
         return;
     }
@@ -56,6 +59,7 @@ const load = async () => {
         runner_type: job.runner_type,
         command_template: job.command_template ?? '',
         task_markdown_path: job.task_markdown_path,
+        task_markdown_content: job.task_markdown_content ?? '',
         working_directory: job.working_directory,
         env_json: job.env_json ?? {},
     });
@@ -63,11 +67,21 @@ const load = async () => {
     loading.value = false;
 };
 
-const onSubmit = async ({ payload, invalidEnvJson }) => {
+const onSubmit = async ({ payload, invalidEnvJson, invalidTaskMarkdown }) => {
     clearErrors();
 
     if (invalidEnvJson) {
         errors.env_json = ['env_json must be valid JSON.'];
+        return;
+    }
+
+    if (invalidTaskMarkdown === 'path_empty') {
+        errors.task_markdown_path = ['Task markdown path is required when using file-path mode.'];
+        return;
+    }
+
+    if (invalidTaskMarkdown === 'inline_empty') {
+        errors.task_markdown_content = ['Inline markdown content is required when using editor mode.'];
         return;
     }
 

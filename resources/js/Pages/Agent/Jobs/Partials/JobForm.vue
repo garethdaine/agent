@@ -64,8 +64,13 @@ const form = reactive({
     runner_type: 'codex',
     command_template: '',
     task_markdown_path: '',
+    task_markdown_content: '',
     working_directory: '',
     env_json_text: '{}',
+});
+
+const taskSource = reactive({
+    mode: 'path',
 });
 
 const schedule = reactive({
@@ -185,8 +190,10 @@ const hydrate = (value) => {
     form.runner_type = value.runner_type ?? 'codex';
     form.command_template = value.command_template ?? '';
     form.task_markdown_path = value.task_markdown_path ?? '';
+    form.task_markdown_content = value.task_markdown_content ?? '';
     form.working_directory = value.working_directory ?? '';
     form.env_json_text = JSON.stringify(value.env_json ?? {}, null, 2);
+    taskSource.mode = form.task_markdown_content.trim() !== '' ? 'inline' : 'path';
 
     if (parseCronIntoBasicSchedule(form.cron_expression)) {
         schedule.mode = 'basic';
@@ -245,15 +252,30 @@ const submit = () => {
         cooldown_seconds: Number(form.cooldown_seconds),
         runner_type: form.runner_type,
         command_template: form.command_template,
-        task_markdown_path: form.task_markdown_path,
         working_directory: form.working_directory,
     };
+
+    if (taskSource.mode === 'inline') {
+        if (form.task_markdown_content.trim() === '') {
+            emit('submit', { payload: null, invalidEnvJson: env === '__INVALID_JSON__', invalidTaskMarkdown: 'inline_empty' });
+            return;
+        }
+
+        payload.task_markdown_content = form.task_markdown_content;
+    } else {
+        if (form.task_markdown_path.trim() === '') {
+            emit('submit', { payload: null, invalidEnvJson: env === '__INVALID_JSON__', invalidTaskMarkdown: 'path_empty' });
+            return;
+        }
+
+        payload.task_markdown_path = form.task_markdown_path.trim();
+    }
 
     if (env !== '__INVALID_JSON__') {
         payload.env_json = env;
     }
 
-    emit('submit', { payload, invalidEnvJson: env === '__INVALID_JSON__' });
+    emit('submit', { payload, invalidEnvJson: env === '__INVALID_JSON__', invalidTaskMarkdown: null });
 };
 </script>
 
@@ -397,11 +419,42 @@ const submit = () => {
                 <p v-if="errors.cooldown_seconds" class="mt-1 text-sm text-red-600">{{ errors.cooldown_seconds[0] }}</p>
             </div>
 
-            <div class="lg:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Task Markdown Path</label>
-                <input v-model="form.task_markdown_path" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500">Absolute path to the markdown task/prompt file the runner should execute.</p>
-                <p v-if="errors.task_markdown_path" class="mt-1 text-sm text-red-600">{{ errors.task_markdown_path[0] }}</p>
+            <div class="lg:col-span-2 rounded-md border border-gray-200 p-4 dark:border-gray-700">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Task Prompt Source</p>
+                        <p class="text-xs text-gray-500">Choose a markdown file path or write markdown directly.</p>
+                    </div>
+                    <div class="flex items-center gap-4 text-sm">
+                        <label class="inline-flex items-center gap-2">
+                            <input v-model="taskSource.mode" type="radio" value="path" class="border-gray-300" />
+                            File Path
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input v-model="taskSource.mode" type="radio" value="inline" class="border-gray-300" />
+                            Inline Markdown
+                        </label>
+                    </div>
+                </div>
+
+                <div v-if="taskSource.mode === 'path'" class="mt-3">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Task Markdown Path</label>
+                    <input v-model="form.task_markdown_path" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
+                    <p class="mt-1 text-xs text-gray-500">Absolute path to an existing markdown task/prompt file.</p>
+                    <p v-if="errors.task_markdown_path" class="mt-1 text-sm text-red-600">{{ errors.task_markdown_path[0] }}</p>
+                </div>
+
+                <div v-else class="mt-3">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Task Markdown Editor</label>
+                    <textarea
+                        v-model="form.task_markdown_content"
+                        rows="12"
+                        class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm dark:border-gray-700 dark:bg-gray-900"
+                        placeholder="# Task title&#10;&#10;Describe exactly what the agent should do."
+                    />
+                    <p class="mt-1 text-xs text-gray-500">Markdown text is persisted into a managed file path automatically.</p>
+                    <p v-if="errors.task_markdown_content" class="mt-1 text-sm text-red-600">{{ errors.task_markdown_content[0] }}</p>
+                </div>
             </div>
 
             <div class="lg:col-span-2">

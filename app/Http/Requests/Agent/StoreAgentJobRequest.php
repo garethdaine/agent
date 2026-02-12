@@ -36,7 +36,8 @@ class StoreAgentJobRequest extends FormRequest
             'cooldown_seconds' => ['required', 'integer', 'between:0,86400'],
             'runner_type' => ['required', Rule::in(['claude', 'codex', 'custom'])],
             'command_template' => ['nullable', 'string', 'max:2000'],
-            'task_markdown_path' => ['required', 'string', 'max:1024'],
+            'task_markdown_path' => ['nullable', 'string', 'max:1024', 'required_without:task_markdown_content'],
+            'task_markdown_content' => ['nullable', 'string', 'max:200000', 'required_without:task_markdown_path'],
             'working_directory' => ['required', 'string', 'max:1024'],
             'env_json' => ['nullable', 'array'],
         ];
@@ -53,9 +54,18 @@ class StoreAgentJobRequest extends FormRequest
                 $validator->errors()->add('description', 'The description may not contain control characters.');
             }
 
-            $taskError = $pathPolicy->validateTaskMarkdownPath($this->input('task_markdown_path'));
-            if ($taskError !== null) {
-                $validator->errors()->add('task_markdown_path', $taskError);
+            $taskMarkdownPath = trim((string) ($this->input('task_markdown_path') ?? ''));
+            $taskMarkdownContent = (string) ($this->input('task_markdown_content') ?? '');
+
+            if ($taskMarkdownPath !== '') {
+                $taskError = $pathPolicy->validateTaskMarkdownPath($taskMarkdownPath);
+                if ($taskError !== null) {
+                    $validator->errors()->add('task_markdown_path', $taskError);
+                }
+            }
+
+            if ($taskMarkdownPath === '' && trim($taskMarkdownContent) === '') {
+                $validator->errors()->add('task_markdown_content', 'Either task_markdown_path or task_markdown_content is required.');
             }
 
             $workingDirError = $pathPolicy->validateWorkingDirectory($this->input('working_directory'));

@@ -85,6 +85,38 @@ class AgentJobValidationTest extends TestCase
         $this->assertStringContainsString('claude', $job->command_template);
     }
 
+    public function test_user_can_create_job_with_inline_markdown_content(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $payload = [
+            'name' => 'Inline Markdown Job',
+            'description' => 'Inline prompt',
+            'cron_expression' => '0 9 * * 1-5',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'task_markdown_content' => "# Inline Task\n\nRun a quick check.\n",
+            'working_directory' => $this->sandboxBase.'/work',
+            'env_json' => [
+                'AGENT_MODE' => 'test',
+            ],
+        ];
+
+        $response = $this->postJson('/agent/api/v1/jobs', $payload);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.name', 'Inline Markdown Job');
+
+        $job = AgentJob::query()->where('name', 'Inline Markdown Job')->firstOrFail();
+        $this->assertStringContainsString($this->sandboxBase.'/tasks', (string) $job->task_markdown_path);
+        $this->assertFileExists((string) $job->task_markdown_path);
+        $this->assertStringContainsString('Inline Task', file_get_contents((string) $job->task_markdown_path));
+    }
+
     public function test_invalid_cron_returns_validation_error_envelope(): void
     {
         $user = User::factory()->create();

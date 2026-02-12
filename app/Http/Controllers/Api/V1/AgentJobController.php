@@ -10,6 +10,7 @@ use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
+use App\Support\Agent\TaskMarkdownStorage;
 use Carbon\CarbonImmutable;
 use Cron\CronExpression;
 use Illuminate\Database\QueryException;
@@ -62,7 +63,7 @@ class AgentJobController extends Controller
         $perPage = min(100, max(1, (int) $request->integer('per_page', 25)));
         $jobs = $query->paginate($perPage)->withQueryString();
 
-        $data = collect($jobs->items())->map(fn (AgentJob $job): array => $this->transformJob($job))->values();
+        $data = collect($jobs->items())->map(fn (AgentJob $job): array => $this->transformJob($job, false))->values();
 
         return response()->json([
             'data' => $data,
@@ -92,8 +93,21 @@ class AgentJobController extends Controller
         ]);
     }
 
-    public function store(StoreAgentJobRequest $request, AuditLogger $auditLogger): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
+        $job = $request->user()->agentJobs()->withTrashed()->findOrFail($id);
+        $includeTaskContent = $request->boolean('include_task_content', false);
+
+        return response()->json([
+            'data' => $this->transformJob($job, $includeTaskContent),
+        ]);
+    }
+
+    public function store(
+        StoreAgentJobRequest $request,
+        AuditLogger $auditLogger,
+        TaskMarkdownStorage $taskMarkdownStorage
+    ): JsonResponse {
         $validated = $request->validated();
 
         $existing = $request->user()->agentJobs()
@@ -107,6 +121,8 @@ class AgentJobController extends Controller
             ]);
         }
 
+        $taskMarkdownPath = $this->resolveTaskMarkdownPath($request, $validated, $taskMarkdownStorage);
+
         $job = $request->user()->agentJobs()->create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
@@ -117,7 +133,7 @@ class AgentJobController extends Controller
             'cooldown_seconds' => $validated['cooldown_seconds'],
             'runner_type' => $validated['runner_type'],
             'command_template' => $request->normalizedCommandTemplate(),
-            'task_markdown_path' => $validated['task_markdown_path'],
+            'task_markdown_path' => $taskMarkdownPath,
             'working_directory' => $validated['working_directory'],
             'env_json' => $validated['env_json'] ?? null,
             'last_validated_executable_path' => $request->resolvedExecutablePath(),
@@ -150,8 +166,12 @@ class AgentJobController extends Controller
         ], 201);
     }
 
-    public function update(UpdateAgentJobRequest $request, int $id, AuditLogger $auditLogger): JsonResponse
-    {
+    public function update(
+        UpdateAgentJobRequest $request,
+        int $id,
+        AuditLogger $auditLogger,
+        TaskMarkdownStorage $taskMarkdownStorage
+    ): JsonResponse {
         $job = $request->user()->agentJobs()->withTrashed()->findOrFail($id);
         $before = $job->only([
             'name',
@@ -182,6 +202,8 @@ class AgentJobController extends Controller
             ]);
         }
 
+        $taskMarkdownPath = $this->resolveTaskMarkdownPath($request, $validated, $taskMarkdownStorage);
+
         $job->fill([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
@@ -192,7 +214,7 @@ class AgentJobController extends Controller
             'cooldown_seconds' => $validated['cooldown_seconds'],
             'runner_type' => $validated['runner_type'],
             'command_template' => $request->normalizedCommandTemplate(),
-            'task_markdown_path' => $validated['task_markdown_path'],
+            'task_markdown_path' => $taskMarkdownPath,
             'working_directory' => $validated['working_directory'],
             'env_json' => $validated['env_json'] ?? null,
             'last_validated_executable_path' => $request->resolvedExecutablePath(),
@@ -420,7 +442,7 @@ class AgentJobController extends Controller
         ], 202);
     }
 
-    private function transformJob(AgentJob $job): array
+    private function transformJob(AgentJob $job, bool $includeTaskContent = false): array
     {
         $lastRun = $job->runs()->latest('created_at')->first();
 
@@ -439,7 +461,7 @@ class AgentJobController extends Controller
             $nextRunUtc = null;
         }
 
-        return [
+        $payload = [
             'id' => $job->id,
             'name' => $job->name,
             'description' => $job->description,
@@ -459,5 +481,43 @@ class AgentJobController extends Controller
             'last_run_status' => $lastRun?->status,
             'last_run_finished_at' => optional($lastRun?->finished_at)?->toIso8601String(),
         ];
+
+        if ($includeTaskContent) {
+            $payload['task_markdown_content'] = $this->readTaskMarkdownContent($job->task_markdown_path);
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function resolveTaskMarkdownPath(
+        Request $request,
+        array $validated,
+        TaskMarkdownStorage $taskMarkdownStorage
+    ): string {
+        $content = trim((string) ($validated['task_markdown_content'] ?? ''));
+
+        if ($content !== '') {
+            return $taskMarkdownStorage->persistInlineContent($content, (int) $request->user()->id);
+        }
+
+        return (string) ($validated['task_markdown_path'] ?? '');
+    }
+
+    private function readTaskMarkdownContent(?string $path): ?string
+    {
+        if (! is_string($path) || trim($path) === '') {
+            return null;
+        }
+
+        $content = @file_get_contents($path);
+
+        if (! is_string($content)) {
+            return null;
+        }
+
+        return mb_substr($content, 0, 200_000);
     }
 }

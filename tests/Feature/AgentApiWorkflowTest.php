@@ -271,4 +271,33 @@ class AgentApiWorkflowTest extends TestCase
         $this->getJson('/agent/api/jobs')->assertNotFound();
         $this->postJson('/agent/api/jobs', [])->assertNotFound();
     }
+
+    public function test_job_show_can_include_task_markdown_content(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $taskFile = $this->sandboxBase.'/tasks/show-task.md';
+        file_put_contents($taskFile, "# Show Task\n\nInline content check.\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Show Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'command_template' => config('agent.default_templates.codex'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $this->getJson('/agent/api/v1/jobs/'.$job->id.'?include_task_content=1')
+            ->assertOk()
+            ->assertJsonPath('data.id', $job->id)
+            ->assertJsonPath('data.task_markdown_content', "# Show Task\n\nInline content check.\n");
+    }
 }
