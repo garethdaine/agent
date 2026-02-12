@@ -281,6 +281,10 @@ const submit = () => {
 
 <template>
     <form class="space-y-6" @submit.prevent="submit">
+        <div v-if="errors._form" class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+            {{ Array.isArray(errors._form) ? errors._form[0] : errors._form }}
+        </div>
+
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Name</label>

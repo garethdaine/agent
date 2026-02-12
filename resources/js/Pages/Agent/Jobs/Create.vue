@@ -28,6 +28,23 @@ const clearErrors = () => {
     Object.keys(errors).forEach((key) => delete errors[key]);
 };
 
+const applyApiErrors = (e) => {
+    const apiError = e?.response?.data?.error ?? null;
+    const details = apiError?.details;
+
+    if (details && typeof details === 'object' && !Array.isArray(details) && Object.keys(details).length > 0) {
+        Object.assign(errors, details);
+        return;
+    }
+
+    if (apiError?.code === 'UNAUTHENTICATED') {
+        errors._form = ['Your session is not authenticated. Refresh the page, sign in, and try again.'];
+        return;
+    }
+
+    errors._form = [apiError?.message ?? 'Unable to create this job right now.'];
+};
+
 const onSubmit = async ({ payload, invalidEnvJson, invalidTaskMarkdown }) => {
     clearErrors();
 
@@ -52,8 +69,7 @@ const onSubmit = async ({ payload, invalidEnvJson, invalidTaskMarkdown }) => {
         await axios.post('/agent/api/v1/jobs', payload);
         router.visit(route('agent.jobs.index'));
     } catch (e) {
-        const details = e?.response?.data?.error?.details ?? {};
-        Object.assign(errors, details);
+        applyApiErrors(e);
     } finally {
         isSubmitting.value = false;
     }
