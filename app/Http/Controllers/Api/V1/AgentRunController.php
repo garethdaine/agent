@@ -16,6 +16,90 @@ use Illuminate\Http\Request;
 
 class AgentRunController extends Controller
 {
+    public function dashboardMetrics(Request $request): JsonResponse
+    {
+        $window = strtolower($request->string('window', '24h')->toString());
+        $windowHours = [
+            '24h' => 24,
+            '7d' => 24 * 7,
+        ];
+
+        if (! array_key_exists($window, $windowHours)) {
+            return ErrorEnvelope::make('VALIDATION_ERROR', 'The given data was invalid.', 422, [
+                'window' => ['The selected window is invalid.'],
+            ]);
+        }
+
+        $hours = $windowHours[$window];
+        $now = CarbonImmutable::now('UTC');
+        $windowStart = $now->subHours($hours);
+        $todayStart = $now->startOfDay();
+
+        $baseQuery = AgentJobRun::query()->where('user_id', $request->user()->id);
+        $windowTerminalQuery = AgentJobRun::query()
+            ->where('user_id', $request->user()->id)
+            ->where('created_at', '>=', $windowStart)
+            ->whereIn('status', [
+                AgentJobRun::STATUS_SUCCEEDED,
+                AgentJobRun::STATUS_FAILED,
+                AgentJobRun::STATUS_KILLED,
+                AgentJobRun::STATUS_TIMED_OUT,
+            ]);
+
+        $runsToday = (clone $baseQuery)
+            ->where('created_at', '>=', $todayStart)
+            ->count();
+
+        $backlogCount = (clone $baseQuery)
+            ->where('status', AgentJobRun::STATUS_QUEUED)
+            ->count();
+
+        $oldestQueuedAt = (clone $baseQuery)
+            ->where('status', AgentJobRun::STATUS_QUEUED)
+            ->min('created_at');
+
+        $oldestQueuedAgeSeconds = 0;
+        if ($oldestQueuedAt !== null) {
+            $oldestQueuedAgeSeconds = CarbonImmutable::parse($oldestQueuedAt, 'UTC')
+                ->diffInSeconds($now);
+        }
+
+        $windowTerminalTotal = (clone $windowTerminalQuery)->count();
+        $windowSucceeded = (clone $windowTerminalQuery)
+            ->where('status', AgentJobRun::STATUS_SUCCEEDED)
+            ->count();
+        $windowAverageDurationMs = (float) ((clone $windowTerminalQuery)->avg('duration_ms') ?? 0);
+
+        $successRatePercent = $windowTerminalTotal > 0
+            ? round(($windowSucceeded / $windowTerminalTotal) * 100, 1)
+            : 0.0;
+
+        return response()->json([
+            'data' => [
+                'window' => [
+                    'key' => $window,
+                    'hours' => $hours,
+                    'from' => $this->toRfc3339Millis($windowStart),
+                    'to' => $this->toRfc3339Millis($now),
+                    'options' => [
+                        ['key' => '24h', 'label' => 'Last 24h'],
+                        ['key' => '7d', 'label' => 'Last 7 days'],
+                    ],
+                ],
+                'metrics' => [
+                    'runs_today' => $runsToday,
+                    'success_rate_percent' => $successRatePercent,
+                    'average_duration_ms' => (int) round($windowAverageDurationMs),
+                    'backlog_count' => $backlogCount,
+                    'oldest_queued_age_seconds' => $oldestQueuedAgeSeconds,
+                    'window_terminal_total' => $windowTerminalTotal,
+                    'window_succeeded_total' => $windowSucceeded,
+                ],
+                'scheduler' => $this->schedulerHealthSnapshot(),
+            ],
+        ]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $hours = min(24 * 7, max(1, (int) $request->integer('hours', 24)));
@@ -308,16 +392,24 @@ class AgentRunController extends Controller
 
     public function schedulerHealth(): JsonResponse
     {
+        return response()->json([
+            'data' => $this->schedulerHealthSnapshot(),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function schedulerHealthSnapshot(): array
+    {
         $heartbeat = SchedulerHeartbeat::query()->where('source', 'scheduler_dispatch')->first();
 
         if ($heartbeat === null) {
-            return response()->json([
-                'data' => [
-                    'status' => 'unknown',
-                    'last_seen_at' => null,
-                    'age_seconds' => null,
-                ],
-            ]);
+            return [
+                'status' => 'unknown',
+                'last_seen_at' => null,
+                'age_seconds' => null,
+            ];
         }
 
         $lastSeen = CarbonImmutable::parse($heartbeat->last_seen_at, 'UTC');
@@ -330,14 +422,12 @@ class AgentRunController extends Controller
             $status = 'degraded';
         }
 
-        return response()->json([
-            'data' => [
-                'status' => $status,
-                'last_seen_at' => $this->toRfc3339Millis($lastSeen),
-                'age_seconds' => $ageSeconds,
-                'meta' => $heartbeat->meta_json,
-            ],
-        ]);
+        return [
+            'status' => $status,
+            'last_seen_at' => $this->toRfc3339Millis($lastSeen),
+            'age_seconds' => $ageSeconds,
+            'meta' => $heartbeat->meta_json,
+        ];
     }
 
     private function toRfc3339Millis(mixed $value): ?string

@@ -440,6 +440,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
   - `GET /agent/api/v1/runs/{id}`
   - `GET /agent/api/v1/runs/{id}/events?after_sequence=n&limit=m`
   - `POST /agent/api/v1/runs/{id}/stop`
+  - `GET /agent/api/v1/dashboard/metrics?window=24h|7d`
   - `GET /agent/api/v1/health/scheduler`
 - Run visibility when parent job is soft-deleted:
   - owner can still access `GET /agent/api/v1/runs/{id}` and `GET /agent/api/v1/runs/{id}/events`.
@@ -589,6 +590,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
 - Measurement method:
   - seeded dataset: 100 jobs, 2000 runs, 100k events
   - 200 repeated requests per measured endpoint
+  - benchmark command: `php artisan agent:benchmark-slo --seed --measure --jobs=100 --runs=2000 --events=100000 --requests=200 --json`
 - SLO verification is manual release checklist in MVP.
 
 ## 25. Acceptance Criteria

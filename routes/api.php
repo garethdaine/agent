@@ -33,6 +33,7 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/runs/{id}/events', [AgentRunController::class, 'events']);
             Route::post('/runs/{id}/stop', [AgentRunController::class, 'stop'])->middleware('throttle:agent-mutations');
 
+            Route::get('/dashboard/metrics', [AgentRunController::class, 'dashboardMetrics']);
             Route::get('/health/scheduler', [AgentRunController::class, 'schedulerHealth']);
         });
     });

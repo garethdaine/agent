@@ -12,6 +12,12 @@
 - Monitor polling now guards against overlapping refresh calls and de-duplicates events by ID, preventing duplicate lifecycle rows in Event Tail.
 - Monitor Event Tail now surfaces a clear "active but no stdout/stderr yet" signal for long-silent runs.
 - Fixed long-running run redelivery failures by aligning Redis queue `retry_after` (`90000`) above Horizon agent timeout, preventing `MaxAttemptsExceededException` on in-flight runs.
+- Added Phase 9 dashboard metrics endpoint + UI cards with window selector (`24h`/`7d`), skipped-run exclusion for success-rate, and global queued-age calculation.
+- Added `agent:benchmark-slo` command to seed/load benchmark data and measure endpoint p95 with 200 repeated requests.
+- Phase 9 SLO benchmark validation run (2026-02-12 UTC) on seeded dataset (`100 jobs`, `2000 runs`, `100000 events`) passed:
+  - jobs index p95: `16.52ms` (`<500ms`)
+  - run-now ACK p95: `9.59ms` (`<400ms`)
+  - monitor poll p95: `25.41ms` (`<700ms`)
 - DB compatibility smoke checks were executed on all supported engines:
   - SQLite (`php artisan test` / in-memory)
   - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)
@@ -207,16 +213,16 @@ Definition of done:
 - Retention and prune semantics are reproducible, resumable, and match baseline constraints.
 
 ## Phase 9: Dashboard Metrics and Performance Verification
-- [ ] Implement global dashboard cards for runs today, success rate, average duration, backlog count, oldest queued age, scheduler health.
-- [ ] Implement metric formulas and windows (default 24h, selectable 7d) with skipped-run exclusion for success rate.
-- [ ] Ensure backlog oldest queued age is computed globally (not per-job).
-- [ ] Build benchmark command/script for SLO verification dataset:
-- [ ] 100 jobs, 2000 runs, 100k events
-- [ ] 200 repeated requests per endpoint
-- [ ] Validate p95 targets:
-- [ ] jobs index <500ms warm
-- [ ] run-now ACK <400ms
-- [ ] monitor poll <700ms (`limit=100`, up to 5 active monitors)
+- [x] Implement global dashboard cards for runs today, success rate, average duration, backlog count, oldest queued age, scheduler health.
+- [x] Implement metric formulas and windows (default 24h, selectable 7d) with skipped-run exclusion for success rate.
+- [x] Ensure backlog oldest queued age is computed globally (not per-job).
+- [x] Build benchmark command/script for SLO verification dataset:
+- [x] 100 jobs, 2000 runs, 100k events
+- [x] 200 repeated requests per endpoint
+- [x] Validate p95 targets:
+- [x] jobs index <500ms warm
+- [x] run-now ACK <400ms
+- [x] monitor poll <700ms (`limit=100`, up to 5 active monitors)
 
 Definition of done:
 - Manual release checklist includes passing performance measurements for all required SLOs.

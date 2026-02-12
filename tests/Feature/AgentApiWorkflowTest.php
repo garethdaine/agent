@@ -6,7 +6,9 @@ use App\Jobs\ExecuteAgentRunJob;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentRunEvent;
+use App\Models\SchedulerHeartbeat;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
@@ -270,6 +272,92 @@ class AgentApiWorkflowTest extends TestCase
 
         $this->getJson('/agent/api/jobs')->assertNotFound();
         $this->postJson('/agent/api/jobs', [])->assertNotFound();
+    }
+
+    public function test_dashboard_metrics_window_formulas_and_global_backlog_are_correct(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $now = CarbonImmutable::parse('2026-02-12T12:00:00Z');
+        CarbonImmutable::setTestNow($now);
+        try {
+            SchedulerHeartbeat::query()->create([
+                'source' => 'scheduler_dispatch',
+                'last_seen_at' => $now->subSeconds(30),
+                'meta_json' => ['tick' => 'ok'],
+            ]);
+
+            $taskFile = $this->sandboxBase.'/tasks/dashboard-metrics.md';
+            file_put_contents($taskFile, "# dashboard\n");
+
+            $job = AgentJob::query()->create([
+                'user_id' => $user->id,
+                'name' => 'Dashboard Metrics',
+                'description' => null,
+                'cron_expression' => '0 0 1 1 1',
+                'timezone' => 'UTC',
+                'is_enabled' => true,
+                'max_runtime_seconds' => 120,
+                'cooldown_seconds' => 0,
+                'runner_type' => 'codex',
+                'command_template' => config('agent.default_templates.codex'),
+                'task_markdown_path' => $taskFile,
+                'working_directory' => $this->sandboxBase.'/work',
+            ]);
+
+            $makeRun = function (string $status, CarbonImmutable $createdAt, int $durationMs = 0) use ($job, $user): void {
+                AgentJobRun::query()->create([
+                    'agent_job_id' => $job->id,
+                    'user_id' => $user->id,
+                    'initiated_by_user_id' => $user->id,
+                    'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+                    'status' => $status,
+                    'duration_ms' => $durationMs,
+                    'stdout_bytes_pre' => 0,
+                    'stdout_bytes_post' => 0,
+                    'stderr_bytes_pre' => 0,
+                    'stderr_bytes_post' => 0,
+                    'metadata_json' => ['output_truncated' => false, 'redaction_count' => 0],
+                    'created_at' => $createdAt,
+                    'updated_at' => $createdAt,
+                ]);
+            };
+
+            $makeRun(AgentJobRun::STATUS_SUCCEEDED, $now->subHours(2), 1000);
+            $makeRun(AgentJobRun::STATUS_FAILED, $now->subHours(3), 3000);
+            $makeRun(AgentJobRun::STATUS_SKIPPED, $now->subHours(4), 9000);
+            $makeRun(AgentJobRun::STATUS_SUCCEEDED, $now->subDays(3), 5000);
+            $makeRun(AgentJobRun::STATUS_QUEUED, $now->subMinutes(10), 0);
+            $makeRun(AgentJobRun::STATUS_QUEUED, $now->subMinute(), 0);
+            $makeRun(AgentJobRun::STATUS_TIMED_OUT, $now->subDays(8), 7000);
+
+            $this->getJson('/agent/api/v1/dashboard/metrics?window=24h')
+                ->assertOk()
+                ->assertJsonPath('data.window.key', '24h')
+                ->assertJsonPath('data.metrics.runs_today', 5)
+                ->assertJsonPath('data.metrics.success_rate_percent', 50)
+                ->assertJsonPath('data.metrics.average_duration_ms', 2000)
+                ->assertJsonPath('data.metrics.backlog_count', 2)
+                ->assertJsonPath('data.metrics.oldest_queued_age_seconds', 600)
+                ->assertJsonPath('data.metrics.window_terminal_total', 2)
+                ->assertJsonPath('data.metrics.window_succeeded_total', 1)
+                ->assertJsonPath('data.scheduler.status', 'healthy');
+
+            $this->getJson('/agent/api/v1/dashboard/metrics?window=7d')
+                ->assertOk()
+                ->assertJsonPath('data.window.key', '7d')
+                ->assertJsonPath('data.metrics.success_rate_percent', 66.7)
+                ->assertJsonPath('data.metrics.average_duration_ms', 3000)
+                ->assertJsonPath('data.metrics.window_terminal_total', 3)
+                ->assertJsonPath('data.metrics.window_succeeded_total', 2);
+
+            $this->getJson('/agent/api/v1/dashboard/metrics?window=bad')
+                ->assertStatus(422)
+                ->assertJsonPath('error.code', 'VALIDATION_ERROR');
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
     }
 
     public function test_job_show_can_include_task_markdown_content(): void

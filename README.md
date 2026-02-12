@@ -19,6 +19,8 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Reconciliation executable matching now includes launch-time command tokens/configured executable paths to support symlinked CLI binaries
 - Monitor polling now de-duplicates event merges and prevents overlapping poll cycles, eliminating duplicate lifecycle lines in Event Tail
 - Redis queue `retry_after` is now aligned for long-running agent jobs to prevent mid-run redelivery / `MaxAttemptsExceededException` failures
+- Dashboard now includes live agent metrics cards (runs today, success rate, average duration, backlog, oldest queued age, scheduler health) with `24h` / `7d` windows
+- Added `agent:benchmark-slo` command for Phase 9 SLO dataset seeding and p95 endpoint measurement
 - Phases 0-7 checklist completed in `docs/minimal-cron-agent-task-list.md`
 - Phase 8 maintenance baseline implemented (`agent:prune` + audit logging + retention schedules)
 
@@ -66,6 +68,7 @@ php artisan test
 php artisan route:list --path=agent/api/v1
 php artisan agent:dispatch-due
 php artisan agent:prune --dry-run --json
+php artisan agent:benchmark-slo --seed --measure --jobs=100 --runs=2000 --events=100000 --requests=200 --json
 php artisan horizon:status
 ```
 
