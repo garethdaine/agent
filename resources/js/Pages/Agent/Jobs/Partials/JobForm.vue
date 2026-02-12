@@ -41,6 +41,7 @@ const hours = Array.from({ length: 24 }, (_, i) => i);
 const minutes = Array.from({ length: 60 }, (_, i) => i);
 const monthDays = Array.from({ length: 31 }, (_, i) => i + 1);
 const hourIntervals = Array.from({ length: 23 }, (_, i) => i + 1);
+const minuteIntervals = Array.from({ length: 59 }, (_, i) => i + 1);
 
 const weekdays = [
     { value: 0, label: 'Sunday' },
@@ -72,6 +73,7 @@ const schedule = reactive({
     frequency: 'daily',
     minute: 0,
     hour: 9,
+    everyMinutes: 5,
     everyHours: 1,
     weekday: 1,
     monthDay: 1,
@@ -92,6 +94,12 @@ const inRange = (value, min, max, fallback) => {
 const buildCronFromBasicSchedule = () => {
     const minute = inRange(schedule.minute, 0, 59, 0);
     const hour = inRange(schedule.hour, 0, 23, 0);
+
+    if (schedule.frequency === 'minute_interval') {
+        const everyMinutes = inRange(schedule.everyMinutes, 1, 59, 5);
+
+        return `*/${everyMinutes} * * * *`;
+    }
 
     if (schedule.frequency === 'hourly') {
         const everyHours = inRange(schedule.everyHours, 1, 23, 1);
@@ -117,7 +125,15 @@ const buildCronFromBasicSchedule = () => {
 const parseCronIntoBasicSchedule = (cronExpression) => {
     const cron = (cronExpression ?? '').trim();
 
-    let match = cron.match(/^(\d+)\s+\*\/(\d+)\s+\*\s+\*\s+\*$/);
+    let match = cron.match(/^\*\/(\d+)\s+\*\s+\*\s+\*\s+\*$/);
+    if (match) {
+        schedule.frequency = 'minute_interval';
+        schedule.everyMinutes = inRange(match[1], 1, 59, 5);
+
+        return true;
+    }
+
+    match = cron.match(/^(\d+)\s+\*\/(\d+)\s+\*\s+\*\s+\*$/);
     if (match) {
         schedule.frequency = 'hourly';
         schedule.minute = inRange(match[1], 0, 59, 0);
@@ -188,6 +204,7 @@ watch(() => [
     schedule.frequency,
     schedule.minute,
     schedule.hour,
+    schedule.everyMinutes,
     schedule.everyHours,
     schedule.weekday,
     schedule.monthDay,
@@ -283,10 +300,18 @@ const submit = () => {
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Frequency</label>
                         <select v-model="schedule.frequency" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                            <option value="minute_interval">Every N Minutes</option>
                             <option value="hourly">Every N Hours</option>
                             <option value="daily">Daily</option>
                             <option value="weekly">Weekly</option>
                             <option value="monthly">Monthly</option>
+                        </select>
+                    </div>
+
+                    <div v-if="schedule.frequency === 'minute_interval'">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Every</label>
+                        <select v-model="schedule.everyMinutes" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                            <option v-for="n in minuteIntervals" :key="`min-${n}`" :value="n">{{ n }} minute<span v-if="n !== 1">s</span></option>
                         </select>
                     </div>
 
@@ -299,14 +324,22 @@ const submit = () => {
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Hour (24h)</label>
-                        <select v-model="schedule.hour" :disabled="schedule.frequency === 'hourly'" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 disabled:opacity-60">
+                        <select
+                            v-model="schedule.hour"
+                            :disabled="schedule.frequency === 'hourly' || schedule.frequency === 'minute_interval'"
+                            class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 disabled:opacity-60"
+                        >
                             <option v-for="h in hours" :key="`h-${h}`" :value="h">{{ String(h).padStart(2, '0') }}</option>
                         </select>
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Minute</label>
-                        <select v-model="schedule.minute" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <select
+                            v-model="schedule.minute"
+                            :disabled="schedule.frequency === 'minute_interval'"
+                            class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 disabled:opacity-60"
+                        >
                             <option v-for="m in minutes" :key="`m-${m}`" :value="m">{{ String(m).padStart(2, '0') }}</option>
                         </select>
                     </div>
