@@ -16,6 +16,7 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Monitor now surfaces approval-needed state per run in Latest Runs with a modal approval workflow (`Approve & Re-run` / `Deny/Stop`), with runner-aware approval templates for Codex and Claude
 - Runner finalization now normalizes `duration_ms` to integer-safe values for PostgreSQL compatibility and resilient stop handling
 - Reconciliation fingerprint checks now use immutable launch metadata captured per run to avoid false mismatches after job edits
+- Reconciliation executable matching now includes launch-time command tokens/configured executable paths to support symlinked CLI binaries
 - Phases 0-7 checklist completed in `docs/minimal-cron-agent-task-list.md`
 - Phase 8 maintenance baseline implemented (`agent:prune` + audit logging + retention schedules)
 

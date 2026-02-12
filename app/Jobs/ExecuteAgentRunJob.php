@@ -122,6 +122,7 @@ class ExecuteAgentRunJob implements ShouldQueue
                         ...((array) ($run->metadata_json ?? [])),
                         'launch_fingerprint' => [
                             'executable' => (string) ($run->resolved_executable_path ?? ''),
+                            'executable_token' => (string) ($tokens[0] ?? ''),
                             'task_markdown_path' => (string) ($run->job->task_markdown_path ?? ''),
                         ],
                     ],

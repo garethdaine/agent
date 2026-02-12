@@ -217,7 +217,8 @@ class AgentDispatchDueCommandTest extends TestCase
                 'output_truncated' => false,
                 'redaction_count' => 0,
                 'launch_fingerprint' => [
-                    'executable' => 'php',
+                    'executable' => '/does/not/match/live/cmdline',
+                    'executable_token' => 'php',
                     'task_markdown_path' => '',
                 ],
             ],

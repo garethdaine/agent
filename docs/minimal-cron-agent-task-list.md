@@ -8,6 +8,7 @@
 - Fixed PostgreSQL run finalization regression where fractional `duration_ms` could crash runner transitions, leaving runs stuck and causing scheduler heartbeat degradation.
 - Improved approval UX to per-run alerts in Latest Runs with modal actions, and clear approval-required state when runs become terminal so killed/failed runs no longer show stale approval banners.
 - Reconciliation now uses immutable launch fingerprints captured at run start, preventing false `pid_reused_or_mismatch` failures after job template/path edits.
+- Reconciliation fingerprint matching now includes launch-time executable token/configured executable candidates, avoiding false mismatches for symlinked CLIs (for example `claude`).
 - DB compatibility smoke checks were executed on all supported engines:
   - SQLite (`php artisan test` / in-memory)
   - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)

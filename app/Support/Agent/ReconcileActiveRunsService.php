@@ -180,14 +180,19 @@ class ReconcileActiveRunsService
         $launchFingerprint = $metadata['launch_fingerprint'] ?? null;
         $hasLaunchFingerprint = is_array($launchFingerprint);
         $expectedTaskPath = null;
-        $expectedExecutable = null;
+        $executableCandidates = [];
 
         if ($hasLaunchFingerprint) {
             $snapshotExecutable = $launchFingerprint['executable'] ?? null;
+            $snapshotExecutableToken = $launchFingerprint['executable_token'] ?? null;
             $snapshotTaskPath = $launchFingerprint['task_markdown_path'] ?? null;
 
             if (is_string($snapshotExecutable) && trim($snapshotExecutable) !== '') {
-                $expectedExecutable = trim($snapshotExecutable);
+                $executableCandidates[] = trim($snapshotExecutable);
+            }
+
+            if (is_string($snapshotExecutableToken) && trim($snapshotExecutableToken) !== '') {
+                $executableCandidates[] = trim($snapshotExecutableToken);
             }
 
             if (is_string($snapshotTaskPath) && trim($snapshotTaskPath) !== '') {
@@ -195,31 +200,48 @@ class ReconcileActiveRunsService
             }
         }
 
-        if (! is_string($expectedExecutable) || $expectedExecutable === '') {
-            $tokens = $this->renderer->renderTokens($run->job, $run);
+        $tokens = $this->renderer->renderTokens($run->job, $run);
 
-            if ($tokens === []) {
-                return false;
-            }
-
-            $expectedExecutable = $run->resolved_executable_path;
-
-            if (! is_string($expectedExecutable) || $expectedExecutable === '') {
-                $resolved = realpath($tokens[0]);
-                $expectedExecutable = $resolved !== false ? $resolved : $tokens[0];
-            }
-        }
-
-        if (! str_contains($commandLine, $expectedExecutable)) {
+        if ($tokens === []) {
             return false;
         }
 
-        if ($hasLaunchFingerprint) {
-            if (is_string($expectedTaskPath) && $expectedTaskPath !== '' && ! str_contains($commandLine, $expectedTaskPath)) {
-                return false;
-            }
+        $configuredRunnerExecutable = (config('agent.runner_executables', []))[$run->job->runner_type] ?? null;
+        if (is_string($configuredRunnerExecutable) && trim($configuredRunnerExecutable) !== '') {
+            $executableCandidates[] = trim($configuredRunnerExecutable);
+        }
 
-            return true;
+        $expectedExecutable = $run->resolved_executable_path;
+        if (is_string($expectedExecutable) && trim($expectedExecutable) !== '') {
+            $executableCandidates[] = trim($expectedExecutable);
+        }
+
+        $renderedExecutable = (string) ($tokens[0] ?? '');
+        if (trim($renderedExecutable) !== '') {
+            $executableCandidates[] = trim($renderedExecutable);
+        }
+
+        $resolvedRenderedExecutable = realpath($tokens[0]);
+        if (is_string($resolvedRenderedExecutable) && $resolvedRenderedExecutable !== '') {
+            $executableCandidates[] = $resolvedRenderedExecutable;
+        }
+
+        $executableCandidates = array_values(array_unique(array_filter($executableCandidates, static fn ($value) => is_string($value) && $value !== '')));
+
+        if ($hasLaunchFingerprint) {
+            if (is_string($expectedTaskPath) && $expectedTaskPath !== '' && str_contains($commandLine, $expectedTaskPath)) {
+                return true;
+            }
+        }
+
+        foreach ($executableCandidates as $candidate) {
+            if (str_contains($commandLine, $candidate)) {
+                return true;
+            }
+        }
+
+        if ($hasLaunchFingerprint) {
+            return false;
         }
 
         if (in_array('{{task_markdown_path}}', config('agent.allowed_placeholders', []), true)
