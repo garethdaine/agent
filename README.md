@@ -17,6 +17,7 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Runner finalization now normalizes `duration_ms` to integer-safe values for PostgreSQL compatibility and resilient stop handling
 - Reconciliation fingerprint checks now use immutable launch metadata captured per run to avoid false mismatches after job edits
 - Reconciliation executable matching now includes launch-time command tokens/configured executable paths to support symlinked CLI binaries
+- Monitor polling now de-duplicates event merges and prevents overlapping poll cycles, eliminating duplicate lifecycle lines in Event Tail
 - Phases 0-7 checklist completed in `docs/minimal-cron-agent-task-list.md`
 - Phase 8 maintenance baseline implemented (`agent:prune` + audit logging + retention schedules)
 
@@ -64,6 +65,7 @@ php artisan test
 php artisan route:list --path=agent/api/v1
 php artisan agent:dispatch-due
 php artisan agent:prune --dry-run --json
+php artisan horizon:status
 ```
 
 DB compatibility smoke checks:
@@ -76,6 +78,7 @@ DB_PORT=3306 php artisan migrate:fresh --database=mysql --force --no-interaction
 - Reverb host is configured for Herd at `reverb.herd.test` (TLS/443).
 - Sanctum SPA session auth is enabled for `/agent/api/v1/*`; ensure `SANCTUM_STATEFUL_DOMAINS` includes your local app host (for example `agent.test` or `agent.herd.test`).
 - API version header middleware sets `X-Agent-Api-Version: 1.0` on `/agent/api/v1/*` routes.
+- If runs appear stalled/queued unexpectedly, check `php artisan horizon:status`; start/restart workers with `php artisan horizon`.
 - Horizon queue defaults:
   - `connection=redis`
   - `queue=agent`

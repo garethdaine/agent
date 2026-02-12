@@ -13,6 +13,7 @@ const errorMessage = ref('');
 const failureCount = ref(0);
 const autoFollow = ref(true);
 const pollTimer = ref(null);
+const isLoadingMonitor = ref(false);
 const approvalBusy = ref(false);
 const approvalError = ref('');
 const approvalModalRunId = ref(null);
@@ -22,12 +23,35 @@ const INACTIVE_POLL_MS = 10000;
 const HIDDEN_POLL_MS = 15000;
 const BACKOFF = [2000, 4000, 8000, 15000];
 const ACTIVE_RUN_STATUSES = ['queued', 'starting', 'running', 'stopping'];
+const OUTPUT_EVENT_TYPES = ['stdout', 'stderr'];
 
 const consecutiveFailureWarning = computed(() => failureCount.value >= 3);
 
 const activeRuns = computed(() => runs.value.filter((run) => ACTIVE_RUN_STATUSES.includes(run.status)));
 const selectedRun = computed(() => runs.value.find((run) => run.id === selectedRunId.value) ?? null);
 const approvalModalRun = computed(() => runs.value.find((run) => run.id === approvalModalRunId.value) ?? null);
+const selectedRunNoOutputSeconds = computed(() => {
+    const run = selectedRun.value;
+
+    if (!run || !ACTIVE_RUN_STATUSES.includes(run.status)) {
+        return null;
+    }
+
+    const latestOutputEvent = [...events.value].reverse().find((event) => OUTPUT_EVENT_TYPES.includes(event.event_type));
+    const baselineTimestamp = latestOutputEvent?.created_at ?? run.started_at ?? run.created_at;
+
+    if (!baselineTimestamp) {
+        return null;
+    }
+
+    const parsed = new Date(baselineTimestamp).getTime();
+    if (!Number.isFinite(parsed)) {
+        return null;
+    }
+
+    return Math.max(0, Math.floor((Date.now() - parsed) / 1000));
+});
+const selectedRunLikelySilent = computed(() => (selectedRunNoOutputSeconds.value ?? 0) >= 20);
 
 const approvalStateForRun = (run) => {
     if (!run || !ACTIVE_RUN_STATUSES.includes(run.status)) {
@@ -122,7 +146,14 @@ const loadEvents = async () => {
         return;
     }
 
-    events.value = [...events.value, ...incoming].slice(-1000);
+    const deduped = new Map();
+    [...events.value, ...incoming].forEach((event) => {
+        deduped.set(event.id, event);
+    });
+
+    events.value = Array.from(deduped.values())
+        .sort((a, b) => a.sequence - b.sequence)
+        .slice(-1000);
 
     if (autoFollow.value) {
         requestAnimationFrame(() => {
@@ -134,7 +165,13 @@ const loadEvents = async () => {
     }
 };
 
-const loadMonitor = async () => {
+const loadMonitor = async (force = false) => {
+    if (isLoadingMonitor.value && !force) {
+        return;
+    }
+
+    isLoadingMonitor.value = true;
+
     try {
         const [runsResponse, schedulerResponse] = await Promise.all([
             axios.get('/agent/api/v1/runs', { params: { hours: 24, limit: 50 } }),
@@ -168,6 +205,7 @@ const loadMonitor = async () => {
         failureCount.value += 1;
         errorMessage.value = error?.response?.data?.error?.message ?? 'Monitor polling failed.';
     } finally {
+        isLoadingMonitor.value = false;
         loading.value = false;
         scheduleNext();
     }
@@ -175,7 +213,7 @@ const loadMonitor = async () => {
 
 const stopRun = async (runId) => {
     await axios.post(`/agent/api/v1/runs/${runId}/stop`);
-    await loadMonitor();
+    await loadMonitor(true);
 };
 
 const pollUntilTerminal = async (runId, attempts = 12) => {
@@ -265,7 +303,7 @@ const approveAndRerun = async () => {
         }
 
         await axios.post(`/agent/api/v1/jobs/${run.agent_job_id}/run-now`);
-        await loadMonitor();
+        await loadMonitor(true);
         closeApprovalModal();
     } catch (error) {
         approvalError.value = error?.response?.data?.error?.message ?? error?.message ?? 'Approval action failed.';
@@ -436,6 +474,12 @@ onBeforeUnmount(() => {
                             <span class="text-gray-500">[{{ event.sequence }} {{ event.event_type }}]</span>
                             <span class="ml-1">{{ event.payload }}</span>
                         </div>
+                        <p
+                            v-if="selectedRunLikelySilent && selectedRunNoOutputSeconds !== null"
+                            class="mb-2 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200"
+                        >
+                            Run is active but has not emitted stdout/stderr for {{ selectedRunNoOutputSeconds }}s.
+                        </p>
                         <p v-if="events.length === 0" class="text-gray-500">No events yet for selected run.</p>
                     </div>
                 </div>

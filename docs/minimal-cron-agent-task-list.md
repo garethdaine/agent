@@ -9,6 +9,8 @@
 - Improved approval UX to per-run alerts in Latest Runs with modal actions, and clear approval-required state when runs become terminal so killed/failed runs no longer show stale approval banners.
 - Reconciliation now uses immutable launch fingerprints captured at run start, preventing false `pid_reused_or_mismatch` failures after job template/path edits.
 - Reconciliation fingerprint matching now includes launch-time executable token/configured executable candidates, avoiding false mismatches for symlinked CLIs (for example `claude`).
+- Monitor polling now guards against overlapping refresh calls and de-duplicates events by ID, preventing duplicate lifecycle rows in Event Tail.
+- Monitor Event Tail now surfaces a clear "active but no stdout/stderr yet" signal for long-silent runs.
 - DB compatibility smoke checks were executed on all supported engines:
   - SQLite (`php artisan test` / in-memory)
   - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)
@@ -175,6 +177,7 @@ Definition of done:
 - [x] active/inactive/hidden-tab polling cadence (2s/10s/15s)
 - [x] retry backoff and failure banner behavior
 - [x] auto-follow tail pause/resume behavior
+- [x] de-duplicate event stream merges and serialize poll cycles to avoid duplicated lifecycle output
 - [x] queue lag warning thresholds
 - [x] Implement scheduler health card with `unknown/healthy/degraded/down`.
 - [x] Ensure Inertia pages consume the same versioned JSON API under `/agent/api/v1` (no parallel data-loading contract).
