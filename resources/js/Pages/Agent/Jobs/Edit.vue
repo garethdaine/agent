@@ -19,7 +19,7 @@ const loading = ref(true);
 const model = reactive({
     name: '',
     description: '',
-    cron_expression: '0 0 1 1 1',
+    cron_expression: '0 9 * * *',
     timezone: 'UTC',
     is_enabled: true,
     max_runtime_seconds: 300,

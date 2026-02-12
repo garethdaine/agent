@@ -11,6 +11,7 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Versioned API base scaffolded at `/agent/api/v1` with job-create validation guardrails
 - Dispatcher command (`agent:dispatch-due`) and queue runner pipeline implemented
 - Jobs CRUD + run-now/stop APIs + Inertia Jobs/Monitor pages implemented
+- Job create/edit form includes guided schedule builder (basic frequency picker + advanced cron mode)
 - Phases 0-7 checklist completed in `docs/minimal-cron-agent-task-list.md`
 - Phase 8 maintenance baseline implemented (`agent:prune` + audit logging + retention schedules)
 

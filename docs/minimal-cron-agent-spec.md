@@ -170,7 +170,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
 ### 6.1 Job Fields
 - `name`: required, 3..120 chars, UTF-8, no control chars.
 - `description`: optional, 0..4000 chars UTF-8.
-- `cron_expression`: required, max 100 chars, printable ASCII only, explicit 5-part numeric cron syntax only.
+- `cron_expression`: required, max 100 chars, printable ASCII only, 5-part numeric cron syntax (numbers with `*`, ranges, lists, and step values; no month/day names).
 - `timezone`: required valid IANA identifier, max 64 chars.
 - `command_template`: single-line, max 2000 chars, required for `custom`, optional override for `claude`/`codex`.
 - `task_markdown_path`: required absolute path, max 1024 chars, existing readable regular file, extension `.md|.markdown`, UTF-8 text-like.

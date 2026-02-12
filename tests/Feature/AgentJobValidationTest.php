@@ -95,7 +95,7 @@ class AgentJobValidationTest extends TestCase
 
         $payload = [
             'name' => 'Bad Cron',
-            'cron_expression' => '* * * * *',
+            'cron_expression' => 'every day at noon',
             'timezone' => 'UTC',
             'max_runtime_seconds' => 60,
             'cooldown_seconds' => 0,
@@ -117,6 +117,30 @@ class AgentJobValidationTest extends TestCase
                 ],
             ],
         ]);
+    }
+
+    public function test_numeric_cron_with_wildcards_is_allowed(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $taskFile = $this->sandboxBase.'/tasks/wildcard-task.md';
+        file_put_contents($taskFile, "# Test\n");
+
+        $payload = [
+            'name' => 'Wildcard Cron',
+            'cron_expression' => '0 9 * * 1-5',
+            'timezone' => 'UTC',
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ];
+
+        $this->postJson('/agent/api/v1/jobs', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.cron_expression', '0 9 * * 1-5');
     }
 
     public function test_env_json_forbidden_key_is_rejected(): void

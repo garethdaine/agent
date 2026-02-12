@@ -22,8 +22,24 @@ class NumericCronExpression implements ValidationRule
             return;
         }
 
-        if (! preg_match('/^\d+\s+\d+\s+\d+\s+\d+\s+\d+$/', trim($value))) {
+        $parts = preg_split('/\s+/', trim($value)) ?: [];
+
+        if (count($parts) !== 5) {
             $fail('The :attribute must be a 5-part numeric cron expression.');
+
+            return;
+        }
+
+        foreach ($parts as $part) {
+            if (! preg_match('/^[0-9*\/,\-]+$/', $part)) {
+                $fail('The :attribute must use numeric cron tokens only (numbers, *, ranges, lists, and steps).');
+
+                return;
+            }
+        }
+
+        if (preg_match('/[A-Za-z]/', $value)) {
+            $fail('The :attribute must not use month/day names.');
 
             return;
         }
