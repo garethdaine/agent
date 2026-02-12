@@ -13,7 +13,7 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Jobs CRUD + run-now/stop APIs + Inertia Jobs/Monitor pages implemented
 - Job create/edit form includes guided schedule builder (basic frequency picker + advanced cron mode)
 - Task prompt input supports both file-path mode and inline markdown editor mode (inline content is persisted to managed `.md` files)
-- Monitor now surfaces approval-needed output and provides UI actions (`Approve & Re-run` or `Deny/Stop`) to avoid console-only handling
+- Monitor now surfaces approval-needed output and provides UI actions (`Approve & Re-run` or `Deny/Stop`) to avoid console-only handling, with runner-aware approval templates for Codex and Claude
 - Phases 0-7 checklist completed in `docs/minimal-cron-agent-task-list.md`
 - Phase 8 maintenance baseline implemented (`agent:prune` + audit logging + retention schedules)
 

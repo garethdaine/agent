@@ -172,13 +172,27 @@ const pollUntilTerminal = async (runId, attempts = 12) => {
     }
 };
 
-const buildNonInteractiveTemplate = (run, job) => {
+const buildNonInteractiveTemplate = (job) => {
     if (job.runner_type === 'codex') {
         return '/opt/homebrew/bin/codex --dangerously-bypass-approvals-and-sandbox --search exec {{task_markdown_path}}';
     }
 
     if (job.runner_type === 'claude') {
-        return '/Users/garethdaine/.local/bin/claude -p {{task_markdown_path}}';
+        return '/Users/garethdaine/.local/bin/claude --dangerously-skip-permissions -p {{task_markdown_path}}';
+    }
+
+    if (job.runner_type === 'custom') {
+        const current = String(job.command_template ?? '');
+
+        if (current.includes('/opt/homebrew/bin/codex') || /\bcodex\b/.test(current)) {
+            return '/opt/homebrew/bin/codex --dangerously-bypass-approvals-and-sandbox --search exec {{task_markdown_path}}';
+        }
+
+        if (current.includes('/Users/garethdaine/.local/bin/claude') || /\bclaude\b/.test(current)) {
+            return '/Users/garethdaine/.local/bin/claude --dangerously-skip-permissions -p {{task_markdown_path}}';
+        }
+
+        throw new Error('Custom runner approval cannot be auto-applied. Update this job command template to a non-interactive mode first.');
     }
 
     return job.command_template ?? '';
@@ -212,7 +226,7 @@ const approveAndRerun = async () => {
             max_runtime_seconds: job.max_runtime_seconds,
             cooldown_seconds: job.cooldown_seconds,
             runner_type: job.runner_type,
-            command_template: buildNonInteractiveTemplate(run, job),
+            command_template: buildNonInteractiveTemplate(job),
             working_directory: job.working_directory,
             env_json: job.env_json ?? {},
         };
@@ -288,7 +302,7 @@ onBeforeUnmount(() => {
                 <p class="font-semibold">Approval Required</p>
                 <p class="mt-1 whitespace-pre-wrap break-words text-xs opacity-90">{{ approvalHint.excerpt }}</p>
                 <p class="mt-1 text-xs opacity-80">
-                    Approve updates this job to a non-interactive command template, stops the current run, then re-runs it.
+                    Approve updates this job to a non-interactive command template (Codex/Claude aware), stops the current run, then re-runs it.
                 </p>
                 <p v-if="approvalError" class="mt-2 text-xs text-red-700 dark:text-red-300">{{ approvalError }}</p>
                 <div class="mt-3 flex items-center gap-2">
