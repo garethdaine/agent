@@ -21,6 +21,10 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Redis queue `retry_after` is now aligned for long-running agent jobs to prevent mid-run redelivery / `MaxAttemptsExceededException` failures
 - Dashboard now includes live agent metrics cards (runs today, success rate, average duration, backlog, oldest queued age, scheduler health) with `24h` / `7d` windows
 - Added `agent:benchmark-slo` command for Phase 9 SLO dataset seeding and p95 endpoint measurement
+- Runner now detects upstream usage/rate-limit output, records structured metadata, and marks failed runs with `error_code=RATE_LIMITED`
+- Scheduler now applies temporary per-job hold windows after rate-limited failures and skips due windows with `skip_reason=rate_limited` until reset/default hold expiry
+- `run-now` now returns `409 JOB_RATE_LIMITED` while a hold is active, with optional override `ignore_rate_limit_hold=true`
+- Monitor now surfaces per-run rate-limit alerts and supports explicit "Run Anyway Now" override
 - Phases 0-7 checklist completed in `docs/minimal-cron-agent-task-list.md`
 - Phase 8 maintenance baseline implemented (`agent:prune` + audit logging + retention schedules)
 
@@ -84,6 +88,7 @@ DB_PORT=3306 php artisan migrate:fresh --database=mysql --force --no-interaction
 - API version header middleware sets `X-Agent-Api-Version: 1.0` on `/agent/api/v1/*` routes.
 - If runs appear stalled/queued unexpectedly, check `php artisan horizon:status`; start/restart workers with `php artisan horizon`.
 - If you change queue/horizon runtime env values (for example `REDIS_QUEUE_RETRY_AFTER`), restart Horizon so workers pick up the new config.
+- If upstream tools hit usage/rate limits, the scheduler applies temporary job holds to reduce repeated failures; adjust default hold via `AGENT_RATE_LIMIT_DEFAULT_HOLD_MINUTES`.
 - Horizon queue defaults:
   - `connection=redis`
   - `queue=agent`

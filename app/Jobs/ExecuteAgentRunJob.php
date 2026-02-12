@@ -8,6 +8,7 @@ use App\Support\Agent\Duration;
 use App\Support\Agent\RunEventWriter;
 use App\Support\Agent\RunStateTransitionService;
 use App\Support\Agent\RuntimeValidation;
+use App\Support\Agent\UsageLimitState;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -16,6 +17,8 @@ use Symfony\Component\Process\Process;
 class ExecuteAgentRunJob implements ShouldQueue
 {
     use Queueable;
+
+    private ?UsageLimitState $usageLimitState = null;
 
     public int $tries = 1;
 
@@ -33,7 +36,10 @@ class ExecuteAgentRunJob implements ShouldQueue
         RuntimeValidation $runtimeValidation,
         CommandTemplateRenderer $renderer,
         RunStateTransitionService $transitions,
+        UsageLimitState $usageLimitState,
     ): void {
+        $this->usageLimitState = $usageLimitState;
+
         $run = AgentJobRun::query()->with('job')->find($this->runId);
 
         if ($run === null || $run->job === null) {
@@ -316,6 +322,19 @@ class ExecuteAgentRunJob implements ShouldQueue
         $incomingMetadata = (array) ($extra['metadata_json'] ?? []);
         $mergedMetadata = array_merge($baseMetadata, $incomingMetadata);
 
+        if ($status === AgentJobRun::STATUS_FAILED && ($mergedMetadata['rate_limit_detected'] ?? false) === true) {
+            $holdUntil = $this->resolveRateLimitHoldUntil($mergedMetadata, $finishedAt);
+            $mergedMetadata['rate_limit_hold_until'] = $holdUntil->toIso8601String();
+
+            if (! isset($extra['error_code']) || ! is_string($extra['error_code']) || trim((string) $extra['error_code']) === '') {
+                $extra['error_code'] = 'RATE_LIMITED';
+            }
+
+            if (! isset($extra['error_summary']) || ! is_string($extra['error_summary']) || trim((string) $extra['error_summary']) === '') {
+                $extra['error_summary'] = 'Runner hit an upstream usage/rate limit.';
+            }
+        }
+
         if (($mergedMetadata['approval_required'] ?? false) === true) {
             $mergedMetadata['approval_required'] = false;
             $mergedMetadata['approval_resolved_at'] = $finishedAt->toIso8601String();
@@ -342,6 +361,8 @@ class ExecuteAgentRunJob implements ShouldQueue
 
         $run->refresh();
 
+        $this->applyUsageLimitPolicy($run, $status);
+
         try {
             $writer = new RunEventWriter($run);
             $writer->appendLifecycle([
@@ -356,6 +377,64 @@ class ExecuteAgentRunJob implements ShouldQueue
         }
 
         $this->applyPathFailurePolicy($run);
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    private function resolveRateLimitHoldUntil(array $metadata, CarbonImmutable $fallbackFrom): CarbonImmutable
+    {
+        $defaultMinutes = max(1, (int) config('agent.rate_limit_default_hold_minutes', 15));
+
+        foreach (['rate_limit_hold_until', 'rate_limit_reset_at'] as $key) {
+            $candidate = $metadata[$key] ?? null;
+
+            if (! is_string($candidate) || trim($candidate) === '') {
+                continue;
+            }
+
+            try {
+                $parsed = CarbonImmutable::parse($candidate, 'UTC');
+                if ($parsed->greaterThan($fallbackFrom)) {
+                    return $parsed;
+                }
+            } catch (\Throwable) {
+                // Fall through to default hold.
+            }
+        }
+
+        return $fallbackFrom->addMinutes($defaultMinutes);
+    }
+
+    private function applyUsageLimitPolicy(AgentJobRun $run, string $status): void
+    {
+        if ($this->usageLimitState === null || $run->job === null) {
+            return;
+        }
+
+        if ($status === AgentJobRun::STATUS_SUCCEEDED) {
+            $this->usageLimitState->clearHold((int) $run->job->id);
+
+            return;
+        }
+
+        if ($status !== AgentJobRun::STATUS_FAILED) {
+            return;
+        }
+
+        $metadata = (array) ($run->metadata_json ?? []);
+        if (($metadata['rate_limit_detected'] ?? false) !== true) {
+            return;
+        }
+
+        $holdUntil = $this->resolveRateLimitHoldUntil($metadata, CarbonImmutable::now('UTC'));
+
+        $this->usageLimitState->upsertHold((int) $run->job->id, $holdUntil, [
+            'source_run_id' => (int) $run->id,
+            'detected_at' => $metadata['rate_limit_detected_at'] ?? null,
+            'reset_at' => $metadata['rate_limit_reset_at'] ?? null,
+            'excerpt' => $metadata['rate_limit_excerpt'] ?? null,
+        ]);
     }
 
     private function applyPathFailurePolicy(AgentJobRun $run): void

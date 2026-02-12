@@ -6,6 +6,7 @@ use App\Jobs\ExecuteAgentRunJob;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentRunEvent;
+use App\Models\AgentSystemState;
 use App\Models\SchedulerHeartbeat;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -150,6 +151,75 @@ class AgentApiWorkflowTest extends TestCase
         $this->postJson('/agent/api/v1/jobs/'.$job->id.'/run-now')
             ->assertStatus(409)
             ->assertJsonPath('error.code', 'RUN_OVERLAP_ACTIVE');
+    }
+
+    public function test_run_now_returns_conflict_when_job_is_rate_limited(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        Queue::fake();
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limited Run Now',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'command_template' => config('agent.default_templates.codex'),
+            'task_markdown_path' => $this->sandboxBase.'/tasks/rate-limited-run-now.md',
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        file_put_contents($job->task_markdown_path, "# rate limited\n");
+
+        AgentSystemState::query()->updateOrCreate(
+            ['key' => sprintf('job_rate_limit_hold_until:%d', $job->id)],
+            ['value' => now('UTC')->addMinutes(10)->toIso8601String(), 'updated_at' => now('UTC')]
+        );
+
+        $this->postJson('/agent/api/v1/jobs/'.$job->id.'/run-now')
+            ->assertStatus(409)
+            ->assertJsonPath('error.code', 'JOB_RATE_LIMITED');
+    }
+
+    public function test_run_now_can_ignore_rate_limit_hold_when_requested(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        Queue::fake();
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Ignore Rate Limit Hold',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'command_template' => config('agent.default_templates.codex'),
+            'task_markdown_path' => $this->sandboxBase.'/tasks/ignore-rate-limit.md',
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        file_put_contents($job->task_markdown_path, "# ignore hold\n");
+
+        AgentSystemState::query()->updateOrCreate(
+            ['key' => sprintf('job_rate_limit_hold_until:%d', $job->id)],
+            ['value' => now('UTC')->addMinutes(10)->toIso8601String(), 'updated_at' => now('UTC')]
+        );
+
+        $this->postJson('/agent/api/v1/jobs/'.$job->id.'/run-now', [
+            'ignore_rate_limit_hold' => true,
+        ])->assertStatus(202)
+            ->assertJsonPath('data.idempotent_replay', false);
+
+        Queue::assertPushed(ExecuteAgentRunJob::class);
     }
 
     public function test_stop_with_missing_pid_is_terminal_and_idempotent(): void

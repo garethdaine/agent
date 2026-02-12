@@ -22,6 +22,13 @@
   - mandatory acceptance scenarios are covered by feature tests and passing
   - endpoint status-code contract coverage includes `200/201/202/401/404/409/422/429/503`
   - release artifacts published under `docs/release/` (`phase10-test-report.md`, logs, screenshots)
+- Added usage/rate-limit management hardening:
+  - output-level rate-limit detection with parsed reset time metadata
+  - failed rate-limited runs now emit `error_code=RATE_LIMITED`
+  - temporary per-job hold state persisted in `agent_system_state` to suppress repeated scheduled failures until reset/default hold
+  - scheduler dispatch now records skipped runs with `skip_reason=rate_limited`
+  - run-now now returns `409 JOB_RATE_LIMITED` while hold is active (with optional `ignore_rate_limit_hold=true` override)
+  - monitor UI now surfaces rate-limit alerts and allows explicit "Run Anyway Now" override
 - DB compatibility smoke checks were executed on all supported engines:
   - SQLite (`php artisan test` / in-memory)
   - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)
@@ -32,7 +39,7 @@
   - structured log mirroring
   - unified `agent:prune` command (`--runs --events --jobs --audit`, dry-run, JSON)
   - chunked prune checkpoints + scheduled maintenance windows
-- Phase 9+ items remain pending by design.
+- Baseline phases and post-baseline operational hardening items above are implemented.
 
 ## Phase -1: Project Scaffold Setup
 - [x] Create Laravel 12 project at `/Users/garethdaine/Code/agent` if not already present.
@@ -272,4 +279,4 @@ Definition of done:
 - [x] Redaction and secret-handling policies are enforced.
 - [x] Prune/retention policies execute correctly with dry-run support.
 - [x] Versioned API contract and headers are enforced.
-- [ ] Required release artifacts are produced.
+- [x] Required release artifacts are produced.

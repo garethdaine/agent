@@ -435,6 +435,50 @@ class AgentDispatchDueCommandTest extends TestCase
         );
     }
 
+    public function test_dispatch_skips_due_window_when_job_is_temporarily_rate_limited(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limited-dispatch.md';
+        file_put_contents($taskFile, "# Rate Limited Dispatch\n");
+
+        $now = CarbonImmutable::now('UTC')->startOfMinute();
+        $cron = sprintf('%d %d %d %d %d', $now->minute, $now->hour, $now->day, $now->month, $now->dayOfWeek);
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limited Dispatch',
+            'description' => null,
+            'cron_expression' => $cron,
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        AgentSystemState::query()->updateOrCreate(
+            ['key' => sprintf('job_rate_limit_hold_until:%d', $job->id)],
+            ['value' => $now->addMinutes(20)->toIso8601String(), 'updated_at' => $now]
+        );
+
+        app(DispatchDueService::class)->dispatch($now);
+
+        $skipRun = AgentJobRun::query()
+            ->where('agent_job_id', $job->id)
+            ->where('trigger_type', AgentJobRun::TRIGGER_SCHEDULE)
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame(AgentJobRun::STATUS_SKIPPED, $skipRun->status);
+        $this->assertSame('rate_limited', $skipRun->metadata_json['skip_reason'] ?? null);
+        Queue::assertNothingPushed();
+    }
+
     public function test_duplicate_dispatch_is_idempotent_for_same_due_window(): void
     {
         Queue::fake();

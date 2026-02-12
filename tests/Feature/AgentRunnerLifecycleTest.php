@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\ExecuteAgentRunJob;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
+use App\Models\AgentSystemState;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -286,6 +287,72 @@ class AgentRunnerLifecycleTest extends TestCase
 
         $this->assertSame(AgentJobRun::STATUS_TIMED_OUT, $run->status);
         $this->assertSame('timeout', $metadata['termination_mode'] ?? null);
+    }
+
+    public function test_rate_limit_output_sets_rate_limited_error_and_job_hold(): void
+    {
+        $rateLimitedExec = $this->sandboxBase.'/bin/rate-limited-runner';
+        file_put_contents($rateLimitedExec, "#!/bin/sh\necho \"You've hit your limit · resets 3pm (Europe/London)\"\nexit 1\n");
+        chmod($rateLimitedExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $rateLimitedExec,
+            'codex' => $rateLimitedExec,
+            'custom' => $rateLimitedExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $rateLimitedExec.' -p {{task_markdown_path}}',
+            'codex' => $rateLimitedExec.' exec {{task_markdown_path}}',
+        ]);
+        config()->set('agent.rate_limit_default_hold_minutes', 15);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limit.md';
+        file_put_contents($taskFile, "# Rate Limit\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limited Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+        $state = AgentSystemState::query()->find(sprintf('job_rate_limit_hold_until:%d', $job->id));
+
+        $this->assertSame(AgentJobRun::STATUS_FAILED, $run->status);
+        $this->assertSame('RATE_LIMITED', $run->error_code);
+        $this->assertTrue((bool) ($metadata['rate_limit_detected'] ?? false));
+        $this->assertNotEmpty($metadata['rate_limit_hold_until'] ?? null);
+        $this->assertNotNull($state);
     }
 
     private function runExecuteAgentRunJob(int $runId): void

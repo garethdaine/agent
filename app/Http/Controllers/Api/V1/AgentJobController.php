@@ -11,6 +11,7 @@ use App\Models\AgentJobRun;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Agent\TaskMarkdownStorage;
+use App\Support\Agent\UsageLimitState;
 use Carbon\CarbonImmutable;
 use Cron\CronExpression;
 use Illuminate\Database\QueryException;
@@ -20,6 +21,8 @@ use Illuminate\Support\Facades\Cache;
 
 class AgentJobController extends Controller
 {
+    public function __construct(private UsageLimitState $usageLimitState) {}
+
     public function index(Request $request): JsonResponse
     {
         $query = $request->user()->agentJobs()->newQuery();
@@ -342,6 +345,7 @@ class AgentJobController extends Controller
     public function runNow(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
         $job = $request->user()->agentJobs()->withTrashed()->findOrFail($id);
+        $ignoreRateLimitHold = $request->boolean('ignore_rate_limit_hold', false);
 
         $fingerprint = hash('sha256', sprintf('run-now|%d|%d', $request->user()->id, $job->id));
         $cacheKey = 'agent:run-now:'.$fingerprint;
@@ -367,6 +371,19 @@ class AgentJobController extends Controller
                     'run_id' => (int) $existingRunId,
                 ],
             ], 202);
+        }
+
+        $activeHold = $this->usageLimitState->getActiveHold((int) $job->id);
+        if (! $ignoreRateLimitHold && $activeHold !== null) {
+            return ErrorEnvelope::make(
+                'JOB_RATE_LIMITED',
+                'This job is temporarily paused due to an upstream usage/rate limit.',
+                409,
+                [
+                    'job_id' => $job->id,
+                    'hold_until' => $activeHold['hold_until']->toIso8601String(),
+                ]
+            );
         }
 
         $hasOverlap = AgentJobRun::query()
@@ -462,6 +479,8 @@ class AgentJobController extends Controller
             $nextRunUtc = null;
         }
 
+        $activeHold = $this->usageLimitState->getActiveHold((int) $job->id);
+
         $payload = [
             'id' => $job->id,
             'name' => $job->name,
@@ -483,6 +502,8 @@ class AgentJobController extends Controller
             'active_run' => $active,
             'last_run_status' => $lastRun?->status,
             'last_run_finished_at' => optional($lastRun?->finished_at)?->toIso8601String(),
+            'rate_limit_hold_until' => $activeHold !== null ? $activeHold['hold_until']->toIso8601String() : null,
+            'rate_limit_hold_active' => $activeHold !== null,
         ];
 
         if ($includeTaskContent) {

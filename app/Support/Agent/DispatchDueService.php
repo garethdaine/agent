@@ -17,6 +17,7 @@ class DispatchDueService
     public function __construct(
         private ReconcileActiveRunsService $reconcileActiveRuns,
         private AuditLogger $auditLogger,
+        private UsageLimitState $usageLimitState,
     ) {}
 
     /**
@@ -53,6 +54,7 @@ class DispatchDueService
         $dispatchedCount = 0;
         $skippedOverlapCount = 0;
         $skippedCooldownCount = 0;
+        $skippedRateLimitedCount = 0;
         $errorCount = $reconcileError === null ? 0 : 1;
 
         foreach ($dispatchCandidates as $candidate) {
@@ -65,6 +67,8 @@ class DispatchDueService
                     $skippedOverlapCount++;
                 } elseif ($result === 'skipped_cooldown') {
                     $skippedCooldownCount++;
+                } elseif ($result === 'skipped_rate_limited') {
+                    $skippedRateLimitedCount++;
                 }
             } catch (\Throwable $throwable) {
                 report($throwable);
@@ -88,6 +92,7 @@ class DispatchDueService
                     'dispatched_count' => $dispatchedCount,
                     'skipped_overlap_count' => $skippedOverlapCount,
                     'skipped_cooldown_count' => $skippedCooldownCount,
+                    'skipped_rate_limited_count' => $skippedRateLimitedCount,
                     'error_count' => $errorCount,
                     'deferred_capacity_count' => $deferredCapacityCount,
                     'tick_started_at' => $tickStartedAt->toIso8601String(),
@@ -102,6 +107,7 @@ class DispatchDueService
             'dispatched_count' => $dispatchedCount,
             'skipped_overlap_count' => $skippedOverlapCount,
             'skipped_cooldown_count' => $skippedCooldownCount,
+            'skipped_rate_limited_count' => $skippedRateLimitedCount,
             'error_count' => $errorCount,
             'deferred_capacity_count' => $deferredCapacityCount,
             'watermark_minute_utc' => $scanTo->toIso8601String(),
@@ -287,6 +293,14 @@ class DispatchDueService
             $finishedAt = $tickTimestamp;
         }
 
+        $activeHold = $this->usageLimitState->getActiveHold((int) $job->id, $dueWindow);
+        if ($status !== AgentJobRun::STATUS_SKIPPED && $activeHold !== null) {
+            $status = AgentJobRun::STATUS_SKIPPED;
+            $metadata['skip_reason'] = 'rate_limited';
+            $metadata['rate_limit_hold_until'] = $activeHold['hold_until']->toIso8601String();
+            $finishedAt = $tickTimestamp;
+        }
+
         if ($status !== AgentJobRun::STATUS_SKIPPED && $this->isInCooldown($job, $dueWindow)) {
             $status = AgentJobRun::STATUS_SKIPPED;
             $metadata['skip_reason'] = 'cooldown';
@@ -333,7 +347,12 @@ class DispatchDueService
             'at' => $tickTimestamp->toIso8601String(),
         ]);
 
-        return $skipReason === 'overlap' ? 'skipped_overlap' : 'skipped_cooldown';
+        return match ($skipReason) {
+            'overlap' => 'skipped_overlap',
+            'cooldown' => 'skipped_cooldown',
+            'rate_limited' => 'skipped_rate_limited',
+            default => 'skipped_cooldown',
+        };
     }
 
     private function isInCooldown(AgentJob $job, CarbonImmutable $dueWindow): bool

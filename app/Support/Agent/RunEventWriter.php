@@ -28,6 +28,8 @@ class RunEventWriter
 
     private const APPROVAL_PATTERN = '/need permission|requires permission|could you approve|approval/i';
 
+    private const RATE_LIMIT_PATTERN = '/hit your limit|rate limit|too many requests|quota exceeded|usage limit/i';
+
     public function __construct(private AgentJobRun $run)
     {
         $this->nextSequence = (int) (AgentRunEvent::query()
@@ -89,6 +91,11 @@ class RunEventWriter
         if (($eventType === 'stdout' || $eventType === 'stderr')
             && preg_match(self::APPROVAL_PATTERN, $chunk) === 1) {
             $this->markApprovalRequired($chunk);
+        }
+
+        if (($eventType === 'stdout' || $eventType === 'stderr')
+            && preg_match(self::RATE_LIMIT_PATTERN, $chunk) === 1) {
+            $this->markRateLimitDetected($chunk);
         }
 
         if ($redactionCount > 0 && ! $this->redactionNoticeEmitted) {
@@ -279,5 +286,121 @@ class RunEventWriter
         $metadata['approval_excerpt'] = substr(trim($excerpt), 0, 1000);
 
         $this->run->metadata_json = $metadata;
+    }
+
+    private function markRateLimitDetected(string $excerpt): void
+    {
+        $metadata = (array) ($this->run->metadata_json ?? []);
+
+        if (($metadata['rate_limit_detected'] ?? false) === true) {
+            return;
+        }
+
+        $metadata['rate_limit_detected'] = true;
+        $metadata['rate_limit_detected_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+        $metadata['rate_limit_excerpt'] = substr(trim($excerpt), 0, 1000);
+
+        $reset = $this->extractRateLimitReset($excerpt);
+
+        if ($reset !== null) {
+            $metadata['rate_limit_reset_at'] = $reset['reset_at']->toIso8601String();
+            $metadata['rate_limit_reset_timezone'] = $reset['timezone'];
+        }
+
+        $this->run->metadata_json = $metadata;
+
+        $payload = [
+            'type' => 'rate_limit_detected',
+            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+        ];
+
+        if (isset($metadata['rate_limit_reset_at'])) {
+            $payload['reset_at'] = $metadata['rate_limit_reset_at'];
+            $payload['timezone'] = $metadata['rate_limit_reset_timezone'] ?? 'UTC';
+        }
+
+        $this->appendLifecycle($payload);
+    }
+
+    /**
+     * @return array{reset_at:CarbonImmutable,timezone:string}|null
+     */
+    private function extractRateLimitReset(string $excerpt): ?array
+    {
+        $timezone = $this->extractTimezoneFromExcerpt($excerpt)
+            ?? (is_string($this->run->job?->timezone) ? $this->run->job->timezone : null)
+            ?? 'UTC';
+
+        if (! in_array($timezone, timezone_identifiers_list(), true)) {
+            $timezone = 'UTC';
+        }
+
+        if (preg_match('/resets?\s+(?:at\s+)?([0-9]{4}-[0-9]{2}-[0-9]{2}[T ][^,\s]+)/i', $excerpt, $matches) === 1) {
+            try {
+                return [
+                    'reset_at' => CarbonImmutable::parse($matches[1], $timezone)->setTimezone('UTC'),
+                    'timezone' => $timezone,
+                ];
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        if (preg_match('/resets?\s+(?:at\s+)?([0-9]{1,2})(?::([0-9]{2}))?\s*(am|pm)\b/i', $excerpt, $matches) === 1) {
+            $hour = (int) $matches[1];
+            $minute = isset($matches[2]) ? (int) $matches[2] : 0;
+            $meridiem = strtolower((string) $matches[3]);
+
+            if ($hour < 1 || $hour > 12 || $minute < 0 || $minute > 59) {
+                return null;
+            }
+
+            if ($meridiem === 'pm' && $hour !== 12) {
+                $hour += 12;
+            }
+            if ($meridiem === 'am' && $hour === 12) {
+                $hour = 0;
+            }
+
+            $nowTz = CarbonImmutable::now($timezone);
+            $candidate = $nowTz->setTime($hour, $minute, 0);
+
+            if ($candidate->lessThanOrEqualTo($nowTz)) {
+                $candidate = $candidate->addDay();
+            }
+
+            return [
+                'reset_at' => $candidate->setTimezone('UTC'),
+                'timezone' => $timezone,
+            ];
+        }
+
+        if (preg_match('/resets?\s+(?:at\s+)?([01]?[0-9]|2[0-3]):([0-5][0-9])\b/i', $excerpt, $matches) === 1) {
+            $hour = (int) $matches[1];
+            $minute = (int) $matches[2];
+
+            $nowTz = CarbonImmutable::now($timezone);
+            $candidate = $nowTz->setTime($hour, $minute, 0);
+
+            if ($candidate->lessThanOrEqualTo($nowTz)) {
+                $candidate = $candidate->addDay();
+            }
+
+            return [
+                'reset_at' => $candidate->setTimezone('UTC'),
+                'timezone' => $timezone,
+            ];
+        }
+
+        return null;
+    }
+
+    private function extractTimezoneFromExcerpt(string $excerpt): ?string
+    {
+        if (preg_match('/\(([A-Za-z_]+\/[A-Za-z_]+)\)/', $excerpt, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return null;
     }
 }

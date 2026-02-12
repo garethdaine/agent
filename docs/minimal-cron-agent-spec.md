@@ -106,6 +106,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
   - `redaction_count: 0`
 - optional metadata keys:
   - `termination_mode`, `truncate_bytes`, `skip_reason`, `reconcile_reason`, `pid_not_found`
+  - `rate_limit_detected`, `rate_limit_detected_at`, `rate_limit_excerpt`, `rate_limit_reset_at`, `rate_limit_hold_until`
 - `created_at`, `updated_at`
 
 ### 5.3 `agent_run_events`
@@ -125,6 +126,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
   - `dispatched_count`
   - `skipped_overlap_count`
   - `skipped_cooldown_count`
+  - `skipped_rate_limited_count`
   - `error_count`
   - `tick_started_at`
   - `tick_finished_at`
@@ -279,6 +281,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
 - Cooldown uses previous non-skipped run `finished_at`.
 - Cooldown applies after `succeeded|failed|timed_out|killed`.
 - Scheduled overlap/cooldown blocks create `skipped` run rows.
+- Active job rate-limit hold also creates `skipped` run rows with `skip_reason=rate_limited`.
 - `skipped` rows count in run history and retention totals.
 - If both overlap and cooldown apply:
   - primary skip reason: `overlap`
@@ -287,8 +290,11 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
   - allowed even when job is disabled
   - bypasses cooldown
   - does not bypass overlap
+  - blocked when an active per-job usage/rate-limit hold exists
+  - rate-limit hold block response: `409` with `JOB_RATE_LIMITED`
   - blocked on active overlap states, including `queued`
   - overlap block response: `409` with `RUN_OVERLAP_ACTIVE`
+  - optional override via `ignore_rate_limit_hold=true`
 - `run now` idempotency:
   - key fingerprint: `sha256("run-now|user_id|job_id")`
   - state stored in Redis cache
@@ -324,6 +330,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
   - user stop => `killed`
   - spawn exception => `failed`
   - external termination => `failed` with signal metadata
+  - when output indicates upstream usage/rate limiting, terminal failed run uses `error_code=RATE_LIMITED`
 - `skipped` bookkeeping:
   - `started_at=null`
   - `pid=null`
@@ -599,6 +606,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
 - Scheduler dispatches due windows once per idempotency key.
 - Delayed scheduler performs bounded backfill only.
 - Overlap/cooldown produce deterministic skipped runs with reasons.
+- Usage/rate-limit detection produces deterministic temporary hold behavior and `rate_limited` skip reasons.
 - Run-now bypasses cooldown but not overlap and supports 3-second idempotent replay.
 - Runner captures PID, statuses, stdout/stderr events, and terminal outcomes correctly.
 - Stop semantics are idempotent and obey escalation rules.

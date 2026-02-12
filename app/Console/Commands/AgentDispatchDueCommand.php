@@ -30,10 +30,11 @@ class AgentDispatchDueCommand extends Command
         $result = $dispatchDueService->dispatch();
 
         $this->info(sprintf(
-            'Dispatched=%d skipped_overlap=%d skipped_cooldown=%d deferred=%d errors=%d watermark=%s',
+            'Dispatched=%d skipped_overlap=%d skipped_cooldown=%d skipped_rate_limited=%d deferred=%d errors=%d watermark=%s',
             $result['dispatched_count'],
             $result['skipped_overlap_count'],
             $result['skipped_cooldown_count'],
+            $result['skipped_rate_limited_count'] ?? 0,
             $result['deferred_capacity_count'],
             $result['error_count'],
             $result['watermark_minute_utc'],

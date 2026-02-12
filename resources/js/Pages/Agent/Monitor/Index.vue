@@ -17,6 +17,9 @@ const isLoadingMonitor = ref(false);
 const approvalBusy = ref(false);
 const approvalError = ref('');
 const approvalModalRunId = ref(null);
+const rateLimitBusy = ref(false);
+const rateLimitError = ref('');
+const rateLimitModalRunId = ref(null);
 
 const BASE_POLL_MS = 2000;
 const INACTIVE_POLL_MS = 10000;
@@ -30,6 +33,7 @@ const consecutiveFailureWarning = computed(() => failureCount.value >= 3);
 const activeRuns = computed(() => runs.value.filter((run) => ACTIVE_RUN_STATUSES.includes(run.status)));
 const selectedRun = computed(() => runs.value.find((run) => run.id === selectedRunId.value) ?? null);
 const approvalModalRun = computed(() => runs.value.find((run) => run.id === approvalModalRunId.value) ?? null);
+const rateLimitModalRun = computed(() => runs.value.find((run) => run.id === rateLimitModalRunId.value) ?? null);
 const selectedRunNoOutputSeconds = computed(() => {
     const run = selectedRun.value;
 
@@ -71,6 +75,36 @@ const approvalStateForRun = (run) => {
 const runHasApproval = (run) => approvalStateForRun(run) !== null;
 const approvalModalState = computed(() => approvalStateForRun(approvalModalRun.value));
 
+const rateLimitStateForRun = (run) => {
+    if (!run) {
+        return null;
+    }
+
+    const metadata = run.metadata_json ?? {};
+    if (metadata.rate_limit_detected !== true) {
+        return null;
+    }
+
+    const holdUntilRaw = metadata.rate_limit_hold_until ?? metadata.rate_limit_reset_at ?? null;
+    let holdUntil = null;
+    let holdActive = false;
+
+    if (typeof holdUntilRaw === 'string' && holdUntilRaw.trim() !== '') {
+        holdUntil = holdUntilRaw;
+        const parsed = new Date(holdUntilRaw).getTime();
+        holdActive = Number.isFinite(parsed) && parsed > Date.now();
+    }
+
+    return {
+        excerpt: String(metadata.rate_limit_excerpt ?? 'Upstream usage/rate limit detected.'),
+        holdUntil,
+        holdActive,
+    };
+};
+
+const runHasRateLimit = (run) => rateLimitStateForRun(run) !== null;
+const rateLimitModalState = computed(() => rateLimitStateForRun(rateLimitModalRun.value));
+
 const openApprovalModal = (run) => {
     approvalError.value = '';
     approvalModalRunId.value = run.id;
@@ -83,6 +117,20 @@ const openApprovalModal = (run) => {
 const closeApprovalModal = () => {
     approvalModalRunId.value = null;
     approvalError.value = '';
+};
+
+const openRateLimitModal = (run) => {
+    rateLimitError.value = '';
+    rateLimitModalRunId.value = run.id;
+
+    if (selectedRunId.value !== run.id) {
+        selectRun(run.id);
+    }
+};
+
+const closeRateLimitModal = () => {
+    rateLimitModalRunId.value = null;
+    rateLimitError.value = '';
 };
 
 const queueLag = computed(() => {
@@ -194,6 +242,13 @@ const loadMonitor = async (force = false) => {
             const modalRun = runs.value.find((run) => run.id === approvalModalRunId.value) ?? null;
             if (!modalRun || !runHasApproval(modalRun)) {
                 closeApprovalModal();
+            }
+        }
+
+        if (rateLimitModalRunId.value) {
+            const modalRun = runs.value.find((run) => run.id === rateLimitModalRunId.value) ?? null;
+            if (!modalRun || !runHasRateLimit(modalRun)) {
+                closeRateLimitModal();
             }
         }
 
@@ -331,6 +386,31 @@ const denyApprovalRun = async () => {
     }
 };
 
+const runAnywayAfterRateLimit = async () => {
+    const run = rateLimitModalRun.value;
+    if (!run) {
+        return;
+    }
+
+    rateLimitBusy.value = true;
+    rateLimitError.value = '';
+
+    try {
+        await axios.post(`/agent/api/v1/jobs/${run.agent_job_id}/run-now`, {}, {
+            params: {
+                ignore_rate_limit_hold: 1,
+            },
+        });
+
+        await loadMonitor(true);
+        closeRateLimitModal();
+    } catch (error) {
+        rateLimitError.value = error?.response?.data?.error?.message ?? error?.message ?? 'Could not dispatch run.';
+    } finally {
+        rateLimitBusy.value = false;
+    }
+};
+
 const selectRun = async (runId) => {
     selectedRunId.value = runId;
     events.value = [];
@@ -437,14 +517,23 @@ onBeforeUnmount(() => {
                                     <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-200">#{{ run.id }} (job {{ run.agent_job_id }})</td>
                                     <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-200">{{ run.status }}</td>
                                     <td class="px-4 py-2 text-xs">
-                                        <button
-                                            v-if="runHasApproval(run)"
-                                            class="rounded border border-amber-500 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100"
-                                            @click.stop="openApprovalModal(run)"
-                                        >
-                                            Approval
-                                        </button>
-                                        <span v-else class="text-gray-400">-</span>
+                                        <div class="flex items-center gap-1">
+                                            <button
+                                                v-if="runHasApproval(run)"
+                                                class="rounded border border-amber-500 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100"
+                                                @click.stop="openApprovalModal(run)"
+                                            >
+                                                Approval
+                                            </button>
+                                            <button
+                                                v-if="runHasRateLimit(run)"
+                                                class="rounded border border-red-500 bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100"
+                                                @click.stop="openRateLimitModal(run)"
+                                            >
+                                                Rate limit
+                                            </button>
+                                            <span v-if="!runHasApproval(run) && !runHasRateLimit(run)" class="text-gray-400">-</span>
+                                        </div>
                                     </td>
                                     <td class="px-4 py-2 text-xs text-gray-500">{{ run.created_at }}</td>
                                     <td class="px-4 py-2 text-right text-xs">
@@ -520,6 +609,50 @@ onBeforeUnmount(() => {
                             @click="denyApprovalRun"
                         >
                             Deny (Stop Run)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="rateLimitModalState && rateLimitModalRun" class="fixed inset-0 z-40 flex items-center justify-center bg-gray-900/50 p-4">
+                <div class="w-full max-w-2xl rounded-lg border border-red-300 bg-white p-5 shadow-xl dark:border-red-900/70 dark:bg-gray-900">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-red-800 dark:text-red-300">Rate Limit Detected</h3>
+                            <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                                Run #{{ rateLimitModalRun.id }} (job {{ rateLimitModalRun.agent_job_id }}) hit an upstream usage/rate limit.
+                            </p>
+                        </div>
+                        <button class="rounded border border-gray-300 px-2 py-1 text-xs" @click="closeRateLimitModal">Close</button>
+                    </div>
+
+                    <div class="mt-4 rounded-md border border-gray-200 bg-red-50/50 p-3 text-sm text-red-900 dark:border-gray-700 dark:bg-red-950/30 dark:text-red-200">
+                        <p class="whitespace-pre-wrap break-words">{{ rateLimitModalState.excerpt }}</p>
+                    </div>
+
+                    <p v-if="rateLimitModalState.holdUntil" class="mt-3 text-xs text-gray-700 dark:text-gray-300">
+                        Hold until: <span class="font-semibold">{{ rateLimitModalState.holdUntil }}</span>
+                        <span v-if="rateLimitModalState.holdActive"> (active)</span>
+                    </p>
+                    <p v-else class="mt-3 text-xs text-gray-700 dark:text-gray-300">
+                        No reset time was parsed from output. Default hold policy applies.
+                    </p>
+                    <p v-if="rateLimitError" class="mt-2 text-xs text-red-700 dark:text-red-300">{{ rateLimitError }}</p>
+
+                    <div class="mt-4 flex items-center gap-2">
+                        <button
+                            class="rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="rateLimitBusy"
+                            @click="runAnywayAfterRateLimit"
+                        >
+                            {{ rateLimitBusy ? 'Dispatching…' : 'Run Anyway Now' }}
+                        </button>
+                        <button
+                            class="rounded border border-red-600 px-3 py-1.5 text-xs font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-300"
+                            :disabled="rateLimitBusy"
+                            @click="closeRateLimitModal"
+                        >
+                            Wait Until Reset
                         </button>
                     </div>
                 </div>

@@ -44,4 +44,6 @@ return [
     'env_max_keys' => 50,
     'env_max_value_length' => 1024,
     'env_max_payload_bytes' => 16 * 1024,
+
+    'rate_limit_default_hold_minutes' => (int) env('AGENT_RATE_LIMIT_DEFAULT_HOLD_MINUTES', 15),
 ];
