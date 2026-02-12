@@ -17,7 +17,13 @@ class AgentDispatchDueCommand extends Command
     public function handle(DispatchDueService $dispatchDueService, ReconcileActiveRunsService $reconcile): int
     {
         if (! self::$bootReconciled) {
-            $reconcile->reconcile('boot');
+            try {
+                $reconcile->reconcile('boot');
+            } catch (\Throwable $throwable) {
+                report($throwable);
+                $this->warn('Boot reconcile failed; continuing with dispatch tick.');
+            }
+
             self::$bootReconciled = true;
         }
 

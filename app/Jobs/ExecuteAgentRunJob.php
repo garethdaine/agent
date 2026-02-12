@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\AgentJobRun;
 use App\Support\Agent\CommandTemplateRenderer;
+use App\Support\Agent\Duration;
 use App\Support\Agent\RunEventWriter;
 use App\Support\Agent\RunStateTransitionService;
 use App\Support\Agent\RuntimeValidation;
@@ -39,218 +40,228 @@ class ExecuteAgentRunJob implements ShouldQueue
             return;
         }
 
-        $movedToStarting = $transitions->transition(
-            (int) $run->id,
-            [AgentJobRun::STATUS_QUEUED],
-            AgentJobRun::STATUS_STARTING
-        );
-
-        if (! $movedToStarting) {
-            return;
-        }
-
-        $run->refresh();
-
-        $writer = new RunEventWriter($run);
-        $writer->appendLifecycle([
-            'type' => 'state_transition',
-            'from' => AgentJobRun::STATUS_QUEUED,
-            'to' => AgentJobRun::STATUS_STARTING,
-            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
-        ]);
-
-        $runtimeCheck = $runtimeValidation->validate($run->job);
-
-        if (! $runtimeCheck['ok']) {
-            $this->finalizeTerminal(
-                $run,
-                $transitions,
-                AgentJobRun::STATUS_FAILED,
-                [
-                    'resolved_executable_path' => null,
-                    'error_code' => $runtimeCheck['error_code'],
-                    'error_summary' => $runtimeCheck['error_summary'],
-                ]
-            );
-
-            return;
-        }
-
-        $run->resolved_executable_path = $runtimeCheck['resolved_executable_path'];
-        $run->job->last_validated_executable_path = $runtimeCheck['resolved_executable_path'];
-        $run->job->save();
-
-        $tokens = $renderer->renderTokens($run->job, $run);
-        $env = $this->mergedEnvironment($run);
-
-        $process = new Process($tokens, $run->job->working_directory, $env);
-        $process->setTimeout(null);
-
-        $startedAt = CarbonImmutable::now('UTC');
-        $startedAtMonotonicNs = hrtime(true);
-        $stopRequestedAt = null;
-        $timedOut = false;
-        $terminationMode = null;
-
         try {
-            $process->start();
-        } catch (\Throwable $throwable) {
-            $this->finalizeTerminal(
-                $run,
-                $transitions,
-                AgentJobRun::STATUS_FAILED,
-                [
-                    'resolved_executable_path' => $run->resolved_executable_path,
-                    'error_code' => 'PROCESS_START_FAILED',
-                    'error_summary' => $throwable->getMessage(),
-                ]
+            $movedToStarting = $transitions->transition(
+                (int) $run->id,
+                [AgentJobRun::STATUS_QUEUED],
+                AgentJobRun::STATUS_STARTING
             );
 
-            return;
-        }
-
-        $movedToRunning = $transitions->transition(
-            (int) $run->id,
-            [AgentJobRun::STATUS_STARTING],
-            AgentJobRun::STATUS_RUNNING,
-            [
-                'pid' => $process->getPid(),
-                'started_at' => $startedAt,
-            ]
-        );
-
-        if (! $movedToRunning) {
-            return;
-        }
-
-        $run->refresh();
-
-        $writer->appendLifecycle([
-            'type' => 'state_transition',
-            'from' => AgentJobRun::STATUS_STARTING,
-            'to' => AgentJobRun::STATUS_RUNNING,
-            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
-            'pid' => $run->pid,
-        ]);
-
-        while ($process->isRunning()) {
-            $stdout = $process->getIncrementalOutput();
-            if ($stdout !== '') {
-                $writer->appendOutput('stdout', $stdout);
-            }
-
-            $stderr = $process->getIncrementalErrorOutput();
-            if ($stderr !== '') {
-                $writer->appendOutput('stderr', $stderr);
+            if (! $movedToStarting) {
+                return;
             }
 
             $run->refresh();
 
-            if ($run->status === AgentJobRun::STATUS_STOPPING) {
-                if ($stopRequestedAt === null) {
-                    $stopRequestedAt = CarbonImmutable::now('UTC');
-                    $terminationMode = 'user_stop';
+            $writer = new RunEventWriter($run);
+            $writer->appendLifecycle([
+                'type' => 'state_transition',
+                'from' => AgentJobRun::STATUS_QUEUED,
+                'to' => AgentJobRun::STATUS_STARTING,
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ]);
+
+            $runtimeCheck = $runtimeValidation->validate($run->job);
+
+            if (! $runtimeCheck['ok']) {
+                $this->finalizeTerminal(
+                    $run,
+                    $transitions,
+                    AgentJobRun::STATUS_FAILED,
+                    [
+                        'resolved_executable_path' => null,
+                        'error_code' => $runtimeCheck['error_code'],
+                        'error_summary' => $runtimeCheck['error_summary'],
+                    ]
+                );
+
+                return;
+            }
+
+            $run->resolved_executable_path = $runtimeCheck['resolved_executable_path'];
+            $run->job->last_validated_executable_path = $runtimeCheck['resolved_executable_path'];
+            $run->job->save();
+
+            $tokens = $renderer->renderTokens($run->job, $run);
+            $env = $this->mergedEnvironment($run);
+
+            $process = new Process($tokens, $run->job->working_directory, $env);
+            $process->setTimeout(null);
+
+            $startedAt = CarbonImmutable::now('UTC');
+            $startedAtMonotonicNs = hrtime(true);
+            $stopRequestedAt = null;
+            $timedOut = false;
+            $terminationMode = null;
+
+            try {
+                $process->start();
+            } catch (\Throwable $throwable) {
+                $this->finalizeTerminal(
+                    $run,
+                    $transitions,
+                    AgentJobRun::STATUS_FAILED,
+                    [
+                        'resolved_executable_path' => $run->resolved_executable_path,
+                        'error_code' => 'PROCESS_START_FAILED',
+                        'error_summary' => $throwable->getMessage(),
+                    ]
+                );
+
+                return;
+            }
+
+            $movedToRunning = $transitions->transition(
+                (int) $run->id,
+                [AgentJobRun::STATUS_STARTING],
+                AgentJobRun::STATUS_RUNNING,
+                [
+                    'pid' => $process->getPid(),
+                    'started_at' => $startedAt,
+                ]
+            );
+
+            if (! $movedToRunning) {
+                return;
+            }
+
+            $run->refresh();
+
+            $writer->appendLifecycle([
+                'type' => 'state_transition',
+                'from' => AgentJobRun::STATUS_STARTING,
+                'to' => AgentJobRun::STATUS_RUNNING,
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'pid' => $run->pid,
+            ]);
+
+            while ($process->isRunning()) {
+                $stdout = $process->getIncrementalOutput();
+                if ($stdout !== '') {
+                    $writer->appendOutput('stdout', $stdout);
+                }
+
+                $stderr = $process->getIncrementalErrorOutput();
+                if ($stderr !== '') {
+                    $writer->appendOutput('stderr', $stderr);
+                }
+
+                $run->refresh();
+
+                if ($run->status === AgentJobRun::STATUS_STOPPING) {
+                    if ($stopRequestedAt === null) {
+                        $stopRequestedAt = CarbonImmutable::now('UTC');
+                        $terminationMode = 'user_stop';
+                        $this->signalProcess($process->getPid(), SIGTERM);
+                    } elseif (CarbonImmutable::now('UTC')->greaterThanOrEqualTo($stopRequestedAt->addSeconds(10))) {
+                        $sent = $this->signalProcess($process->getPid(), SIGKILL);
+                        if (! $sent && $process->isRunning()) {
+                            $this->finalizeTerminal(
+                                $run,
+                                $transitions,
+                                AgentJobRun::STATUS_FAILED,
+                                [
+                                    'error_code' => 'TERMINATION_FAILED',
+                                    'error_summary' => 'SIGKILL could not be delivered to the target process.',
+                                    'metadata_json' => [
+                                        ...((array) ($run->metadata_json ?? [])),
+                                        'termination_mode' => 'sigkill_failed',
+                                    ],
+                                    'resolved_executable_path' => $run->resolved_executable_path,
+                                ]
+                            );
+
+                            return;
+                        }
+
+                        $terminationMode = 'sigkill';
+                    }
+                }
+
+                $elapsedSeconds = (int) max(0, floor((hrtime(true) - $startedAtMonotonicNs) / 1_000_000_000));
+
+                if ($elapsedSeconds >= (int) $run->job->max_runtime_seconds) {
+                    $timedOut = true;
+                    $terminationMode = 'timeout';
                     $this->signalProcess($process->getPid(), SIGTERM);
-                } elseif (CarbonImmutable::now('UTC')->greaterThanOrEqualTo($stopRequestedAt->addSeconds(10))) {
-                    $sent = $this->signalProcess($process->getPid(), SIGKILL);
-                    if (! $sent && $process->isRunning()) {
-                        $this->finalizeTerminal(
-                            $run,
-                            $transitions,
-                            AgentJobRun::STATUS_FAILED,
-                            [
-                                'error_code' => 'TERMINATION_FAILED',
-                                'error_summary' => 'SIGKILL could not be delivered to the target process.',
-                                'metadata_json' => [
-                                    ...((array) ($run->metadata_json ?? [])),
-                                    'termination_mode' => 'sigkill_failed',
-                                ],
-                                'resolved_executable_path' => $run->resolved_executable_path,
-                            ]
-                        );
 
-                        return;
+                    usleep(1_000_000);
+
+                    if ($process->isRunning()) {
+                        $sent = $this->signalProcess($process->getPid(), SIGKILL);
+                        if (! $sent && $process->isRunning()) {
+                            $this->finalizeTerminal(
+                                $run,
+                                $transitions,
+                                AgentJobRun::STATUS_FAILED,
+                                [
+                                    'error_code' => 'TERMINATION_FAILED',
+                                    'error_summary' => 'SIGKILL could not be delivered after timeout escalation.',
+                                    'metadata_json' => [
+                                        ...((array) ($run->metadata_json ?? [])),
+                                        'termination_mode' => 'timeout_sigkill_failed',
+                                    ],
+                                    'resolved_executable_path' => $run->resolved_executable_path,
+                                ]
+                            );
+
+                            return;
+                        }
                     }
 
-                    $terminationMode = 'sigkill';
-                }
-            }
-
-            $elapsedSeconds = (int) max(0, floor((hrtime(true) - $startedAtMonotonicNs) / 1_000_000_000));
-
-            if ($elapsedSeconds >= (int) $run->job->max_runtime_seconds) {
-                $timedOut = true;
-                $terminationMode = 'timeout';
-                $this->signalProcess($process->getPid(), SIGTERM);
-
-                usleep(1_000_000);
-
-                if ($process->isRunning()) {
-                    $sent = $this->signalProcess($process->getPid(), SIGKILL);
-                    if (! $sent && $process->isRunning()) {
-                        $this->finalizeTerminal(
-                            $run,
-                            $transitions,
-                            AgentJobRun::STATUS_FAILED,
-                            [
-                                'error_code' => 'TERMINATION_FAILED',
-                                'error_summary' => 'SIGKILL could not be delivered after timeout escalation.',
-                                'metadata_json' => [
-                                    ...((array) ($run->metadata_json ?? [])),
-                                    'termination_mode' => 'timeout_sigkill_failed',
-                                ],
-                                'resolved_executable_path' => $run->resolved_executable_path,
-                            ]
-                        );
-
-                        return;
-                    }
+                    break;
                 }
 
-                break;
+                usleep(250_000);
             }
 
-            usleep(250_000);
+            $remainingOut = $process->getIncrementalOutput();
+            if ($remainingOut !== '') {
+                $writer->appendOutput('stdout', $remainingOut);
+            }
+
+            $remainingErr = $process->getIncrementalErrorOutput();
+            if ($remainingErr !== '') {
+                $writer->appendOutput('stderr', $remainingErr);
+            }
+
+            $run->refresh();
+
+            if (in_array($run->status, AgentJobRun::TERMINAL_STATUSES, true)) {
+                return;
+            }
+
+            $exitCode = $process->getExitCode();
+            $finalStatus = AgentJobRun::STATUS_FAILED;
+
+            if ($timedOut) {
+                $finalStatus = AgentJobRun::STATUS_TIMED_OUT;
+            } elseif ($run->status === AgentJobRun::STATUS_STOPPING) {
+                $finalStatus = AgentJobRun::STATUS_KILLED;
+            } elseif ($exitCode === 0) {
+                $finalStatus = AgentJobRun::STATUS_SUCCEEDED;
+            }
+
+            $metadata = (array) ($run->metadata_json ?? []);
+            if ($terminationMode !== null) {
+                $metadata['termination_mode'] = $terminationMode;
+            }
+
+            $this->finalizeTerminal(
+                $run,
+                $transitions,
+                $finalStatus,
+                [
+                    'exit_code' => $exitCode,
+                    'signal' => $process->getTermSignal(),
+                    'metadata_json' => $metadata,
+                    'resolved_executable_path' => $run->resolved_executable_path,
+                ]
+            );
+        } catch (\Throwable $throwable) {
+            report($throwable);
+            $this->failRunSafely($run, $transitions, $throwable);
         }
-
-        $remainingOut = $process->getIncrementalOutput();
-        if ($remainingOut !== '') {
-            $writer->appendOutput('stdout', $remainingOut);
-        }
-
-        $remainingErr = $process->getIncrementalErrorOutput();
-        if ($remainingErr !== '') {
-            $writer->appendOutput('stderr', $remainingErr);
-        }
-
-        $run->refresh();
-
-        if (in_array($run->status, AgentJobRun::TERMINAL_STATUSES, true)) {
-            return;
-        }
-
-        $exitCode = $process->getExitCode();
-        $finalStatus = AgentJobRun::STATUS_FAILED;
-
-        if ($timedOut) {
-            $finalStatus = AgentJobRun::STATUS_TIMED_OUT;
-        } elseif ($run->status === AgentJobRun::STATUS_STOPPING) {
-            $finalStatus = AgentJobRun::STATUS_KILLED;
-        } elseif ($exitCode === 0) {
-            $finalStatus = AgentJobRun::STATUS_SUCCEEDED;
-        }
-
-        $metadata = (array) ($run->metadata_json ?? []);
-        if ($terminationMode !== null) {
-            $metadata['termination_mode'] = $terminationMode;
-        }
-
-        $this->finalizeTerminal($run, $transitions, $finalStatus, [
-            'exit_code' => $exitCode,
-            'signal' => $process->getTermSignal(),
-            'metadata_json' => $metadata,
-            'resolved_executable_path' => $run->resolved_executable_path,
-        ]);
     }
 
     /**
@@ -291,11 +302,7 @@ class ExecuteAgentRunJob implements ShouldQueue
         }
 
         $finishedAt = CarbonImmutable::now('UTC');
-        $durationMs = 0;
-
-        if ($run->started_at !== null) {
-            $durationMs = max(0, CarbonImmutable::parse($run->started_at, 'UTC')->diffInMilliseconds($finishedAt));
-        }
+        $durationMs = Duration::millisecondsBetween($run->started_at, $finishedAt);
 
         $payload = array_merge($extra, [
             'finished_at' => $finishedAt,
@@ -315,14 +322,18 @@ class ExecuteAgentRunJob implements ShouldQueue
 
         $run->refresh();
 
-        $writer = new RunEventWriter($run);
-        $writer->appendLifecycle([
-            'type' => 'state_transition',
-            'to' => $status,
-            'at' => $finishedAt->toIso8601String(),
-            'exit_code' => $run->exit_code,
-            'signal' => $run->signal,
-        ]);
+        try {
+            $writer = new RunEventWriter($run);
+            $writer->appendLifecycle([
+                'type' => 'state_transition',
+                'to' => $status,
+                'at' => $finishedAt->toIso8601String(),
+                'exit_code' => $run->exit_code,
+                'signal' => $run->signal,
+            ]);
+        } catch (\Throwable $throwable) {
+            report($throwable);
+        }
 
         $this->applyPathFailurePolicy($run);
     }
@@ -376,5 +387,31 @@ class ExecuteAgentRunJob implements ShouldQueue
         }
 
         return @posix_kill($pid, $signal);
+    }
+
+    private function failRunSafely(AgentJobRun $run, RunStateTransitionService $transitions, \Throwable $throwable): void
+    {
+        $run->refresh();
+
+        if (in_array($run->status, AgentJobRun::TERMINAL_STATUSES, true)) {
+            return;
+        }
+
+        $finishedAt = CarbonImmutable::now('UTC');
+        $metadata = (array) ($run->metadata_json ?? []);
+        $metadata['termination_mode'] = 'runner_exception';
+
+        $transitions->transition(
+            (int) $run->id,
+            AgentJobRun::ACTIVE_STATUSES,
+            AgentJobRun::STATUS_FAILED,
+            [
+                'finished_at' => $finishedAt,
+                'duration_ms' => Duration::millisecondsBetween($run->started_at, $finishedAt),
+                'error_code' => 'RUNNER_EXCEPTION',
+                'error_summary' => substr($throwable->getMessage(), 0, 500),
+                'metadata_json' => $metadata,
+            ]
+        );
     }
 }

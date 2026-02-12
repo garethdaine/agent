@@ -24,7 +24,14 @@ class DispatchDueService
      */
     public function dispatch(?CarbonImmutable $now = null): array
     {
-        $this->reconcileActiveRuns->reconcile('tick');
+        $reconcileError = null;
+
+        try {
+            $this->reconcileActiveRuns->reconcile('tick');
+        } catch (\Throwable $throwable) {
+            report($throwable);
+            $reconcileError = $throwable->getMessage();
+        }
 
         $tickStartedAt = CarbonImmutable::now('UTC');
         $nowMinute = ($now ?? $tickStartedAt)->startOfMinute();
@@ -46,7 +53,7 @@ class DispatchDueService
         $dispatchedCount = 0;
         $skippedOverlapCount = 0;
         $skippedCooldownCount = 0;
-        $errorCount = 0;
+        $errorCount = $reconcileError === null ? 0 : 1;
 
         foreach ($dispatchCandidates as $candidate) {
             try {
@@ -86,6 +93,7 @@ class DispatchDueService
                     'tick_started_at' => $tickStartedAt->toIso8601String(),
                     'tick_finished_at' => $tickFinishedAt->toIso8601String(),
                     'watermark_minute_utc' => $scanTo->toIso8601String(),
+                    'reconcile_error' => $reconcileError,
                 ],
             ]
         );

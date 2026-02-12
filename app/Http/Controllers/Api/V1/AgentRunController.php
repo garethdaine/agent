@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AgentJobRun;
 use App\Models\SchedulerHeartbeat;
 use App\Support\Agent\AuditLogger;
+use App\Support\Agent\Duration;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Agent\RunEventWriter;
 use App\Support\Agent\RunStateTransitionService;
@@ -168,9 +169,7 @@ class AgentRunController extends Controller
             $metadata['pid_not_found'] = true;
 
             $finishedAt = CarbonImmutable::now('UTC');
-            $durationMs = $run->started_at
-                ? max(0, CarbonImmutable::parse($run->started_at, 'UTC')->diffInMilliseconds($finishedAt))
-                : 0;
+            $durationMs = Duration::millisecondsBetween($run->started_at, $finishedAt);
 
             $transitioned = $transitions->transition(
                 (int) $run->id,

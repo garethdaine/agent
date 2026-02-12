@@ -79,9 +79,7 @@ class ReconcileActiveRunsService
             }
 
             $finishedAt = CarbonImmutable::now('UTC');
-            $durationMs = $run->started_at
-                ? max(0, CarbonImmutable::parse($run->started_at, 'UTC')->diffInMilliseconds($finishedAt))
-                : 0;
+            $durationMs = Duration::millisecondsBetween($run->started_at, $finishedAt);
 
             $transitioned = $this->transitions->transition(
                 (int) $run->id,
