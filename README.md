@@ -18,6 +18,7 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Reconciliation fingerprint checks now use immutable launch metadata captured per run to avoid false mismatches after job edits
 - Reconciliation executable matching now includes launch-time command tokens/configured executable paths to support symlinked CLI binaries
 - Monitor polling now de-duplicates event merges and prevents overlapping poll cycles, eliminating duplicate lifecycle lines in Event Tail
+- Redis queue `retry_after` is now aligned for long-running agent jobs to prevent mid-run redelivery / `MaxAttemptsExceededException` failures
 - Phases 0-7 checklist completed in `docs/minimal-cron-agent-task-list.md`
 - Phase 8 maintenance baseline implemented (`agent:prune` + audit logging + retention schedules)
 
@@ -79,9 +80,11 @@ DB_PORT=3306 php artisan migrate:fresh --database=mysql --force --no-interaction
 - Sanctum SPA session auth is enabled for `/agent/api/v1/*`; ensure `SANCTUM_STATEFUL_DOMAINS` includes your local app host (for example `agent.test` or `agent.herd.test`).
 - API version header middleware sets `X-Agent-Api-Version: 1.0` on `/agent/api/v1/*` routes.
 - If runs appear stalled/queued unexpectedly, check `php artisan horizon:status`; start/restart workers with `php artisan horizon`.
+- If you change queue/horizon runtime env values (for example `REDIS_QUEUE_RETRY_AFTER`), restart Horizon so workers pick up the new config.
 - Horizon queue defaults:
   - `connection=redis`
   - `queue=agent`
+  - `retry_after=90000`
   - `tries=1`
   - `backoff=0`
   - `timeout=86500`

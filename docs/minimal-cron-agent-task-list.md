@@ -11,6 +11,7 @@
 - Reconciliation fingerprint matching now includes launch-time executable token/configured executable candidates, avoiding false mismatches for symlinked CLIs (for example `claude`).
 - Monitor polling now guards against overlapping refresh calls and de-duplicates events by ID, preventing duplicate lifecycle rows in Event Tail.
 - Monitor Event Tail now surfaces a clear "active but no stdout/stderr yet" signal for long-silent runs.
+- Fixed long-running run redelivery failures by aligning Redis queue `retry_after` (`90000`) above Horizon agent timeout, preventing `MaxAttemptsExceededException` on in-flight runs.
 - DB compatibility smoke checks were executed on all supported engines:
   - SQLite (`php artisan test` / in-memory)
   - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)
@@ -42,7 +43,7 @@ Definition of done:
 - [x] Confirm platform targets in docs and environment checks: macOS + Linux supported, Windows warning only.
 - [x] Provision Redis and configure Laravel queue/cache for Redis.
 - [x] Configure Reverb server/client wiring (Laravel Reverb + Laravel Echo) for websocket support.
-- [x] Configure Horizon with dedicated `agent` queue (`tries=1`, `backoff=0`, `timeout=86500`, `maxProcesses` default `2`, bounds `1..8`).
+- [x] Configure Horizon with dedicated `agent` queue (`tries=1`, `backoff=0`, `timeout=86500`, `retry_after=90000`, `maxProcesses` default `2`, bounds `1..8`).
 - [x] Enforce fixed queue binding in runtime config: `connection=redis`, `queue=agent`.
 - [x] Confirm canonical run mode in docs and scripts: manual `php artisan horizon` + manual `php artisan schedule:work`.
 - [x] Add `dragonmantank/cron-expression` (major v3 pinned).

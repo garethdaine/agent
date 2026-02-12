@@ -50,7 +50,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
   - Reverb server (Herd-managed local Reverb endpoint).
   - Redis (hard prerequisite; no fallback backend).
   - Queue binding is fixed in MVP: `connection=redis`, `queue=agent`.
-  - Horizon defaults in MVP: `tries=1`, `backoff=0`, `timeout=86500`, `maxProcesses=2` (configurable bounds `1..8`).
+  - Horizon defaults in MVP: `tries=1`, `backoff=0`, `timeout=86500`, `retry_after=90000`, `maxProcesses=2` (configurable bounds `1..8`).
 - Secondary scheduler mode supported: cron invoking `php artisan schedule:run`.
 - Database support in MVP: SQLite, MySQL, and PostgreSQL.
 - Target versions:
