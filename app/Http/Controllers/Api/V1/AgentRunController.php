@@ -170,6 +170,11 @@ class AgentRunController extends Controller
 
             $finishedAt = CarbonImmutable::now('UTC');
             $durationMs = Duration::millisecondsBetween($run->started_at, $finishedAt);
+            if (($metadata['approval_required'] ?? false) === true) {
+                $metadata['approval_required'] = false;
+                $metadata['approval_resolved_at'] = $finishedAt->toIso8601String();
+                $metadata['approval_resolution'] = AgentJobRun::STATUS_KILLED;
+            }
 
             $transitioned = $transitions->transition(
                 (int) $run->id,

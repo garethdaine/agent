@@ -118,6 +118,13 @@ class ExecuteAgentRunJob implements ShouldQueue
                 [
                     'pid' => $process->getPid(),
                     'started_at' => $startedAt,
+                    'metadata_json' => [
+                        ...((array) ($run->metadata_json ?? [])),
+                        'launch_fingerprint' => [
+                            'executable' => (string) ($run->resolved_executable_path ?? ''),
+                            'task_markdown_path' => (string) ($run->job->task_markdown_path ?? ''),
+                        ],
+                    ],
                 ]
             );
 
@@ -304,6 +311,18 @@ class ExecuteAgentRunJob implements ShouldQueue
         $finishedAt = CarbonImmutable::now('UTC');
         $durationMs = Duration::millisecondsBetween($run->started_at, $finishedAt);
 
+        $baseMetadata = (array) ($run->metadata_json ?? []);
+        $incomingMetadata = (array) ($extra['metadata_json'] ?? []);
+        $mergedMetadata = array_merge($baseMetadata, $incomingMetadata);
+
+        if (($mergedMetadata['approval_required'] ?? false) === true) {
+            $mergedMetadata['approval_required'] = false;
+            $mergedMetadata['approval_resolved_at'] = $finishedAt->toIso8601String();
+            $mergedMetadata['approval_resolution'] = $status;
+        }
+
+        $extra['metadata_json'] = $mergedMetadata;
+
         $payload = array_merge($extra, [
             'finished_at' => $finishedAt,
             'duration_ms' => $durationMs,
@@ -400,6 +419,11 @@ class ExecuteAgentRunJob implements ShouldQueue
         $finishedAt = CarbonImmutable::now('UTC');
         $metadata = (array) ($run->metadata_json ?? []);
         $metadata['termination_mode'] = 'runner_exception';
+        if (($metadata['approval_required'] ?? false) === true) {
+            $metadata['approval_required'] = false;
+            $metadata['approval_resolved_at'] = $finishedAt->toIso8601String();
+            $metadata['approval_resolution'] = 'runner_exception';
+        }
 
         $transitions->transition(
             (int) $run->id,

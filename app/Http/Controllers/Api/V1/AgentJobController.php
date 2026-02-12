@@ -399,6 +399,7 @@ class AgentJobController extends Controller
                 'metadata_json' => [
                     'output_truncated' => false,
                     'redaction_count' => 0,
+                    'approval_required' => false,
                 ],
             ]);
 

@@ -80,6 +80,11 @@ class ReconcileActiveRunsService
 
             $finishedAt = CarbonImmutable::now('UTC');
             $durationMs = Duration::millisecondsBetween($run->started_at, $finishedAt);
+            if (($metadata['approval_required'] ?? false) === true) {
+                $metadata['approval_required'] = false;
+                $metadata['approval_resolved_at'] = $finishedAt->toIso8601String();
+                $metadata['approval_resolution'] = $targetStatus;
+            }
 
             $transitioned = $this->transitions->transition(
                 (int) $run->id,
@@ -171,21 +176,50 @@ class ReconcileActiveRunsService
             return false;
         }
 
-        $tokens = $this->renderer->renderTokens($run->job, $run);
+        $metadata = (array) ($run->metadata_json ?? []);
+        $launchFingerprint = $metadata['launch_fingerprint'] ?? null;
+        $hasLaunchFingerprint = is_array($launchFingerprint);
+        $expectedTaskPath = null;
+        $expectedExecutable = null;
 
-        if ($tokens === []) {
-            return false;
+        if ($hasLaunchFingerprint) {
+            $snapshotExecutable = $launchFingerprint['executable'] ?? null;
+            $snapshotTaskPath = $launchFingerprint['task_markdown_path'] ?? null;
+
+            if (is_string($snapshotExecutable) && trim($snapshotExecutable) !== '') {
+                $expectedExecutable = trim($snapshotExecutable);
+            }
+
+            if (is_string($snapshotTaskPath) && trim($snapshotTaskPath) !== '') {
+                $expectedTaskPath = trim($snapshotTaskPath);
+            }
         }
 
-        $expectedExecutable = $run->resolved_executable_path;
-
         if (! is_string($expectedExecutable) || $expectedExecutable === '') {
-            $resolved = realpath($tokens[0]);
-            $expectedExecutable = $resolved !== false ? $resolved : $tokens[0];
+            $tokens = $this->renderer->renderTokens($run->job, $run);
+
+            if ($tokens === []) {
+                return false;
+            }
+
+            $expectedExecutable = $run->resolved_executable_path;
+
+            if (! is_string($expectedExecutable) || $expectedExecutable === '') {
+                $resolved = realpath($tokens[0]);
+                $expectedExecutable = $resolved !== false ? $resolved : $tokens[0];
+            }
         }
 
         if (! str_contains($commandLine, $expectedExecutable)) {
             return false;
+        }
+
+        if ($hasLaunchFingerprint) {
+            if (is_string($expectedTaskPath) && $expectedTaskPath !== '' && ! str_contains($commandLine, $expectedTaskPath)) {
+                return false;
+            }
+
+            return true;
         }
 
         if (in_array('{{task_markdown_path}}', config('agent.allowed_placeholders', []), true)

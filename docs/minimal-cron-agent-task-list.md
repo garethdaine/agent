@@ -6,6 +6,8 @@
 - Added create/edit form-level API error banners so non-field failures (for example `401 UNAUTHENTICATED`) are shown directly in the UI.
 - Added Monitor approval handling UX: detects approval-needed output and offers UI actions to approve (reconfigure + rerun) or deny (stop run), with runner-aware templates for `codex` and `claude` and guarded handling for `custom`.
 - Fixed PostgreSQL run finalization regression where fractional `duration_ms` could crash runner transitions, leaving runs stuck and causing scheduler heartbeat degradation.
+- Improved approval UX to per-run alerts in Latest Runs with modal actions, and clear approval-required state when runs become terminal so killed/failed runs no longer show stale approval banners.
+- Reconciliation now uses immutable launch fingerprints captured at run start, preventing false `pid_reused_or_mismatch` failures after job template/path edits.
 - DB compatibility smoke checks were executed on all supported engines:
   - SQLite (`php artisan test` / in-memory)
   - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)

@@ -9,6 +9,7 @@ use App\Models\AgentJobRun;
 use App\Models\AgentSystemState;
 use App\Models\SchedulerHeartbeat;
 use App\Models\User;
+use App\Support\Agent\ReconcileActiveRunsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -175,5 +176,59 @@ class AgentDispatchDueCommandTest extends TestCase
         $run->refresh();
         $this->assertSame(AgentJobRun::STATUS_FAILED, $run->status);
         $this->assertSame('process_not_found', $run->metadata_json['reconcile_reason'] ?? null);
+    }
+
+    public function test_reconcile_uses_launch_fingerprint_when_job_changes(): void
+    {
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/fingerprint.md';
+        file_put_contents($taskFile, "# Fingerprint\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Fingerprint Stable',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_RUNNING,
+            'pid' => getmypid(),
+            'started_at' => now('UTC')->subSeconds(30),
+            'resolved_executable_path' => 'php',
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+                'launch_fingerprint' => [
+                    'executable' => 'php',
+                    'task_markdown_path' => '',
+                ],
+            ],
+        ]);
+
+        $job->task_markdown_path = $this->sandboxBase.'/tasks/changed-after-launch.md';
+        $job->save();
+
+        app(ReconcileActiveRunsService::class)->reconcile('boot');
+
+        $run->refresh();
+        $this->assertSame(AgentJobRun::STATUS_RUNNING, $run->status);
     }
 }

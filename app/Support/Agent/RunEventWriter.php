@@ -26,6 +26,8 @@ class RunEventWriter
 
     private bool $redactionNoticeEmitted = false;
 
+    private const APPROVAL_PATTERN = '/need permission|requires permission|could you approve|approval/i';
+
     public function __construct(private AgentJobRun $run)
     {
         $this->nextSequence = (int) (AgentRunEvent::query()
@@ -83,6 +85,11 @@ class RunEventWriter
         $metadata['redaction_count'] = (int) ($metadata['redaction_count'] ?? 0) + $redactionCount;
 
         $this->run->metadata_json = $metadata;
+
+        if (($eventType === 'stdout' || $eventType === 'stderr')
+            && preg_match(self::APPROVAL_PATTERN, $chunk) === 1) {
+            $this->markApprovalRequired($chunk);
+        }
 
         if ($redactionCount > 0 && ! $this->redactionNoticeEmitted) {
             $this->redactionNoticeEmitted = true;
@@ -257,5 +264,20 @@ class RunEventWriter
     private function persistRunStats(): void
     {
         $this->run->save();
+    }
+
+    private function markApprovalRequired(string $excerpt): void
+    {
+        $metadata = (array) ($this->run->metadata_json ?? []);
+
+        if (($metadata['approval_required'] ?? false) === true) {
+            return;
+        }
+
+        $metadata['approval_required'] = true;
+        $metadata['approval_detected_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+        $metadata['approval_excerpt'] = substr(trim($excerpt), 0, 1000);
+
+        $this->run->metadata_json = $metadata;
     }
 }

@@ -163,6 +163,70 @@ class AgentRunnerLifecycleTest extends TestCase
         $this->assertSame(0, (int) $job->scheduled_path_failure_streak);
     }
 
+    public function test_approval_detection_is_cleared_when_run_reaches_terminal_state(): void
+    {
+        $approvalExec = $this->sandboxBase.'/bin/approval-runner';
+        file_put_contents($approvalExec, "#!/bin/sh\necho \"I need permission to use web tools\" \nexit 0\n");
+        chmod($approvalExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $approvalExec,
+            'codex' => $approvalExec,
+            'custom' => $approvalExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $approvalExec.' -p {{task_markdown_path}}',
+            'codex' => $approvalExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/approval.md';
+        file_put_contents($taskFile, "# Approval\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Approval Metadata',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+                'approval_required' => false,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['approval_required'] ?? true));
+        $this->assertNotEmpty($metadata['approval_detected_at'] ?? null);
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $metadata['approval_resolution'] ?? null);
+    }
+
     private function runExecuteAgentRunJob(int $runId): void
     {
         $job = new ExecuteAgentRunJob($runId);

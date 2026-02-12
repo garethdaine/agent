@@ -202,6 +202,7 @@ class DispatchDueService
         $metadata = [
             'output_truncated' => false,
             'redaction_count' => 0,
+            'approval_required' => false,
         ];
         $finishedAt = null;
 
