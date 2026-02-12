@@ -70,6 +70,7 @@ DB_PORT=3306 php artisan migrate:fresh --database=mysql --force --no-interaction
 
 ## Notes
 - Reverb host is configured for Herd at `reverb.herd.test` (TLS/443).
+- Sanctum SPA session auth is enabled for `/agent/api/v1/*`; ensure `SANCTUM_STATEFUL_DOMAINS` includes your local app host (for example `agent.test` or `agent.herd.test`).
 - API version header middleware sets `X-Agent-Api-Version: 1.0` on `/agent/api/v1/*` routes.
 - Horizon queue defaults:
   - `connection=redis`

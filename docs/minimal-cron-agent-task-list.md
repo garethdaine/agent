@@ -2,6 +2,7 @@
 
 ## Progress Notes (2026-02-12)
 - Phases 0-7 are now complete against the current baseline.
+- Enabled Sanctum stateful API middleware bootstrap so logged-in Inertia sessions authenticate correctly on `/agent/api/v1/*`.
 - DB compatibility smoke checks were executed on all supported engines:
   - SQLite (`php artisan test` / in-memory)
   - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)
