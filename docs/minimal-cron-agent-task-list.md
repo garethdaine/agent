@@ -7,7 +7,12 @@
   - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)
   - MySQL (`DB_PORT=3306 php artisan migrate:fresh --database=mysql --force --no-interaction`)
 - Phase 2 validation guardrails are implemented behind `POST /agent/api/v1/jobs` and covered by feature tests.
-- Phase 8+ items remain pending by design.
+- Phase 8 is now complete:
+  - immutable audit entries for mutating actions
+  - structured log mirroring
+  - unified `agent:prune` command (`--runs --events --jobs --audit`, dry-run, JSON)
+  - chunked prune checkpoints + scheduled maintenance windows
+- Phase 9+ items remain pending by design.
 
 ## Phase -1: Project Scaffold Setup
 - [x] Create Laravel 12 project at `/Users/garethdaine/Code/agent` if not already present.
@@ -171,21 +176,21 @@ Definition of done:
 - End-to-end workflow is achievable from UI and matches behavior contracts exactly.
 
 ## Phase 8: Audit, Retention, and Maintenance
-- [ ] Implement immutable audit logging for mutating actions only.
-- [ ] Mirror audit entries to structured Laravel logs.
-- [ ] Enforce owner-scoped audit access policies.
-- [ ] Implement unified prune command with domain flags (`--runs --events --jobs --audit`).
-- [ ] Implement `--dry-run` output modes (human default, JSON with `--json`).
-- [ ] Implement chunked prune with checkpoints in `agent_maintenance_checkpoints`.
-- [ ] Implement prune retention rules:
-- [ ] runs >=30 days and keep last 20/job
-- [ ] failed/timed_out >=30 days
-- [ ] events >=7 days except active runs
-- [ ] deleted jobs hard-pruned after 30 days with cascading children
-- [ ] Schedule prune jobs at:
-- [ ] 03:10 local app time (runs/events)
-- [ ] 03:20 local app time (deleted jobs)
-- [ ] Ensure prune actions emit system audit entries.
+- [x] Implement immutable audit logging for mutating actions only.
+- [x] Mirror audit entries to structured Laravel logs.
+- [x] Enforce owner-scoped audit access policies.
+- [x] Implement unified prune command with domain flags (`--runs --events --jobs --audit`).
+- [x] Implement `--dry-run` output modes (human default, JSON with `--json`).
+- [x] Implement chunked prune with checkpoints in `agent_maintenance_checkpoints`.
+- [x] Implement prune retention rules:
+- [x] runs >=30 days and keep last 20/job
+- [x] failed/timed_out >=30 days
+- [x] events >=7 days except active runs
+- [x] deleted jobs hard-pruned after 30 days with cascading children
+- [x] Schedule prune jobs at:
+- [x] 03:10 local app time (runs/events)
+- [x] 03:20 local app time (deleted jobs)
+- [x] Ensure prune actions emit system audit entries.
 
 Definition of done:
 - Retention and prune semantics are reproducible, resumable, and match baseline constraints.
@@ -244,6 +249,6 @@ Definition of done:
 - [x] Live monitor polling and event stream behavior meet contract.
 - [x] Heartbeat health states are correct, including `unknown`.
 - [x] Redaction and secret-handling policies are enforced.
-- [ ] Prune/retention policies execute correctly with dry-run support.
+- [x] Prune/retention policies execute correctly with dry-run support.
 - [x] Versioned API contract and headers are enforced.
 - [ ] Required release artifacts are produced.

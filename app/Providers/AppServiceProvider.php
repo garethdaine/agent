@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
+use App\Policies\AgentAuditLogPolicy;
 use App\Policies\AgentJobPolicy;
 use App\Policies\AgentJobRunPolicy;
 use App\Support\Agent\ErrorEnvelope;
@@ -30,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(AgentJob::class, AgentJobPolicy::class);
         Gate::policy(AgentJobRun::class, AgentJobRunPolicy::class);
+        Gate::policy(AgentAuditLog::class, AgentAuditLogPolicy::class);
 
         RateLimiter::for('agent-mutations', function (Request $request) {
             return [

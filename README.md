@@ -12,6 +12,7 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Dispatcher command (`agent:dispatch-due`) and queue runner pipeline implemented
 - Jobs CRUD + run-now/stop APIs + Inertia Jobs/Monitor pages implemented
 - Phases 0-7 checklist completed in `docs/minimal-cron-agent-task-list.md`
+- Phase 8 maintenance baseline implemented (`agent:prune` + audit logging + retention schedules)
 
 ## Prerequisites
 - PHP 8.3+
@@ -56,6 +57,7 @@ npm run dev
 php artisan test
 php artisan route:list --path=agent/api/v1
 php artisan agent:dispatch-due
+php artisan agent:prune --dry-run --json
 ```
 
 DB compatibility smoke checks:

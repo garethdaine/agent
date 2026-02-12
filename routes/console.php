@@ -11,3 +11,9 @@ Artisan::command('inspire', function () {
 Schedule::command('agent:dispatch-due')
     ->everyMinute()
     ->withoutOverlapping(2);
+
+Schedule::command('agent:prune --runs --events')
+    ->dailyAt('03:10');
+
+Schedule::command('agent:prune --jobs')
+    ->dailyAt('03:20');

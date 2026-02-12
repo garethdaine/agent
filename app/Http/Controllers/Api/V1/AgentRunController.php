@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\AgentJobRun;
 use App\Models\SchedulerHeartbeat;
+use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Agent\RunEventWriter;
 use App\Support\Agent\RunStateTransitionService;
@@ -118,8 +119,12 @@ class AgentRunController extends Controller
         ]);
     }
 
-    public function stop(Request $request, int $id, RunStateTransitionService $transitions): JsonResponse
-    {
+    public function stop(
+        Request $request,
+        int $id,
+        RunStateTransitionService $transitions,
+        AuditLogger $auditLogger
+    ): JsonResponse {
         $run = AgentJobRun::query()->find($id);
 
         if ($run === null || $run->user_id !== $request->user()->id) {
@@ -154,6 +159,8 @@ class AgentRunController extends Controller
         if (! in_array($run->status, [AgentJobRun::STATUS_QUEUED, AgentJobRun::STATUS_STARTING, AgentJobRun::STATUS_RUNNING], true)) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Run is not in a stoppable state.', 409);
         }
+
+        $previousStatus = (string) $run->status;
 
         if ($run->pid === null) {
             $metadata = (array) ($run->metadata_json ?? []);
@@ -201,6 +208,21 @@ class AgentRunController extends Controller
                 'at' => $finishedAt->toIso8601String(),
                 'reason' => 'pid_missing',
             ]);
+
+            $auditLogger->recordUserAction(
+                request: $request,
+                action: 'run.stop',
+                targetType: 'agent_job_run',
+                targetId: (int) $run->id,
+                ownerUserId: (int) $run->user_id,
+                changedFields: ['status', 'finished_at', 'metadata_json'],
+                before: ['status' => $previousStatus],
+                after: [
+                    'status' => AgentJobRun::STATUS_KILLED,
+                    'finished_at' => $this->toRfc3339Millis($run->finished_at),
+                    'metadata_json' => $run->metadata_json,
+                ],
+            );
 
             return response()->json([
                 'data' => [
@@ -256,6 +278,17 @@ class AgentRunController extends Controller
         if (function_exists('posix_kill')) {
             @posix_kill((int) $run->pid, SIGTERM);
         }
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'run.stop',
+            targetType: 'agent_job_run',
+            targetId: (int) $run->id,
+            ownerUserId: (int) $run->user_id,
+            changedFields: ['status'],
+            before: ['status' => $previousStatus],
+            after: ['status' => AgentJobRun::STATUS_STOPPING],
+        );
 
         return response()->json([
             'data' => [

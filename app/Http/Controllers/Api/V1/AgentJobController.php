@@ -8,6 +8,7 @@ use App\Http\Requests\Agent\UpdateAgentJobRequest;
 use App\Jobs\ExecuteAgentRunJob;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
+use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
 use Carbon\CarbonImmutable;
 use Cron\CronExpression;
@@ -91,7 +92,7 @@ class AgentJobController extends Controller
         ]);
     }
 
-    public function store(StoreAgentJobRequest $request): JsonResponse
+    public function store(StoreAgentJobRequest $request, AuditLogger $auditLogger): JsonResponse
     {
         $validated = $request->validated();
 
@@ -122,14 +123,51 @@ class AgentJobController extends Controller
             'last_validated_executable_path' => $request->resolvedExecutablePath(),
         ]);
 
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'job.create',
+            targetType: 'agent_job',
+            targetId: (int) $job->id,
+            ownerUserId: (int) $job->user_id,
+            changedFields: array_keys($job->getAttributes()),
+            before: null,
+            after: $job->only([
+                'id',
+                'name',
+                'cron_expression',
+                'timezone',
+                'is_enabled',
+                'runner_type',
+                'max_runtime_seconds',
+                'cooldown_seconds',
+                'task_markdown_path',
+                'working_directory',
+            ]),
+        );
+
         return response()->json([
             'data' => $this->transformJob($job),
         ], 201);
     }
 
-    public function update(UpdateAgentJobRequest $request, int $id): JsonResponse
+    public function update(UpdateAgentJobRequest $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
         $job = $request->user()->agentJobs()->withTrashed()->findOrFail($id);
+        $before = $job->only([
+            'name',
+            'description',
+            'cron_expression',
+            'timezone',
+            'is_enabled',
+            'max_runtime_seconds',
+            'cooldown_seconds',
+            'runner_type',
+            'command_template',
+            'task_markdown_path',
+            'working_directory',
+            'env_json',
+            'last_validated_executable_path',
+        ]);
         $validated = $request->validated();
 
         $existing = $request->user()->agentJobs()
@@ -161,26 +199,71 @@ class AgentJobController extends Controller
         ]);
         $job->save();
 
+        $after = $job->only(array_keys($before));
+        $changedFields = [];
+        foreach ($after as $field => $value) {
+            if (($before[$field] ?? null) !== $value) {
+                $changedFields[] = $field;
+            }
+        }
+
+        if ($changedFields !== []) {
+            $auditLogger->recordUserAction(
+                request: $request,
+                action: 'job.update',
+                targetType: 'agent_job',
+                targetId: (int) $job->id,
+                ownerUserId: (int) $job->user_id,
+                changedFields: $changedFields,
+                before: $before,
+                after: $after,
+            );
+        }
+
         return response()->json([
             'data' => $this->transformJob($job),
         ]);
     }
 
-    public function toggle(Request $request, int $id): JsonResponse
+    public function toggle(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
         $job = $request->user()->agentJobs()->withTrashed()->findOrFail($id);
+        $before = ['is_enabled' => (bool) $job->is_enabled];
         $job->is_enabled = ! $job->is_enabled;
         $job->save();
 
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'job.toggle',
+            targetType: 'agent_job',
+            targetId: (int) $job->id,
+            ownerUserId: (int) $job->user_id,
+            changedFields: ['is_enabled'],
+            before: $before,
+            after: ['is_enabled' => (bool) $job->is_enabled],
+        );
+
         return response()->json([
             'data' => $this->transformJob($job),
         ]);
     }
 
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
         $job = $request->user()->agentJobs()->findOrFail($id);
+        $before = ['deleted_at' => optional($job->deleted_at)?->toIso8601String()];
         $job->delete();
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'job.delete',
+            targetType: 'agent_job',
+            targetId: (int) $job->id,
+            ownerUserId: (int) $job->user_id,
+            changedFields: ['deleted_at'],
+            before: $before,
+            after: ['deleted_at' => optional($job->deleted_at)?->toIso8601String()],
+        );
 
         return response()->json([
             'data' => [
@@ -190,13 +273,25 @@ class AgentJobController extends Controller
         ]);
     }
 
-    public function restore(Request $request, int $id): JsonResponse
+    public function restore(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
         $job = $request->user()->agentJobs()->withTrashed()->findOrFail($id);
+        $before = ['deleted_at' => optional($job->deleted_at)?->toIso8601String()];
 
         if ($job->trashed()) {
             $job->restore();
         }
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'job.restore',
+            targetType: 'agent_job',
+            targetId: (int) $job->id,
+            ownerUserId: (int) $job->user_id,
+            changedFields: ['deleted_at'],
+            before: $before,
+            after: ['deleted_at' => optional($job->deleted_at)?->toIso8601String()],
+        );
 
         return response()->json([
             'data' => $this->transformJob($job->fresh()),
@@ -222,7 +317,7 @@ class AgentJobController extends Controller
         ]);
     }
 
-    public function runNow(Request $request, int $id): JsonResponse
+    public function runNow(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
         $job = $request->user()->agentJobs()->withTrashed()->findOrFail($id);
 
@@ -290,6 +385,21 @@ class AgentJobController extends Controller
                 ->onQueue('agent');
 
             $redis->put($cacheKey, (string) $run->id, now()->addSeconds(3));
+
+            $auditLogger->recordUserAction(
+                request: $request,
+                action: 'run.dispatch_manual',
+                targetType: 'agent_job_run',
+                targetId: (int) $run->id,
+                ownerUserId: (int) $run->user_id,
+                changedFields: ['status', 'trigger_type', 'agent_job_id'],
+                before: null,
+                after: [
+                    'status' => $run->status,
+                    'trigger_type' => $run->trigger_type,
+                    'agent_job_id' => $run->agent_job_id,
+                ],
+            );
         } catch (QueryException|\Throwable $throwable) {
             report($throwable);
 

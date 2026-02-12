@@ -3,7 +3,6 @@
 namespace App\Support\Agent;
 
 use App\Jobs\ExecuteAgentRunJob;
-use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentSystemState;
@@ -15,7 +14,10 @@ use Illuminate\Support\Collection;
 
 class DispatchDueService
 {
-    public function __construct(private ReconcileActiveRunsService $reconcileActiveRuns) {}
+    public function __construct(
+        private ReconcileActiveRunsService $reconcileActiveRuns,
+        private AuditLogger $auditLogger,
+    ) {}
 
     /**
      * @return array<string, int|string>
@@ -289,32 +291,20 @@ class DispatchDueService
         CarbonImmutable $scanFrom,
         CarbonImmutable $scanTo
     ): void {
-        AgentAuditLog::query()->create([
-            'user_id' => null,
-            'actor_type' => 'system',
-            'actor_id' => null,
-            'action' => 'deferred_capacity',
-            'target_type' => 'scheduler_dispatch',
-            'target_id' => 'scheduler_dispatch',
-            'changed_fields_json' => [
+        $this->auditLogger->recordSystemAction(
+            action: 'deferred_capacity',
+            targetType: 'scheduler_dispatch',
+            targetId: 'scheduler_dispatch',
+            changedFields: [
                 'deferred_capacity_count',
                 'scan_from_utc',
                 'scan_to_utc',
             ],
-            'before_json' => null,
-            'after_json' => [
+            after: [
                 'deferred_capacity_count' => $deferredCapacityCount,
                 'scan_from_utc' => $scanFrom->toIso8601String(),
                 'scan_to_utc' => $scanTo->toIso8601String(),
             ],
-            'request_id' => null,
-            'ip_address' => null,
-            'user_agent' => null,
-            'hostname' => gethostname() ?: null,
-            'outcome' => 'success',
-            'error_code' => null,
-            'error_message' => null,
-            'created_at' => CarbonImmutable::now('UTC'),
-        ]);
+        );
     }
 }
