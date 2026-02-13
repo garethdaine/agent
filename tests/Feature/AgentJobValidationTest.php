@@ -22,6 +22,7 @@ class AgentJobValidationTest extends TestCase
         @mkdir($this->sandboxBase.'/bin', 0777, true);
         @mkdir($this->sandboxBase.'/tasks', 0777, true);
         @mkdir($this->sandboxBase.'/work', 0777, true);
+        @mkdir($this->sandboxBase.'/spaces/Business Ideas', 0777, true);
 
         $claude = $this->sandboxBase.'/bin/claude';
         $codex = $this->sandboxBase.'/bin/codex';
@@ -36,7 +37,7 @@ class AgentJobValidationTest extends TestCase
         chmod($custom, 0755);
 
         config()->set('agent.allowed_task_markdown_bases', [$this->sandboxBase.'/tasks']);
-        config()->set('agent.allowed_working_directory_bases', [$this->sandboxBase.'/work']);
+        config()->set('agent.allowed_working_directory_bases', [$this->sandboxBase.'/work', $this->sandboxBase.'/spaces']);
         config()->set('agent.runner_executables', [
             'claude' => $claude,
             'codex' => $codex,
@@ -233,5 +234,29 @@ class AgentJobValidationTest extends TestCase
             'error.details.command_template.0',
             'Custom runner templates must include {{task_markdown_path}}.'
         );
+    }
+
+    public function test_working_directory_with_spaces_is_allowed_when_within_allowed_base(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $taskFile = $this->sandboxBase.'/tasks/space-path-task.md';
+        file_put_contents($taskFile, "# Test\n");
+
+        $payload = [
+            'name' => 'Space Directory Path',
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/spaces/Business Ideas',
+        ];
+
+        $this->postJson('/agent/api/v1/jobs', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.working_directory', $this->sandboxBase.'/spaces/Business Ideas');
     }
 }

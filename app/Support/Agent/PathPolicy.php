@@ -45,7 +45,10 @@ class PathPolicy
         $allowedBases = $this->resolvedBases(config('agent.allowed_task_markdown_bases', []));
 
         if (! $this->isWithinAllowedBases($realPath, $allowedBases)) {
-            return 'The task_markdown_path is outside the allowed base directories.';
+            return sprintf(
+                'The task_markdown_path is outside the allowed base directories. Allowed: %s. Add more via AGENT_ADDITIONAL_TASK_MARKDOWN_BASES.',
+                $this->formatAllowedBases($allowedBases)
+            );
         }
 
         return null;
@@ -72,7 +75,10 @@ class PathPolicy
         $allowedBases = $this->resolvedBases(config('agent.allowed_working_directory_bases', []));
 
         if (! $this->isWithinAllowedBases($realPath, $allowedBases)) {
-            return 'The working_directory is outside the allowed base directories.';
+            return sprintf(
+                'The working_directory is outside the allowed base directories. Allowed: %s. Add more via AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES.',
+                $this->formatAllowedBases($allowedBases)
+            );
         }
 
         return null;
@@ -144,5 +150,17 @@ class PathPolicy
         }
 
         return false;
+    }
+
+    /**
+     * @param  array<int, string>  $allowedBases
+     */
+    private function formatAllowedBases(array $allowedBases): string
+    {
+        if ($allowedBases === []) {
+            return '(none configured)';
+        }
+
+        return implode(', ', $allowedBases);
     }
 }

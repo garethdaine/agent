@@ -29,6 +29,11 @@
   - scheduler dispatch now records skipped runs with `skip_reason=rate_limited`
   - run-now now returns `409 JOB_RATE_LIMITED` while hold is active (with optional `ignore_rate_limit_hold=true` override)
   - monitor UI now surfaces rate-limit alerts and allows explicit "Run Anyway Now" override
+- Improved path/template UX hardening:
+  - configurable additional allowed directory bases via `.env` (`AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES`, `AGENT_ADDITIONAL_TASK_MARKDOWN_BASES`)
+  - path inputs are trimmed server-side before validation/save
+  - paths containing spaces are accepted when within allowed base restrictions
+  - job form now includes interactive command-template presets + placeholder token insertion
 - DB compatibility smoke checks were executed on all supported engines:
   - SQLite (`php artisan test` / in-memory)
   - PostgreSQL (`php artisan migrate:fresh --database=pgsql --force`)

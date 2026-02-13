@@ -1,15 +1,31 @@
 <?php
 
+$parseEnvCsvList = static function (string $key): array {
+    $raw = env($key, '');
+
+    if (! is_string($raw) || trim($raw) === '') {
+        return [];
+    }
+
+    $values = str_getcsv($raw);
+
+    return array_values(array_filter(array_map(
+        static fn ($value): string => trim((string) $value),
+        $values
+    ), static fn (string $value): bool => $value !== ''));
+};
+
 return [
-    'allowed_working_directory_bases' => [
+    'allowed_working_directory_bases' => array_values(array_unique(array_merge([
         '/Users/garethdaine/Code',
         '/Users/garethdaine/Code/agent',
-    ],
+        '/Users/garethdaine/Documents',
+    ], $parseEnvCsvList('AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES')))),
 
-    'allowed_task_markdown_bases' => [
+    'allowed_task_markdown_bases' => array_values(array_unique(array_merge([
         '/Users/garethdaine/Code/agent/tasks',
         '/Users/garethdaine/Code/agent/prompts',
-    ],
+    ], $parseEnvCsvList('AGENT_ADDITIONAL_TASK_MARKDOWN_BASES')))),
 
     'runner_executables' => [
         'claude' => env('AGENT_RUNNER_CLAUDE_PATH', '/Users/garethdaine/.local/bin/claude'),

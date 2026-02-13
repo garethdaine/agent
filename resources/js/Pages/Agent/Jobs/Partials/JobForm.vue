@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watch } from 'vue';
+import { computed, reactive, watch } from 'vue';
 
 const props = defineProps({
     modelValue: {
@@ -53,6 +53,20 @@ const weekdays = [
     { value: 6, label: 'Saturday' },
 ];
 
+const RUNNER_EXECUTABLES = {
+    claude: '/Users/garethdaine/.local/bin/claude',
+    codex: '/opt/homebrew/bin/codex',
+    custom: '/Users/garethdaine/Code/agent/bin/agent-runner',
+};
+
+const PLACEHOLDER_OPTIONS = [
+    '{{task_markdown_path}}',
+    '{{working_directory}}',
+    '{{run_id}}',
+    '{{job_id}}',
+    '{{job_name}}',
+];
+
 const form = reactive({
     name: '',
     description: '',
@@ -67,6 +81,14 @@ const form = reactive({
     task_markdown_content: '',
     working_directory: '',
     env_json_text: '{}',
+});
+
+const templateBuilder = reactive({
+    preset: 'runner_default',
+    includeWorkingDirectory: false,
+    includeRunId: false,
+    includeJobId: false,
+    includeJobName: false,
 });
 
 const taskSource = reactive({
@@ -200,11 +222,106 @@ const hydrate = (value) => {
     } else {
         schedule.mode = 'advanced';
     }
+
+    if (form.command_template.trim() === '') {
+        templateBuilder.preset = form.runner_type === 'custom' ? 'custom_standard' : 'runner_default';
+    } else {
+        templateBuilder.preset = 'manual';
+    }
 };
 
 watch(() => props.modelValue, (value) => {
     hydrate(value);
 }, { immediate: true, deep: true });
+
+const presetOptions = computed(() => {
+    if (form.runner_type === 'codex') {
+        return [
+            { value: 'runner_default', label: 'Runner Default (empty template)' },
+            { value: 'codex_standard', label: 'Codex Standard' },
+            { value: 'codex_search', label: 'Codex + --search' },
+            { value: 'codex_non_interactive', label: 'Codex Non-Interactive (approval bypass)' },
+            { value: 'manual', label: 'Manual Edit' },
+        ];
+    }
+
+    if (form.runner_type === 'claude') {
+        return [
+            { value: 'runner_default', label: 'Runner Default (empty template)' },
+            { value: 'claude_standard', label: 'Claude Standard' },
+            { value: 'claude_non_interactive', label: 'Claude Non-Interactive (skip permissions)' },
+            { value: 'manual', label: 'Manual Edit' },
+        ];
+    }
+
+    return [
+        { value: 'custom_standard', label: 'Custom Runner + Task Path' },
+        { value: 'manual', label: 'Manual Edit' },
+    ];
+});
+
+watch(() => form.runner_type, (runnerType) => {
+    const optionValues = new Set(presetOptions.value.map((option) => option.value));
+    if (!optionValues.has(templateBuilder.preset)) {
+        templateBuilder.preset = runnerType === 'custom' ? 'custom_standard' : 'runner_default';
+    }
+});
+
+const buildTemplateFromPreset = () => {
+    let tokens = [];
+
+    if (templateBuilder.preset === 'runner_default') {
+        return '';
+    }
+
+    if (templateBuilder.preset === 'codex_standard') {
+        tokens = [RUNNER_EXECUTABLES.codex, 'exec', '{{task_markdown_path}}'];
+    } else if (templateBuilder.preset === 'codex_search') {
+        tokens = [RUNNER_EXECUTABLES.codex, '--search', 'exec', '{{task_markdown_path}}'];
+    } else if (templateBuilder.preset === 'codex_non_interactive') {
+        tokens = [RUNNER_EXECUTABLES.codex, '--dangerously-bypass-approvals-and-sandbox', '--search', 'exec', '{{task_markdown_path}}'];
+    } else if (templateBuilder.preset === 'claude_standard') {
+        tokens = [RUNNER_EXECUTABLES.claude, '-p', '{{task_markdown_path}}'];
+    } else if (templateBuilder.preset === 'claude_non_interactive') {
+        tokens = [RUNNER_EXECUTABLES.claude, '--dangerously-skip-permissions', '-p', '{{task_markdown_path}}'];
+    } else if (templateBuilder.preset === 'custom_standard') {
+        tokens = [RUNNER_EXECUTABLES.custom, '{{task_markdown_path}}'];
+    } else if (templateBuilder.preset === 'manual') {
+        return form.command_template;
+    }
+
+    if (templateBuilder.includeWorkingDirectory) {
+        tokens.push('{{working_directory}}');
+    }
+    if (templateBuilder.includeRunId) {
+        tokens.push('{{run_id}}');
+    }
+    if (templateBuilder.includeJobId) {
+        tokens.push('{{job_id}}');
+    }
+    if (templateBuilder.includeJobName) {
+        tokens.push('{{job_name}}');
+    }
+
+    return Array.from(new Set(tokens)).join(' ');
+};
+
+const generatedTemplate = computed(() => buildTemplateFromPreset());
+
+const applyGeneratedTemplate = () => {
+    form.command_template = generatedTemplate.value;
+};
+
+const appendPlaceholderToTemplate = (placeholder) => {
+    const raw = form.command_template.trim();
+    const tokens = raw === '' ? [] : raw.split(/\s+/);
+
+    if (!tokens.includes(placeholder)) {
+        tokens.push(placeholder);
+    }
+
+    form.command_template = tokens.join(' ');
+};
 
 watch(() => [
     schedule.mode,
@@ -464,14 +581,71 @@ const submit = () => {
             <div class="lg:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Working Directory</label>
                 <input v-model="form.working_directory" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500">Absolute directory where the command will execute.</p>
+                <p class="mt-1 text-xs text-gray-500">
+                    Absolute directory where the command will execute. Paths with spaces are supported. If this path is outside allowed bases, add its parent via <code>AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES</code> in <code>.env</code>.
+                </p>
                 <p v-if="errors.working_directory" class="mt-1 text-sm text-red-600">{{ errors.working_directory[0] }}</p>
+            </div>
+
+            <div class="lg:col-span-2 rounded-md border border-gray-200 p-4 dark:border-gray-700">
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Command Builder Preset</label>
+                        <select v-model="templateBuilder.preset" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                            <option v-for="option in presetOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Generate a safe command template from runner-aware options.</p>
+                    </div>
+
+                    <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Optional Placeholder Tokens</p>
+                        <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
+                            <label class="inline-flex items-center gap-2">
+                                <input v-model="templateBuilder.includeWorkingDirectory" type="checkbox" class="rounded border-gray-300" />
+                                <span>&#123;&#123;working_directory&#125;&#125;</span>
+                            </label>
+                            <label class="inline-flex items-center gap-2">
+                                <input v-model="templateBuilder.includeRunId" type="checkbox" class="rounded border-gray-300" />
+                                <span>&#123;&#123;run_id&#125;&#125;</span>
+                            </label>
+                            <label class="inline-flex items-center gap-2">
+                                <input v-model="templateBuilder.includeJobId" type="checkbox" class="rounded border-gray-300" />
+                                <span>&#123;&#123;job_id&#125;&#125;</span>
+                            </label>
+                            <label class="inline-flex items-center gap-2">
+                                <input v-model="templateBuilder.includeJobName" type="checkbox" class="rounded border-gray-300" />
+                                <span>&#123;&#123;job_name&#125;&#125;</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Generated Template Preview</label>
+                    <input :value="generatedTemplate" type="text" readonly class="mt-1 w-full rounded-md border-gray-300 bg-gray-50 font-mono text-sm dark:border-gray-700 dark:bg-gray-900" />
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        <button type="button" class="rounded border border-indigo-600 px-2 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300" @click="applyGeneratedTemplate">
+                            Apply Generated Template
+                        </button>
+                        <button
+                            v-for="placeholder in PLACEHOLDER_OPTIONS"
+                            :key="placeholder"
+                            type="button"
+                            class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200"
+                            @click="appendPlaceholderToTemplate(placeholder)"
+                        >
+                            Insert {{ placeholder }}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="lg:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Command Template (optional for claude/codex)</label>
                 <input v-model="form.command_template" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500">Optional command override. Leave empty to use runner defaults. Must pass command safety validation.</p>
+                <p class="mt-1 text-xs text-gray-500">
+                    Optional command override. Leave empty to use runner defaults (claude/codex). For paths containing spaces, prefer placeholders like <code>&#123;&#123;task_markdown_path&#125;&#125;</code> and <code>&#123;&#123;working_directory&#125;&#125;</code>.
+                </p>
                 <p v-if="errors.command_template" class="mt-1 text-sm text-red-600">{{ errors.command_template[0] }}</p>
             </div>
 

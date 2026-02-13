@@ -189,9 +189,13 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
 - Allowed `working_directory` bases:
   - `/Users/garethdaine/Code`
   - `/Users/garethdaine/Code/agent`
+  - `/Users/garethdaine/Documents`
+  - plus optional CSV additions from `AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES`
 - Allowed `task_markdown_path` bases:
   - `/Users/garethdaine/Code/agent/tasks`
   - `/Users/garethdaine/Code/agent/prompts`
+  - plus optional CSV additions from `AGENT_ADDITIONAL_TASK_MARKDOWN_BASES`
+- Paths containing spaces are supported for `working_directory` and `task_markdown_path` after trim + `realpath()` normalization.
 - Runtime path re-check is mandatory; failures finalize run as:
   - status: `failed`
   - `error.code`: `RUN_PATH_NOT_FOUND`
@@ -244,6 +248,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
   - `claude`: `/Users/garethdaine/.local/bin/claude -p {{task_markdown_path}}`
   - `codex`: `/opt/homebrew/bin/codex exec {{task_markdown_path}}`
 - User-supplied template for `claude|codex` is allowed and overrides defaults after validation.
+- UI provides an interactive command-template builder with runner-aware presets and safe placeholder insertion, while preserving manual template editing.
 
 ## 9. Scheduler and Dispatch Semantics
 - Dispatcher command: `agent:dispatch-due`.

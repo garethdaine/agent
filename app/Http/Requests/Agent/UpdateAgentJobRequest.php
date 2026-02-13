@@ -21,6 +21,19 @@ class UpdateAgentJobRequest extends FormRequest
         return $this->user() !== null;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $workingDirectory = $this->input('working_directory');
+        $taskMarkdownPath = $this->input('task_markdown_path');
+        $commandTemplate = $this->input('command_template');
+
+        $this->merge([
+            'working_directory' => is_string($workingDirectory) ? trim($workingDirectory) : $workingDirectory,
+            'task_markdown_path' => is_string($taskMarkdownPath) ? trim($taskMarkdownPath) : $taskMarkdownPath,
+            'command_template' => is_string($commandTemplate) ? trim($commandTemplate) : $commandTemplate,
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */

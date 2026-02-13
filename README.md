@@ -12,6 +12,7 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Dispatcher command (`agent:dispatch-due`) and queue runner pipeline implemented
 - Jobs CRUD + run-now/stop APIs + Inertia Jobs/Monitor pages implemented
 - Job create/edit form includes guided schedule builder (basic frequency picker + advanced cron mode)
+- Job create/edit form now includes interactive command-template builder presets (runner-aware) plus placeholder token insertion
 - Task prompt input supports both file-path mode and inline markdown editor mode (inline content is persisted to managed `.md` files)
 - Monitor now surfaces approval-needed state per run in Latest Runs with a modal approval workflow (`Approve & Re-run` / `Deny/Stop`), with runner-aware approval templates for Codex and Claude
 - Runner finalization now normalizes `duration_ms` to integer-safe values for PostgreSQL compatibility and resilient stop handling
@@ -85,6 +86,9 @@ DB_PORT=3306 php artisan migrate:fresh --database=mysql --force --no-interaction
 ## Notes
 - Reverb host is configured for Herd at `reverb.herd.test` (TLS/443).
 - Sanctum SPA session auth is enabled for `/agent/api/v1/*`; ensure `SANCTUM_STATEFUL_DOMAINS` includes your local app host (for example `agent.test` or `agent.herd.test`).
+- Additional allowed directory bases can be configured in `.env`:
+  - `AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES` (CSV; quote paths containing spaces)
+  - `AGENT_ADDITIONAL_TASK_MARKDOWN_BASES` (CSV; quote paths containing spaces)
 - API version header middleware sets `X-Agent-Api-Version: 1.0` on `/agent/api/v1/*` routes.
 - If runs appear stalled/queued unexpectedly, check `php artisan horizon:status`; start/restart workers with `php artisan horizon`.
 - If you change queue/horizon runtime env values (for example `REDIS_QUEUE_RETRY_AFTER`), restart Horizon so workers pick up the new config.
