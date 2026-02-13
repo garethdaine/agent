@@ -13,6 +13,7 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Jobs CRUD + run-now/stop APIs + Inertia Jobs/Monitor pages implemented
 - Job create/edit form includes guided schedule builder (basic frequency picker + advanced cron mode)
 - Job create/edit form now includes interactive command-template builder presets (runner-aware) plus placeholder token insertion
+- Command builder now surfaces runner-specific permission profiles/flags for both Codex and Claude, with quick token insertion for manual templates
 - Task prompt input supports both file-path mode and inline markdown editor mode (inline content is persisted to managed `.md` files)
 - Monitor now surfaces approval-needed state per run in Latest Runs with a modal approval workflow (`Approve & Re-run` / `Deny/Stop`), with runner-aware approval templates for Codex and Claude
 - Runner finalization now normalizes `duration_ms` to integer-safe values for PostgreSQL compatibility and resilient stop handling

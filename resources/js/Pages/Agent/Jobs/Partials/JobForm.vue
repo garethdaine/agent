@@ -67,6 +67,43 @@ const PLACEHOLDER_OPTIONS = [
     '{{job_name}}',
 ];
 
+const RUNNER_PERMISSION_PROFILES = {
+    codex: [
+        {
+            value: 'interactive',
+            label: 'Interactive approvals (default)',
+            description: 'Codex can pause and request approvals when needed.',
+            tokens: [],
+        },
+        {
+            value: 'web_access',
+            label: 'Pre-allow web tools',
+            description: 'Adds --search while keeping approvals interactive.',
+            tokens: ['--search'],
+        },
+        {
+            value: 'non_interactive',
+            label: 'Non-interactive (dangerous)',
+            description: 'Bypasses approvals/sandbox for trusted prompts only.',
+            tokens: ['--dangerously-bypass-approvals-and-sandbox', '--search'],
+        },
+    ],
+    claude: [
+        {
+            value: 'interactive',
+            label: 'Interactive approvals (default)',
+            description: 'Claude can pause and request permission as needed.',
+            tokens: [],
+        },
+        {
+            value: 'non_interactive',
+            label: 'Non-interactive (dangerous)',
+            description: 'Adds --dangerously-skip-permissions.',
+            tokens: ['--dangerously-skip-permissions'],
+        },
+    ],
+};
+
 const form = reactive({
     name: '',
     description: '',
@@ -85,6 +122,7 @@ const form = reactive({
 
 const templateBuilder = reactive({
     preset: 'runner_default',
+    permissionProfile: 'interactive',
     includeWorkingDirectory: false,
     includeRunId: false,
     includeJobId: false,
@@ -238,9 +276,7 @@ const presetOptions = computed(() => {
     if (form.runner_type === 'codex') {
         return [
             { value: 'runner_default', label: 'Runner Default (empty template)' },
-            { value: 'codex_standard', label: 'Codex Standard' },
-            { value: 'codex_search', label: 'Codex + --search' },
-            { value: 'codex_non_interactive', label: 'Codex Non-Interactive (approval bypass)' },
+            { value: 'codex_prompt_file', label: 'Codex: Execute Prompt File' },
             { value: 'manual', label: 'Manual Edit' },
         ];
     }
@@ -248,8 +284,7 @@ const presetOptions = computed(() => {
     if (form.runner_type === 'claude') {
         return [
             { value: 'runner_default', label: 'Runner Default (empty template)' },
-            { value: 'claude_standard', label: 'Claude Standard' },
-            { value: 'claude_non_interactive', label: 'Claude Non-Interactive (skip permissions)' },
+            { value: 'claude_prompt_file', label: 'Claude: Prompt File (-p)' },
             { value: 'manual', label: 'Manual Edit' },
         ];
     }
@@ -260,10 +295,41 @@ const presetOptions = computed(() => {
     ];
 });
 
+const permissionProfileOptions = computed(() => RUNNER_PERMISSION_PROFILES[form.runner_type] ?? []);
+
+const selectedPermissionProfile = computed(() => {
+    const options = permissionProfileOptions.value;
+
+    return options.find((profile) => profile.value === templateBuilder.permissionProfile) ?? options[0] ?? null;
+});
+
+const permissionTokenOptions = computed(() => {
+    const tokens = permissionProfileOptions.value.flatMap((profile) => profile.tokens);
+
+    return Array.from(new Set(tokens));
+});
+
+const runnerCommandHint = computed(() => {
+    if (form.runner_type === 'codex') {
+        return `${RUNNER_EXECUTABLES.codex} [permission flags] exec {{task_markdown_path}}`;
+    }
+
+    if (form.runner_type === 'claude') {
+        return `${RUNNER_EXECUTABLES.claude} [permission flags] -p {{task_markdown_path}}`;
+    }
+
+    return `${RUNNER_EXECUTABLES.custom} {{task_markdown_path}}`;
+});
+
 watch(() => form.runner_type, (runnerType) => {
     const optionValues = new Set(presetOptions.value.map((option) => option.value));
     if (!optionValues.has(templateBuilder.preset)) {
         templateBuilder.preset = runnerType === 'custom' ? 'custom_standard' : 'runner_default';
+    }
+
+    const availableProfiles = permissionProfileOptions.value.map((profile) => profile.value);
+    if (availableProfiles.length > 0 && !availableProfiles.includes(templateBuilder.permissionProfile)) {
+        templateBuilder.permissionProfile = availableProfiles[0];
     }
 });
 
@@ -274,20 +340,40 @@ const buildTemplateFromPreset = () => {
         return '';
     }
 
-    if (templateBuilder.preset === 'codex_standard') {
-        tokens = [RUNNER_EXECUTABLES.codex, 'exec', '{{task_markdown_path}}'];
-    } else if (templateBuilder.preset === 'codex_search') {
-        tokens = [RUNNER_EXECUTABLES.codex, '--search', 'exec', '{{task_markdown_path}}'];
-    } else if (templateBuilder.preset === 'codex_non_interactive') {
-        tokens = [RUNNER_EXECUTABLES.codex, '--dangerously-bypass-approvals-and-sandbox', '--search', 'exec', '{{task_markdown_path}}'];
-    } else if (templateBuilder.preset === 'claude_standard') {
-        tokens = [RUNNER_EXECUTABLES.claude, '-p', '{{task_markdown_path}}'];
-    } else if (templateBuilder.preset === 'claude_non_interactive') {
-        tokens = [RUNNER_EXECUTABLES.claude, '--dangerously-skip-permissions', '-p', '{{task_markdown_path}}'];
-    } else if (templateBuilder.preset === 'custom_standard') {
+    if (templateBuilder.preset === 'custom_standard') {
         tokens = [RUNNER_EXECUTABLES.custom, '{{task_markdown_path}}'];
     } else if (templateBuilder.preset === 'manual') {
         return form.command_template;
+    } else {
+        let executable = null;
+        let tailTokens = [];
+        let permissionTokens = selectedPermissionProfile.value?.tokens ?? [];
+
+        if (templateBuilder.preset === 'codex_prompt_file' || templateBuilder.preset === 'codex_standard') {
+            executable = RUNNER_EXECUTABLES.codex;
+            tailTokens = ['exec', '{{task_markdown_path}}'];
+        } else if (templateBuilder.preset === 'codex_search') {
+            executable = RUNNER_EXECUTABLES.codex;
+            tailTokens = ['exec', '{{task_markdown_path}}'];
+            permissionTokens = ['--search'];
+        } else if (templateBuilder.preset === 'codex_non_interactive') {
+            executable = RUNNER_EXECUTABLES.codex;
+            tailTokens = ['exec', '{{task_markdown_path}}'];
+            permissionTokens = ['--dangerously-bypass-approvals-and-sandbox', '--search'];
+        } else if (templateBuilder.preset === 'claude_prompt_file' || templateBuilder.preset === 'claude_standard') {
+            executable = RUNNER_EXECUTABLES.claude;
+            tailTokens = ['-p', '{{task_markdown_path}}'];
+        } else if (templateBuilder.preset === 'claude_non_interactive') {
+            executable = RUNNER_EXECUTABLES.claude;
+            tailTokens = ['-p', '{{task_markdown_path}}'];
+            permissionTokens = ['--dangerously-skip-permissions'];
+        }
+
+        if (executable === null) {
+            return form.command_template;
+        }
+
+        tokens = [executable, ...permissionTokens, ...tailTokens];
     }
 
     if (templateBuilder.includeWorkingDirectory) {
@@ -318,6 +404,17 @@ const appendPlaceholderToTemplate = (placeholder) => {
 
     if (!tokens.includes(placeholder)) {
         tokens.push(placeholder);
+    }
+
+    form.command_template = tokens.join(' ');
+};
+
+const appendTokenToTemplate = (token) => {
+    const raw = form.command_template.trim();
+    const tokens = raw === '' ? [] : raw.split(/\s+/);
+
+    if (!tokens.includes(token)) {
+        tokens.push(token);
     }
 
     form.command_template = tokens.join(' ');
@@ -595,10 +692,27 @@ const submit = () => {
                             <option v-for="option in presetOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                         </select>
                         <p class="mt-1 text-xs text-gray-500">Generate a safe command template from runner-aware options.</p>
+                        <p class="mt-1 text-xs text-gray-500">
+                            Base format: <code>{{ runnerCommandHint }}</code>
+                        </p>
                     </div>
 
                     <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Optional Placeholder Tokens</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Permission Profile</p>
+                        <div v-if="permissionProfileOptions.length > 0" class="mt-2 space-y-2">
+                            <select v-model="templateBuilder.permissionProfile" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+                                <option v-for="option in permissionProfileOptions" :key="`perm-${option.value}`" :value="option.value">{{ option.label }}</option>
+                            </select>
+                            <p class="text-xs text-gray-500">{{ selectedPermissionProfile?.description }}</p>
+                            <p class="text-xs text-gray-500">
+                                Active flags:
+                                <span v-if="(selectedPermissionProfile?.tokens?.length ?? 0) === 0">none</span>
+                                <span v-else class="font-mono">{{ selectedPermissionProfile.tokens.join(' ') }}</span>
+                            </p>
+                        </div>
+                        <p v-else class="mt-2 text-xs text-gray-500">No built-in permission flags for <code>custom</code> runners.</p>
+
+                        <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-500">Optional Placeholder Tokens</p>
                         <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
                             <label class="inline-flex items-center gap-2">
                                 <input v-model="templateBuilder.includeWorkingDirectory" type="checkbox" class="rounded border-gray-300" />
@@ -628,6 +742,15 @@ const submit = () => {
                             Apply Generated Template
                         </button>
                         <button
+                            v-for="token in permissionTokenOptions"
+                            :key="`token-${token}`"
+                            type="button"
+                            class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300"
+                            @click="appendTokenToTemplate(token)"
+                        >
+                            Insert {{ token }}
+                        </button>
+                        <button
                             v-for="placeholder in PLACEHOLDER_OPTIONS"
                             :key="placeholder"
                             type="button"
@@ -644,7 +767,7 @@ const submit = () => {
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Command Template (optional for claude/codex)</label>
                 <input v-model="form.command_template" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
                 <p class="mt-1 text-xs text-gray-500">
-                    Optional command override. Leave empty to use runner defaults (claude/codex). For paths containing spaces, prefer placeholders like <code>&#123;&#123;task_markdown_path&#125;&#125;</code> and <code>&#123;&#123;working_directory&#125;&#125;</code>.
+                    Optional command override. Leave empty to use runner defaults. For paths containing spaces, prefer placeholders like <code>&#123;&#123;task_markdown_path&#125;&#125;</code> and <code>&#123;&#123;working_directory&#125;&#125;</code> so the backend applies safe tokenization.
                 </p>
                 <p v-if="errors.command_template" class="mt-1 text-sm text-red-600">{{ errors.command_template[0] }}</p>
             </div>

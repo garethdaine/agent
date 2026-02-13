@@ -1,5 +1,8 @@
 # Minimal Local Cron + Agent Runner Task List (Final Baseline)
 
+## Progress Notes (2026-02-13)
+- Improved job command builder UX with explicit runner-aware permission profiles and flag visibility for both `codex` and `claude`, plus quick insertion of permission tokens into manual templates.
+
 ## Progress Notes (2026-02-12)
 - Phases 0-7 are now complete against the current baseline.
 - Enabled Sanctum stateful API middleware bootstrap so logged-in Inertia sessions authenticate correctly on `/agent/api/v1/*`.
