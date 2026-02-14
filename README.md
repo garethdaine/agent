@@ -23,6 +23,7 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Redis queue `retry_after` is now aligned for long-running agent jobs to prevent mid-run redelivery / `MaxAttemptsExceededException` failures
 - Dashboard now includes live agent metrics cards (runs today, success rate, average duration, backlog, oldest queued age, scheduler health) with `24h` / `7d` windows
 - Added `agent:benchmark-slo` command for Phase 9 SLO dataset seeding and p95 endpoint measurement
+- Added Requirements Discovery tool (`/tools/discovery`) with session lifecycle APIs, interrogation queue workers, Reverb live events, and a multi-panel wizard UI (Q&A, summary confirmation, planning, exports)
 - Runner now detects upstream usage/rate-limit output, records structured metadata, and marks failed runs with `error_code=RATE_LIMITED`
 - Scheduler now applies temporary per-job hold windows after rate-limited failures and skips due windows with `skip_reason=rate_limited` until reset/default hold expiry
 - `run-now` now returns `409 JOB_RATE_LIMITED` while a hold is active, with optional override `ignore_rate_limit_hold=true`

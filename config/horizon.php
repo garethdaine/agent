@@ -98,6 +98,7 @@ return [
 
     'waits' => [
         'redis:agent' => 60,
+        'redis:interrogation' => 30,
     ],
 
     /*
@@ -211,6 +212,20 @@ return [
             'timeout' => 86500,
             'nice' => 0,
         ],
+        'supervisor-interrogation' => [
+            'connection' => 'redis',
+            'queue' => ['interrogation'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(8, (int) env('HORIZON_INTERROGATION_MAX_PROCESSES', 2))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 1,
+            'backoff' => 0,
+            'timeout' => 900,
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [
@@ -220,10 +235,18 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-interrogation' => [
+                'maxProcesses' => max(1, min(8, (int) env('HORIZON_INTERROGATION_MAX_PROCESSES', 2))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
         ],
 
         'local' => [
             'supervisor-1' => [
+                //
+            ],
+            'supervisor-interrogation' => [
                 //
             ],
         ],

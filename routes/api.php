@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\V1\AgentJobController;
 use App\Http\Controllers\Api\V1\AgentRunController;
+use App\Http\Controllers\Api\V1\InterrogationSessionController;
+use App\Http\Controllers\Api\V1\InterrogationSettingsController;
 use App\Http\Middleware\AgentApiVersionHeader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -35,5 +37,26 @@ Route::middleware([AgentApiVersionHeader::class])
 
             Route::get('/dashboard/metrics', [AgentRunController::class, 'dashboardMetrics']);
             Route::get('/health/scheduler', [AgentRunController::class, 'schedulerHealth']);
+
+            Route::get('/interrogation/sessions', [InterrogationSessionController::class, 'index']);
+            Route::post('/interrogation/sessions', [InterrogationSessionController::class, 'store'])->middleware('throttle:interrogation');
+            Route::get('/interrogation/sessions/{id}', [InterrogationSessionController::class, 'show']);
+            Route::delete('/interrogation/sessions/{id}', [InterrogationSessionController::class, 'destroy'])->middleware('throttle:interrogation');
+            Route::post('/interrogation/sessions/{id}/restore', [InterrogationSessionController::class, 'restore'])->middleware('throttle:interrogation');
+            Route::post('/interrogation/sessions/{id}/pause', [InterrogationSessionController::class, 'pause'])->middleware('throttle:interrogation');
+            Route::post('/interrogation/sessions/{id}/resume', [InterrogationSessionController::class, 'resume'])->middleware('throttle:interrogation');
+            Route::get('/interrogation/sessions/{id}/events', [InterrogationSessionController::class, 'events']);
+            Route::post('/interrogation/sessions/{id}/answer', [InterrogationSessionController::class, 'submitAnswer'])->middleware('throttle:interrogation');
+            Route::post('/interrogation/sessions/{id}/answer/edit', [InterrogationSessionController::class, 'editAnswer'])->middleware('throttle:interrogation');
+            Route::post('/interrogation/sessions/{id}/confirm-summary', [InterrogationSessionController::class, 'confirmSummary'])->middleware('throttle:interrogation');
+            Route::post('/interrogation/sessions/{id}/generate-plan', [InterrogationSessionController::class, 'generatePlan'])->middleware('throttle:interrogation');
+            Route::post('/interrogation/sessions/{id}/revise-plan', [InterrogationSessionController::class, 'requestRevision'])->middleware('throttle:interrogation');
+            Route::patch('/interrogation/sessions/{id}/annotations', [InterrogationSessionController::class, 'updateAnnotation'])->middleware('throttle:interrogation');
+            Route::post('/interrogation/sessions/{id}/export-summary', [InterrogationSessionController::class, 'exportSummary'])->middleware('throttle:interrogation');
+            Route::post('/interrogation/sessions/{id}/export-plan', [InterrogationSessionController::class, 'exportPlan'])->middleware('throttle:interrogation');
+
+            Route::get('/interrogation/settings', [InterrogationSettingsController::class, 'index']);
+            Route::get('/interrogation/settings/{key}', [InterrogationSettingsController::class, 'show']);
+            Route::put('/interrogation/settings/{key}', [InterrogationSettingsController::class, 'update'])->middleware('throttle:interrogation');
         });
     });

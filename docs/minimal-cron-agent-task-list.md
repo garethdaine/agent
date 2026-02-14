@@ -2,6 +2,7 @@
 
 ## Progress Notes (2026-02-13)
 - Improved job command builder UX with explicit runner-aware permission profiles and flag visibility for both `codex` and `claude`, plus quick insertion of permission tokens into manual templates.
+- Implemented the Requirements Discovery feature plan baseline (`docs/plans/requirements-discovery-feature.md`): schema/models/policy, interrogation services/jobs/events/API/routes, Tools navigation/routes, wizard UI components, and initial integration/config tests.
 
 ## Progress Notes (2026-02-12)
 - Phases 0-7 are now complete against the current baseline.

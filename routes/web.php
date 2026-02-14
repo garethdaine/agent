@@ -39,4 +39,26 @@ Route::middleware([
     Route::get('/agent/monitor', function () {
         return Inertia::render('Agent/Monitor/Index');
     })->name('agent.monitor.index');
+
+    Route::get('/tools', function () {
+        return Inertia::render('Tools/Index');
+    })->name('tools.index');
+
+    Route::get('/tools/discovery', function () {
+        return Inertia::render('Tools/Discovery/Index');
+    })->name('tools.discovery.index');
+
+    Route::get('/tools/discovery/new', function () {
+        return Inertia::render('Tools/Discovery/Create');
+    })->name('tools.discovery.create');
+
+    Route::get('/tools/discovery/settings', function () {
+        return Inertia::render('Tools/Discovery/Settings');
+    })->name('tools.discovery.settings');
+
+    Route::get('/tools/discovery/{id}', function (int $id) {
+        return Inertia::render('Tools/Discovery/Wizard', [
+            'sessionId' => $id,
+        ]);
+    })->name('tools.discovery.wizard');
 });

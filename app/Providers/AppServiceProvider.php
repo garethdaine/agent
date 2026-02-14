@@ -5,9 +5,11 @@ namespace App\Providers;
 use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
+use App\Models\InterrogationSession;
 use App\Policies\AgentAuditLogPolicy;
 use App\Policies\AgentJobPolicy;
 use App\Policies\AgentJobRunPolicy;
+use App\Policies\InterrogationSessionPolicy;
 use App\Support\Agent\ErrorEnvelope;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -33,6 +35,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AgentJob::class, AgentJobPolicy::class);
         Gate::policy(AgentJobRun::class, AgentJobRunPolicy::class);
         Gate::policy(AgentAuditLog::class, AgentAuditLogPolicy::class);
+        Gate::policy(InterrogationSession::class, InterrogationSessionPolicy::class);
 
         RateLimiter::for('agent-mutations', function (Request $request) {
             return [
@@ -42,6 +45,20 @@ class AppServiceProvider extends ServiceProvider
                         return ErrorEnvelope::make(
                             'RATE_LIMITED',
                             'Too many requests. Please retry shortly.',
+                            429
+                        );
+                    }),
+            ];
+        });
+
+        RateLimiter::for('interrogation', function (Request $request) {
+            return [
+                Limit::perMinute(120)
+                    ->by((string) ($request->user()?->id ?? $request->ip()))
+                    ->response(function () {
+                        return ErrorEnvelope::make(
+                            'RATE_LIMITED',
+                            'Too many interrogation requests. Please retry shortly.',
                             429
                         );
                     }),

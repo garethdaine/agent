@@ -76,4 +76,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(AgentJobRun::class);
     }
+
+    public function interrogationSessions(): HasMany
+    {
+        return $this->hasMany(InterrogationSession::class);
+    }
+
+    public function interrogationSettings(): HasMany
+    {
+        return $this->hasMany(InterrogationSetting::class);
+    }
 }
