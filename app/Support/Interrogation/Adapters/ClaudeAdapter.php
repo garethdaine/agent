@@ -19,8 +19,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
             'stream-json',
             '--system-prompt',
             $systemPrompt,
-            '--tools',
-            'Read,Glob,Grep',
+            '--tools=Read,Glob,Grep',
             $discoveryPrompt,
         ];
     }
@@ -46,8 +45,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
         $command[] = $this->questionSchema();
         $command[] = '--system-prompt';
         $command[] = $systemPrompt;
-        $command[] = '--tools';
-        $command[] = 'Read,Glob,Grep';
+        $command[] = '--tools=Read,Glob,Grep';
         $command[] = $userMessage;
 
         return $command;
@@ -74,8 +72,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
         $command[] = $this->summarySchema();
         $command[] = '--system-prompt';
         $command[] = $systemPrompt;
-        $command[] = '--tools';
-        $command[] = 'Read,Glob,Grep';
+        $command[] = '--tools=Read,Glob,Grep';
         $command[] = $summaryPrompt;
 
         return $command;
@@ -102,8 +99,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
         $command[] = $this->planSchema();
         $command[] = '--system-prompt';
         $command[] = $systemPrompt;
-        $command[] = '--tools';
-        $command[] = 'Read,Glob,Grep,Write,Edit';
+        $command[] = '--tools=Read,Glob,Grep,Write,Edit';
         $command[] = $planningPrompt;
 
         return $command;
@@ -123,8 +119,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
             $this->questionSchema(),
             '--system-prompt',
             $systemPrompt,
-            '--tools',
-            'Read,Glob,Grep',
+            '--tools=Read,Glob,Grep',
             $conversationHistory,
         ];
     }
