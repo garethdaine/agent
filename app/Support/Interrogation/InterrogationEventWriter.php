@@ -7,6 +7,7 @@ use App\Events\InterrogationSessionUpdated;
 use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 
 class InterrogationEventWriter
 {
@@ -106,13 +107,26 @@ class InterrogationEventWriter
     {
         $payload = $this->redactPayload($payload);
 
-        $event = InterrogationEvent::query()->create([
-            'interrogation_session_id' => $this->session->id,
-            'event_type' => $eventType,
-            'sequence' => $this->nextSequence++,
-            'payload' => $payload,
-            'event_ts' => CarbonImmutable::now('UTC'),
-        ]);
+        $event = DB::transaction(function () use ($eventType, $payload): InterrogationEvent {
+            InterrogationSession::query()
+                ->whereKey($this->session->id)
+                ->lockForUpdate()
+                ->first();
+
+            $sequence = (int) (InterrogationEvent::query()
+                ->where('interrogation_session_id', $this->session->id)
+                ->max('sequence') ?? 0) + 1;
+
+            $this->nextSequence = $sequence + 1;
+
+            return InterrogationEvent::query()->create([
+                'interrogation_session_id' => $this->session->id,
+                'event_type' => $eventType,
+                'sequence' => $sequence,
+                'payload' => $payload,
+                'event_ts' => CarbonImmutable::now('UTC'),
+            ]);
+        }, 3);
 
         event(new InterrogationSessionUpdated(
             (int) $this->session->id,
@@ -130,7 +144,7 @@ class InterrogationEventWriter
      */
     private function redactPayload(array $payload): array
     {
-        $redact = static function ($value) use (&$redact) {
+        $redact = function ($value) use (&$redact) {
             if (is_array($value)) {
                 $next = [];
                 foreach ($value as $key => $item) {
@@ -144,6 +158,8 @@ class InterrogationEventWriter
                 return $value;
             }
 
+            $value = $this->normalizeUtf8($value);
+
             return preg_replace([
                 '/\b(?:api[_-]?key|token|password|secret)\s*[:=]\s*[^\s,;]+/i',
                 '/\bBearer\s+[A-Za-z0-9._\-]+/i',
@@ -151,5 +167,20 @@ class InterrogationEventWriter
         };
 
         return $redact($payload);
+    }
+
+    private function normalizeUtf8(string $value): string
+    {
+        if (! mb_check_encoding($value, 'UTF-8')) {
+            $converted = @iconv('UTF-8', 'UTF-8//IGNORE', $value);
+
+            if (is_string($converted)) {
+                $value = $converted;
+            }
+        }
+
+        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value);
+
+        return is_string($sanitized) ? $sanitized : $value;
     }
 }

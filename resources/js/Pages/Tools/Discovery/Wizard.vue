@@ -11,7 +11,7 @@ import SummaryViewer from '@/Components/Interrogation/SummaryViewer.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
     sessionId: {
@@ -26,6 +26,7 @@ const loading = ref(true);
 const error = ref('');
 const busy = ref(false);
 const pollingTimer = ref(null);
+const selectedQuestionId = ref('');
 let echoChannel = null;
 
 const latestQuestion = computed(() => {
@@ -34,10 +35,31 @@ const latestQuestion = computed(() => {
     return questionEvents.length > 0 ? questionEvents[questionEvents.length - 1].payload : null;
 });
 
+const selectedQuestion = computed(() => {
+    const targetId = selectedQuestionId.value.trim();
+    if (targetId === '') {
+        return null;
+    }
+
+    const found = [...events.value]
+        .reverse()
+        .find((event) => event.event_type === 'question' && String(event?.payload?.question_id ?? '') === targetId);
+
+    return found?.payload ?? null;
+});
+
+const activeQuestion = computed(() => selectedQuestion.value ?? latestQuestion.value);
+
 const latestDiscoveryEvent = computed(() => {
     const discovery = events.value.filter((event) => event.event_type === 'discovery_activity');
 
     return discovery.length > 0 ? discovery[discovery.length - 1] : null;
+});
+
+watch(activeQuestion, (question) => {
+    if (!question) {
+        selectedQuestionId.value = '';
+    }
 });
 
 const loadSession = async (includeEvents = true) => {
@@ -157,25 +179,8 @@ const submitAnswer = async (payload) => {
     }
 };
 
-const editFromQuestion = async (questionId) => {
-    if (!questionId) {
-        return;
-    }
-
-    busy.value = true;
-
-    try {
-        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/answer/edit`, {
-            question_id: questionId,
-            answer_type: 'freetext',
-            answer_text: 'Please re-evaluate from this question. I will provide an updated answer next.',
-        });
-        await loadSession(false);
-    } catch (e) {
-        error.value = e?.response?.data?.error?.message ?? 'Failed to request edit.';
-    } finally {
-        busy.value = false;
-    }
+const focusQuestion = (questionId) => {
+    selectedQuestionId.value = String(questionId || '').trim();
 };
 
 const confirmSummary = async () => {
@@ -369,15 +374,22 @@ onBeforeUnmount(() => {
 
                     <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
                         <div class="xl:col-span-3">
-                            <QaHistoryPanel :events="events" :selected-question-id="latestQuestion?.question_id || ''" @edit-question="editFromQuestion" />
+                            <QaHistoryPanel :events="events" :selected-question-id="activeQuestion?.question_id || ''" @select-question="focusQuestion" />
                         </div>
 
                         <div class="space-y-4 xl:col-span-6">
                             <StatusCard v-if="session.phase <= 1" :session="session" :latest-discovery-event="latestDiscoveryEvent" />
 
                             <template v-if="session.phase === 2">
-                                <QuestionRenderer :question="latestQuestion" />
-                                <AnswerInput :question="latestQuestion" :busy="busy" @submit="submitAnswer" />
+                                <div
+                                    v-if="selectedQuestion && latestQuestion && selectedQuestion.question_id !== latestQuestion.question_id"
+                                    class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+                                >
+                                    Revising an earlier question ({{ selectedQuestion.question_id }}).
+                                    <button type="button" class="ml-2 font-medium underline" @click="selectedQuestionId = ''">Return to latest question</button>
+                                </div>
+                                <QuestionRenderer :question="activeQuestion" />
+                                <AnswerInput :question="activeQuestion" :busy="busy" @submit="submitAnswer" />
                             </template>
 
                             <template v-if="session.phase === 3">

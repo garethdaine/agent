@@ -11,6 +11,7 @@ use App\Jobs\ExecuteInterrogationDiscoveryJob;
 use App\Jobs\ExecuteInterrogationPlanJob;
 use App\Jobs\ExecuteInterrogationRoundJob;
 use App\Jobs\ExecuteInterrogationSummaryJob;
+use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
@@ -167,7 +168,7 @@ class InterrogationSessionController extends Controller
         $validated = $request->validated();
         $message = $this->buildAnswerMessage($validated);
 
-        ExecuteInterrogationRoundJob::dispatch((int) $session->id, $message);
+        ExecuteInterrogationRoundJob::dispatch((int) $session->id, $message, false, $validated);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -215,7 +216,7 @@ class InterrogationSessionController extends Controller
             'message' => 'Answer edited; downstream questions may be stale.',
         ]);
 
-        ExecuteInterrogationRoundJob::dispatch((int) $session->id, $message);
+        ExecuteInterrogationRoundJob::dispatch((int) $session->id, $message, false, $validated);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -511,7 +512,7 @@ class InterrogationSessionController extends Controller
         }
 
         $targetStatus = match ((int) $session->phase) {
-            InterrogationSession::PHASE_DISCOVERY => InterrogationSession::STATUS_DISCOVERING,
+            InterrogationSession::PHASE_SETUP, InterrogationSession::PHASE_DISCOVERY => InterrogationSession::STATUS_SETUP,
             InterrogationSession::PHASE_INTERROGATION => InterrogationSession::STATUS_INTERROGATING,
             InterrogationSession::PHASE_SUMMARY => InterrogationSession::STATUS_SUMMARIZING,
             InterrogationSession::PHASE_PLANNING => InterrogationSession::STATUS_PLANNING,
@@ -539,11 +540,27 @@ class InterrogationSessionController extends Controller
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot be retried from its current state.', 409);
         }
 
+        if ((int) $session->phase === InterrogationSession::PHASE_INTERROGATION) {
+            $session->cli_session_id = null;
+            $session->save();
+        }
+
+        $pendingQuestionId = null;
+        if ((int) $session->phase === InterrogationSession::PHASE_INTERROGATION) {
+            $pendingQuestionId = $this->latestUnansweredQuestionId($session);
+        }
+
         match ((int) $session->phase) {
             InterrogationSession::PHASE_SETUP, InterrogationSession::PHASE_DISCOVERY =>
                 ExecuteInterrogationDiscoveryJob::dispatch((int) $session->id),
             InterrogationSession::PHASE_INTERROGATION =>
-                ExecuteInterrogationRoundJob::dispatch((int) $session->id, 'Retry current interrogation phase and continue with the next best question.'),
+                $pendingQuestionId !== null
+                    ? null
+                    : ExecuteInterrogationRoundJob::dispatch(
+                        (int) $session->id,
+                        'Retry current interrogation phase. Resume from the latest unanswered question before asking anything new.',
+                        true
+                    ),
             InterrogationSession::PHASE_SUMMARY =>
                 ExecuteInterrogationSummaryJob::dispatch((int) $session->id),
             InterrogationSession::PHASE_PLANNING =>
@@ -574,12 +591,37 @@ class InterrogationSessionController extends Controller
         return response()->json([
             'data' => [
                 'accepted' => true,
-                'queued' => true,
+                'queued' => $pendingQuestionId === null,
+                'pending_question_id' => $pendingQuestionId,
                 'session_id' => $session->id,
                 'status' => $session->status,
                 'phase' => $session->phase,
             ],
         ], 202);
+    }
+
+    private function latestUnansweredQuestionId(InterrogationSession $session): ?string
+    {
+        $latestQuestion = $session->events()
+            ->where('event_type', InterrogationEvent::TYPE_QUESTION)
+            ->orderByDesc('sequence')
+            ->first();
+
+        if (! $latestQuestion) {
+            return null;
+        }
+
+        $questionId = trim((string) data_get($latestQuestion->payload, 'question_id', ''));
+        if ($questionId === '') {
+            return null;
+        }
+
+        $answered = $session->events()
+            ->where('event_type', InterrogationEvent::TYPE_ANSWER)
+            ->whereRaw("payload->>'question_id' = ?", [$questionId])
+            ->exists();
+
+        return $answered ? null : $questionId;
     }
 
     public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
@@ -695,6 +737,15 @@ class InterrogationSessionController extends Controller
         $answerType = (string) $validated['answer_type'];
 
         if ($answerType === 'choice') {
+            $multiple = array_values(array_filter(
+                (array) ($validated['selected_options'] ?? []),
+                static fn ($value): bool => is_string($value) && trim($value) !== ''
+            ));
+
+            if ($multiple !== []) {
+                return sprintf('Question %s answered with choices: %s', $questionId, implode('; ', $multiple));
+            }
+
             return sprintf('Question %s answered with choice: %s', $questionId, (string) ($validated['selected_option'] ?? ''));
         }
 

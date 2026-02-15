@@ -61,7 +61,8 @@ class ExecuteInterrogationDiscoveryJob implements ShouldQueue
         try {
             $adapter = $adapterFactory->make((string) $session->runner_type);
             $systemPrompt = $promptResolver->resolveForPhase($session, 'discovery');
-            $discoveryPrompt = 'Inspect the project and emit concise discovery progress updates while preparing requirements interrogation.';
+            $discoveryPrompt = 'Inspect this project for requirements interrogation prep. Focus on app/, routes/, resources/js/, config/, database/migrations/, docs/, and tests/. '
+                .'Do not scan vendor/, node_modules/, storage/, or bootstrap/cache/. Emit concise human-readable progress updates only.';
             $command = $adapter->buildDiscoveryCommand($session, $discoveryPrompt, $systemPrompt);
 
             $process = new Process($command, (string) $session->project_directory, $adapter->buildEnvironment($session));
@@ -123,7 +124,15 @@ class ExecuteInterrogationDiscoveryJob implements ShouldQueue
                 ['at' => CarbonImmutable::now('UTC')->toIso8601String()]
             );
 
-            ExecuteInterrogationRoundJob::dispatch((int) $session->id, 'Start requirements interrogation. Ask the first question.');
+            // Start interrogation with a fresh CLI session to avoid carrying discovery stream state.
+            $session->cli_session_id = null;
+            $session->save();
+
+            ExecuteInterrogationRoundJob::dispatch(
+                (int) $session->id,
+                'Start requirements interrogation. Ask the first question.',
+                true,
+            );
         } catch (\Throwable $throwable) {
             report($throwable);
 
@@ -188,12 +197,18 @@ class ExecuteInterrogationDiscoveryJob implements ShouldQueue
 
             $payload = is_array($parsed['payload'] ?? null) ? $parsed['payload'] : [];
             $payload['stream_type'] = (string) ($parsed['type'] ?? 'message');
-            $writer->appendDiscoveryActivity($payload);
 
             if (isset($payload['cli_session_id']) && is_string($payload['cli_session_id']) && $payload['cli_session_id'] !== '' && $session->cli_session_id !== $payload['cli_session_id']) {
                 $session->cli_session_id = $payload['cli_session_id'];
                 $session->save();
             }
+
+            $message = trim((string) ($payload['message'] ?? ''));
+            if ($message === '') {
+                continue;
+            }
+
+            $writer->appendDiscoveryActivity($payload);
         }
 
         return $buffer;

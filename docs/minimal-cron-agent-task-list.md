@@ -1,5 +1,38 @@
 # Minimal Local Cron + Agent Runner Task List (Final Baseline)
 
+## Progress Notes (2026-02-15)
+- Fixed Discovery retry stalling at `discovering` with no new output/events: retry now resets discovery/setup phases to `setup` before re-queueing so `ExecuteInterrogationDiscoveryJob` can transition and run.
+- Fixed Claude discovery CLI invocation for streamed output: `--verbose` is now included with `--output-format stream-json` under `--print` mode to satisfy CLI requirements.
+- Fixed Claude discovery stream parsing for non-string payloads (`message/content` arrays), preventing `DISCOVERY_RUNTIME_EXCEPTION` / `Array to string conversion` crashes during discovery.
+- Tightened Claude discovery activity parsing/output: suppress raw JSON/event usage dumps, emit concise tool progress summaries, and ignore empty stream messages so the Discovery Status card no longer fills with token/metadata noise.
+- Discovery hardening follow-up:
+  - ignore transient `<tool_use_error>Sibling tool call errored</tool_use_error>` status noise
+  - constrain discovery prompt away from `vendor/`, `node_modules/`, `storage/`, and `bootstrap/cache/` to reduce tool churn
+  - normalize malformed UTF-8 in interrogation event payloads before JSON persistence to prevent runtime failures while streaming
+- Interrogation phase stability fixes:
+  - replaced fallback runtime prompt source from `docs/interrogate.md` with a built-in non-interactive, schema-first prompt contract
+  - prevented discovery CLI session reuse in first interrogation round (reset `cli_session_id` on phase transition to start interrogation fresh)
+  - added `isSystemMessage` handling for interrogation round bootstrap/retry prompts so system bootstrap text is not recorded as a user answer event
+  - updated Claude JSON parsing to unwrap CLI `type=result` envelopes (`structured_output` / `result` JSON-string) so question/summary parsing no longer fails with `ROUND_RESPONSE_PARSE_FAILED`
+- Interrogation UX overhaul:
+  - choice questions now render as clickable option cards (radio/checkbox style), not dropdowns
+  - supports multi-select choice answers (`selected_options`) with server validation and answer-message handling
+  - question presentation now de-duplicates option-heavy prompt text and avoids repeating options across the question card and answer controls
+  - Q&A history now shows concise question previews instead of full long-form prompt dumps
+  - reasoning presentation now renders as a structured panel (`Why this matters`, extracted `Key Considerations`, collapsible `View full reasoning`) instead of one oversized text block
+  - second-pass interrogation visual redesign now uses a Claude-style card layout (large prompt typography, numbered selectable rows, inline "Something else" path, and cleaner action footer with explicit submit/skip controls)
+  - visual polish follow-up aligns interrogation cards with the app's standard scale/style (normal typography, standard corner radii, and existing card spacing rhythm)
+  - restored explicit skip-reason selection in interrogation answers and fixed skip submission to send the selected reason reliably
+  - fixed interrogation event sequence race in `InterrogationEventWriter` by allocating sequence numbers under a session row lock, preventing duplicate `(session_id, sequence)` failures during concurrent round processing
+  - fixed interrogation answer-linking so answer events persist `question_id`/answer metadata (choice, multi-choice, skip) instead of generic free-text only
+  - fixed interrogation retry in phase 2 to resume on the latest unanswered question (no automatic "ask next question" when a pending question already exists)
+  - fixed interrogation question prompt rendering to support safe markdown formatting (bold, inline code, lists, links) instead of showing raw markdown tokens
+  - improved interrogation revision UX: Q&A history now explicitly selects a prior question for revision ("Answer/revise this question"), and the UI shows a clear "Return to latest question" state while editing earlier responses
+  - improved prompt cleanup to strip inline option blocks from question markdown when structured `options` are already provided, preventing duplicated question+options rendering
+  - de-duplicated Q&A history by `question_id` and sorted unresolved items first, preventing retry-induced repeated question rows from flooding the history panel
+  - sanitized displayed interrogation reasoning to remove operational retry/meta preambles (for example re-issuing/id-mismatch control text) so reasoning stays relevant to the actual question
+  - fixed Claude discovery tool-result error detection false-positive where PHP/code snippets containing identifiers like `ErrorEnvelope` were incorrectly surfaced as `Tool error`
+
 ## Progress Notes (2026-02-13)
 - Improved job command builder UX with explicit runner-aware permission profiles and flag visibility for both `codex` and `claude`, plus quick insertion of permission tokens into manual templates.
 - Implemented the Requirements Discovery feature plan baseline (`docs/plans/requirements-discovery-feature.md`): schema/models/policy, interrogation services/jobs/events/API/routes, Tools navigation/routes, wizard UI components, and initial integration/config tests.

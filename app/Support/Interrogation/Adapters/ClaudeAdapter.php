@@ -15,6 +15,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
         return [
             $this->executable(),
             '-p',
+            '--verbose',
             '--output-format',
             'stream-json',
             '--system-prompt',
@@ -143,8 +144,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
 
         $payload = [
             'source' => 'claude',
-            'raw' => $decoded,
-            'message' => (string) ($decoded['text'] ?? $decoded['message'] ?? $decoded['content'] ?? ''),
+            'message' => $this->extractStreamMessage($decoded),
         ];
 
         if (isset($decoded['session_id']) && is_string($decoded['session_id'])) {
@@ -164,11 +164,239 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
     }
 
     /**
+     * @param  array<string, mixed>  $decoded
+     */
+    private function extractStreamMessage(array $decoded): string
+    {
+        $type = (string) ($decoded['type'] ?? '');
+
+        if ($type === 'assistant') {
+            return $this->extractAssistantStreamMessage($decoded);
+        }
+
+        if ($type === 'user') {
+            return $this->extractToolResultMessage($decoded);
+        }
+
+        if ($type === 'result') {
+            $result = $decoded['result'] ?? $decoded['message'] ?? $decoded['content'] ?? null;
+
+            return $this->flattenStreamValue($result, 320);
+        }
+
+        if ($type === 'system') {
+            $subtype = (string) ($decoded['subtype'] ?? '');
+
+            if ($subtype === 'init') {
+                return 'Discovery session initialized.';
+            }
+        }
+
+        foreach (['text', 'message', 'content', 'delta'] as $key) {
+            if (! array_key_exists($key, $decoded)) {
+                continue;
+            }
+
+            $message = $this->flattenStreamValue($decoded[$key], 320);
+            if ($message !== '') {
+                return $message;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $decoded
+     */
+    private function extractAssistantStreamMessage(array $decoded): string
+    {
+        $message = is_array($decoded['message'] ?? null) ? $decoded['message'] : [];
+        $content = is_array($message['content'] ?? null) ? $message['content'] : [];
+
+        $fragments = [];
+
+        foreach ($content as $block) {
+            if (! is_array($block)) {
+                continue;
+            }
+
+            $blockType = (string) ($block['type'] ?? '');
+
+            if ($blockType === 'text') {
+                $text = $this->flattenStreamValue($block['text'] ?? null, 320);
+                if ($text !== '') {
+                    $fragments[] = $text;
+                }
+
+                continue;
+            }
+
+            if ($blockType === 'tool_use') {
+                $toolMessage = $this->formatToolUseMessage($block);
+                if ($toolMessage !== '') {
+                    $fragments[] = $toolMessage;
+                }
+            }
+        }
+
+        $fragments = array_values(array_unique($fragments));
+
+        return $fragments === [] ? '' : implode("\n", $fragments);
+    }
+
+    /**
+     * @param  array<string, mixed>  $decoded
+     */
+    private function extractToolResultMessage(array $decoded): string
+    {
+        $toolUseResult = is_array($decoded['tool_use_result'] ?? null) ? $decoded['tool_use_result'] : null;
+
+        if ($toolUseResult !== null && isset($toolUseResult['numFiles'])) {
+            $count = (int) $toolUseResult['numFiles'];
+            $truncated = ((bool) ($toolUseResult['truncated'] ?? false)) ? ' (truncated)' : '';
+
+            return sprintf('Tool result: %d file%s%s.', $count, $count === 1 ? '' : 's', $truncated);
+        }
+
+        $message = is_array($decoded['message'] ?? null) ? $decoded['message'] : [];
+        $content = is_array($message['content'] ?? null) ? $message['content'] : [];
+
+        foreach ($content as $block) {
+            if (! is_array($block) || (string) ($block['type'] ?? '') !== 'tool_result') {
+                continue;
+            }
+
+            $candidate = $this->flattenStreamValue($block['content'] ?? null, 320);
+            $candidate = trim((string) preg_replace('/<[^>]+>/', '', $candidate));
+
+            if ($candidate === '' || stripos($candidate, 'Sibling tool call errored') !== false) {
+                return '';
+            }
+
+            if ($candidate !== '' && $this->isLikelyToolError($candidate)) {
+                return 'Tool error: '.$candidate;
+            }
+        }
+
+        return '';
+    }
+
+    private function isLikelyToolError(string $message): bool
+    {
+        $normalized = trim($message);
+
+        if ($normalized === '') {
+            return false;
+        }
+
+        // Avoid misclassifying code snippets (e.g. "ErrorEnvelope") as tool errors.
+        if (preg_match('/^\d+→<\?php/i', $normalized) === 1 || str_starts_with($normalized, '<?php')) {
+            return false;
+        }
+
+        return preg_match('/\b(?:error|failed|denied|not[_\s-]?available)\b/i', $normalized) === 1;
+    }
+
+    /**
+     * @param  array<string, mixed>  $block
+     */
+    private function formatToolUseMessage(array $block): string
+    {
+        $name = (string) ($block['name'] ?? 'tool');
+        $input = is_array($block['input'] ?? null) ? $block['input'] : [];
+
+        return match ($name) {
+            'Read' => isset($input['file_path']) && is_string($input['file_path'])
+                ? 'Reading '.basename($input['file_path'])
+                : 'Reading file',
+            'Glob' => isset($input['pattern']) && is_string($input['pattern'])
+                ? 'Searching files: '.$input['pattern']
+                : 'Searching files',
+            'Grep' => isset($input['pattern']) && is_string($input['pattern'])
+                ? 'Scanning text: '.$input['pattern']
+                : 'Scanning text',
+            default => 'Using tool: '.$name,
+        };
+    }
+
+    private function flattenStreamValue(mixed $value, int $maxLength = 600): string
+    {
+        if (is_string($value)) {
+            $text = $this->sanitizeUtf8(trim($value));
+
+            return mb_substr($text, 0, $maxLength);
+        }
+
+        if (is_bool($value) || is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+
+        if (! is_array($value)) {
+            return '';
+        }
+
+        $fragments = [];
+
+        if (isset($value['text'])) {
+            $text = $this->flattenStreamValue($value['text'], $maxLength);
+            if ($text !== '') {
+                $fragments[] = $text;
+            }
+        }
+
+        if (isset($value['content'])) {
+            $content = $this->flattenStreamValue($value['content'], $maxLength);
+            if ($content !== '') {
+                $fragments[] = $content;
+            }
+        }
+
+        if (isset($value['message'])) {
+            $message = $this->flattenStreamValue($value['message'], $maxLength);
+            if ($message !== '') {
+                $fragments[] = $message;
+            }
+        }
+
+        foreach ($value as $item) {
+            $fragment = $this->flattenStreamValue($item, $maxLength);
+            if ($fragment !== '') {
+                $fragments[] = $fragment;
+            }
+        }
+
+        $fragments = array_values(array_unique($fragments));
+
+        if ($fragments !== []) {
+            return mb_substr(implode("\n", $fragments), 0, $maxLength);
+        }
+
+        $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return is_string($encoded) ? mb_substr($encoded, 0, $maxLength) : '';
+    }
+
+    private function sanitizeUtf8(string $value): string
+    {
+        if (mb_check_encoding($value, 'UTF-8')) {
+            return $value;
+        }
+
+        $converted = @iconv('UTF-8', 'UTF-8//IGNORE', $value);
+        if (is_string($converted) && $converted !== '') {
+            return $converted;
+        }
+
+        return mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function parseQuestionResponse(string $output): ?array
     {
-        $decoded = $this->decodeBestEffortJson($output);
+        $decoded = $this->decodeStructuredOutput($output);
 
         if (! is_array($decoded)) {
             return null;
@@ -200,7 +428,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
      */
     public function parseSummaryResponse(string $output): ?array
     {
-        $decoded = $this->decodeBestEffortJson($output);
+        $decoded = $this->decodeStructuredOutput($output);
 
         if (! is_array($decoded)) {
             return null;
@@ -225,7 +453,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
      */
     public function parsePlanResponse(string $output): ?array
     {
-        $decoded = $this->decodeBestEffortJson($output);
+        $decoded = $this->decodeStructuredOutput($output);
 
         if (! is_array($decoded)) {
             return null;
@@ -241,6 +469,41 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
             'risks' => is_array($decoded['risks'] ?? null) ? array_values($decoded['risks']) : [],
             'assumptions' => is_array($decoded['assumptions'] ?? null) ? array_values($decoded['assumptions']) : [],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function decodeStructuredOutput(string $output): ?array
+    {
+        $decoded = $this->decodeBestEffortJson($output);
+
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        if (is_array($decoded['structured_output'] ?? null)) {
+            $normalized = $decoded['structured_output'];
+
+            if (! isset($normalized['cli_session_id']) && is_string($decoded['session_id'] ?? null) && $decoded['session_id'] !== '') {
+                $normalized['cli_session_id'] = $decoded['session_id'];
+            }
+
+            return $normalized;
+        }
+
+        if (is_array($decoded['result'] ?? null)) {
+            return $decoded['result'];
+        }
+
+        if (is_string($decoded['result'] ?? null) && trim($decoded['result']) !== '') {
+            $parsedResult = $this->decodeBestEffortJson((string) $decoded['result']);
+            if (is_array($parsedResult)) {
+                return $parsedResult;
+            }
+        }
+
+        return $decoded;
     }
 
     /**

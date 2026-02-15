@@ -21,6 +21,7 @@ class InterrogationClaudeAdapterCommandTest extends TestCase
         $command = $adapter->buildDiscoveryCommand($session, $prompt, 'system');
 
         $this->assertContains('--tools=Read,Glob,Grep', $command);
+        $this->assertContains('--verbose', $command);
         $this->assertSame(1, count(array_filter($command, fn ($token) => str_starts_with((string) $token, '--tools'))));
         $this->assertSame($prompt, $command[count($command) - 1]);
     }

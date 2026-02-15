@@ -21,7 +21,13 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
 
     public int $timeout = 900;
 
-    public function __construct(public int $sessionId, public string $userMessage)
+    public function __construct(
+        public int $sessionId,
+        public string $userMessage,
+        public bool $isSystemMessage = false,
+        /** @var array<string, mixed>|null */
+        public ?array $answerPayload = null,
+    )
     {
         $this->onConnection('redis');
         $this->onQueue('interrogation');
@@ -53,12 +59,29 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
 
         $writer = new InterrogationEventWriter($session);
 
-        if (trim($this->userMessage) !== '') {
-            $writer->appendAnswer([
-                'answer_text' => trim($this->userMessage),
-                'answer_type' => 'freetext',
+        if (! $this->isSystemMessage && trim($this->userMessage) !== '') {
+            $payload = is_array($this->answerPayload) ? $this->answerPayload : [];
+            $answerType = (string) ($payload['answer_type'] ?? 'freetext');
+            $questionId = isset($payload['question_id']) ? trim((string) $payload['question_id']) : '';
+
+            $normalized = [
+                'question_id' => $questionId !== '' ? $questionId : null,
+                'answer_type' => $answerType,
+                'answer_text' => (string) ($payload['answer_text'] ?? ''),
+                'selected_option' => (string) ($payload['selected_option'] ?? ''),
+                'selected_options' => array_values(array_filter(
+                    (array) ($payload['selected_options'] ?? []),
+                    static fn ($value): bool => is_string($value) && trim($value) !== ''
+                )),
+                'skip_reason' => (string) ($payload['skip_reason'] ?? ''),
                 'at' => CarbonImmutable::now('UTC')->toIso8601String(),
-            ]);
+            ];
+
+            if (($normalized['answer_text'] ?? '') === '' && $answerType === 'freetext') {
+                $normalized['answer_text'] = trim($this->userMessage);
+            }
+
+            $writer->appendAnswer($normalized);
         }
 
         try {

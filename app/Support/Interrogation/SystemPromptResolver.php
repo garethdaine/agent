@@ -12,10 +12,10 @@ class SystemPromptResolver
         $base = $this->basePrompt($session);
 
         $phaseInstructions = match ($phase) {
-            'discovery' => 'Phase: discovery. Inspect project context and report concise discoveries only.',
-            'interrogation' => 'Phase: interrogation. Ask one high-signal question at a time with clear answer format.',
-            'summary' => 'Phase: summary. Produce structured summary JSON for user confirmation.',
-            'planning' => 'Phase: planning. Produce implementable, sequenced plan JSON with clear acceptance criteria.',
+            'discovery' => 'Phase: discovery. Inspect project context and emit concise human-readable progress lines only.',
+            'interrogation' => 'Phase: interrogation. Return ONLY a single JSON object that matches the provided schema. Ask exactly one high-signal question.',
+            'summary' => 'Phase: summary. Return ONLY a single JSON object that matches the provided schema for summary output.',
+            'planning' => 'Phase: planning. Return ONLY a single JSON object that matches the provided schema for planning output.',
             default => 'Phase: setup.',
         };
 
@@ -39,14 +39,18 @@ class SystemPromptResolver
             return $setting['text'];
         }
 
-        $fallbackPath = base_path('docs/interrogate.md');
-        if (is_file($fallbackPath)) {
-            $contents = @file_get_contents($fallbackPath);
-            if (is_string($contents) && trim($contents) !== '') {
-                return $contents;
-            }
-        }
+        return <<<'PROMPT'
+You are Agent's requirements discovery runtime in non-interactive CLI mode.
 
-        return 'You are a requirements discovery assistant. Ask focused, structured questions and produce implementable outputs.';
+Hard rules:
+- Do not reference unavailable orchestration tools (for example AskUserQuestion or EnterPlanMode).
+- Do not output markdown wrappers or prose outside required output format.
+- Prefer concise outputs and avoid unnecessary tool calls.
+- If a tool error is transient, recover and continue; do not loop indefinitely.
+
+Output contract:
+- When output format is stream-json, emit short progress updates.
+- When output format is json with a schema, return exactly one valid JSON object matching that schema.
+PROMPT;
     }
 }

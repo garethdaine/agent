@@ -84,7 +84,7 @@ onMounted(load);
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">System Prompt Override</label>
                     <textarea v-model="form.system_prompt" rows="14" class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm dark:border-gray-700 dark:bg-gray-900" />
-                    <p class="mt-1 text-xs text-gray-500">Leave empty to fall back to <code>docs/interrogate.md</code>.</p>
+                    <p class="mt-1 text-xs text-gray-500">Leave empty to use the built-in runtime-safe prompt.</p>
                 </div>
 
                 <div class="flex justify-end">

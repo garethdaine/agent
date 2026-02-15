@@ -161,7 +161,7 @@ class InterrogationApiWorkflowTest extends TestCase
 
         $session->refresh();
 
-        $this->assertSame(InterrogationSession::STATUS_DISCOVERING, $session->status);
+        $this->assertSame(InterrogationSession::STATUS_SETUP, $session->status);
         $this->assertNull($session->error_code);
         $this->assertNull($session->error_summary);
         $this->assertNull($session->finished_at);
@@ -169,5 +169,114 @@ class InterrogationApiWorkflowTest extends TestCase
         Queue::assertPushed(ExecuteInterrogationDiscoveryJob::class, function (ExecuteInterrogationDiscoveryJob $job) use ($session) {
             return (int) $job->sessionId === (int) $session->id;
         });
+    }
+
+    public function test_retry_interrogation_clears_cli_session_and_requeues_round_job(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Retry interrogation session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_FAILED,
+            'phase' => InterrogationSession::PHASE_INTERROGATION,
+            'cli_session_id' => 'stale-session-id',
+            'error_code' => 'ROUND_RUNTIME_EXCEPTION',
+            'error_summary' => 'stalled once',
+            'finished_at' => now('UTC'),
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/retry')
+            ->assertStatus(202)
+            ->assertJsonPath('data.queued', true)
+            ->assertJsonPath('data.session_id', $session->id);
+
+        $session->refresh();
+
+        $this->assertSame(InterrogationSession::STATUS_INTERROGATING, $session->status);
+        $this->assertNull($session->cli_session_id);
+
+        Queue::assertPushed(ExecuteInterrogationRoundJob::class, function (ExecuteInterrogationRoundJob $job) use ($session) {
+            return (int) $job->sessionId === (int) $session->id && $job->isSystemMessage === true;
+        });
+    }
+
+    public function test_submit_answer_accepts_multi_choice_payloads_and_rejects_empty_choice(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Multi choice answer session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_GENERAL,
+            'status' => InterrogationSession::STATUS_INTERROGATING,
+            'phase' => InterrogationSession::PHASE_INTERROGATION,
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/answer', [
+            'question_id' => 'q-multi-1',
+            'answer_type' => 'choice',
+            'selected_options' => ['Option A', 'Option C'],
+        ])->assertStatus(202);
+
+        Queue::assertPushed(ExecuteInterrogationRoundJob::class, function (ExecuteInterrogationRoundJob $job) use ($session) {
+            return (int) $job->sessionId === (int) $session->id
+                && is_array($job->answerPayload)
+                && ($job->answerPayload['question_id'] ?? null) === 'q-multi-1'
+                && ($job->answerPayload['answer_type'] ?? null) === 'choice'
+                && ($job->answerPayload['selected_options'] ?? []) === ['Option A', 'Option C'];
+        });
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/answer', [
+            'question_id' => 'q-multi-2',
+            'answer_type' => 'choice',
+        ])->assertStatus(422);
+    }
+
+    public function test_retry_interrogation_with_unanswered_latest_question_does_not_queue_next_round(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Retry with pending question',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_FAILED,
+            'phase' => InterrogationSession::PHASE_INTERROGATION,
+            'error_code' => 'ROUND_RUNTIME_EXCEPTION',
+            'error_summary' => 'failed once',
+            'finished_at' => now('UTC'),
+        ]);
+
+        InterrogationEvent::query()->create([
+            'interrogation_session_id' => $session->id,
+            'event_type' => InterrogationEvent::TYPE_QUESTION,
+            'sequence' => 1,
+            'payload' => ['question_id' => 'q-pending', 'question_text' => 'Pending question'],
+            'event_ts' => now('UTC'),
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/retry')
+            ->assertStatus(202)
+            ->assertJsonPath('data.queued', false)
+            ->assertJsonPath('data.pending_question_id', 'q-pending');
+
+        Queue::assertNotPushed(ExecuteInterrogationRoundJob::class);
     }
 }
