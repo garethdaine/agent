@@ -39,6 +39,37 @@ const setPage = async (page) => {
     await load();
 };
 
+const retrySession = async (sessionId) => {
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${sessionId}/retry`);
+        await load();
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to retry session.';
+    }
+};
+
+const deleteSession = async (sessionId) => {
+    if (!window.confirm('Delete this session? You can restore it later from the Deleted filter.')) {
+        return;
+    }
+
+    try {
+        await axios.delete(`/agent/api/v1/interrogation/sessions/${sessionId}`);
+        await load();
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to delete session.';
+    }
+};
+
+const restoreSession = async (sessionId) => {
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${sessionId}/restore`);
+        await load();
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to restore session.';
+    }
+};
+
 onMounted(load);
 </script>
 
@@ -116,9 +147,35 @@ onMounted(load);
                                 <td class="px-4 py-3 text-sm"><SessionStatusBadge :status="session.status" /></td>
                                 <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-200">{{ session.updated_at || '—' }}</td>
                                 <td class="px-4 py-3 text-right">
-                                    <Link :href="route('tools.discovery.wizard', session.id)" class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700">
-                                        Open
-                                    </Link>
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button
+                                            v-if="!session.deleted_at && ['failed', 'paused', 'setup'].includes(session.status)"
+                                            type="button"
+                                            class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50"
+                                            @click="retrySession(session.id)"
+                                        >
+                                            Retry
+                                        </button>
+                                        <button
+                                            v-if="!session.deleted_at"
+                                            type="button"
+                                            class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+                                            @click="deleteSession(session.id)"
+                                        >
+                                            Delete
+                                        </button>
+                                        <button
+                                            v-else
+                                            type="button"
+                                            class="rounded border border-green-300 px-2 py-1 text-xs text-green-700 hover:bg-green-50"
+                                            @click="restoreSession(session.id)"
+                                        >
+                                            Restore
+                                        </button>
+                                        <Link :href="route('tools.discovery.wizard', session.id)" class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700">
+                                            Open
+                                        </Link>
+                                    </div>
                                 </td>
                             </tr>
                             <tr v-if="!loading && sessions.length === 0">

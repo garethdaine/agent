@@ -10,6 +10,7 @@ use App\Http\Requests\Interrogation\UpdateAnnotationRequest;
 use App\Jobs\ExecuteInterrogationDiscoveryJob;
 use App\Jobs\ExecuteInterrogationPlanJob;
 use App\Jobs\ExecuteInterrogationRoundJob;
+use App\Jobs\ExecuteInterrogationSummaryJob;
 use App\Models\InterrogationSession;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
@@ -491,6 +492,94 @@ class InterrogationSessionController extends Controller
                 'phase' => $session->phase,
             ],
         ]);
+    }
+
+    public function retry(
+        Request $request,
+        int $id,
+        SessionStateTransitionService $transitions,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->withTrashed()->findOrFail($id);
+
+        if ($session->trashed()) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is deleted. Restore it before retrying.', 409);
+        }
+
+        if ($session->status === InterrogationSession::STATUS_COMPLETED) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is already completed. Use plan revision for updates.', 409);
+        }
+
+        $targetStatus = match ((int) $session->phase) {
+            InterrogationSession::PHASE_DISCOVERY => InterrogationSession::STATUS_DISCOVERING,
+            InterrogationSession::PHASE_INTERROGATION => InterrogationSession::STATUS_INTERROGATING,
+            InterrogationSession::PHASE_SUMMARY => InterrogationSession::STATUS_SUMMARIZING,
+            InterrogationSession::PHASE_PLANNING => InterrogationSession::STATUS_PLANNING,
+            default => InterrogationSession::STATUS_SETUP,
+        };
+
+        $allowedFromStatuses = [
+            InterrogationSession::STATUS_FAILED,
+            InterrogationSession::STATUS_PAUSED,
+            InterrogationSession::STATUS_SETUP,
+        ];
+
+        $transitioned = $transitions->transition(
+            (int) $session->id,
+            $allowedFromStatuses,
+            $targetStatus,
+            [
+                'error_code' => null,
+                'error_summary' => null,
+                'finished_at' => null,
+            ]
+        );
+
+        if (! $transitioned) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot be retried from its current state.', 409);
+        }
+
+        match ((int) $session->phase) {
+            InterrogationSession::PHASE_SETUP, InterrogationSession::PHASE_DISCOVERY =>
+                ExecuteInterrogationDiscoveryJob::dispatch((int) $session->id),
+            InterrogationSession::PHASE_INTERROGATION =>
+                ExecuteInterrogationRoundJob::dispatch((int) $session->id, 'Retry current interrogation phase and continue with the next best question.'),
+            InterrogationSession::PHASE_SUMMARY =>
+                ExecuteInterrogationSummaryJob::dispatch((int) $session->id),
+            InterrogationSession::PHASE_PLANNING =>
+                ExecuteInterrogationPlanJob::dispatch((int) $session->id),
+            default =>
+                ExecuteInterrogationDiscoveryJob::dispatch((int) $session->id),
+        };
+
+        $session->refresh();
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.retry',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['status', 'error_code', 'error_summary', 'finished_at'],
+            before: null,
+            after: [
+                'status' => $session->status,
+                'phase' => $session->phase,
+                'error_code' => $session->error_code,
+                'error_summary' => $session->error_summary,
+                'finished_at' => $this->toRfc3339Millis($session->finished_at),
+            ],
+        );
+
+        return response()->json([
+            'data' => [
+                'accepted' => true,
+                'queued' => true,
+                'session_id' => $session->id,
+                'status' => $session->status,
+                'phase' => $session->phase,
+            ],
+        ], 202);
     }
 
     public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse

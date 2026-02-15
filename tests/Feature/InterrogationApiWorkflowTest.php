@@ -133,4 +133,41 @@ class InterrogationApiWorkflowTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.key', 'interrogation.system_prompt');
     }
+
+    public function test_retry_endpoint_requeues_failed_session_for_current_phase(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Retry session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_FAILED,
+            'phase' => InterrogationSession::PHASE_DISCOVERY,
+            'error_code' => 'DISCOVERY_COMMAND_FAILED',
+            'error_summary' => 'failed once',
+            'finished_at' => now('UTC'),
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/retry')
+            ->assertStatus(202)
+            ->assertJsonPath('data.queued', true)
+            ->assertJsonPath('data.session_id', $session->id);
+
+        $session->refresh();
+
+        $this->assertSame(InterrogationSession::STATUS_DISCOVERING, $session->status);
+        $this->assertNull($session->error_code);
+        $this->assertNull($session->error_summary);
+        $this->assertNull($session->finished_at);
+
+        Queue::assertPushed(ExecuteInterrogationDiscoveryJob::class, function (ExecuteInterrogationDiscoveryJob $job) use ($session) {
+            return (int) $job->sessionId === (int) $session->id;
+        });
+    }
 }

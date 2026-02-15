@@ -255,6 +255,49 @@ const resume = async () => {
     }
 };
 
+const retrySession = async () => {
+    busy.value = true;
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/retry`);
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to retry session.';
+    } finally {
+        busy.value = false;
+    }
+};
+
+const deleteSession = async () => {
+    if (!window.confirm('Delete this session? You can restore it from the sessions list.')) {
+        return;
+    }
+
+    busy.value = true;
+
+    try {
+        await axios.delete(`/agent/api/v1/interrogation/sessions/${props.sessionId}`);
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to delete session.';
+    } finally {
+        busy.value = false;
+    }
+};
+
+const restoreSession = async () => {
+    busy.value = true;
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/restore`);
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to restore session.';
+    } finally {
+        busy.value = false;
+    }
+};
+
 onMounted(async () => {
     await loadSession(true);
     subscribeEcho();
@@ -279,8 +322,35 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="flex items-center gap-2">
                     <SessionStatusBadge v-if="session" :status="session.status" />
+                    <button
+                        v-if="session && !session.deleted_at && ['failed', 'paused', 'setup'].includes(session.status)"
+                        type="button"
+                        class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50"
+                        :disabled="busy"
+                        @click="retrySession"
+                    >
+                        Retry
+                    </button>
                     <button v-if="session && session.status !== 'paused'" type="button" class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50" :disabled="busy" @click="pause">Pause</button>
                     <button v-if="session && session.status === 'paused'" type="button" class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50" :disabled="busy" @click="resume">Resume</button>
+                    <button
+                        v-if="session && !session.deleted_at"
+                        type="button"
+                        class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+                        :disabled="busy"
+                        @click="deleteSession"
+                    >
+                        Delete
+                    </button>
+                    <button
+                        v-if="session && session.deleted_at"
+                        type="button"
+                        class="rounded border border-green-300 px-2 py-1 text-xs text-green-700 hover:bg-green-50"
+                        :disabled="busy"
+                        @click="restoreSession"
+                    >
+                        Restore
+                    </button>
                     <Link :href="route('tools.discovery.index')" class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200">Back</Link>
                 </div>
             </div>

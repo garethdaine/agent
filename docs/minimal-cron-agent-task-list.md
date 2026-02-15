@@ -3,6 +3,7 @@
 ## Progress Notes (2026-02-13)
 - Improved job command builder UX with explicit runner-aware permission profiles and flag visibility for both `codex` and `claude`, plus quick insertion of permission tokens into manual templates.
 - Implemented the Requirements Discovery feature plan baseline (`docs/plans/requirements-discovery-feature.md`): schema/models/policy, interrogation services/jobs/events/API/routes, Tools navigation/routes, wizard UI components, and initial integration/config tests.
+- Added Discovery session recovery controls: UI delete/restore actions and new per-session retry endpoint (`POST /agent/api/v1/interrogation/sessions/{id}/retry`) that clears failure state and re-queues work based on current phase.
 
 ## Progress Notes (2026-02-12)
 - Phases 0-7 are now complete against the current baseline.
