@@ -7,8 +7,8 @@ use App\Models\AgentJobRun;
 use App\Models\SchedulerHeartbeat;
 use App\Models\User;
 use Carbon\CarbonImmutable;
-use Illuminate\Console\Command;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Command;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -164,7 +164,7 @@ class AgentBenchmarkSloCommand extends Command
             file_put_contents($taskPath, "# Benchmark Task\n\nCollect benchmark metrics.\n");
         }
 
-        $defaultTemplate = (string) (config('agent.default_templates.codex') ?? '/opt/homebrew/bin/codex exec {{task_markdown_path}}');
+        $defaultTemplate = (string) (config('agent.default_templates.codex') ?? '/opt/homebrew/bin/codex -m gpt-5.3-codex exec {{task_markdown_path}}');
         $now = CarbonImmutable::now('UTC');
         $jobRows = [];
 
@@ -411,7 +411,7 @@ class AgentBenchmarkSloCommand extends Command
             file_put_contents($taskPath, "# Benchmark Task\n\nCollect benchmark metrics.\n");
         }
 
-        $defaultTemplate = (string) (config('agent.default_templates.codex') ?? '/opt/homebrew/bin/codex exec {{task_markdown_path}}');
+        $defaultTemplate = (string) (config('agent.default_templates.codex') ?? '/opt/homebrew/bin/codex -m gpt-5.3-codex exec {{task_markdown_path}}');
         $pool = [];
 
         for ($index = 1; $index <= $poolSize; $index++) {

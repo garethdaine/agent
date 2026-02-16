@@ -1,5 +1,6 @@
 <script setup>
 import AnswerInput from '@/Components/Interrogation/AnswerInput.vue';
+import BuildPanel from '@/Components/Interrogation/BuildPanel.vue';
 import PhaseStepper from '@/Components/Interrogation/PhaseStepper.vue';
 import PlanViewer from '@/Components/Interrogation/PlanViewer.vue';
 import QaHistoryPanel from '@/Components/Interrogation/QaHistoryPanel.vue';
@@ -8,6 +9,7 @@ import SessionStatusBadge from '@/Components/Interrogation/SessionStatusBadge.vu
 import StatsPanel from '@/Components/Interrogation/StatsPanel.vue';
 import StatusCard from '@/Components/Interrogation/StatusCard.vue';
 import SummaryViewer from '@/Components/Interrogation/SummaryViewer.vue';
+import { isAnswerableQuestionEvent } from '@/Components/Interrogation/questionPresentation';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -25,12 +27,25 @@ const events = ref([]);
 const loading = ref(true);
 const error = ref('');
 const busy = ref(false);
+const notice = ref('');
 const pollingTimer = ref(null);
 const selectedQuestionId = ref('');
+const awaitingNextQuestion = ref(false);
+const submittedQuestionCount = ref(0);
+const localPlanGenerationPending = ref(false);
+const actionState = ref({
+    approvePlan: false,
+    exportPlan: false,
+    generateBuildTasks: false,
+    startBuild: false,
+    pauseBuild: false,
+    resumeBuild: false,
+    clarifyBuild: false,
+});
 let echoChannel = null;
 
 const latestQuestion = computed(() => {
-    const questionEvents = events.value.filter((event) => event.event_type === 'question');
+    const questionEvents = events.value.filter((event) => isAnswerableQuestionEvent(event));
 
     return questionEvents.length > 0 ? questionEvents[questionEvents.length - 1].payload : null;
 });
@@ -56,11 +71,64 @@ const latestDiscoveryEvent = computed(() => {
     return discovery.length > 0 ? discovery[discovery.length - 1] : null;
 });
 
+const questionEventCount = computed(() => events.value.filter((event) => isAnswerableQuestionEvent(event)).length);
+const hasMeaningfulPlan = computed(() => {
+    const plan = session.value?.plan_json ?? {};
+    const markdown = String(plan?.plan_markdown ?? '').trim();
+    const hasMarkdown = markdown !== '' && !/^plan not generated yet\.?$/i.test(markdown);
+
+    return hasMarkdown
+        || (Array.isArray(plan?.sections) && plan.sections.length > 0)
+        || (Array.isArray(plan?.risks) && plan.risks.length > 0)
+        || (Array.isArray(plan?.assumptions) && plan.assumptions.length > 0);
+});
+const isPlanGenerating = computed(() => {
+    if ((session.value?.phase ?? 0) !== 4) {
+        return false;
+    }
+
+    if (hasMeaningfulPlan.value) {
+        return false;
+    }
+
+    return localPlanGenerationPending.value || session.value?.status === 'planning';
+});
+const hasPlanApproved = computed(() => Boolean(session.value?.approved_at));
+const canApprovePlan = computed(() => hasMeaningfulPlan.value && !hasPlanApproved.value && !actionState.value.approvePlan && !busy.value && !isPlanGenerating.value);
+const build = computed(() => (session.value?.build && typeof session.value.build === 'object' ? session.value.build : {}));
+
 watch(activeQuestion, (question) => {
     if (!question) {
         selectedQuestionId.value = '';
     }
 });
+
+watch(
+    [hasMeaningfulPlan, () => session.value?.status, () => session.value?.phase],
+    ([hasPlan, status, phase]) => {
+        if (phase < 4 || hasPlan || status === 'failed' || status === 'paused') {
+            localPlanGenerationPending.value = false;
+        }
+    }
+);
+
+watch(
+    [questionEventCount, () => session.value?.phase, () => session.value?.status],
+    ([count, phase, status]) => {
+        if (!awaitingNextQuestion.value) {
+            return;
+        }
+
+        if (phase !== 2 || status !== 'interrogating') {
+            awaitingNextQuestion.value = false;
+            return;
+        }
+
+        if (Number(count) > submittedQuestionCount.value) {
+            awaitingNextQuestion.value = false;
+        }
+    }
+);
 
 const loadSession = async (includeEvents = true) => {
     try {
@@ -171,8 +239,12 @@ const submitAnswer = async (payload) => {
 
     try {
         await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/answer`, payload);
+        selectedQuestionId.value = '';
+        submittedQuestionCount.value = questionEventCount.value;
+        awaitingNextQuestion.value = true;
         await loadSession(false);
     } catch (e) {
+        awaitingNextQuestion.value = false;
         error.value = e?.response?.data?.error?.message ?? 'Failed to submit answer.';
     } finally {
         busy.value = false;
@@ -196,16 +268,62 @@ const confirmSummary = async () => {
     }
 };
 
+const reviseSummary = async (payload) => {
+    busy.value = true;
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/revise-summary`, payload ?? {});
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to request summary revision.';
+    } finally {
+        busy.value = false;
+    }
+};
+
+const continueInterrogation = async (payload) => {
+    busy.value = true;
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/continue-interrogation`, payload ?? {});
+        selectedQuestionId.value = '';
+        submittedQuestionCount.value = questionEventCount.value;
+        awaitingNextQuestion.value = true;
+        await loadSession(false);
+    } catch (e) {
+        awaitingNextQuestion.value = false;
+        error.value = e?.response?.data?.error?.message ?? 'Failed to continue interrogation.';
+    } finally {
+        busy.value = false;
+    }
+};
+
 const generatePlan = async () => {
     busy.value = true;
+    localPlanGenerationPending.value = true;
 
     try {
         await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/generate-plan`);
         await loadSession(false);
     } catch (e) {
+        localPlanGenerationPending.value = false;
         error.value = e?.response?.data?.error?.message ?? 'Failed to queue plan generation.';
     } finally {
         busy.value = false;
+    }
+};
+
+const approvePlan = async () => {
+    actionState.value.approvePlan = true;
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/approve-plan`);
+        notice.value = 'Plan approved.';
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to approve plan.';
+    } finally {
+        actionState.value.approvePlan = false;
     }
 };
 
@@ -223,14 +341,83 @@ const requestRevision = async (payload) => {
 };
 
 const exportPlan = async () => {
-    busy.value = true;
+    actionState.value.exportPlan = true;
 
     try {
-        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/export-plan`);
+        const { data } = await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/export-plan`);
+        const path = data?.data?.path;
+        notice.value = path ? `Plan exported to ${path}` : 'Plan exported.';
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to export plan.';
     } finally {
-        busy.value = false;
+        actionState.value.exportPlan = false;
+    }
+};
+
+const generateBuildTasks = async () => {
+    actionState.value.generateBuildTasks = true;
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/generate-build-tasks`);
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to generate build tasks.';
+    } finally {
+        actionState.value.generateBuildTasks = false;
+    }
+};
+
+const startBuild = async (restartFailed = false) => {
+    actionState.value.startBuild = true;
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/start-build`, {
+            restart_failed: restartFailed,
+        });
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to start build.';
+    } finally {
+        actionState.value.startBuild = false;
+    }
+};
+
+const pauseBuild = async () => {
+    actionState.value.pauseBuild = true;
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/pause-build`);
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to pause build.';
+    } finally {
+        actionState.value.pauseBuild = false;
+    }
+};
+
+const resumeBuild = async () => {
+    actionState.value.resumeBuild = true;
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/resume-build`);
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to resume build.';
+    } finally {
+        actionState.value.resumeBuild = false;
+    }
+};
+
+const clarifyBuild = async (payload) => {
+    actionState.value.clarifyBuild = true;
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/build/clarify`, payload ?? {});
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to submit clarification.';
+    } finally {
+        actionState.value.clarifyBuild = false;
     }
 };
 
@@ -336,8 +523,24 @@ onBeforeUnmount(() => {
                     >
                         Retry
                     </button>
-                    <button v-if="session && session.status !== 'paused'" type="button" class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50" :disabled="busy" @click="pause">Pause</button>
-                    <button v-if="session && session.status === 'paused'" type="button" class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50" :disabled="busy" @click="resume">Resume</button>
+                    <button
+                        v-if="session && session.phase < 5 && session.status !== 'paused'"
+                        type="button"
+                        class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
+                        :disabled="busy"
+                        @click="pause"
+                    >
+                        Pause
+                    </button>
+                    <button
+                        v-if="session && session.phase < 5 && session.status === 'paused'"
+                        type="button"
+                        class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
+                        :disabled="busy"
+                        @click="resume"
+                    >
+                        Resume
+                    </button>
                     <button
                         v-if="session && !session.deleted_at"
                         type="button"
@@ -362,8 +565,9 @@ onBeforeUnmount(() => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1500px] space-y-4">
+            <div class="mx-auto max-w-7xl space-y-4">
                 <p v-if="error" class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
+                <p v-if="notice" class="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700">{{ notice }}</p>
 
                 <div v-if="loading" class="rounded-lg border border-gray-200 bg-white p-8 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800">Loading session...</div>
 
@@ -373,11 +577,11 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
-                        <div class="xl:col-span-3">
+                        <div v-if="session.phase < 4" class="xl:col-span-3">
                             <QaHistoryPanel :events="events" :selected-question-id="activeQuestion?.question_id || ''" @select-question="focusQuestion" />
                         </div>
 
-                        <div class="space-y-4 xl:col-span-6">
+                        <div class="space-y-4" :class="session.phase >= 4 ? 'xl:col-span-9' : 'xl:col-span-6'">
                             <StatusCard v-if="session.phase <= 1" :session="session" :latest-discovery-event="latestDiscoveryEvent" />
 
                             <template v-if="session.phase === 2">
@@ -388,23 +592,82 @@ onBeforeUnmount(() => {
                                     Revising an earlier question ({{ selectedQuestion.question_id }}).
                                     <button type="button" class="ml-2 font-medium underline" @click="selectedQuestionId = ''">Return to latest question</button>
                                 </div>
-                                <QuestionRenderer :question="activeQuestion" />
-                                <AnswerInput :question="activeQuestion" :busy="busy" @submit="submitAnswer" />
+                                <QuestionRenderer :question="awaitingNextQuestion ? null : activeQuestion" />
+                                <div
+                                    v-if="awaitingNextQuestion"
+                                    class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                                        <span>Answer submitted. Generating next question...</span>
+                                    </div>
+                                </div>
+                                <AnswerInput
+                                    :question="awaitingNextQuestion ? null : activeQuestion"
+                                    :busy="busy"
+                                    :waiting-for-next-question="awaitingNextQuestion"
+                                    @submit="submitAnswer"
+                                />
                             </template>
 
                             <template v-if="session.phase === 3">
-                                <SummaryViewer :summary="session.summary_json || {}" :busy="busy" @confirm="confirmSummary" />
+                                <SummaryViewer
+                                    :summary="session.summary_json || {}"
+                                    :busy="busy"
+                                    :status="session.status || ''"
+                                    @confirm="confirmSummary"
+                                    @revise="reviseSummary"
+                                    @continue="continueInterrogation"
+                                />
                             </template>
 
-                            <template v-if="session.phase >= 4">
+                            <template v-if="session.phase === 4">
                                 <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                                     <div class="mb-3 flex justify-end">
-                                        <button type="button" class="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50" :disabled="busy" @click="generatePlan">
-                                            {{ busy ? 'Processing...' : 'Generate Plan' }}
+                                        <button
+                                            v-if="!hasMeaningfulPlan || !hasPlanApproved"
+                                            type="button"
+                                            class="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                                            :disabled="!hasMeaningfulPlan ? (busy || isPlanGenerating) : !canApprovePlan"
+                                            @click="!hasMeaningfulPlan ? generatePlan() : approvePlan()"
+                                        >
+                                            {{
+                                                !hasMeaningfulPlan
+                                                    ? (isPlanGenerating ? 'Generating plan...' : (busy ? 'Processing...' : 'Generate Plan'))
+                                                    : (actionState.approvePlan ? 'Approving...' : 'Approve Plan')
+                                            }}
                                         </button>
+                                        <span
+                                            v-else
+                                            class="rounded border border-green-400 bg-green-50 px-3 py-2 text-sm font-semibold text-green-700"
+                                        >Plan Approved</span>
                                     </div>
-                                    <PlanViewer :plan="session.plan_json || {}" :busy="busy" @revise="requestRevision" @export="exportPlan" />
+                                    <PlanViewer :plan="session.plan_json || {}" :busy="busy || actionState.exportPlan" :generating="isPlanGenerating" @revise="requestRevision" @export="exportPlan" />
                                 </div>
+                            </template>
+
+                            <template v-if="session.phase === 5">
+                                <BuildPanel
+                                    mode="tasks"
+                                    :build="build"
+                                    :actions="actionState"
+                                    :disabled="busy"
+                                    @generate-tasks="generateBuildTasks"
+                                    @start="startBuild(false)"
+                                />
+                            </template>
+
+                            <template v-if="session.phase >= 6">
+                                <BuildPanel
+                                    mode="execution"
+                                    :build="build"
+                                    :actions="actionState"
+                                    :disabled="busy"
+                                    @pause="pauseBuild"
+                                    @resume="resumeBuild"
+                                    @retry="startBuild(true)"
+                                    @clarify="clarifyBuild"
+                                />
                             </template>
                         </div>
 

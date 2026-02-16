@@ -15,6 +15,8 @@ const colorClass = computed(() => {
         interrogating: 'bg-indigo-100 text-indigo-700 border-indigo-200',
         summarizing: 'bg-purple-100 text-purple-700 border-purple-200',
         planning: 'bg-amber-100 text-amber-700 border-amber-200',
+        build_tasks: 'bg-cyan-100 text-cyan-700 border-cyan-200',
+        build_executing: 'bg-emerald-100 text-emerald-700 border-emerald-200',
         paused: 'bg-slate-100 text-slate-700 border-slate-200',
         completed: 'bg-green-100 text-green-700 border-green-200',
         failed: 'bg-red-100 text-red-700 border-red-200',

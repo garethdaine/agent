@@ -6,6 +6,7 @@ use App\Models\InterrogationSession;
 use App\Support\Interrogation\AdapterFactory;
 use App\Support\Interrogation\ConversationReconstructor;
 use App\Support\Interrogation\InterrogationEventWriter;
+use App\Support\Interrogation\QuestionPayloadGuard;
 use App\Support\Interrogation\SessionStateTransitionService;
 use App\Support\Interrogation\SystemPromptResolver;
 use Carbon\CarbonImmutable;
@@ -27,8 +28,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
         public bool $isSystemMessage = false,
         /** @var array<string, mixed>|null */
         public ?array $answerPayload = null,
-    )
-    {
+    ) {
         $this->onConnection('redis');
         $this->onQueue('interrogation');
     }
@@ -46,6 +46,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
         SessionStateTransitionService $transitions,
         SystemPromptResolver $promptResolver,
         ConversationReconstructor $reconstructor,
+        QuestionPayloadGuard $questionPayloadGuard,
     ): void {
         $session = InterrogationSession::query()->find($this->sessionId);
 
@@ -133,17 +134,58 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             /** @var array<string, mixed> $question */
             $question = $questionResult['parsed'];
 
+            $validation = $questionPayloadGuard->validate($question);
+            if (! $validation['valid']) {
+                $repairPrompt = 'Your previous response violated the interrogation contract: '.$validation['reason'].".\n"
+                    .'Re-issue the same next-question intent in correct format. '
+                    .'Return exactly one question only. Never batch multiple questions. '
+                    .'If this is a choice question, set answer_type="choice" and provide options[]; do not embed option text in question_text.';
+
+                $repaired = $this->runAndParseQuestion(
+                    $adapter->buildQuestionCommand($session, $repairPrompt, $systemPrompt),
+                    (string) $session->project_directory,
+                    $adapter->buildEnvironment($session),
+                    fn (string $output) => $adapter->parseQuestionResponse($output),
+                );
+
+                if ($repaired['parsed'] !== null && $questionPayloadGuard->validate($repaired['parsed'])['valid']) {
+                    $questionResult = $repaired;
+                    $question = $questionResult['parsed'];
+                } else {
+                    $transitions->transition(
+                        (int) $session->id,
+                        InterrogationSession::ACTIVE_STATUSES,
+                        InterrogationSession::STATUS_FAILED,
+                        [
+                            'error_code' => 'ROUND_CONTRACT_VIOLATION',
+                            'error_summary' => 'Runner returned batched/invalid interrogation question payload.',
+                            'finished_at' => CarbonImmutable::now('UTC'),
+                        ],
+                    );
+
+                    $session->refresh();
+                    $writer = new InterrogationEventWriter($session);
+                    $writer->appendError([
+                        'code' => 'ROUND_CONTRACT_VIOLATION',
+                        'message' => 'Runner returned batched/invalid interrogation question payload.',
+                        'details' => ['reason' => $validation['reason']],
+                    ]);
+
+                    return;
+                }
+            }
+
             if (isset($question['cli_session_id']) && is_string($question['cli_session_id']) && $question['cli_session_id'] !== '' && $session->cli_session_id !== $question['cli_session_id']) {
                 $session->cli_session_id = $question['cli_session_id'];
                 $session->save();
             }
 
-            $writer->appendQuestion($question);
-
             $done = ((int) ($question['progress_estimate'] ?? 0) >= 100)
                 || ((bool) ($question['is_complete'] ?? false) === true);
 
             if (! $done) {
+                $writer->appendQuestion($question);
+
                 if ($session->status !== InterrogationSession::STATUS_INTERROGATING) {
                     $transitions->transition(
                         (int) $session->id,
@@ -154,6 +196,14 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                 }
 
                 return;
+            }
+
+            $completionMessage = trim((string) ($question['question_text'] ?? ''));
+            if ($completionMessage !== '') {
+                $writer->appendSystem([
+                    'notice' => 'interrogation_complete',
+                    'message' => $completionMessage,
+                ]);
             }
 
             $moved = $transitions->transitionPhase(

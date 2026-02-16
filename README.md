@@ -91,6 +91,7 @@ DB_PORT=3306 php artisan migrate:fresh --database=mysql --force --no-interaction
 - Additional allowed directory bases can be configured in `.env`:
   - `AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES` (CSV; quote paths containing spaces)
   - `AGENT_ADDITIONAL_TASK_MARKDOWN_BASES` (CSV; quote paths containing spaces)
+- Codex runner model can be pinned per environment with `AGENT_RUNNER_CODEX_MODEL` (default: `gpt-5.3-codex`).
 - API version header middleware sets `X-Agent-Api-Version: 1.0` on `/agent/api/v1/*` routes.
 - If runs appear stalled/queued unexpectedly, check `php artisan horizon:status`; start/restart workers with `php artisan horizon`.
 - If you change queue/horizon runtime env values (for example `REDIS_QUEUE_RETRY_AFTER`), restart Horizon so workers pick up the new config.

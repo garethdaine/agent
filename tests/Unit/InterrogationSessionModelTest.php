@@ -19,6 +19,8 @@ class InterrogationSessionModelTest extends TestCase
         $this->assertSame('interrogating', InterrogationSession::STATUS_INTERROGATING);
         $this->assertSame('summarizing', InterrogationSession::STATUS_SUMMARIZING);
         $this->assertSame('planning', InterrogationSession::STATUS_PLANNING);
+        $this->assertSame('build_tasks', InterrogationSession::STATUS_BUILD_TASKS);
+        $this->assertSame('build_executing', InterrogationSession::STATUS_BUILD_EXECUTING);
         $this->assertSame('completed', InterrogationSession::STATUS_COMPLETED);
         $this->assertSame('failed', InterrogationSession::STATUS_FAILED);
         $this->assertSame('paused', InterrogationSession::STATUS_PAUSED);
@@ -41,6 +43,8 @@ class InterrogationSessionModelTest extends TestCase
         $this->assertContains('interrogating', InterrogationSession::ACTIVE_STATUSES);
         $this->assertContains('summarizing', InterrogationSession::ACTIVE_STATUSES);
         $this->assertContains('planning', InterrogationSession::ACTIVE_STATUSES);
+        $this->assertContains('build_tasks', InterrogationSession::ACTIVE_STATUSES);
+        $this->assertContains('build_executing', InterrogationSession::ACTIVE_STATUSES);
     }
 
     public function test_terminal_statuses_cover_expected_values(): void
@@ -62,6 +66,8 @@ class InterrogationSessionModelTest extends TestCase
         $this->assertSame(2, InterrogationSession::PHASE_INTERROGATION);
         $this->assertSame(3, InterrogationSession::PHASE_SUMMARY);
         $this->assertSame(4, InterrogationSession::PHASE_PLANNING);
+        $this->assertSame(5, InterrogationSession::PHASE_BUILD_TASKS);
+        $this->assertSame(6, InterrogationSession::PHASE_BUILD_EXECUTION);
     }
 
     public function test_type_constants_exist(): void

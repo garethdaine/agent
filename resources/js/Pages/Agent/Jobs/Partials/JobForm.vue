@@ -58,6 +58,8 @@ const RUNNER_EXECUTABLES = {
     codex: '/opt/homebrew/bin/codex',
     custom: '/Users/garethdaine/Code/agent/bin/agent-runner',
 };
+const CODEX_DEFAULT_MODEL = 'gpt-5.3-codex';
+const CODEX_MODEL_TOKENS = ['-m', CODEX_DEFAULT_MODEL];
 
 const PLACEHOLDER_OPTIONS = [
     '{{task_markdown_path}}',
@@ -311,7 +313,7 @@ const permissionTokenOptions = computed(() => {
 
 const runnerCommandHint = computed(() => {
     if (form.runner_type === 'codex') {
-        return `${RUNNER_EXECUTABLES.codex} [permission flags] exec {{task_markdown_path}}`;
+        return `${RUNNER_EXECUTABLES.codex} -m ${CODEX_DEFAULT_MODEL} [permission flags] exec {{task_markdown_path}}`;
     }
 
     if (form.runner_type === 'claude') {
@@ -351,14 +353,14 @@ const buildTemplateFromPreset = () => {
 
         if (templateBuilder.preset === 'codex_prompt_file' || templateBuilder.preset === 'codex_standard') {
             executable = RUNNER_EXECUTABLES.codex;
-            tailTokens = ['exec', '{{task_markdown_path}}'];
+            tailTokens = [...CODEX_MODEL_TOKENS, 'exec', '{{task_markdown_path}}'];
         } else if (templateBuilder.preset === 'codex_search') {
             executable = RUNNER_EXECUTABLES.codex;
-            tailTokens = ['exec', '{{task_markdown_path}}'];
+            tailTokens = [...CODEX_MODEL_TOKENS, 'exec', '{{task_markdown_path}}'];
             permissionTokens = ['--search'];
         } else if (templateBuilder.preset === 'codex_non_interactive') {
             executable = RUNNER_EXECUTABLES.codex;
-            tailTokens = ['exec', '{{task_markdown_path}}'];
+            tailTokens = [...CODEX_MODEL_TOKENS, 'exec', '{{task_markdown_path}}'];
             permissionTokens = ['--dangerously-bypass-approvals-and-sandbox', '--search'];
         } else if (templateBuilder.preset === 'claude_prompt_file' || templateBuilder.preset === 'claude_standard') {
             executable = RUNNER_EXECUTABLES.claude;

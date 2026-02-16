@@ -246,7 +246,7 @@ This document is the final signed baseline for MVP (`v1.0`) requirements.
 - `{{working_directory}}` in template is optional because process CWD is set independently.
 - Default templates:
   - `claude`: `/Users/garethdaine/.local/bin/claude -p {{task_markdown_path}}`
-  - `codex`: `/opt/homebrew/bin/codex exec {{task_markdown_path}}`
+  - `codex`: `/opt/homebrew/bin/codex -m gpt-5.3-codex exec {{task_markdown_path}}` (model override via `AGENT_RUNNER_CODEX_MODEL`)
 - User-supplied template for `claude|codex` is allowed and overrides defaults after validation.
 - UI provides an interactive command-template builder with runner-aware presets and safe placeholder insertion, while preserving manual template editing.
 

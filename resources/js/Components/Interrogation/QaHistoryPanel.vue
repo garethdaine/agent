@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { shortQuestionText } from '@/Components/Interrogation/questionPresentation';
+import { isAnswerableQuestionEvent, shortQuestionText } from '@/Components/Interrogation/questionPresentation';
 
 const props = defineProps({
     events: {
@@ -17,7 +17,7 @@ const emit = defineEmits(['select-question']);
 
 const qaPairs = computed(() => {
     const questions = props.events
-        .filter((event) => event.event_type === 'question')
+        .filter((event) => isAnswerableQuestionEvent(event))
         .sort((a, b) => Number(a.sequence ?? 0) - Number(b.sequence ?? 0));
     const answers = props.events
         .filter((event) => event.event_type === 'answer')

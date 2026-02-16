@@ -228,6 +228,70 @@ class AgentRunnerLifecycleTest extends TestCase
         $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $metadata['approval_resolution'] ?? null);
     }
 
+    public function test_approval_detection_ignores_codex_banner_lines(): void
+    {
+        $bannerExec = $this->sandboxBase.'/bin/codex-banner-runner';
+        file_put_contents($bannerExec, "#!/bin/sh\necho \"approval: never\"\necho \"sandbox: danger-full-access\"\nexit 0\n");
+        chmod($bannerExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $bannerExec,
+            'codex' => $bannerExec,
+            'custom' => $bannerExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $bannerExec.' -p {{task_markdown_path}}',
+            'codex' => $bannerExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/codex-banner.md';
+        file_put_contents($taskFile, "# Banner\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Approval Banner Ignore',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'command_template' => config('agent.default_templates.codex'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+                'approval_required' => false,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['approval_required'] ?? true));
+        $this->assertNull($metadata['approval_detected_at'] ?? null);
+        $this->assertNull($metadata['approval_resolution'] ?? null);
+    }
+
     public function test_run_times_out_when_exceeding_max_runtime(): void
     {
         $slowExec = $this->sandboxBase.'/bin/slow-runner';

@@ -6,6 +6,8 @@ use App\Models\InterrogationSession;
 
 class ExportService
 {
+    public function __construct(private readonly SummaryPayloadNormalizer $summaryPayloadNormalizer) {}
+
     public function exportSummary(InterrogationSession $session): string
     {
         $directory = rtrim($session->project_directory, '/').'/docs/discovery';
@@ -14,7 +16,9 @@ class ExportService
         $slug = $this->sessionSlug($session);
         $path = $this->nextAvailablePath($directory, $slug, 'md');
 
-        $summary = is_array($session->summary_json) ? $session->summary_json : [];
+        $summary = is_array($session->summary_json)
+            ? $this->summaryPayloadNormalizer->normalize($session->summary_json)
+            : [];
         $markdown = (string) ($summary['summary_markdown'] ?? '');
 
         $content = "# Requirements Discovery Summary\n\n";

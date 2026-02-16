@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { isAnswerableQuestionEvent } from '@/Components/Interrogation/questionPresentation';
 
 const props = defineProps({
     session: {
@@ -12,14 +13,14 @@ const props = defineProps({
     },
 });
 
-const questionCount = computed(() => props.events.filter((event) => event.event_type === 'question').length);
+const questionCount = computed(() => props.events.filter((event) => isAnswerableQuestionEvent(event)).length);
 const answerCount = computed(() => props.events.filter((event) => event.event_type === 'answer').length);
 
 const categories = computed(() => {
     const values = new Set();
 
     props.events.forEach((event) => {
-        if (event.event_type === 'question' && typeof event.payload?.category === 'string' && event.payload.category !== '') {
+        if (isAnswerableQuestionEvent(event) && typeof event.payload?.category === 'string' && event.payload.category !== '') {
             values.add(event.payload.category);
         }
     });

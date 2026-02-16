@@ -2,9 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\ExecuteInterrogationBuildJob;
 use App\Jobs\ExecuteInterrogationDiscoveryJob;
 use App\Jobs\ExecuteInterrogationPlanJob;
 use App\Jobs\ExecuteInterrogationRoundJob;
+use App\Jobs\ExecuteInterrogationSummaryJob;
+use App\Jobs\GenerateInterrogationBuildTasksJob;
+use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
 use App\Models\User;
@@ -278,5 +282,397 @@ class InterrogationApiWorkflowTest extends TestCase
             ->assertJsonPath('data.pending_question_id', 'q-pending');
 
         Queue::assertNotPushed(ExecuteInterrogationRoundJob::class);
+    }
+
+    public function test_retry_interrogation_ignores_completion_marker_questions_when_finding_pending_question(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Retry with completion marker',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_FAILED,
+            'phase' => InterrogationSession::PHASE_INTERROGATION,
+            'error_code' => 'ROUND_RUNTIME_EXCEPTION',
+            'error_summary' => 'failed once',
+            'finished_at' => now('UTC'),
+        ]);
+
+        InterrogationEvent::query()->create([
+            'interrogation_session_id' => $session->id,
+            'event_type' => InterrogationEvent::TYPE_QUESTION,
+            'sequence' => 1,
+            'payload' => [
+                'question_id' => 'q-complete',
+                'question_text' => 'Requirements interrogation is now complete.',
+                'is_complete' => true,
+                'progress_estimate' => 100,
+            ],
+            'event_ts' => now('UTC'),
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/retry')
+            ->assertStatus(202)
+            ->assertJsonPath('data.queued', true)
+            ->assertJsonPath('data.pending_question_id', null);
+
+        Queue::assertPushed(ExecuteInterrogationRoundJob::class, function (ExecuteInterrogationRoundJob $job) use ($session) {
+            return (int) $job->sessionId === (int) $session->id && $job->isSystemMessage === true;
+        });
+    }
+
+    public function test_revise_summary_queues_summary_job_with_notes(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Summary revise session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SUMMARIZING,
+            'phase' => InterrogationSession::PHASE_SUMMARY,
+            'summary_json' => [
+                'summary_markdown' => 'Initial summary',
+                'open_questions' => ['Unresolved point'],
+            ],
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/revise-summary', [
+            'notes' => 'Please remove ambiguities and tighten acceptance criteria.',
+        ])->assertStatus(202)
+            ->assertJsonPath('data.accepted', true);
+
+        Queue::assertPushed(ExecuteInterrogationSummaryJob::class, function (ExecuteInterrogationSummaryJob $job) use ($session) {
+            return (int) $job->sessionId === (int) $session->id
+                && is_string($job->revisionNotes)
+                && str_contains($job->revisionNotes, 'tighten acceptance criteria');
+        });
+    }
+
+    public function test_continue_interrogation_from_summary_moves_phase_and_queues_round(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Summary reopen session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SUMMARIZING,
+            'phase' => InterrogationSession::PHASE_SUMMARY,
+            'summary_json' => [
+                'summary_markdown' => 'Summary content',
+                'open_questions' => ['Open question one'],
+            ],
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/continue-interrogation', [
+            'focus' => 'Resolve taxonomy and concurrency caps.',
+        ])->assertStatus(202)
+            ->assertJsonPath('data.accepted', true);
+
+        $session->refresh();
+
+        $this->assertSame(InterrogationSession::PHASE_INTERROGATION, (int) $session->phase);
+        $this->assertSame(InterrogationSession::STATUS_INTERROGATING, (string) $session->status);
+
+        Queue::assertPushed(ExecuteInterrogationRoundJob::class, function (ExecuteInterrogationRoundJob $job) use ($session) {
+            return (int) $job->sessionId === (int) $session->id
+                && $job->isSystemMessage === true
+                && str_contains($job->userMessage, 'Resolve taxonomy and concurrency caps');
+        });
+    }
+
+    public function test_show_endpoint_normalizes_legacy_embedded_summary_parameters(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Legacy summary payload',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SUMMARIZING,
+            'phase' => InterrogationSession::PHASE_SUMMARY,
+            'summary_json' => [
+                'summary_markdown' => "## Summary\n\n<parameter name=\"goals\">[\"Goal One\",\"Goal Two\"]",
+                'goals' => [],
+                'constraints' => [],
+                'acceptance_criteria' => [],
+                'open_questions' => [],
+            ],
+        ]);
+
+        $response = $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id)
+            ->assertOk();
+
+        $this->assertSame(['Goal One', 'Goal Two'], $response->json('data.summary_json.goals'));
+        $this->assertStringNotContainsString('<parameter name="goals">', (string) $response->json('data.summary_json.summary_markdown'));
+    }
+
+    public function test_confirm_summary_blocks_when_legacy_payload_contains_embedded_open_questions(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Legacy open questions',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SUMMARIZING,
+            'phase' => InterrogationSession::PHASE_SUMMARY,
+            'summary_json' => [
+                'summary_markdown' => "## Summary\n\n<parameter name=\"open_questions\">[\"Need one more decision\"]",
+                'goals' => [],
+                'constraints' => [],
+                'acceptance_criteria' => [],
+                'open_questions' => [],
+            ],
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/confirm-summary')
+            ->assertStatus(409);
+    }
+
+    public function test_show_endpoint_reconciles_answered_open_questions_from_events(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Reconciled open questions',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SUMMARIZING,
+            'phase' => InterrogationSession::PHASE_SUMMARY,
+            'summary_json' => [
+                'summary_markdown' => 'Summary body',
+                'goals' => [],
+                'constraints' => [],
+                'acceptance_criteria' => [],
+                'open_questions' => [
+                    'What capabilities taxonomy should the MVP seed?',
+                    'What should remain unresolved?',
+                ],
+                'private_notes' => '',
+            ],
+        ]);
+
+        InterrogationEvent::query()->create([
+            'interrogation_session_id' => $session->id,
+            'event_type' => InterrogationEvent::TYPE_QUESTION,
+            'sequence' => 1,
+            'payload' => [
+                'question_id' => 'oq-capabilities-taxonomy',
+                'question_text' => '**Open Question 1: What capabilities taxonomy should the MVP seed?**',
+            ],
+            'event_ts' => now('UTC'),
+        ]);
+
+        InterrogationEvent::query()->create([
+            'interrogation_session_id' => $session->id,
+            'event_type' => InterrogationEvent::TYPE_ANSWER,
+            'sequence' => 2,
+            'payload' => [
+                'question_id' => 'oq-capabilities-taxonomy',
+                'answer_type' => 'choice',
+                'selected_option' => 'Option B',
+            ],
+            'event_ts' => now('UTC'),
+        ]);
+
+        $response = $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id)
+            ->assertOk();
+
+        $this->assertSame(
+            ['What should remain unresolved?'],
+            $response->json('data.summary_json.open_questions')
+        );
+    }
+
+    public function test_show_endpoint_reconciles_open_questions_by_open_question_ordinal(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Ordinal reconciliation',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SUMMARIZING,
+            'phase' => InterrogationSession::PHASE_SUMMARY,
+            'summary_json' => [
+                'summary_markdown' => 'Summary body',
+                'goals' => [],
+                'constraints' => [],
+                'acceptance_criteria' => [],
+                'open_questions' => [
+                    'What specific capabilities taxonomy should the MVP seed?',
+                    'What should remain unresolved?',
+                ],
+                'private_notes' => '',
+            ],
+        ]);
+
+        InterrogationEvent::query()->create([
+            'interrogation_session_id' => $session->id,
+            'event_type' => InterrogationEvent::TYPE_QUESTION,
+            'sequence' => 1,
+            'payload' => [
+                'question_id' => 'oq-capabilities-taxonomy',
+                'question_text' => 'Open Question 1: What capabilities taxonomy should the MVP seed?',
+            ],
+            'event_ts' => now('UTC'),
+        ]);
+
+        InterrogationEvent::query()->create([
+            'interrogation_session_id' => $session->id,
+            'event_type' => InterrogationEvent::TYPE_ANSWER,
+            'sequence' => 2,
+            'payload' => [
+                'question_id' => 'oq-capabilities-taxonomy',
+                'answer_type' => 'choice',
+                'selected_option' => 'Option B',
+            ],
+            'event_ts' => now('UTC'),
+        ]);
+
+        $response = $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id)
+            ->assertOk();
+
+        $this->assertSame(
+            ['What should remain unresolved?'],
+            $response->json('data.summary_json.open_questions')
+        );
+    }
+
+    public function test_build_endpoints_queue_jobs_and_update_build_state(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build workflow session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_PLANNING,
+            'phase' => InterrogationSession::PHASE_PLANNING,
+            'plan_json' => [
+                'plan_markdown' => 'Plan body',
+            ],
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/approve-plan')
+            ->assertOk()
+            ->assertJsonPath('data.phase', InterrogationSession::PHASE_BUILD_TASKS)
+            ->assertJsonPath('data.status', InterrogationSession::STATUS_BUILD_TASKS);
+
+        $session->refresh();
+        $this->assertNotNull($session->approved_at);
+        $this->assertSame(InterrogationSession::PHASE_BUILD_TASKS, (int) $session->phase);
+        $this->assertSame(InterrogationSession::STATUS_BUILD_TASKS, $session->status);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/generate-build-tasks')
+            ->assertStatus(202)
+            ->assertJsonPath('data.build_status', 'generating_tasks');
+
+        Queue::assertPushed(GenerateInterrogationBuildTasksJob::class, function (GenerateInterrogationBuildTasksJob $job) use ($session): bool {
+            return (int) $job->sessionId === (int) $session->id;
+        });
+
+        $buildTask = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Task 1',
+            'description' => 'First task',
+            'instructions_markdown' => 'Implement first task',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+        ]);
+
+        $session->metadata_json = [
+            ...((array) ($session->metadata_json ?? [])),
+            'build' => [
+                'status' => 'ready',
+                'task_count' => 1,
+            ],
+        ];
+        $session->save();
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/start-build')
+            ->assertStatus(202)
+            ->assertJsonPath('data.build_status', 'running');
+
+        $session->refresh();
+        $this->assertSame(InterrogationSession::PHASE_BUILD_EXECUTION, (int) $session->phase);
+        $this->assertSame(InterrogationSession::STATUS_BUILD_EXECUTING, $session->status);
+
+        Queue::assertPushed(ExecuteInterrogationBuildJob::class, function (ExecuteInterrogationBuildJob $job) use ($session): bool {
+            return (int) $job->sessionId === (int) $session->id;
+        });
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/pause-build')
+            ->assertStatus(202)
+            ->assertJsonPath('data.build_status', 'paused');
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/build/clarify', [
+            'message' => 'Use repository patterns for error envelopes.',
+        ])->assertStatus(202)
+            ->assertJsonPath('data.task_id', $buildTask->id);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/resume-build')
+            ->assertStatus(202)
+            ->assertJsonPath('data.build_status', 'running');
+
+        Queue::assertPushed(ExecuteInterrogationBuildJob::class, 2);
+    }
+
+    public function test_start_build_requires_generated_tasks(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build no tasks',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_BUILD_TASKS,
+            'phase' => InterrogationSession::PHASE_BUILD_TASKS,
+            'plan_json' => [
+                'plan_markdown' => 'Plan body',
+            ],
+            'approved_at' => now('UTC'),
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/start-build')
+            ->assertStatus(409);
     }
 }

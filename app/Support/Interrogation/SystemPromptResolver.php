@@ -13,9 +13,12 @@ class SystemPromptResolver
 
         $phaseInstructions = match ($phase) {
             'discovery' => 'Phase: discovery. Inspect project context and emit concise human-readable progress lines only.',
-            'interrogation' => 'Phase: interrogation. Return ONLY a single JSON object that matches the provided schema. Ask exactly one high-signal question.',
+            'interrogation' => 'Phase: interrogation. Return ONLY a single JSON object that matches the provided schema. Ask exactly one high-signal question (never batch multiple questions). '
+                .'For choice questions set answer_type="choice" and provide options as a structured string array. '
+                .'Do not include option blocks inside question_text.',
             'summary' => 'Phase: summary. Return ONLY a single JSON object that matches the provided schema for summary output.',
             'planning' => 'Phase: planning. Return ONLY a single JSON object that matches the provided schema for planning output.',
+            'build_tasks' => 'Phase: build task generation. Return ONLY a single JSON object that matches the provided schema for executable build tasks.',
             default => 'Phase: setup.',
         };
 
@@ -47,6 +50,7 @@ Hard rules:
 - Do not output markdown wrappers or prose outside required output format.
 - Prefer concise outputs and avoid unnecessary tool calls.
 - If a tool error is transient, recover and continue; do not loop indefinitely.
+- During interrogation, ask one question per turn only. Never batch Q1/Q2/Q3 in one payload.
 
 Output contract:
 - When output format is stream-json, emit short progress updates.

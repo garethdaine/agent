@@ -22,7 +22,10 @@ const reasoning = computed(() => formatReasoning(props.question?.reasoning ?? ''
 
 <template>
     <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-        <div v-if="!question" class="text-sm text-gray-500">No question yet. Waiting for runner output.</div>
+        <div v-if="!question" class="flex items-center gap-2 text-sm text-gray-500">
+            <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+            <span>Waiting for runner output...</span>
+        </div>
 
         <template v-else>
             <div class="flex items-center justify-between gap-3">

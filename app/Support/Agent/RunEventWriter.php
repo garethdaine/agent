@@ -26,7 +26,7 @@ class RunEventWriter
 
     private bool $redactionNoticeEmitted = false;
 
-    private const APPROVAL_PATTERN = '/need permission|requires permission|could you approve|approval/i';
+    private const APPROVAL_PATTERN = '/\b(?:need|needs|required|requires)\s+(?:your\s+)?permission\b|\bcould you approve\b|\bplease approve\b|\bapproval required\b/i';
 
     private const RATE_LIMIT_PATTERN = '/hit your limit|rate limit|too many requests|quota exceeded|usage limit/i';
 

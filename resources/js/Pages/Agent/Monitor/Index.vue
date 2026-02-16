@@ -27,6 +27,7 @@ const HIDDEN_POLL_MS = 15000;
 const BACKOFF = [2000, 4000, 8000, 15000];
 const ACTIVE_RUN_STATUSES = ['queued', 'starting', 'running', 'stopping'];
 const OUTPUT_EVENT_TYPES = ['stdout', 'stderr'];
+const CODEX_DEFAULT_MODEL = 'gpt-5.3-codex';
 
 const consecutiveFailureWarning = computed(() => failureCount.value >= 3);
 
@@ -286,7 +287,7 @@ const pollUntilTerminal = async (runId, attempts = 12) => {
 
 const buildNonInteractiveTemplate = (job) => {
     if (job.runner_type === 'codex') {
-        return '/opt/homebrew/bin/codex --dangerously-bypass-approvals-and-sandbox --search exec {{task_markdown_path}}';
+        return `/opt/homebrew/bin/codex -m ${CODEX_DEFAULT_MODEL} --dangerously-bypass-approvals-and-sandbox --search exec {{task_markdown_path}}`;
     }
 
     if (job.runner_type === 'claude') {
@@ -297,7 +298,7 @@ const buildNonInteractiveTemplate = (job) => {
         const current = String(job.command_template ?? '');
 
         if (current.includes('/opt/homebrew/bin/codex') || /\bcodex\b/.test(current)) {
-            return '/opt/homebrew/bin/codex --dangerously-bypass-approvals-and-sandbox --search exec {{task_markdown_path}}';
+            return `/opt/homebrew/bin/codex -m ${CODEX_DEFAULT_MODEL} --dangerously-bypass-approvals-and-sandbox --search exec {{task_markdown_path}}`;
         }
 
         if (current.includes('/Users/garethdaine/.local/bin/claude') || /\bclaude\b/.test(current)) {

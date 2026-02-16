@@ -32,6 +32,22 @@
   - de-duplicated Q&A history by `question_id` and sorted unresolved items first, preventing retry-induced repeated question rows from flooding the history panel
   - sanitized displayed interrogation reasoning to remove operational retry/meta preambles (for example re-issuing/id-mismatch control text) so reasoning stays relevant to the actual question
   - fixed Claude discovery tool-result error detection false-positive where PHP/code snippets containing identifiers like `ErrorEnvelope` were incorrectly surfaced as `Tool error`
+  - added interrogation waiting-state spinners for initial/next-question generation in both question and answer panels
+  - tightened question markdown cleanup to strip embedded option blocks (including `Option A/B/...` inline sections) when structured options are already shown in answer controls
+  - stopped terminal completion notices from being tracked as unresolved questions by filtering completion-marker `question` payloads (`is_complete/progress=100`) across retry pending-question detection, Q&A history, and stats counts
+  - improved Summary phase empty-state UX to show an explicit "Generating summary..." spinner while status is `summarizing`
+  - upgraded summary markdown rendering: escaped newline payloads are normalized (for example `\n` to real line breaks) and markdown now renders as formatted HTML instead of raw `<pre>` text
+  - refactored summary detail sections (`Goals`, `Constraints`, `Acceptance Criteria`, `Open Questions`, `Private Notes`) into expandable accordions for cleaner navigation on long summaries
+  - added markdown table rendering support in interrogation/summary markdown presenter so pipe-table sections render as actual `<table>` blocks
+  - added summary revision control actions: request amendments (with optional notes) and continue interrogation from summary to resolve remaining open questions before confirmation
+  - summary confirmation is now gated when `open_questions` are still present, forcing explicit resolution flow instead of silently advancing to planning with unresolved ambiguity
+  - fixed root-cause summary field leakage by tightening runner summary JSON schema requirements (`summary_markdown`, `goals`, `constraints`, `acceptance_criteria`, `open_questions`, `private_notes` all required) and adding explicit prompt constraints to forbid embedding arrays/tags inside markdown
+  - added shared summary payload normalization at write/read/export boundaries to recover malformed legacy payloads and keep structured summary arrays canonical
+  - improved summary markdown table readability with explicit header/cell/row styling (clear borders, striping, spacing) for faster scanning
+  - improved private-notes rendering by normalizing enumerated prose markers (for example `(1)`, `(2)`) into markdown ordered-list structure before rendering
+  - enforced single-question interrogation contract end-to-end (including continue-from-summary): runtime guard now rejects batched `Q1/Q2/...` payloads, attempts one automatic repair prompt, and fails fast with `ROUND_CONTRACT_VIOLATION` if the runner still returns batched/invalid question output
+  - improved summary regeneration resilience after interrogation completion: summary job now attempts fallback generation with reconstructed transcript and a fresh non-resumed CLI context when initial summary command/parse fails
+  - added open-question reconciliation against answered interrogation events so already-answered continuation questions are removed from `summary_json.open_questions` and no longer block summary confirmation as stale unresolved items
 
 ## Progress Notes (2026-02-13)
 - Improved job command builder UX with explicit runner-aware permission profiles and flag visibility for both `codex` and `claude`, plus quick insertion of permission tokens into manual templates.
@@ -323,3 +339,15 @@ Definition of done:
 - [x] Prune/retention policies execute correctly with dry-run support.
 - [x] Versioned API contract and headers are enforced.
 - [x] Required release artifacts are produced.
+
+## Build Layer Delivery Checklist
+
+- [x] Add interrogation build endpoints (`generate-build-tasks`, `start-build`, `pause-build`, `resume-build`, `build/clarify`)
+- [x] Add build task generation job (`GenerateInterrogationBuildTasksJob`)
+- [x] Add build orchestration job (`ExecuteInterrogationBuildJob`)
+- [x] Add run factory for build tasks (`BuildTaskRunFactory`)
+- [x] Extend session payload with build summary, active task/run, approval and rate-limit signals
+- [x] Add planning UI build panel with task status list, active run log tail, clarification input, and controls
+- [x] Add export feedback state for plan export actions in planning UI
+- [x] Add feature tests for build endpoint workflow
+- [x] Add unit tests for build generation and orchestration jobs

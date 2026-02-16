@@ -98,6 +98,8 @@ onMounted(load);
                         <option value="interrogating">interrogating</option>
                         <option value="summarizing">summarizing</option>
                         <option value="planning">planning</option>
+                        <option value="build_tasks">build_tasks</option>
+                        <option value="build_executing">build_executing</option>
                         <option value="paused">paused</option>
                         <option value="completed">completed</option>
                         <option value="failed">failed</option>

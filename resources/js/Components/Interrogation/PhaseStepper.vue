@@ -14,6 +14,8 @@ const steps = [
     { value: 2, label: 'Interrogation' },
     { value: 3, label: 'Summary' },
     { value: 4, label: 'Planning' },
+    { value: 5, label: 'Build Tasks' },
+    { value: 6, label: 'Build Execution' },
 ];
 
 const stateFor = (value) => {

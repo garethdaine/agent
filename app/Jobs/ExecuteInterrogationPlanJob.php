@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationSession;
 use App\Support\Interrogation\AdapterFactory;
 use App\Support\Interrogation\ExportService;
@@ -120,6 +121,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
             }
 
             $session->plan_json = $plan;
+            $session->approved_at = null;
 
             $metadata = (array) ($session->metadata_json ?? []);
 
@@ -133,17 +135,28 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                 'summary' => $summaryPath,
                 'plan' => $planPath,
             ];
+            $metadata['build'] = [
+                'status' => 'idle',
+                'task_count' => 0,
+                'active_task_id' => null,
+                'active_run_id' => null,
+                'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ];
+
+            InterrogationBuildTask::query()
+                ->where('interrogation_session_id', $session->id)
+                ->delete();
 
             $session->metadata_json = $metadata;
-            $session->status = InterrogationSession::STATUS_COMPLETED;
+            $session->status = InterrogationSession::STATUS_PLANNING;
             $session->phase = InterrogationSession::PHASE_PLANNING;
-            $session->finished_at = CarbonImmutable::now('UTC');
+            $session->finished_at = null;
             $session->save();
 
             $writer = new InterrogationEventWriter($session);
             $writer->appendPlan($plan);
             $writer->appendSystem([
-                'notice' => 'plan_exported',
+                'notice' => 'plan_ready',
                 'summary_path' => $summaryPath,
                 'plan_path' => $planPath,
             ]);

@@ -29,6 +29,11 @@ interface InterrogationRunnerAdapter
     /**
      * @return array<int, string>
      */
+    public function buildBuildTasksCommand(InterrogationSession $session, string $prompt, string $systemPrompt): array;
+
+    /**
+     * @return array<int, string>
+     */
     public function buildReconstructCommand(InterrogationSession $session, string $conversationHistory, string $systemPrompt): array;
 
     /**
@@ -50,6 +55,11 @@ interface InterrogationRunnerAdapter
      * @return array<string, mixed>|null
      */
     public function parsePlanResponse(string $output): ?array;
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function parseBuildTasksResponse(string $output): ?array;
 
     /**
      * @return array<string, string>

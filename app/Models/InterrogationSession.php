@@ -27,13 +27,17 @@ class InterrogationSession extends Model
 
     public const STATUS_PLANNING = 'planning';
 
+    public const STATUS_BUILD_TASKS = 'build_tasks';
+
+    public const STATUS_BUILD_EXECUTING = 'build_executing';
+
     public const STATUS_COMPLETED = 'completed';
 
     public const STATUS_FAILED = 'failed';
 
     public const STATUS_PAUSED = 'paused';
 
-    public const ACTIVE_STATUSES = ['setup', 'discovering', 'interrogating', 'summarizing', 'planning'];
+    public const ACTIVE_STATUSES = ['setup', 'discovering', 'interrogating', 'summarizing', 'planning', 'build_tasks', 'build_executing'];
 
     public const TERMINAL_STATUSES = ['completed', 'failed'];
 
@@ -49,6 +53,10 @@ class InterrogationSession extends Model
 
     public const PHASE_PLANNING = 4;
 
+    public const PHASE_BUILD_TASKS = 5;
+
+    public const PHASE_BUILD_EXECUTION = 6;
+
     public const TYPE_FEATURE = 'feature';
 
     public const TYPE_GENERAL = 'general';
@@ -61,6 +69,7 @@ class InterrogationSession extends Model
             'plan_json' => 'array',
             'annotations_json' => 'array',
             'metadata_json' => 'array',
+            'approved_at' => 'datetime',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];
@@ -74,6 +83,11 @@ class InterrogationSession extends Model
     public function events(): HasMany
     {
         return $this->hasMany(InterrogationEvent::class);
+    }
+
+    public function buildTasks(): HasMany
+    {
+        return $this->hasMany(InterrogationBuildTask::class)->orderBy('sequence')->orderBy('id');
     }
 
     public function scopeActive(Builder $query): void

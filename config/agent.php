@@ -15,6 +15,10 @@ $parseEnvCsvList = static function (string $key): array {
     ), static fn (string $value): bool => $value !== ''));
 };
 
+$codexExecutable = env('AGENT_RUNNER_CODEX_PATH', '/opt/homebrew/bin/codex');
+$codexModel = trim((string) env('AGENT_RUNNER_CODEX_MODEL', 'gpt-5.3-codex'));
+$codexModelArgs = $codexModel !== '' ? ' -m '.$codexModel : '';
+
 return [
     'allowed_working_directory_bases' => array_values(array_unique(array_merge([
         '/Users/garethdaine/Code',
@@ -29,13 +33,13 @@ return [
 
     'runner_executables' => [
         'claude' => env('AGENT_RUNNER_CLAUDE_PATH', '/Users/garethdaine/.local/bin/claude'),
-        'codex' => env('AGENT_RUNNER_CODEX_PATH', '/opt/homebrew/bin/codex'),
+        'codex' => $codexExecutable,
         'custom' => env('AGENT_RUNNER_CUSTOM_PATH', '/Users/garethdaine/Code/agent/bin/agent-runner'),
     ],
 
     'default_templates' => [
         'claude' => '/Users/garethdaine/.local/bin/claude -p {{task_markdown_path}}',
-        'codex' => '/opt/homebrew/bin/codex exec {{task_markdown_path}}',
+        'codex' => trim($codexExecutable.$codexModelArgs.' exec {{task_markdown_path}}'),
     ],
 
     'allowed_placeholders' => [

@@ -4,7 +4,7 @@
 
 **Feature Name:** Requirements Discovery
 **Navigation:** Under a new "Tools" section (card grid with live status — active sessions, last used)
-**Purpose:** A GUI wizard that mirrors the CLI interrogation workflow (docs/interrogate.md), guiding users through structured requirements gathering with AI-generated questions, culminating in a confirmed summary and optional implementation plan.
+**Purpose:** A GUI wizard that mirrors the CLI interrogation workflow (docs/interrogate.md), guiding users through structured requirements gathering with AI-generated questions, culminating in a confirmed summary, approved implementation plan, generated build tasks, and orchestrated build execution.
 **Runner Support:** Both Claude CLI and Codex CLI, selectable at session start.
 
 ---
@@ -19,7 +19,9 @@ The wizard has visible phase indicators (stepper bar across the top):
 | 1 | Discovery | AI autonomously explores the target project. Single status card updates in real-time via stream-json. Parsed friendly messages from tool calls. |
 | 2 | Interrogation | AI asks one question at a time. User answers via multiple choice, free text, or skip-with-reason. Structured JSON questions via `--json-schema` (Claude) / `--output-schema` (Codex). |
 | 3 | Summary | AI produces a structured summary displayed as collapsible sections. User annotates (private notes + flag sections for AI revision). User confirms completeness. |
-| 4 | Planning | Explicit "Generate Plan" button. AI generates an implementation plan (same CLI session resumed with elevated tool permissions). User can request structured revisions. |
+| 4 | Planning | Explicit "Generate Plan" button. AI generates an implementation plan (same CLI session resumed with elevated tool permissions). Once generated, user must click "Approve Plan" (`approved_at` set) before progressing. |
+| 5 | Build Tasks | User generates build tasks from the approved plan. Tasks are persisted and shown with status/attempt/error metadata. |
+| 6 | Build Execution | User starts execution, monitors active task/run output, handles approval/rate-limit prompts, submits clarifications, and can pause/resume/retry failed work. Session completes when all tasks finish. |
 
 ---
 
@@ -36,7 +38,7 @@ The wizard has visible phase indicators (stepper bar across the top):
 
 **Phase-based tool restrictions:**
 - Phases 0–3: Read-only tools (Read, Glob, Grep) only.
-- Phase 4 (Planning): Full tool access (Write/Edit enabled) since the plan gets written to disk.
+- Phases 4–6: Full tool access (Write/Edit enabled) since plan/build artifacts are generated and executed.
 
 **Session resume:**
 - Native CLI resume first (`--resume` / `codex resume`).
@@ -146,6 +148,7 @@ Rich input supporting:
 - **Revision actions:** Expand, Simplify, Add Examples, Rewrite, Split Into Steps, Add Acceptance Criteria.
 - **Plan output:** Linked to session in DB + auto-exported to project's `docs/plans/` directory.
 - Plan file includes a header reference to the discovery summary it was generated from.
+- User must explicitly approve generated plan (`POST .../approve-plan`), which stamps `approved_at` and advances the session into Build Tasks (phase 5).
 
 ---
 
@@ -186,3 +189,39 @@ Full coverage from the initial build:
 - Feature tests for all API endpoints
 - Unit tests for models, services, adapters
 - Integration tests for CLI subprocess interaction
+
+## Build Lifecycle (Phases 5–6)
+
+After plan approval, build execution runs on top of persisted `interrogation_build_tasks`.
+
+### Build API Endpoints
+
+- `POST /agent/api/v1/interrogation/sessions/{id}/approve-plan`
+- `POST /agent/api/v1/interrogation/sessions/{id}/generate-build-tasks`
+- `POST /agent/api/v1/interrogation/sessions/{id}/start-build`
+- `POST /agent/api/v1/interrogation/sessions/{id}/pause-build`
+- `POST /agent/api/v1/interrogation/sessions/{id}/resume-build`
+- `POST /agent/api/v1/interrogation/sessions/{id}/build/clarify`
+
+### Build Phase State Transitions
+
+- Phase 4 (`planning`) + generated plan -> `approve-plan` -> phase 5 (`build_tasks`)
+- Phase 5 + generated task list -> `start-build` -> phase 6 (`build_executing`)
+- Phase 6 + all tasks terminal-success -> session `completed` (workflow complete across all 7 phases)
+
+### Build State Contract (`session.build`)
+
+`InterrogationSessionController@show` includes a `build` payload with:
+
+- `status` (`idle|generating_tasks|ready|running|paused|failed|completed`)
+- `summary` counts by task status
+- ordered `tasks`
+- `active_task` and `active_run`
+- `flags.approval_required` and `flags.rate_limit_detected` (plus excerpts/reset timestamp)
+- lifecycle timestamps and pause/error details
+
+### Orchestration
+
+- Build task generation uses the same runner adapter family (`ClaudeAdapter` / `CodexAdapter`) with build-task schema parsing.
+- Execution is coordinated by `ExecuteInterrogationBuildJob` and delegated run creation via `BuildTaskRunFactory`.
+- Each build task maps to an `AgentJobRun`, preserving normal run lifecycle, event capture, approval/rate-limit metadata, and stop semantics.
