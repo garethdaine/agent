@@ -129,6 +129,9 @@ class ExecuteInterrogationPlanJobTest extends TestCase
     public function test_codex_plan_prompt_includes_parity_depth_requirements(): void
     {
         config()->set('agent.interrogation.codex_plan_quality_retries', 0);
+        config()->set('agent.interrogation.codex_plan_min_markdown_chars', 1);
+        config()->set('agent.interrogation.codex_plan_min_sections', 1);
+        config()->set('agent.interrogation.codex_plan_min_concrete_references', 1);
 
         $session = $this->planningSession('codex');
 
@@ -143,15 +146,17 @@ class ExecuteInterrogationPlanJobTest extends TestCase
                     && str_contains($planningPrompt, 'Codex parity requirements')
                     && str_contains($planningPrompt, 'implementation-ready');
             })
-            ->andReturn(['php', '-r', 'echo json_encode(["plan_markdown" => "Codex detailed plan", "sections" => ["Architecture"], "risks" => ["Risk"], "assumptions" => ["Assumption"]]);']);
+            ->andReturn(['php', '-r', 'echo json_encode(["plan_markdown" => "Codex detailed plan\n- Update app/Http/Controllers/Api/V1/InterrogationSessionController.php", "sections" => ["Architecture", "API Contracts", "Tests"], "risks" => ["Risk"], "assumptions" => ["Assumption"]]);']);
         $adapter->shouldReceive('buildEnvironment')
             ->once()
             ->andReturn([]);
         $adapter->shouldReceive('parsePlanResponse')
             ->once()
             ->andReturn([
-                'plan_markdown' => 'Codex detailed plan',
-                'sections' => ['Architecture'],
+                'plan_markdown' => 'Codex detailed plan'.PHP_EOL
+                    .'- Update app/Http/Controllers/Api/V1/InterrogationSessionController.php'.PHP_EOL
+                    .str_repeat('x', 320),
+                'sections' => ['Architecture', 'API Contracts', 'Tests'],
                 'risks' => ['Risk'],
                 'assumptions' => ['Assumption'],
             ]);
@@ -166,7 +171,68 @@ class ExecuteInterrogationPlanJobTest extends TestCase
 
         $session->refresh();
 
-        $this->assertSame('Codex detailed plan', (string) data_get($session->plan_json, 'plan_markdown'));
+        $this->assertStringContainsString('Codex detailed plan', (string) data_get($session->plan_json, 'plan_markdown'));
+        $this->assertStringContainsString(
+            'app/Http/Controllers/Api/V1/InterrogationSessionController.php',
+            (string) data_get($session->plan_json, 'plan_markdown')
+        );
+    }
+
+    public function test_codex_revision_quality_failure_preserves_existing_plan_and_marks_revision_failed(): void
+    {
+        config()->set('agent.interrogation.codex_plan_quality_retries', 0);
+        config()->set('agent.interrogation.codex_plan_min_markdown_chars', 500);
+        config()->set('agent.interrogation.codex_plan_min_sections', 8);
+        config()->set('agent.interrogation.codex_plan_min_concrete_references', 6);
+
+        $session = $this->planningSession('codex');
+        $session->plan_json = [
+            'plan_markdown' => '## Existing Plan'.PHP_EOL.'- Keep me',
+            'sections' => ['Scope', 'Implementation'],
+            'risks' => ['Risk A'],
+            'assumptions' => ['Assumption A'],
+        ];
+        $session->save();
+
+        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter->shouldReceive('buildPlanCommand')
+            ->once()
+            ->andReturn(['php', '-r', 'echo json_encode(["plan_markdown" => "I\'m revising the plan against the locked baseline now.", "sections" => [], "risks" => [], "assumptions" => []]);']);
+        $adapter->shouldReceive('buildEnvironment')
+            ->once()
+            ->andReturn([]);
+        $adapter->shouldReceive('parsePlanResponse')
+            ->once()
+            ->andReturn([
+                'plan_markdown' => 'I\'m revising the plan against the locked baseline now.',
+                'sections' => [],
+                'risks' => [],
+                'assumptions' => [],
+            ]);
+
+        $factory = $this->mock(AdapterFactory::class);
+        $factory->shouldReceive('make')
+            ->once()
+            ->andReturn($adapter);
+
+        $job = new ExecuteInterrogationPlanJob((int) $session->id, 'Rewrite the plan with stronger detail.');
+        $this->app->call([$job, 'handle']);
+
+        $session->refresh();
+
+        $this->assertSame(InterrogationSession::STATUS_PLANNING, (string) $session->status);
+        $this->assertSame('failed', (string) data_get($session->metadata_json, 'plan.revision_status'));
+        $this->assertStringContainsString('Plan quality requirements not met', (string) data_get($session->metadata_json, 'plan.revision_error'));
+        $this->assertSame('## Existing Plan'.PHP_EOL.'- Keep me', (string) data_get($session->plan_json, 'plan_markdown'));
+        $this->assertSame(['Scope', 'Implementation'], data_get($session->plan_json, 'sections'));
+
+        $this->assertTrue(
+            InterrogationEvent::query()
+                ->where('interrogation_session_id', $session->id)
+                ->where('event_type', InterrogationEvent::TYPE_ERROR)
+                ->where('payload->code', 'PLAN_REVISION_QUALITY_FAILED')
+                ->exists()
+        );
     }
 
     public function test_codex_plan_quality_retry_rewrites_thin_plan_before_persisting(): void

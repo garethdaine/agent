@@ -243,6 +243,48 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                     $plan = $planPayloadNormalizer->normalize($qualityPlan);
                     [$qualityOk, $qualityIssues] = $this->validateCodexPlanQuality($plan);
                 }
+
+                if (! $qualityOk) {
+                    $message = 'Plan quality requirements not met: '.implode('; ', $qualityIssues);
+
+                    if ($isRevisionRequest) {
+                        $this->markRevisionState($session, 'failed', $message);
+                        $writer->appendError([
+                            'code' => 'PLAN_REVISION_QUALITY_FAILED',
+                            'message' => $message,
+                            'issues' => $qualityIssues,
+                        ]);
+                        $writer->appendSystem([
+                            'notice' => 'plan_revision_failed',
+                            'message' => $message,
+                            'issues' => $qualityIssues,
+                            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                        ]);
+
+                        return;
+                    }
+
+                    $transitions->transition(
+                        (int) $session->id,
+                        InterrogationSession::ACTIVE_STATUSES,
+                        InterrogationSession::STATUS_FAILED,
+                        [
+                            'error_code' => 'PLAN_QUALITY_FAILED',
+                            'error_summary' => $message,
+                            'finished_at' => CarbonImmutable::now('UTC'),
+                        ],
+                    );
+
+                    $session->refresh();
+                    $writer = new InterrogationEventWriter($session);
+                    $writer->appendError([
+                        'code' => 'PLAN_QUALITY_FAILED',
+                        'message' => $message,
+                        'issues' => $qualityIssues,
+                    ]);
+
+                    return;
+                }
             }
 
             $session->plan_json = $plan;
