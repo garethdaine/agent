@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
 use App\Support\Interrogation\AdapterFactory;
 use App\Support\Interrogation\ConversationReconstructor;
@@ -94,6 +95,21 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                 $adapter->buildEnvironment($session),
                 fn (string $output) => $adapter->parseQuestionResponse($output),
             );
+            $retriedWithoutResume = false;
+
+            if ($this->shouldRetryWithoutResume($session, $questionResult)) {
+                $freshSession = clone $session;
+                $freshSession->cli_session_id = null;
+
+                $questionResult = $this->runAndParseQuestion(
+                    $adapter->buildQuestionCommand($freshSession, $this->userMessage, $systemPrompt),
+                    (string) $session->project_directory,
+                    $adapter->buildEnvironment($freshSession),
+                    fn (string $output) => $adapter->parseQuestionResponse($output),
+                );
+
+                $retriedWithoutResume = true;
+            }
 
             if ($questionResult['exit_code'] !== 0 || $questionResult['parsed'] === null) {
                 $history = $reconstructor->reconstruct($session);
@@ -107,6 +123,11 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                 if ($reconstructed['parsed'] !== null) {
                     $questionResult = $reconstructed;
                 }
+            }
+
+            if ($retriedWithoutResume && is_string($session->cli_session_id) && trim($session->cli_session_id) !== '') {
+                $session->cli_session_id = null;
+                $session->save();
             }
 
             if ($questionResult['parsed'] === null) {
@@ -139,7 +160,8 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                 $repairPrompt = 'Your previous response violated the interrogation contract: '.$validation['reason'].".\n"
                     .'Re-issue the same next-question intent in correct format. '
                     .'Return exactly one question only. Never batch multiple questions. '
-                    .'If this is a choice question, set answer_type="choice" and provide options[]; do not embed option text in question_text.';
+                    .'If this is a choice question, set answer_type="choice" and provide options[]; do not embed option text in question_text. '
+                    .'Do not return process-status narration about resuming, loading, locating, or workspace/session state.';
 
                 $repaired = $this->runAndParseQuestion(
                     $adapter->buildQuestionCommand($session, $repairPrompt, $systemPrompt),
@@ -182,6 +204,58 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
 
             $done = ((int) ($question['progress_estimate'] ?? 0) >= 100)
                 || ((bool) ($question['is_complete'] ?? false) === true);
+
+            $substantiveAnswerCount = $this->substantiveAnsweredQuestionCount($session, $questionPayloadGuard);
+            $minimumAnswerCount = $this->minimumAnsweredQuestionsForCompletion($session);
+
+            if ($done && ! $this->canAcceptCompletion($session, $questionPayloadGuard)) {
+                $completionRepairPrompt = 'Do not mark interrogation complete yet. '
+                    .'At least '.$minimumAnswerCount.' substantive answered question(s) are required before completion '
+                    .'for this runner/type; currently resolved='.$substantiveAnswerCount.'. '
+                    .'Ask exactly one concrete, high-signal next question now. '
+                    .'Return is_complete=false and progress_estimate<100.';
+
+                $repaired = $this->runAndParseQuestion(
+                    $adapter->buildQuestionCommand($session, $completionRepairPrompt, $systemPrompt),
+                    (string) $session->project_directory,
+                    $adapter->buildEnvironment($session),
+                    fn (string $output) => $adapter->parseQuestionResponse($output),
+                );
+
+                if ($repaired['parsed'] !== null) {
+                    $repairValidation = $questionPayloadGuard->validate($repaired['parsed']);
+                    $repairDone = ((int) ($repaired['parsed']['progress_estimate'] ?? 0) >= 100)
+                        || ((bool) ($repaired['parsed']['is_complete'] ?? false) === true);
+
+                    if ($repairValidation['valid'] && ! $repairDone) {
+                        $questionResult = $repaired;
+                        $question = $questionResult['parsed'];
+                        $done = false;
+                    }
+                }
+
+                if ($done) {
+                    $transitions->transition(
+                        (int) $session->id,
+                        InterrogationSession::ACTIVE_STATUSES,
+                        InterrogationSession::STATUS_FAILED,
+                        [
+                            'error_code' => 'ROUND_CONTRACT_VIOLATION',
+                            'error_summary' => 'Runner attempted to complete interrogation before minimum substantive answered question threshold.',
+                            'finished_at' => CarbonImmutable::now('UTC'),
+                        ],
+                    );
+
+                    $session->refresh();
+                    $writer = new InterrogationEventWriter($session);
+                    $writer->appendError([
+                        'code' => 'ROUND_CONTRACT_VIOLATION',
+                        'message' => 'Runner attempted to complete interrogation before minimum substantive answered question threshold.',
+                    ]);
+
+                    return;
+                }
+            }
 
             if (! $done) {
                 $writer->appendQuestion($question);
@@ -253,7 +327,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
 
     /**
      * @param  array<int, string>  $command
-     * @param  array<string, string>  $env
+     * @param  array<string, string|bool>  $env
      * @param  callable(string):array<string,mixed>|null  $parser
      * @return array{exit_code:int,stdout:string,stderr:string,parsed:array<string,mixed>|null}
      */
@@ -272,5 +346,112 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             'stderr' => $stderr,
             'parsed' => $parser($stdout),
         ];
+    }
+
+    /**
+     * @param  array{exit_code:int,stdout:string,stderr:string,parsed:array<string,mixed>|null}  $result
+     */
+    private function shouldRetryWithoutResume(InterrogationSession $session, array $result): bool
+    {
+        return is_string($session->cli_session_id)
+            && trim($session->cli_session_id) !== ''
+            && ((int) ($result['exit_code'] ?? 1) !== 0 || ($result['parsed'] ?? null) === null);
+    }
+
+    private function canAcceptCompletion(InterrogationSession $session, QuestionPayloadGuard $questionPayloadGuard): bool
+    {
+        return $this->substantiveAnsweredQuestionCount($session, $questionPayloadGuard)
+            >= $this->minimumAnsweredQuestionsForCompletion($session);
+    }
+
+    private function substantiveAnsweredQuestionCount(InterrogationSession $session, QuestionPayloadGuard $questionPayloadGuard): int
+    {
+        $events = $session->events()
+            ->orderBy('sequence')
+            ->get(['event_type', 'payload']);
+
+        if ($events->isEmpty()) {
+            return 0;
+        }
+
+        $answerableQuestionIds = [];
+        foreach ($events as $event) {
+            if ($event->event_type !== InterrogationEvent::TYPE_QUESTION) {
+                continue;
+            }
+
+            $payload = is_array($event->payload) ? $event->payload : [];
+            $questionId = trim((string) ($payload['question_id'] ?? ''));
+            if ($questionId === '') {
+                continue;
+            }
+
+            $isCompletionMarker = ((int) ($payload['progress_estimate'] ?? 0) >= 100)
+                || ((bool) ($payload['is_complete'] ?? false) === true);
+            if ($isCompletionMarker) {
+                continue;
+            }
+
+            if (! ($questionPayloadGuard->validate($payload)['valid'] ?? false)) {
+                continue;
+            }
+
+            $answerableQuestionIds[$questionId] = true;
+        }
+
+        if ($answerableQuestionIds === []) {
+            return 0;
+        }
+
+        $answeredQuestionIds = [];
+
+        foreach ($events as $event) {
+            if ($event->event_type !== InterrogationEvent::TYPE_ANSWER) {
+                continue;
+            }
+
+            $payload = is_array($event->payload) ? $event->payload : [];
+            $answerType = strtolower(trim((string) ($payload['answer_type'] ?? '')));
+            if ($answerType === 'skip') {
+                continue;
+            }
+
+            $questionId = trim((string) ($payload['question_id'] ?? ''));
+            if ($questionId === '') {
+                continue;
+            }
+
+            if (! isset($answerableQuestionIds[$questionId])) {
+                continue;
+            }
+
+            $answerText = trim((string) ($payload['answer_text'] ?? ''));
+            $selectedOption = trim((string) ($payload['selected_option'] ?? ''));
+            $selectedOptions = array_filter(
+                (array) ($payload['selected_options'] ?? []),
+                static fn ($value): bool => is_string($value) && trim($value) !== ''
+            );
+
+            if ($answerText === '' && $selectedOption === '' && $selectedOptions === []) {
+                continue;
+            }
+
+            $answeredQuestionIds[$questionId] = true;
+        }
+
+        return count($answeredQuestionIds);
+    }
+
+    private function minimumAnsweredQuestionsForCompletion(InterrogationSession $session): int
+    {
+        if ((string) $session->runner_type !== 'codex') {
+            return 1;
+        }
+
+        $configKey = $session->interrogation_type === InterrogationSession::TYPE_FEATURE
+            ? 'agent.interrogation.codex_min_feature_answers'
+            : 'agent.interrogation.codex_min_general_answers';
+
+        return max(1, (int) config($configKey, 1));
     }
 }

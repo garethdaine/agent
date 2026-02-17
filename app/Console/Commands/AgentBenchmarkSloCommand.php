@@ -175,7 +175,8 @@ class AgentBenchmarkSloCommand extends Command
                 'description' => 'Phase 9 benchmark seed job',
                 'cron_expression' => '*/5 * * * *',
                 'timezone' => 'UTC',
-                'is_enabled' => true,
+                // Keep seeded benchmark jobs disabled so they do not interfere with real scheduler traffic.
+                'is_enabled' => false,
                 'max_runtime_seconds' => 900,
                 'cooldown_seconds' => 0,
                 'runner_type' => 'codex',

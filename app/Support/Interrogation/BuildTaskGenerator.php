@@ -30,12 +30,44 @@ class BuildTaskGenerator
         );
         $process->setTimeout(600);
         $process->run();
+        $parsed = $process->getExitCode() === 0
+            ? $adapter->parseBuildTasksResponse((string) $process->getOutput())
+            : null;
+
+        if (
+            is_string($session->cli_session_id)
+            && trim($session->cli_session_id) !== ''
+            && ($process->getExitCode() !== 0 || ! is_array($parsed) || ! is_array($parsed['tasks'] ?? null) || $parsed['tasks'] === [])
+        ) {
+            $freshSession = clone $session;
+            $freshSession->cli_session_id = null;
+
+            $fallback = new Process(
+                $adapter->buildBuildTasksCommand($freshSession, $prompt, $systemPrompt),
+                (string) $session->project_directory,
+                $adapter->buildEnvironment($freshSession),
+            );
+            $fallback->setTimeout(600);
+            $fallback->run();
+
+            $fallbackParsed = $fallback->getExitCode() === 0
+                ? $adapter->parseBuildTasksResponse((string) $fallback->getOutput())
+                : null;
+
+            if ($fallback->getExitCode() === 0 && is_array($fallbackParsed) && is_array($fallbackParsed['tasks'] ?? null) && $fallbackParsed['tasks'] !== []) {
+                $process = $fallback;
+                $parsed = $fallbackParsed;
+                $session->cli_session_id = null;
+                $session->save();
+            } else {
+                $process = $fallback;
+                $parsed = $fallbackParsed;
+            }
+        }
 
         if ($process->getExitCode() !== 0) {
             throw new RuntimeException(trim((string) $process->getErrorOutput()) ?: 'Build task generation command failed.');
         }
-
-        $parsed = $adapter->parseBuildTasksResponse((string) $process->getOutput());
 
         if (! is_array($parsed) || ! is_array($parsed['tasks'] ?? null) || $parsed['tasks'] === []) {
             throw new RuntimeException('Build task generation response could not be parsed.');

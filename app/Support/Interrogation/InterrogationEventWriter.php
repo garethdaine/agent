@@ -8,6 +8,8 @@ use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use JsonSerializable;
+use Stringable;
 
 class InterrogationEventWriter
 {
@@ -106,6 +108,7 @@ class InterrogationEventWriter
     private function append(string $eventType, array $payload): InterrogationEvent
     {
         $payload = $this->redactPayload($payload);
+        $payload = $this->normalizePayloadForStorage($payload);
 
         $event = DB::transaction(function () use ($eventType, $payload): InterrogationEvent {
             InterrogationSession::query()
@@ -148,10 +151,31 @@ class InterrogationEventWriter
             if (is_array($value)) {
                 $next = [];
                 foreach ($value as $key => $item) {
-                    $next[$key] = $redact($item);
+                    $normalizedKey = is_string($key) ? $this->normalizeUtf8($key) : $key;
+                    if (! is_int($normalizedKey) && ! is_string($normalizedKey)) {
+                        $normalizedKey = (string) $normalizedKey;
+                    }
+
+                    $next[$normalizedKey] = $redact($item);
                 }
 
                 return $next;
+            }
+
+            if ($value instanceof JsonSerializable) {
+                return $redact($value->jsonSerialize());
+            }
+
+            if ($value instanceof Stringable || (is_object($value) && method_exists($value, '__toString'))) {
+                $value = (string) $value;
+            }
+
+            if (is_resource($value)) {
+                return '[resource]';
+            }
+
+            if (is_object($value)) {
+                return '[object '.get_class($value).']';
             }
 
             if (! is_string($value)) {
@@ -174,13 +198,86 @@ class InterrogationEventWriter
         if (! mb_check_encoding($value, 'UTF-8')) {
             $converted = @iconv('UTF-8', 'UTF-8//IGNORE', $value);
 
-            if (is_string($converted)) {
+            if (is_string($converted) && $converted !== '') {
                 $value = $converted;
+            } else {
+                $value = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
             }
         }
 
-        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $value);
+        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value);
 
         return is_string($sanitized) ? $sanitized : $value;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function normalizePayloadForStorage(array $payload): array
+    {
+        $payload = $this->normalizePayloadValue($payload);
+
+        $encoded = json_encode(
+            $payload,
+            JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR
+        );
+
+        if (! is_string($encoded)) {
+            return ['message' => 'Event payload encoding failed.'];
+        }
+
+        $decoded = json_decode($encoded, true);
+
+        return is_array($decoded) ? $decoded : ['message' => 'Event payload decoding failed.'];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function normalizePayloadValue(array $payload): array
+    {
+        $normalize = function ($value) use (&$normalize) {
+            if (is_array($value)) {
+                $next = [];
+                foreach ($value as $key => $item) {
+                    $normalizedKey = is_string($key) ? $this->normalizeUtf8($key) : $key;
+                    if (! is_int($normalizedKey) && ! is_string($normalizedKey)) {
+                        $normalizedKey = (string) $normalizedKey;
+                    }
+
+                    $next[$normalizedKey] = $normalize($item);
+                }
+
+                return $next;
+            }
+
+            if ($value instanceof JsonSerializable) {
+                return $normalize($value->jsonSerialize());
+            }
+
+            if ($value instanceof Stringable || (is_object($value) && method_exists($value, '__toString'))) {
+                return $this->normalizeUtf8((string) $value);
+            }
+
+            if (is_resource($value)) {
+                return '[resource]';
+            }
+
+            if (is_object($value)) {
+                return '[object '.get_class($value).']';
+            }
+
+            if (is_string($value)) {
+                return $this->normalizeUtf8($value);
+            }
+
+            return $value;
+        };
+
+        $normalized = $normalize($payload);
+
+        return is_array($normalized) ? $normalized : ['message' => 'Event payload normalization failed.'];
     }
 }

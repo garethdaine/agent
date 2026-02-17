@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
-import { normalizeMarkdownContent, normalizePrivateNotesContent, renderMarkdownToHtml } from '@/Components/Interrogation/questionPresentation';
+import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
+import { normalizeMarkdownContent, normalizePrivateNotesContent } from '@/Components/Interrogation/questionPresentation';
 
 const props = defineProps({
     summary: {
@@ -26,7 +27,6 @@ const hasSummary = computed(() => {
 });
 
 const normalizedSummaryMarkdown = computed(() => normalizeMarkdownContent(String(props.summary?.summary_markdown ?? '')));
-const summaryHtml = computed(() => renderMarkdownToHtml(normalizedSummaryMarkdown.value));
 
 const sections = computed(() => [
     {
@@ -52,7 +52,6 @@ const sections = computed(() => [
 ]);
 
 const privateNotes = computed(() => normalizePrivateNotesContent(String(props.summary?.private_notes ?? '')));
-const privateNotesHtml = computed(() => renderMarkdownToHtml(privateNotes.value));
 const openQuestions = computed(() => list(props.summary?.open_questions));
 const hasOpenQuestions = computed(() => openQuestions.value.length > 0);
 const canConfirm = computed(() => hasSummary.value && !hasOpenQuestions.value && !props.busy);
@@ -131,9 +130,9 @@ watch(() => props.status, (nextStatus) => {
                 <p class="mt-1 text-xs text-indigo-700/90 dark:text-indigo-200/90">Current summary remains visible until the refreshed version is ready.</p>
             </div>
 
-            <div
+            <MarkdownRenderer
+                :markdown="normalizedSummaryMarkdown"
                 class="summary-markdown prose prose-sm mt-3 max-w-none rounded-lg border border-gray-200 bg-gray-50 p-4 text-gray-800 dark:prose-invert dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-100 prose-headings:mb-2 prose-headings:mt-4 prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 dark:prose-code:bg-gray-700"
-                v-html="summaryHtml"
             />
 
             <div class="mt-4 space-y-3">
@@ -168,10 +167,10 @@ watch(() => props.status, (nextStatus) => {
                     <span class="text-xs font-medium text-gray-500">{{ privateNotes === '' ? 0 : 1 }}</span>
                 </summary>
                 <div class="border-t border-gray-200 px-3 py-3 dark:border-gray-700">
-                    <div
+                    <MarkdownRenderer
                         v-if="privateNotes !== ''"
+                        :markdown="privateNotes"
                         class="summary-markdown notes-markdown prose prose-sm max-w-none text-gray-700 dark:prose-invert dark:text-gray-200 prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 dark:prose-code:bg-gray-700"
-                        v-html="privateNotesHtml"
                     />
                     <p v-else class="text-sm text-gray-500">No private notes.</p>
                 </div>
@@ -257,17 +256,28 @@ watch(() => props.status, (nextStatus) => {
 </template>
 
 <style scoped>
-:deep(.summary-markdown .md-table) {
-    width: 100%;
-    border-collapse: collapse;
+:deep(.summary-markdown) {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+:deep(.summary-markdown table) {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    border-collapse: separate;
+    border-spacing: 0;
     border: 1px solid #d1d5db;
     border-radius: 0.5rem;
-    overflow: hidden;
     margin-top: 0.75rem;
     margin-bottom: 0.75rem;
 }
 
-:deep(.summary-markdown .md-table-th) {
+:deep(.summary-markdown th) {
     background: #f3f4f6;
     border-bottom: 1px solid #d1d5db;
     border-right: 1px solid #d1d5db;
@@ -276,46 +286,52 @@ watch(() => props.status, (nextStatus) => {
     font-weight: 700;
     font-size: 0.875rem;
     color: #111827;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
-:deep(.summary-markdown .md-table-th:last-child) {
+:deep(.summary-markdown th:last-child) {
     border-right: none;
 }
 
-:deep(.summary-markdown .md-table-td) {
+:deep(.summary-markdown td) {
     border-top: 1px solid #e5e7eb;
     border-right: 1px solid #e5e7eb;
     padding: 0.625rem 0.75rem;
     vertical-align: top;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
-:deep(.summary-markdown .md-table-td:last-child) {
+:deep(.summary-markdown td:last-child) {
     border-right: none;
 }
 
-:deep(.summary-markdown .md-table-tr:nth-child(even) .md-table-td) {
+:deep(.summary-markdown tbody tr:nth-child(even) td) {
     background: #f9fafb;
 }
 
-:deep(.dark .summary-markdown .md-table) {
+:deep(.dark .summary-markdown table) {
     border-color: #4b5563;
 }
 
-:deep(.dark .summary-markdown .md-table-th) {
+:deep(.dark .summary-markdown th) {
     background: #1f2937;
     border-color: #4b5563;
     color: #f3f4f6;
 }
 
-:deep(.dark .summary-markdown .md-table-td) {
+:deep(.dark .summary-markdown td) {
     border-color: #374151;
 }
 
-:deep(.dark .summary-markdown .md-table-tr:nth-child(even) .md-table-td) {
+:deep(.dark .summary-markdown tbody tr:nth-child(even) td) {
     background: #111827;
 }
 
-:deep(.summary-markdown .md-code-block) {
+:deep(.summary-markdown pre) {
     margin-top: 0.5rem;
     margin-bottom: 0.75rem;
     overflow-x: hidden;
@@ -325,7 +341,7 @@ watch(() => props.status, (nextStatus) => {
     padding: 0.75rem;
 }
 
-:deep(.summary-markdown .md-code) {
+:deep(.summary-markdown pre code) {
     display: block;
     white-space: pre-wrap;
     word-break: break-word;
@@ -339,28 +355,29 @@ watch(() => props.status, (nextStatus) => {
     border-radius: 0 !important;
 }
 
-:deep(.summary-markdown .md-json-key) {
+:deep(.summary-markdown .token.property) {
     color: #93c5fd;
 }
 
-:deep(.summary-markdown .md-json-string) {
+:deep(.summary-markdown .token.string) {
     color: #86efac;
 }
 
-:deep(.summary-markdown .md-json-number) {
+:deep(.summary-markdown .token.number) {
     color: #fca5a5;
 }
 
-:deep(.summary-markdown .md-json-literal) {
+:deep(.summary-markdown .token.boolean),
+:deep(.summary-markdown .token.null) {
     color: #fcd34d;
 }
 
-:deep(.dark .summary-markdown .md-code-block) {
+:deep(.dark .summary-markdown pre) {
     border-color: #0f172a;
     background: #020617;
 }
 
-:deep(.dark .summary-markdown .md-code) {
+:deep(.dark .summary-markdown pre code) {
     color: #e5e7eb;
 }
 

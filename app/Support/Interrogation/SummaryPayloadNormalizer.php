@@ -15,7 +15,7 @@ class SummaryPayloadNormalizer
         $markdown = (string) ($summary['summary_markdown'] ?? $summary['summary'] ?? '');
         $embedded = $this->extractEmbeddedParameterLists($markdown, $fields);
 
-        $summary['summary_markdown'] = $embedded['clean_markdown'];
+        $summary['summary_markdown'] = $this->sanitizeSummaryMarkdown($embedded['clean_markdown']);
 
         foreach ($fields as $field) {
             $existing = $this->toStringList($summary[$field] ?? null);
@@ -24,7 +24,7 @@ class SummaryPayloadNormalizer
                 $existing = $embedded['lists'][$field];
             }
 
-            $summary[$field] = $existing;
+            $summary[$field] = $this->sanitizeList($existing, $field);
         }
 
         $summary['private_notes'] = (string) ($summary['private_notes'] ?? '');
@@ -203,5 +203,107 @@ class SummaryPayloadNormalizer
         }
 
         return array_values(array_unique($items));
+    }
+
+    private function sanitizeSummaryMarkdown(string $markdown): string
+    {
+        if (trim($markdown) === '') {
+            return '';
+        }
+
+        $lines = preg_split('/\R/', $markdown) ?: [];
+        $filtered = [];
+        $skipSection = false;
+
+        foreach ($lines as $line) {
+            $trimmed = trim((string) $line);
+
+            if ($this->isHeadingLine($trimmed)) {
+                $skipSection = $this->isEstimateOrTimelineContent($this->headingText($trimmed));
+                if ($skipSection) {
+                    continue;
+                }
+            }
+
+            if ($skipSection) {
+                continue;
+            }
+
+            if ($trimmed !== '' && $this->isEstimateOrTimelineContent($trimmed)) {
+                continue;
+            }
+
+            $filtered[] = (string) $line;
+        }
+
+        $clean = implode("\n", $filtered);
+        $clean = preg_replace('/\n{3,}/', "\n\n", $clean) ?? $clean;
+
+        return trim($clean);
+    }
+
+    /**
+     * @param  array<int, string>  $items
+     * @return array<int, string>
+     */
+    private function sanitizeList(array $items, string $field): array
+    {
+        $guard = $field === 'open_questions' ? new QuestionPayloadGuard : null;
+
+        return array_values(array_filter(
+            $items,
+            function (string $item) use ($field, $guard): bool {
+                if ($this->isEstimateOrTimelineContent($item)) {
+                    return false;
+                }
+
+                if ($field !== 'open_questions') {
+                    return true;
+                }
+
+                $validation = $guard?->validate([
+                    'question_text' => $item,
+                    'answer_type' => 'freetext',
+                    'options' => [],
+                    'progress_estimate' => 0,
+                    'is_complete' => false,
+                ]);
+
+                return (bool) ($validation['valid'] ?? false);
+            },
+        ));
+    }
+
+    private function isHeadingLine(string $line): bool
+    {
+        return (bool) preg_match('/^\s{0,3}#{1,6}\s+/', $line);
+    }
+
+    private function headingText(string $line): string
+    {
+        return trim((string) preg_replace('/^\s{0,3}#{1,6}\s+/', '', $line));
+    }
+
+    private function isEstimateOrTimelineContent(string $value): bool
+    {
+        $text = trim($value);
+        if ($text === '') {
+            return false;
+        }
+
+        if (preg_match('/\b(total\s+estimated\s+effort|estimated\s+effort|effort\s+estimate|estimate\s*:|timeline|time[- ]line|critical\s+path|paralleli[sz]able|eta|delivery\s+date|target\s+date)\b/i', $text) === 1) {
+            return true;
+        }
+
+        $hasDuration = preg_match('/\b\d+\s*(?:-|–|to)?\s*\d*\s*(working\s*)?(hours?|days?|weeks?|months?)\b/i', $text) === 1;
+        $hasEffortContext = preg_match('/\b(developer|engineer|person|team|staffed?)\b/i', $text) === 1;
+        $hasDeliveryVerb = preg_match('/\b(deliver(?:y)?|complete|finish|ship|rollout|release|launch|target)\b/i', $text) === 1;
+        $hasBoundedDuration = preg_match('/\b(within|in|by)\s+\d+\s*(hours?|days?|weeks?|months?)\b/i', $text) === 1;
+
+        if ($hasDeliveryVerb && $hasBoundedDuration) {
+            return true;
+        }
+
+        return $hasDuration && $hasEffortContext;
     }
 }

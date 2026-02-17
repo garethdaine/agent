@@ -20,11 +20,34 @@ class ConversationReconstructor
             $payload = is_array($event->payload) ? $event->payload : [];
 
             if ($event->event_type === InterrogationEvent::TYPE_QUESTION) {
-                $lines[] = 'Assistant Question: '.(string) ($payload['question_text'] ?? '');
+                $questionId = trim((string) ($payload['question_id'] ?? ''));
+                $prefix = $questionId !== '' ? 'Assistant Question ['.$questionId.']' : 'Assistant Question';
+                $lines[] = $prefix.': '.(string) ($payload['question_text'] ?? '');
             }
 
             if ($event->event_type === InterrogationEvent::TYPE_ANSWER) {
-                $lines[] = 'User Answer: '.(string) ($payload['answer_text'] ?? $payload['selected_option'] ?? '');
+                $questionId = trim((string) ($payload['question_id'] ?? ''));
+                $answerType = strtolower(trim((string) ($payload['answer_type'] ?? 'freetext')));
+                $answerText = trim((string) ($payload['answer_text'] ?? ''));
+                $selectedOption = trim((string) ($payload['selected_option'] ?? ''));
+                $selectedOptions = array_values(array_filter(
+                    (array) ($payload['selected_options'] ?? []),
+                    static fn ($value): bool => is_string($value) && trim($value) !== ''
+                ));
+
+                $answer = $answerText;
+                if ($answer === '' && $selectedOption !== '') {
+                    $answer = $selectedOption;
+                }
+                if ($answer === '' && $selectedOptions !== []) {
+                    $answer = implode('; ', array_map(static fn (string $value): string => trim($value), $selectedOptions));
+                }
+                if ($answer === '') {
+                    $answer = '(no answer content provided)';
+                }
+
+                $prefix = $questionId !== '' ? 'User Answer ['.$questionId.']' : 'User Answer';
+                $lines[] = $prefix.' ('.$answerType.'): '.$answer;
             }
 
             if ($event->event_type === InterrogationEvent::TYPE_SUMMARY && isset($payload['summary_markdown'])) {

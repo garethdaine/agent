@@ -42,6 +42,7 @@ class DispatchDueService
         $scanTo = $nowMinute;
 
         $windows = $this->collectDueWindows($scanFrom, $scanTo)
+            ->pipe(fn (Collection $candidates): Collection => $this->withoutExistingScheduledRuns($candidates))
             ->sortBy([
                 ['due_window', 'asc'],
                 ['agent_job_id', 'asc'],
@@ -49,7 +50,11 @@ class DispatchDueService
             ->values();
 
         $dispatchCandidates = $windows->take(20);
-        $deferredCapacityCount = max(0, $windows->count() - $dispatchCandidates->count());
+        $deferredWindows = $windows->slice($dispatchCandidates->count())->values();
+        $deferredCapacityCount = $deferredWindows->count();
+        $watermarkToPersist = $deferredCapacityCount > 0
+            ? $deferredWindows->first()['due_window']->subMinute()
+            : $scanTo;
 
         $dispatchedCount = 0;
         $skippedOverlapCount = 0;
@@ -82,7 +87,7 @@ class DispatchDueService
 
         $tickFinishedAt = CarbonImmutable::now('UTC');
 
-        $this->setWatermark($scanTo);
+        $this->setWatermark($watermarkToPersist);
 
         SchedulerHeartbeat::query()->updateOrCreate(
             ['source' => 'scheduler_dispatch'],
@@ -97,7 +102,7 @@ class DispatchDueService
                     'deferred_capacity_count' => $deferredCapacityCount,
                     'tick_started_at' => $tickStartedAt->toIso8601String(),
                     'tick_finished_at' => $tickFinishedAt->toIso8601String(),
-                    'watermark_minute_utc' => $scanTo->toIso8601String(),
+                    'watermark_minute_utc' => $watermarkToPersist->toIso8601String(),
                     'reconcile_error' => $reconcileError,
                 ],
             ]
@@ -110,7 +115,7 @@ class DispatchDueService
             'skipped_rate_limited_count' => $skippedRateLimitedCount,
             'error_count' => $errorCount,
             'deferred_capacity_count' => $deferredCapacityCount,
-            'watermark_minute_utc' => $scanTo->toIso8601String(),
+            'watermark_minute_utc' => $watermarkToPersist->toIso8601String(),
         ];
     }
 
@@ -203,6 +208,53 @@ class DispatchDueService
         }
 
         return $windows;
+    }
+
+    /**
+     * @param  Collection<int, array{job:AgentJob,agent_job_id:int,due_window:CarbonImmutable}>  $windows
+     * @return Collection<int, array{job:AgentJob,agent_job_id:int,due_window:CarbonImmutable}>
+     */
+    private function withoutExistingScheduledRuns(Collection $windows): Collection
+    {
+        if ($windows->isEmpty()) {
+            return $windows;
+        }
+
+        $jobIds = $windows->pluck('agent_job_id')->unique()->values();
+        $dueWindows = $windows->pluck('due_window')->unique(fn (CarbonImmutable $window): string => $window->toIso8601String())->values();
+
+        $existing = AgentJobRun::query()
+            ->where('trigger_type', AgentJobRun::TRIGGER_SCHEDULE)
+            ->whereIn('agent_job_id', $jobIds)
+            ->whereIn('due_window_utc_minute', $dueWindows)
+            ->get(['agent_job_id', 'due_window_utc_minute']);
+
+        $existingByKey = [];
+        foreach ($existing as $run) {
+            if ($run->due_window_utc_minute === null) {
+                continue;
+            }
+
+            $key = sprintf(
+                '%d|%s',
+                (int) $run->agent_job_id,
+                CarbonImmutable::parse((string) $run->due_window_utc_minute, 'UTC')->toIso8601String()
+            );
+
+            $existingByKey[$key] = true;
+        }
+
+        return $windows
+            ->reject(function (array $candidate) use ($existingByKey): bool {
+                $key = sprintf(
+                    '%d|%s',
+                    (int) $candidate['agent_job_id'],
+                    $candidate['due_window']->toIso8601String()
+                );
+
+                return isset($existingByKey[$key]);
+            })
+            ->values();
     }
 
     private function matchesCronMinuteAndHour(string $cronExpression, CarbonImmutable $zoned): bool

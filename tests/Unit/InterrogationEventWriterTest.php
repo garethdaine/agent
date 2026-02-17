@@ -37,6 +37,37 @@ class InterrogationEventWriterTest extends TestCase
         $this->assertStringContainsString('[REDACTED]', (string) $event->payload['message']);
     }
 
+    public function test_append_discovery_activity_handles_nested_invalid_utf8_payloads(): void
+    {
+        $user = User::factory()->create();
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'runner_type' => 'codex',
+            'project_directory' => '/tmp/test',
+            'interrogation_type' => InterrogationSession::TYPE_GENERAL,
+            'status' => InterrogationSession::STATUS_DISCOVERING,
+            'phase' => InterrogationSession::PHASE_DISCOVERY,
+        ]);
+
+        $writer = new InterrogationEventWriter($session);
+
+        $event = $writer->appendDiscoveryActivity([
+            'source' => 'codex',
+            'message' => "rollout failure: \xC3\x28",
+            'raw' => [
+                'stderr' => "bad-bytes-\xB1\x31",
+                'nested' => [
+                    'detail' => "thread \xE2\x28\xA1",
+                ],
+                "bad-key-\xC3\x28" => "value-\xE2\x28\xA1",
+            ],
+        ]);
+
+        $this->assertIsArray($event->payload);
+        $this->assertTrue(mb_check_encoding(json_encode($event->payload) ?: '', 'UTF-8'));
+    }
+
     public function test_append_recomputes_sequence_when_writer_counter_is_stale(): void
     {
         $user = User::factory()->create();

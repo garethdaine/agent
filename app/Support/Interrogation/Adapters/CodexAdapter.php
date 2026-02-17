@@ -4,6 +4,7 @@ namespace App\Support\Interrogation\Adapters;
 
 use App\Models\InterrogationSession;
 use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
+use RuntimeException;
 
 class CodexAdapter implements InterrogationRunnerAdapter
 {
@@ -13,10 +14,9 @@ class CodexAdapter implements InterrogationRunnerAdapter
     public function buildDiscoveryCommand(InterrogationSession $session, string $discoveryPrompt, string $systemPrompt): array
     {
         return [
-            $this->executable(),
-            'exec',
+            ...$this->baseExecCommand(),
             '--json',
-            $discoveryPrompt,
+            $this->composePrompt($systemPrompt, $discoveryPrompt),
         ];
     }
 
@@ -25,21 +25,17 @@ class CodexAdapter implements InterrogationRunnerAdapter
      */
     public function buildQuestionCommand(InterrogationSession $session, string $userMessage, string $systemPrompt): array
     {
-        $command = [
-            $this->executable(),
-        ];
+        $command = $this->baseExecCommand();
 
         if (is_string($session->cli_session_id) && $session->cli_session_id !== '') {
             $command[] = 'resume';
             $command[] = $session->cli_session_id;
-        } else {
-            $command[] = 'exec';
         }
 
         $command[] = '--json';
         $command[] = '--output-schema';
-        $command[] = $this->questionSchema();
-        $command[] = $userMessage;
+        $command[] = $this->schemaFilePath('question', $this->questionSchema());
+        $command[] = $this->composePrompt($systemPrompt, $userMessage);
 
         return $command;
     }
@@ -49,21 +45,17 @@ class CodexAdapter implements InterrogationRunnerAdapter
      */
     public function buildSummaryCommand(InterrogationSession $session, string $summaryPrompt, string $systemPrompt): array
     {
-        $command = [
-            $this->executable(),
-        ];
+        $command = $this->baseExecCommand();
 
         if (is_string($session->cli_session_id) && $session->cli_session_id !== '') {
             $command[] = 'resume';
             $command[] = $session->cli_session_id;
-        } else {
-            $command[] = 'exec';
         }
 
         $command[] = '--json';
         $command[] = '--output-schema';
-        $command[] = $this->summarySchema();
-        $command[] = $summaryPrompt;
+        $command[] = $this->schemaFilePath('summary', $this->summarySchema());
+        $command[] = $this->composePrompt($systemPrompt, $summaryPrompt);
 
         return $command;
     }
@@ -73,21 +65,17 @@ class CodexAdapter implements InterrogationRunnerAdapter
      */
     public function buildPlanCommand(InterrogationSession $session, string $planningPrompt, string $systemPrompt): array
     {
-        $command = [
-            $this->executable(),
-        ];
+        $command = $this->baseExecCommand();
 
         if (is_string($session->cli_session_id) && $session->cli_session_id !== '') {
             $command[] = 'resume';
             $command[] = $session->cli_session_id;
-        } else {
-            $command[] = 'exec';
         }
 
         $command[] = '--json';
         $command[] = '--output-schema';
-        $command[] = $this->planSchema();
-        $command[] = $planningPrompt;
+        $command[] = $this->schemaFilePath('plan', $this->planSchema());
+        $command[] = $this->composePrompt($systemPrompt, $planningPrompt);
 
         return $command;
     }
@@ -97,21 +85,17 @@ class CodexAdapter implements InterrogationRunnerAdapter
      */
     public function buildBuildTasksCommand(InterrogationSession $session, string $prompt, string $systemPrompt): array
     {
-        $command = [
-            $this->executable(),
-        ];
+        $command = $this->baseExecCommand();
 
         if (is_string($session->cli_session_id) && $session->cli_session_id !== '') {
             $command[] = 'resume';
             $command[] = $session->cli_session_id;
-        } else {
-            $command[] = 'exec';
         }
 
         $command[] = '--json';
         $command[] = '--output-schema';
-        $command[] = $this->buildTasksSchema();
-        $command[] = $prompt;
+        $command[] = $this->schemaFilePath('build-tasks', $this->buildTasksSchema());
+        $command[] = $this->composePrompt($systemPrompt, $prompt);
 
         return $command;
     }
@@ -122,13 +106,26 @@ class CodexAdapter implements InterrogationRunnerAdapter
     public function buildReconstructCommand(InterrogationSession $session, string $conversationHistory, string $systemPrompt): array
     {
         return [
-            $this->executable(),
-            'exec',
+            ...$this->baseExecCommand(),
             '--json',
             '--output-schema',
-            $this->questionSchema(),
-            $conversationHistory,
+            $this->schemaFilePath('question', $this->questionSchema()),
+            $this->composePrompt($systemPrompt, $conversationHistory),
         ];
+    }
+
+    private function composePrompt(string $systemPrompt, string $userPrompt): string
+    {
+        $system = trim($systemPrompt);
+        $user = trim($userPrompt);
+
+        if ($system === '') {
+            return $user;
+        }
+
+        return "Follow the SYSTEM instructions exactly.\n\n"
+            ."<SYSTEM>\n{$system}\n</SYSTEM>\n\n"
+            ."<USER_REQUEST>\n{$user}\n</USER_REQUEST>";
     }
 
     /**
@@ -142,16 +139,47 @@ class CodexAdapter implements InterrogationRunnerAdapter
             return null;
         }
 
+        if ($this->isIgnorableCodexStateWarning($line)) {
+            return [
+                'type' => 'diagnostic',
+                'payload' => [
+                    'source' => 'codex',
+                    'message' => '',
+                ],
+            ];
+        }
+
         $decoded = json_decode($line, true);
+
+        if (is_string($decoded)) {
+            $nested = json_decode($decoded, true);
+            if (is_array($nested)) {
+                $decoded = $nested;
+            } else {
+                return [
+                    'type' => 'message',
+                    'payload' => [
+                        'source' => 'codex',
+                        'message' => $this->truncateMessage($decoded),
+                    ],
+                ];
+            }
+        }
 
         if (! is_array($decoded)) {
             return null;
         }
 
+        $raw = $this->compactRawEvent($decoded);
+        $message = (string) ($decoded['message'] ?? $decoded['text'] ?? $decoded['content'] ?? '');
+        if ($message === '') {
+            $message = $this->extractNestedStreamMessage($decoded);
+        }
+
         $payload = [
             'source' => 'codex',
-            'raw' => $decoded,
-            'message' => (string) ($decoded['message'] ?? $decoded['text'] ?? $decoded['content'] ?? ''),
+            'raw' => $raw,
+            'message' => $this->truncateMessage($message),
         ];
 
         if (isset($decoded['session_id']) && is_string($decoded['session_id'])) {
@@ -162,6 +190,188 @@ class CodexAdapter implements InterrogationRunnerAdapter
             'type' => (string) ($decoded['type'] ?? 'message'),
             'payload' => $payload,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $decoded
+     */
+    private function extractNestedStreamMessage(array $decoded): string
+    {
+        $candidates = [];
+
+        if (is_array($decoded['item'] ?? null)) {
+            $candidates[] = $decoded['item'];
+        }
+
+        if (is_array($decoded['delta'] ?? null)) {
+            $candidates[] = $decoded['delta'];
+        }
+
+        if (is_array($decoded['result'] ?? null)) {
+            $candidates[] = $decoded['result'];
+        }
+
+        foreach ($candidates as $candidate) {
+            if ((string) ($candidate['type'] ?? '') === 'command_execution') {
+                return $this->formatCommandExecutionMessage($candidate);
+            }
+
+            $text = (string) ($candidate['message'] ?? $candidate['text'] ?? $candidate['content'] ?? '');
+            if ($text !== '') {
+                return $text;
+            }
+
+            $aggregatedOutput = trim((string) ($candidate['aggregated_output'] ?? $candidate['output'] ?? ''));
+            if ($aggregatedOutput !== '') {
+                if ($this->isLikelyCodeOrBlob($aggregatedOutput)) {
+                    return 'Reading source files.';
+                }
+
+                return $aggregatedOutput;
+            }
+
+            if (is_array($candidate['content'] ?? null)) {
+                $parts = [];
+
+                foreach ($candidate['content'] as $part) {
+                    if (is_array($part)) {
+                        $partText = (string) ($part['text'] ?? $part['message'] ?? '');
+                        if ($partText !== '') {
+                            $parts[] = $partText;
+                        }
+                    }
+                }
+
+                if ($parts !== []) {
+                    return trim(implode("\n", $parts));
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private function truncateMessage(string $message, int $maxLength = 2000): string
+    {
+        $message = trim($message);
+
+        if ($message === '') {
+            return '';
+        }
+
+        if (mb_strlen($message) <= $maxLength) {
+            return $message;
+        }
+
+        return mb_substr($message, 0, $maxLength).'… [truncated]';
+    }
+
+    /**
+     * @param  array<string, mixed>  $candidate
+     */
+    private function formatCommandExecutionMessage(array $candidate): string
+    {
+        $command = trim((string) ($candidate['command'] ?? ''));
+        $status = strtolower(trim((string) ($candidate['status'] ?? '')));
+        $exitCode = isset($candidate['exit_code']) && is_numeric($candidate['exit_code'])
+            ? (int) $candidate['exit_code']
+            : null;
+        $aggregatedOutput = trim((string) ($candidate['aggregated_output'] ?? $candidate['output'] ?? ''));
+
+        if ($command === '' && $aggregatedOutput !== '' && ! $this->isLikelyCodeOrBlob($aggregatedOutput)) {
+            return $this->truncateMessage($aggregatedOutput, 320);
+        }
+
+        $base = $this->summarizeCommandIntent($command);
+
+        if ($status === 'completed' && $exitCode !== null && $exitCode !== 0) {
+            return $base.' Command exited with code '.$exitCode.'.';
+        }
+
+        return $base;
+    }
+
+    private function summarizeCommandIntent(string $command): string
+    {
+        $command = strtolower(trim($command));
+
+        if ($command === '') {
+            return 'Running discovery command.';
+        }
+
+        if (str_contains($command, 'rg ') || str_contains($command, 'grep ')) {
+            return 'Searching repository files.';
+        }
+
+        if (str_contains($command, 'find ') || str_contains($command, 'ls ') || str_contains($command, 'glob')) {
+            return 'Listing project files.';
+        }
+
+        if (str_contains($command, 'sed -n') || str_contains($command, 'cat ') || str_contains($command, 'head ') || str_contains($command, 'tail ')) {
+            return 'Reading source files.';
+        }
+
+        if (str_contains($command, 'php artisan')) {
+            return 'Inspecting Laravel application state.';
+        }
+
+        return 'Running discovery command.';
+    }
+
+    private function isLikelyCodeOrBlob(string $message): bool
+    {
+        $message = trim($message);
+
+        if ($message === '') {
+            return false;
+        }
+
+        if (mb_strlen($message) >= 600) {
+            return true;
+        }
+
+        if (preg_match('/<\?php|^namespace\s+[A-Za-z0-9_\\\\]+;|^\s*class\s+[A-Za-z0-9_]+/mi', $message) === 1) {
+            return true;
+        }
+
+        if (preg_match('/\b(?:function|public|private|protected)\s+[A-Za-z0-9_]+\s*\(/', $message) === 1) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $decoded
+     * @return array<string, mixed>
+     */
+    private function compactRawEvent(array $decoded): array
+    {
+        $item = $decoded['item'] ?? null;
+        if (! is_array($item)) {
+            return $decoded;
+        }
+
+        if ((string) ($item['type'] ?? '') !== 'command_execution') {
+            return $decoded;
+        }
+
+        $compact = $decoded;
+        $compactItem = $item;
+        $aggregatedOutput = trim((string) ($compactItem['aggregated_output'] ?? ''));
+        $output = trim((string) ($compactItem['output'] ?? ''));
+        $outputLength = max(mb_strlen($aggregatedOutput), mb_strlen($output));
+
+        unset($compactItem['aggregated_output'], $compactItem['output']);
+
+        if ($outputLength > 0) {
+            $compactItem['output_omitted'] = true;
+            $compactItem['output_length'] = $outputLength;
+        }
+
+        $compact['item'] = $compactItem;
+
+        return $compact;
     }
 
     /**
@@ -192,7 +402,7 @@ class CodexAdapter implements InterrogationRunnerAdapter
             'is_complete' => (bool) ($decoded['is_complete'] ?? false),
             'cli_session_id' => is_string($decoded['cli_session_id'] ?? null)
                 ? $decoded['cli_session_id']
-                : null,
+                : (is_string($decoded['session_id'] ?? null) ? $decoded['session_id'] : null),
         ];
     }
 
@@ -404,16 +614,30 @@ class CodexAdapter implements InterrogationRunnerAdapter
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, string|bool>
      */
     public function buildEnvironment(InterrogationSession $session): array
     {
         $env = [];
+        $blockedKeys = [
+            'CODEX_THREAD_ID',
+            'CODEX_SESSION_ID',
+            'CODEX_INTERNAL_ORIGINATOR_OVERRIDE',
+        ];
 
         foreach ($_ENV as $key => $value) {
+            if (in_array((string) $key, $blockedKeys, true)) {
+                continue;
+            }
+
             if (is_string($key) && is_scalar($value)) {
                 $env[$key] = (string) $value;
             }
+        }
+
+        foreach ($blockedKeys as $blockedKey) {
+            // Symfony Process treats false as "unset this inherited env var".
+            $env[$blockedKey] = false;
         }
 
         $env['INTERROGATION_SESSION_ID'] = (string) $session->id;
@@ -426,11 +650,39 @@ class CodexAdapter implements InterrogationRunnerAdapter
         return (string) (config('agent.runner_executables.codex') ?: 'codex');
     }
 
+    /**
+     * @return array<int, string>
+     */
+    private function baseExecCommand(): array
+    {
+        $command = [
+            $this->executable(),
+        ];
+
+        $model = $this->model();
+        if ($model !== '') {
+            $command[] = '--model';
+            $command[] = $model;
+        }
+
+        $command[] = 'exec';
+
+        return $command;
+    }
+
+    private function model(): string
+    {
+        return trim((string) (
+            config('agent.interrogation.codex_model')
+            ?: config('agent.runner_models.codex')
+        ));
+    }
+
     private function questionSchema(): string
     {
         return json_encode([
             'type' => 'object',
-            'required' => ['question_text', 'answer_type', 'progress_estimate'],
+            'required' => ['question_id', 'question_text', 'answer_type', 'options', 'reasoning', 'category', 'progress_estimate', 'is_complete', 'cli_session_id'],
             'additionalProperties' => false,
             'properties' => [
                 'question_id' => ['type' => 'string'],
@@ -467,7 +719,8 @@ class CodexAdapter implements InterrogationRunnerAdapter
     {
         return json_encode([
             'type' => 'object',
-            'required' => ['plan_markdown'],
+            'required' => ['plan_markdown', 'sections', 'risks', 'assumptions'],
+            'additionalProperties' => false,
             'properties' => [
                 'plan_markdown' => ['type' => 'string'],
                 'sections' => ['type' => 'array', 'items' => ['type' => 'string']],
@@ -489,7 +742,7 @@ class CodexAdapter implements InterrogationRunnerAdapter
                     'minItems' => 1,
                     'items' => [
                         'type' => 'object',
-                        'required' => ['title'],
+                        'required' => ['sequence', 'title', 'description', 'instructions_markdown'],
                         'additionalProperties' => false,
                         'properties' => [
                             'sequence' => ['type' => 'integer', 'minimum' => 1],
@@ -503,6 +756,25 @@ class CodexAdapter implements InterrogationRunnerAdapter
         ], JSON_UNESCAPED_SLASHES) ?: '{}';
     }
 
+    private function schemaFilePath(string $name, string $schema): string
+    {
+        $directory = storage_path('framework/interrogation-schemas');
+        if (! is_dir($directory) && ! @mkdir($directory, 0775, true) && ! is_dir($directory)) {
+            throw new RuntimeException('Unable to create Codex schema directory: '.$directory);
+        }
+
+        $path = $directory.'/codex-'.$name.'.schema.json';
+        $existing = @file_get_contents($path);
+
+        if (! is_string($existing) || trim($existing) !== trim($schema)) {
+            if (@file_put_contents($path, $schema) === false) {
+                throw new RuntimeException('Unable to write Codex schema file: '.$path);
+            }
+        }
+
+        return $path;
+    }
+
     /**
      * @return array<string, mixed>|null
      */
@@ -514,10 +786,11 @@ class CodexAdapter implements InterrogationRunnerAdapter
             return null;
         }
 
-        $decoded = json_decode($output, true);
+        $candidates = [];
 
+        $decoded = json_decode($output, true);
         if (is_array($decoded)) {
-            return $decoded;
+            $candidates[] = $decoded;
         }
 
         foreach (preg_split('/\R/', $output) ?: [] as $line) {
@@ -528,10 +801,71 @@ class CodexAdapter implements InterrogationRunnerAdapter
 
             $lineDecoded = json_decode($line, true);
             if (is_array($lineDecoded)) {
-                return $lineDecoded;
+                $candidates[] = $lineDecoded;
             }
         }
 
-        return null;
+        if ($candidates === []) {
+            return null;
+        }
+
+        foreach ($candidates as $candidate) {
+            if ($this->looksLikeStructuredPayload($candidate)) {
+                return $candidate;
+            }
+
+            if (is_array($candidate['structured_output'] ?? null) && $this->looksLikeStructuredPayload($candidate['structured_output'])) {
+                return $candidate['structured_output'];
+            }
+
+            if (is_array($candidate['result'] ?? null) && $this->looksLikeStructuredPayload($candidate['result'])) {
+                return $candidate['result'];
+            }
+
+            $item = $candidate['item'] ?? null;
+            if (is_array($item)) {
+                if (is_array($item['structured_output'] ?? null) && $this->looksLikeStructuredPayload($item['structured_output'])) {
+                    return $item['structured_output'];
+                }
+
+                if (is_array($item['result'] ?? null) && $this->looksLikeStructuredPayload($item['result'])) {
+                    return $item['result'];
+                }
+
+                foreach (['text', 'message', 'content'] as $field) {
+                    $text = $item[$field] ?? null;
+                    if (! is_string($text) || trim($text) === '') {
+                        continue;
+                    }
+
+                    $parsedText = json_decode(trim($text), true);
+                    if (is_array($parsedText) && $this->looksLikeStructuredPayload($parsedText)) {
+                        return $parsedText;
+                    }
+                }
+            }
+        }
+
+        return $candidates[array_key_last($candidates)] ?? null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $decoded
+     */
+    private function looksLikeStructuredPayload(array $decoded): bool
+    {
+        foreach (['question_text', 'question', 'summary_markdown', 'summary', 'plan_markdown', 'plan', 'tasks'] as $key) {
+            if (array_key_exists($key, $decoded)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isIgnorableCodexStateWarning(string $line): bool
+    {
+        return str_contains($line, 'codex_core::rollout::list: state db missing rollout path for thread')
+            || str_contains($line, 'codex_core::state_db: state db record_discrepancy');
     }
 }

@@ -33,8 +33,11 @@ const selectedQuestionId = ref('');
 const awaitingNextQuestion = ref(false);
 const submittedQuestionCount = ref(0);
 const localPlanGenerationPending = ref(false);
+const localPlanRevisionPending = ref(false);
+const planRevisionQueuedAfterSequence = ref(0);
 const actionState = ref({
     approvePlan: false,
+    revisePlan: false,
     exportPlan: false,
     generateBuildTasks: false,
     startBuild: false,
@@ -64,6 +67,20 @@ const selectedQuestion = computed(() => {
 });
 
 const activeQuestion = computed(() => selectedQuestion.value ?? latestQuestion.value);
+const isRevisingHistoryQuestion = computed(() => {
+    const selectedId = String(selectedQuestion.value?.question_id ?? '').trim();
+    const latestId = String(latestQuestion.value?.question_id ?? '').trim();
+
+    if (selectedId === '') {
+        return false;
+    }
+
+    if (latestId === '') {
+        return true;
+    }
+
+    return selectedId !== latestId;
+});
 
 const latestDiscoveryEvent = computed(() => {
     const discovery = events.value.filter((event) => event.event_type === 'discovery_activity');
@@ -82,6 +99,18 @@ const hasMeaningfulPlan = computed(() => {
         || (Array.isArray(plan?.risks) && plan.risks.length > 0)
         || (Array.isArray(plan?.assumptions) && plan.assumptions.length > 0);
 });
+const planRevisionStatus = computed(() => String(session.value?.metadata_json?.plan?.revision_status ?? '').toLowerCase());
+const isPlanRevising = computed(() => {
+    if ((session.value?.phase ?? 0) !== 4) {
+        return false;
+    }
+
+    if (session.value?.status === 'failed') {
+        return false;
+    }
+
+    return localPlanRevisionPending.value || ['queued', 'running'].includes(planRevisionStatus.value);
+});
 const isPlanGenerating = computed(() => {
     if ((session.value?.phase ?? 0) !== 4) {
         return false;
@@ -94,7 +123,45 @@ const isPlanGenerating = computed(() => {
     return localPlanGenerationPending.value || session.value?.status === 'planning';
 });
 const hasPlanApproved = computed(() => Boolean(session.value?.approved_at));
-const canApprovePlan = computed(() => hasMeaningfulPlan.value && !hasPlanApproved.value && !actionState.value.approvePlan && !busy.value && !isPlanGenerating.value);
+const canApprovePlan = computed(() => hasMeaningfulPlan.value && !hasPlanApproved.value && !actionState.value.approvePlan && !busy.value && !isPlanGenerating.value && !isPlanRevising.value);
+const planPrimaryActionLabel = computed(() => {
+    if (!hasMeaningfulPlan.value) {
+        if (isPlanGenerating.value) {
+            return 'Generating plan...';
+        }
+
+        return busy.value ? 'Processing...' : 'Generate Plan';
+    }
+
+    if (isPlanRevising.value) {
+        return 'Revising plan...';
+    }
+
+    return actionState.value.approvePlan ? 'Approving...' : 'Approve Plan';
+});
+const planPrimaryActionDisabled = computed(() => {
+    if (!hasMeaningfulPlan.value) {
+        return busy.value || isPlanGenerating.value || isPlanRevising.value;
+    }
+
+    return !canApprovePlan.value;
+});
+const latestPlanReadySequence = computed(() => {
+    for (let index = events.value.length - 1; index >= 0; index -= 1) {
+        const event = events.value[index];
+        if (event?.event_type !== 'system') {
+            continue;
+        }
+
+        if (String(event?.payload?.notice ?? '') !== 'plan_ready') {
+            continue;
+        }
+
+        return Number(event?.sequence ?? 0);
+    }
+
+    return 0;
+});
 const build = computed(() => (session.value?.build && typeof session.value.build === 'object' ? session.value.build : {}));
 
 watch(activeQuestion, (question) => {
@@ -111,6 +178,35 @@ watch(
         }
     }
 );
+
+watch(
+    [() => session.value?.phase, () => session.value?.status, planRevisionStatus],
+    ([phase, status, revisionStatus]) => {
+        if (phase !== 4 || status === 'failed' || status === 'paused' || revisionStatus === 'idle' || revisionStatus === 'failed') {
+            localPlanRevisionPending.value = false;
+        }
+
+        if (revisionStatus === 'failed') {
+            const revisionError = String(session.value?.metadata_json?.plan?.revision_error ?? '').trim();
+            if (revisionError !== '') {
+                error.value = revisionError;
+            }
+        }
+    }
+);
+
+watch(latestPlanReadySequence, (sequence) => {
+    if (!localPlanRevisionPending.value) {
+        return;
+    }
+
+    if (Number(sequence) <= Number(planRevisionQueuedAfterSequence.value || 0)) {
+        return;
+    }
+
+    localPlanRevisionPending.value = false;
+    notice.value = 'Plan revision complete.';
+});
 
 watch(
     [questionEventCount, () => session.value?.phase, () => session.value?.status],
@@ -144,7 +240,13 @@ const loadSession = async (includeEvents = true) => {
             events.value = data.data?.events || [];
         }
 
-        error.value = '';
+        const revisionError = String(session.value?.metadata_json?.plan?.revision_error ?? '').trim();
+        const sessionError = String(session.value?.error_summary ?? '').trim();
+        if (revisionError !== '') {
+            error.value = revisionError;
+        } else if (sessionError !== '') {
+            error.value = sessionError;
+        }
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load session.';
     } finally {
@@ -238,7 +340,8 @@ const submitAnswer = async (payload) => {
     busy.value = true;
 
     try {
-        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/answer`, payload);
+        const endpoint = isRevisingHistoryQuestion.value ? 'answer/edit' : 'answer';
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/${endpoint}`, payload);
         selectedQuestionId.value = '';
         submittedQuestionCount.value = questionEventCount.value;
         awaitingNextQuestion.value = true;
@@ -251,8 +354,32 @@ const submitAnswer = async (payload) => {
     }
 };
 
-const focusQuestion = (questionId) => {
-    selectedQuestionId.value = String(questionId || '').trim();
+const focusQuestion = async (questionId) => {
+    const targetId = String(questionId || '').trim();
+    selectedQuestionId.value = targetId;
+
+    if (targetId === '') {
+        return;
+    }
+
+    if ((session.value?.phase ?? 0) !== 3) {
+        return;
+    }
+
+    busy.value = true;
+    error.value = '';
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/continue-interrogation`, {
+            revisit_question_id: targetId,
+        });
+        awaitingNextQuestion.value = false;
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to reopen interrogation for question revision.';
+    } finally {
+        busy.value = false;
+    }
 };
 
 const confirmSummary = async () => {
@@ -328,15 +455,20 @@ const approvePlan = async () => {
 };
 
 const requestRevision = async (payload) => {
-    busy.value = true;
+    actionState.value.revisePlan = true;
+    error.value = '';
+    planRevisionQueuedAfterSequence.value = Number(events.value[events.value.length - 1]?.sequence ?? 0);
+    localPlanRevisionPending.value = true;
 
     try {
-        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/revise-plan`, payload);
+        const { data } = await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/revise-plan`, payload);
+        notice.value = data?.data?.message ?? 'Plan revision queued. Regenerating plan now.';
         await loadSession(false);
     } catch (e) {
+        localPlanRevisionPending.value = false;
         error.value = e?.response?.data?.error?.message ?? 'Failed to request plan revision.';
     } finally {
-        busy.value = false;
+        actionState.value.revisePlan = false;
     }
 };
 
@@ -460,6 +592,54 @@ const retrySession = async () => {
     }
 };
 
+const restartFromBeginning = async () => {
+    if (!window.confirm('Restart from the beginning? This will permanently clear all questions, answers, and generated artifacts for this session.')) {
+        return;
+    }
+
+    busy.value = true;
+    error.value = '';
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/restart-from-beginning`);
+        selectedQuestionId.value = '';
+        awaitingNextQuestion.value = false;
+        submittedQuestionCount.value = 0;
+        notice.value = 'Session restarted from setup. Discovery has been queued.';
+        await loadSession(true);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to restart session.';
+    } finally {
+        busy.value = false;
+    }
+};
+
+const cleanupInvalidQuestions = async () => {
+    busy.value = true;
+
+    try {
+        const { data } = await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/cleanup-invalid-questions`);
+        await loadSession(true);
+
+        const removedQuestionEvents = Number(data?.data?.removed_question_events ?? 0);
+        const removedAnswerEvents = Number(data?.data?.removed_answer_events ?? 0);
+        const removedPendingOpenQuestions = Number(data?.data?.removed_pending_open_questions ?? 0);
+        const removedAskedOpenQuestions = Number(data?.data?.removed_asked_open_questions ?? 0);
+        const removedActiveOpenQuestion = Boolean(data?.data?.removed_active_open_question);
+        const parts = [
+            `${removedQuestionEvents} question event(s)`,
+            `${removedAnswerEvents} answer event(s)`,
+            `${removedPendingOpenQuestions + removedAskedOpenQuestions + (removedActiveOpenQuestion ? 1 : 0)} open-question queue item(s)`,
+        ];
+
+        notice.value = `Cleanup complete. Removed ${parts.join(', ')}.`;
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to clean up invalid questions.';
+    } finally {
+        busy.value = false;
+    }
+};
+
 const deleteSession = async () => {
     if (!window.confirm('Delete this session? You can restore it from the sessions list.')) {
         return;
@@ -515,13 +695,33 @@ onBeforeUnmount(() => {
                 <div class="flex items-center gap-2">
                     <SessionStatusBadge v-if="session" :status="session.status" />
                     <button
-                        v-if="session && !session.deleted_at && ['failed', 'paused', 'setup'].includes(session.status)"
+                        v-if="session && !session.deleted_at
+                            && (['failed', 'paused', 'setup'].includes(session.status)
+                                || (session.status === 'interrogating' && session.phase === 2))"
                         type="button"
                         class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50"
                         :disabled="busy"
                         @click="retrySession"
                     >
                         Retry
+                    </button>
+                    <button
+                        v-if="session && !session.deleted_at"
+                        type="button"
+                        class="rounded border border-orange-300 px-2 py-1 text-xs text-orange-700 hover:bg-orange-50"
+                        :disabled="busy"
+                        @click="restartFromBeginning"
+                    >
+                        Restart Fresh
+                    </button>
+                    <button
+                        v-if="session && !session.deleted_at && session.phase === 2"
+                        type="button"
+                        class="rounded border border-orange-300 px-2 py-1 text-xs text-orange-700 hover:bg-orange-50"
+                        :disabled="busy"
+                        @click="cleanupInvalidQuestions"
+                    >
+                        Clean Questions
                     </button>
                     <button
                         v-if="session && session.phase < 5 && session.status !== 'paused'"
@@ -628,21 +828,25 @@ onBeforeUnmount(() => {
                                             v-if="!hasMeaningfulPlan || !hasPlanApproved"
                                             type="button"
                                             class="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-                                            :disabled="!hasMeaningfulPlan ? (busy || isPlanGenerating) : !canApprovePlan"
+                                            :disabled="planPrimaryActionDisabled"
                                             @click="!hasMeaningfulPlan ? generatePlan() : approvePlan()"
                                         >
-                                            {{
-                                                !hasMeaningfulPlan
-                                                    ? (isPlanGenerating ? 'Generating plan...' : (busy ? 'Processing...' : 'Generate Plan'))
-                                                    : (actionState.approvePlan ? 'Approving...' : 'Approve Plan')
-                                            }}
+                                            {{ planPrimaryActionLabel }}
                                         </button>
                                         <span
                                             v-else
                                             class="rounded border border-green-400 bg-green-50 px-3 py-2 text-sm font-semibold text-green-700"
                                         >Plan Approved</span>
                                     </div>
-                                    <PlanViewer :plan="session.plan_json || {}" :busy="busy || actionState.exportPlan" :generating="isPlanGenerating" @revise="requestRevision" @export="exportPlan" />
+                                    <PlanViewer
+                                        :plan="session.plan_json || {}"
+                                        :busy="busy || actionState.exportPlan || actionState.approvePlan"
+                                        :generating="isPlanGenerating"
+                                        :revising="isPlanRevising"
+                                        :revision-submitting="actionState.revisePlan"
+                                        @revise="requestRevision"
+                                        @export="exportPlan"
+                                    />
                                 </div>
                             </template>
 

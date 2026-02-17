@@ -36,10 +36,23 @@ return [
         'codex' => $codexExecutable,
         'custom' => env('AGENT_RUNNER_CUSTOM_PATH', '/Users/garethdaine/Code/agent/bin/agent-runner'),
     ],
+    'runner_models' => [
+        'codex' => $codexModel,
+    ],
 
     'default_templates' => [
         'claude' => '/Users/garethdaine/.local/bin/claude -p {{task_markdown_path}}',
         'codex' => trim($codexExecutable.$codexModelArgs.' exec {{task_markdown_path}}'),
+    ],
+
+    'interrogation' => [
+        'codex_model' => trim((string) env('AGENT_INTERROGATION_CODEX_MODEL', $codexModel)),
+        'codex_min_feature_answers' => (int) env('AGENT_INTERROGATION_CODEX_MIN_FEATURE_ANSWERS', 5),
+        'codex_min_general_answers' => (int) env('AGENT_INTERROGATION_CODEX_MIN_GENERAL_ANSWERS', 3),
+        'codex_plan_min_markdown_chars' => (int) env('AGENT_INTERROGATION_CODEX_PLAN_MIN_MARKDOWN_CHARS', 2500),
+        'codex_plan_min_sections' => (int) env('AGENT_INTERROGATION_CODEX_PLAN_MIN_SECTIONS', 8),
+        'codex_plan_min_concrete_references' => (int) env('AGENT_INTERROGATION_CODEX_PLAN_MIN_CONCRETE_REFERENCES', 6),
+        'codex_plan_quality_retries' => (int) env('AGENT_INTERROGATION_CODEX_PLAN_QUALITY_RETRIES', 1),
     ],
 
     'allowed_placeholders' => [

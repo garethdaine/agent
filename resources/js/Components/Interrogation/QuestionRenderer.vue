@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { choiceOptionsFromQuestion, displayQuestionMarkdown, formatReasoning, renderMarkdownToHtml } from '@/Components/Interrogation/questionPresentation';
+import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
+import { choiceOptionsFromQuestion, displayQuestionMarkdown, formatReasoning, normalizeQuestionCategory } from '@/Components/Interrogation/questionPresentation';
 
 const props = defineProps({
     question: {
@@ -15,9 +16,9 @@ const showFullReasoning = ref(false);
 const options = computed(() => choiceOptionsFromQuestion(props.question));
 
 const promptMarkdown = computed(() => displayQuestionMarkdown(props.question?.question_text ?? '', options.value));
-const promptHtml = computed(() => renderMarkdownToHtml(promptMarkdown.value));
 
 const reasoning = computed(() => formatReasoning(props.question?.reasoning ?? ''));
+const categoryLabel = computed(() => normalizeQuestionCategory(props.question?.category ?? '') || 'general');
 </script>
 
 <template>
@@ -30,14 +31,14 @@ const reasoning = computed(() => formatReasoning(props.question?.reasoning ?? ''
         <template v-else>
             <div class="flex items-center justify-between gap-3">
                 <span class="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
-                    {{ question.category || 'general' }}
+                    {{ categoryLabel }}
                 </span>
                 <span class="text-xs text-gray-500">Progress {{ question.progress_estimate ?? 0 }}%</span>
             </div>
 
-            <div
+            <MarkdownRenderer
+                :markdown="promptMarkdown"
                 class="prose prose-sm mt-3 max-w-none text-gray-900 dark:prose-invert dark:text-gray-100 prose-p:my-0 prose-p:text-xl prose-p:leading-8 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.9em] dark:prose-code:bg-gray-700"
-                v-html="promptHtml"
             />
 
             <div class="mt-3 h-2 w-full rounded bg-gray-200 dark:bg-gray-700">

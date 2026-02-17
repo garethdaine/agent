@@ -6,7 +6,10 @@ use App\Models\InterrogationSession;
 
 class ExportService
 {
-    public function __construct(private readonly SummaryPayloadNormalizer $summaryPayloadNormalizer) {}
+    public function __construct(
+        private readonly SummaryPayloadNormalizer $summaryPayloadNormalizer,
+        private readonly PlanPayloadNormalizer $planPayloadNormalizer,
+    ) {}
 
     public function exportSummary(InterrogationSession $session): string
     {
@@ -46,7 +49,9 @@ class ExportService
         $slug = $this->sessionSlug($session);
         $path = $this->nextAvailablePath($directory, $slug, 'md');
 
-        $plan = is_array($session->plan_json) ? $session->plan_json : [];
+        $plan = is_array($session->plan_json)
+            ? $this->planPayloadNormalizer->normalize($session->plan_json)
+            : [];
         $markdown = (string) ($plan['plan_markdown'] ?? '');
 
         $content = "# Implementation Plan\n\n";

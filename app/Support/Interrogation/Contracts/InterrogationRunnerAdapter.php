@@ -62,7 +62,7 @@ interface InterrogationRunnerAdapter
     public function parseBuildTasksResponse(string $output): ?array;
 
     /**
-     * @return array<string, string>
+     * @return array<string, string|bool>
      */
     public function buildEnvironment(InterrogationSession $session): array;
 }

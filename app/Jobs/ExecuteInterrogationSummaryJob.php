@@ -7,7 +7,6 @@ use App\Support\Interrogation\AdapterFactory;
 use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 use App\Support\Interrogation\ConversationReconstructor;
 use App\Support\Interrogation\InterrogationEventWriter;
-use App\Support\Interrogation\SessionStateTransitionService;
 use App\Support\Interrogation\SummaryPayloadNormalizer;
 use App\Support\Interrogation\SystemPromptResolver;
 use Carbon\CarbonImmutable;
@@ -32,7 +31,6 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
     public function handle(
         AdapterFactory $adapterFactory,
         ConversationReconstructor $reconstructor,
-        SessionStateTransitionService $transitions,
         SummaryPayloadNormalizer $summaryPayloadNormalizer,
         SystemPromptResolver $promptResolver,
     ): void {
@@ -46,15 +44,13 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
             return;
         }
 
+        $summaryQueueActive = (bool) data_get($session->metadata_json, 'summary_open_question_queue.active', false);
+        if ($summaryQueueActive) {
+            return;
+        }
+
         if ((int) $session->phase !== InterrogationSession::PHASE_SUMMARY) {
-            $transitions->transitionPhase(
-                (int) $session->id,
-                (int) $session->phase,
-                InterrogationSession::PHASE_SUMMARY,
-                InterrogationSession::STATUS_SUMMARIZING,
-                InterrogationSession::ACTIVE_STATUSES,
-            );
-            $session->refresh();
+            return;
         }
 
         $writer = new InterrogationEventWriter($session);
@@ -62,11 +58,13 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
         try {
             $adapter = $adapterFactory->make((string) $session->runner_type);
             $systemPrompt = $promptResolver->resolveForPhase($session, 'summary');
+            $history = $reconstructor->reconstruct($session);
             $summaryPrompt = 'Produce a structured summary JSON for this discovery session. '
                 .'Populate ALL schema fields exactly: summary_markdown, goals, constraints, acceptance_criteria, open_questions, private_notes. '
                 .'Return arrays as arrays of plain strings (never embed them inside summary_markdown). '
                 .'Do not emit XML-like parameter tags such as <parameter ...>. '
-                .'Make the summary implementation-ready and comprehensive (not abbreviated): include concrete decisions, entities, services, config values, and acceptance criteria.';
+                .'Make the summary implementation-ready and comprehensive (not abbreviated): include concrete decisions, entities, services, config values, and acceptance criteria. '
+                .'Do not include estimates or timelines (no days/weeks/months, ETA, total effort, critical path, or parallelization schedule).';
 
             if (is_string($this->revisionNotes) && trim($this->revisionNotes) !== '') {
                 $summaryPrompt = 'Revise the structured summary JSON for this discovery session using the following user amendment notes. '
@@ -74,26 +72,32 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
                     .'Return arrays as real JSON arrays of strings, never embedded inside summary_markdown. '
                     .'Do not emit XML-like parameter tags such as <parameter ...>. '
                     .'Keep full implementation detail (decisions, entities, services, config, acceptance criteria); do not collapse to high-level prose. '
+                    .'Do not include estimates or timelines (no days/weeks/months, ETA, total effort, critical path, or parallelization schedule). '
                     .'Only keep items in open_questions that are truly unresolved after applying the notes.'."\n\n"
                     .'Amendment notes:'."\n".trim($this->revisionNotes);
             }
 
+            $summaryPrompt .= "\n\n"
+                .'Use the authoritative session transcript below as required context. It contains full discovery + reinterrogation questions/answers. '
+                .'Incorporate resolved answers into the summary and remove any open question that has been answered.'."\n\n"
+                .'Session transcript:'."\n"
+                .$history;
+
             $process = $this->runSummaryProcess($adapter, $session, $summaryPrompt, $systemPrompt);
             $summary = null;
+            $retriedWithoutResume = false;
 
             if ($process->getExitCode() === 0) {
                 $summary = $adapter->parseSummaryResponse((string) $process->getOutput());
             }
 
             if ($summary === null) {
-                $history = $reconstructor->reconstruct($session);
-                $fallbackPrompt = $summaryPrompt
-                    ."\n\nConversation transcript (use this transcript as authoritative context):\n"
-                    .$history;
+                $fallbackPrompt = $summaryPrompt;
 
                 $freshSession = clone $session;
                 $freshSession->cli_session_id = null;
                 $fallbackProcess = $this->runSummaryProcess($adapter, $freshSession, $fallbackPrompt, $systemPrompt);
+                $retriedWithoutResume = true;
 
                 if ($fallbackProcess->getExitCode() === 0) {
                     $summary = $adapter->parseSummaryResponse((string) $fallbackProcess->getOutput());
@@ -137,6 +141,9 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
 
             $session->summary_json = $summary;
             $session->metadata_json = $metadata;
+            if ($retriedWithoutResume && is_string($session->cli_session_id) && trim($session->cli_session_id) !== '') {
+                $session->cli_session_id = null;
+            }
             $session->save();
 
             $writer->appendSummary($summary);

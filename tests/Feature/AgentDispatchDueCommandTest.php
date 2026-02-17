@@ -8,8 +8,8 @@ use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentSystemState;
 use App\Models\SchedulerHeartbeat;
-use App\Support\Agent\DispatchDueService;
 use App\Models\User;
+use App\Support\Agent\DispatchDueService;
 use App\Support\Agent\ReconcileActiveRunsService;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -129,6 +129,54 @@ class AgentDispatchDueCommandTest extends TestCase
         $audit = AgentAuditLog::query()->where('action', 'deferred_capacity')->latest('id')->first();
         $this->assertNotNull($audit);
         $this->assertSame(5, (int) ($audit->after_json['deferred_capacity_count'] ?? 0));
+    }
+
+    public function test_deferred_capacity_windows_are_dispatched_on_next_tick(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/deferred-next-tick.md';
+        file_put_contents($taskFile, "# Deferred Next Tick\n");
+
+        $now = CarbonImmutable::now('UTC')->startOfMinute();
+        $cron = sprintf('%d %d %d %d %d', $now->minute, $now->hour, $now->day, $now->month, $now->dayOfWeek);
+
+        for ($i = 1; $i <= 25; $i++) {
+            AgentJob::query()->create([
+                'user_id' => $user->id,
+                'name' => 'Replay Deferred '.$i,
+                'description' => null,
+                'cron_expression' => $cron,
+                'timezone' => 'UTC',
+                'is_enabled' => true,
+                'max_runtime_seconds' => 120,
+                'cooldown_seconds' => 0,
+                'runner_type' => 'claude',
+                'command_template' => config('agent.default_templates.claude'),
+                'task_markdown_path' => $taskFile,
+                'working_directory' => $this->sandboxBase.'/work',
+            ]);
+        }
+
+        $service = app(DispatchDueService::class);
+        $service->dispatch($now);
+
+        $this->assertSame(20, AgentJobRun::query()->count());
+
+        $service->dispatch($now->addMinute());
+
+        $this->assertSame(25, AgentJobRun::query()->count());
+
+        $dueWindows = AgentJobRun::query()
+            ->pluck('due_window_utc_minute')
+            ->filter()
+            ->map(fn ($value): string => CarbonImmutable::parse((string) $value, 'UTC')->toIso8601String())
+            ->unique()
+            ->values()
+            ->all();
+
+        $this->assertSame([$now->toIso8601String()], $dueWindows);
     }
 
     public function test_dispatch_reconciles_orphaned_active_runs(): void

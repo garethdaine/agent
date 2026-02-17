@@ -135,4 +135,31 @@ class InterrogationEventModelTest extends TestCase
             'event_ts' => now(),
         ]);
     }
+
+    public function test_payload_setter_sanitizes_invalid_utf8_bytes(): void
+    {
+        $user = User::factory()->create();
+
+        $session = InterrogationSession::create([
+            'user_id' => $user->id,
+            'runner_type' => 'codex',
+            'project_directory' => '/tmp/test',
+            'interrogation_type' => 'general',
+            'status' => 'discovering',
+        ]);
+
+        $event = InterrogationEvent::create([
+            'interrogation_session_id' => $session->id,
+            'event_type' => InterrogationEvent::TYPE_DISCOVERY_ACTIVITY,
+            'sequence' => 1,
+            'payload' => [
+                "bad-key-\xC3\x28" => "bad-value-\xE2\x28\xA1",
+                'nested' => ['detail' => "detail-\xB1\x31"],
+            ],
+            'event_ts' => now(),
+        ])->refresh();
+
+        $this->assertIsArray($event->payload);
+        $this->assertTrue(mb_check_encoding(json_encode($event->payload) ?: '', 'UTF-8'));
+    }
 }

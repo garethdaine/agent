@@ -693,7 +693,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, string|bool>
      */
     public function buildEnvironment(InterrogationSession $session): array
     {

@@ -23,6 +23,8 @@ use App\Support\Agent\ErrorEnvelope;
 use App\Support\Agent\RunStateTransitionService;
 use App\Support\Interrogation\ExportService;
 use App\Support\Interrogation\InterrogationEventWriter;
+use App\Support\Interrogation\PlanPayloadNormalizer;
+use App\Support\Interrogation\QuestionPayloadGuard;
 use App\Support\Interrogation\SessionStateTransitionService;
 use App\Support\Interrogation\SummaryPayloadNormalizer;
 use Carbon\CarbonImmutable;
@@ -164,6 +166,7 @@ class InterrogationSessionController extends Controller
     public function submitAnswer(
         SubmitAnswerRequest $request,
         int $id,
+        SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
         $session = $request->user()->interrogationSessions()->findOrFail($id);
@@ -173,9 +176,12 @@ class InterrogationSessionController extends Controller
         }
 
         $validated = $request->validated();
-        $message = $this->buildAnswerMessage($validated);
+        $queueHandled = $this->handleSummaryOpenQuestionQueueAnswer($session, $validated, $transitions);
 
-        ExecuteInterrogationRoundJob::dispatch((int) $session->id, $message, false, $validated);
+        if (! $queueHandled) {
+            $message = $this->buildAnswerMessage($validated);
+            ExecuteInterrogationRoundJob::dispatch((int) $session->id, $message, false, $validated);
+        }
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -299,6 +305,9 @@ class InterrogationSessionController extends Controller
             after: ['phase' => $session->phase, 'status' => $session->status],
         );
 
+        // Planning must always be regenerated from the latest confirmed summary.
+        ExecuteInterrogationPlanJob::dispatch((int) $session->id);
+
         return response()->json(['data' => ['confirmed' => true, 'session_id' => $session->id]]);
     }
 
@@ -374,9 +383,11 @@ class InterrogationSessionController extends Controller
 
         $validated = $request->validate([
             'focus' => ['nullable', 'string', 'max:4000'],
+            'revisit_question_id' => ['nullable', 'string', 'max:120'],
         ]);
 
         $focus = trim((string) ($validated['focus'] ?? ''));
+        $revisitQuestionId = trim((string) ($validated['revisit_question_id'] ?? ''));
         $summary = $this->normalizedSummaryJson($session, true);
         $openQuestions = is_array($summary['open_questions'] ?? null) ? array_values($summary['open_questions']) : [];
 
@@ -393,6 +404,8 @@ class InterrogationSessionController extends Controller
         }
 
         $session->refresh();
+        $this->invalidateDerivedArtifactsForReinterrogation($session);
+
         $writer = new InterrogationEventWriter($session);
         $writer->appendPhaseTransition(
             InterrogationSession::PHASE_SUMMARY,
@@ -401,24 +414,27 @@ class InterrogationSessionController extends Controller
             ['at' => CarbonImmutable::now('UTC')->toIso8601String(), 'reopened_by_user_id' => $request->user()->id],
         );
 
-        $prompt = 'Continue interrogation from summary. Ask the NEXT single unresolved question only. '
-            .'Do not batch multiple questions into one response.';
+        if ($revisitQuestionId !== '') {
+            $this->clearSummaryOpenQuestionQueue($session);
+        } else {
+            $normalizedOpenQuestions = $this->normalizeOpenQuestionList($openQuestions);
+            if ($normalizedOpenQuestions !== []) {
+                $queue = $this->buildSummaryOpenQuestionQueue($normalizedOpenQuestions, $focus);
+                $this->persistSummaryOpenQuestionQueue($session, $queue);
+                $this->dispatchNextSummaryOpenQuestionFromQueue($session);
+            } else {
+                $this->clearSummaryOpenQuestionQueue($session);
 
-        if ($openQuestions !== []) {
-            $prompt .= "\n\nPrior summary open questions:\n";
-            foreach ($openQuestions as $index => $question) {
-                if (! is_string($question) || trim($question) === '') {
-                    continue;
+                $prompt = 'Continue interrogation from summary. Ask the NEXT single unresolved question only. '
+                    .'Do not batch multiple questions into one response.';
+
+                if ($focus !== '') {
+                    $prompt .= "\nAdditional user focus:\n".$focus;
                 }
-                $prompt .= ($index + 1).'. '.trim($question)."\n";
+
+                ExecuteInterrogationRoundJob::dispatch((int) $session->id, $prompt, true);
             }
         }
-
-        if ($focus !== '') {
-            $prompt .= "\nAdditional user focus:\n".$focus;
-        }
-
-        ExecuteInterrogationRoundJob::dispatch((int) $session->id, $prompt, true);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -491,8 +507,12 @@ class InterrogationSessionController extends Controller
             ]);
         }
 
-        if ((int) $session->phase !== InterrogationSession::PHASE_PLANNING || $session->status !== InterrogationSession::STATUS_PLANNING) {
+        if ((int) $session->phase !== InterrogationSession::PHASE_PLANNING) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Plan can only be approved from planning phase.', 409);
+        }
+
+        if ($session->status === InterrogationSession::STATUS_FAILED) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Failed session must be retried before plan approval.', 409);
         }
 
         if (! $this->hasMeaningfulPlan($session)) {
@@ -518,7 +538,11 @@ class InterrogationSessionController extends Controller
             InterrogationSession::PHASE_PLANNING,
             InterrogationSession::PHASE_BUILD_TASKS,
             InterrogationSession::STATUS_BUILD_TASKS,
-            [InterrogationSession::STATUS_PLANNING],
+            [
+                InterrogationSession::STATUS_PLANNING,
+                InterrogationSession::STATUS_COMPLETED,
+                InterrogationSession::STATUS_PAUSED,
+            ],
         );
 
         if (! $moved) {
@@ -541,7 +565,7 @@ class InterrogationSessionController extends Controller
             targetId: (int) $session->id,
             ownerUserId: (int) $session->user_id,
             changedFields: ['approved_at', 'phase', 'status'],
-            before: ['approved_at' => null, 'phase' => InterrogationSession::PHASE_PLANNING, 'status' => InterrogationSession::STATUS_PLANNING],
+            before: ['approved_at' => null, 'phase' => InterrogationSession::PHASE_PLANNING, 'status' => $session->getOriginal('status')],
             after: ['approved_at' => $this->toRfc3339Millis($session->approved_at), 'phase' => $session->phase, 'status' => $session->status],
         );
 
@@ -556,6 +580,39 @@ class InterrogationSessionController extends Controller
         ]);
     }
 
+    private function invalidateDerivedArtifactsForReinterrogation(InterrogationSession $session): void
+    {
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+
+        $metadata['summary_ready'] = false;
+        $metadata['summary_generated_at'] = null;
+
+        if (is_array($metadata['exports'] ?? null)) {
+            unset($metadata['exports']['summary'], $metadata['exports']['plan']);
+            if ($metadata['exports'] === []) {
+                unset($metadata['exports']);
+            }
+        }
+
+        $metadata['build'] = [
+            'status' => 'idle',
+            'task_count' => 0,
+            'active_task_id' => null,
+            'active_run_id' => null,
+            'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+        ];
+
+        $session->summary_json = [];
+        $session->plan_json = [];
+        $session->approved_at = null;
+        $session->metadata_json = $metadata;
+        $session->save();
+
+        InterrogationBuildTask::query()
+            ->where('interrogation_session_id', $session->id)
+            ->delete();
+    }
+
     public function requestRevision(
         RequestPlanRevisionRequest $request,
         int $id,
@@ -568,12 +625,46 @@ class InterrogationSessionController extends Controller
 
         $validated = $request->validated();
 
-        $prompt = sprintf(
-            'Revise the implementation plan. Action: %s. Section: %s. Notes: %s',
-            (string) $validated['action'],
-            (string) ($validated['section'] ?? 'entire_plan'),
-            (string) ($validated['notes'] ?? 'none')
+        $selectedSections = array_values(array_filter(array_map(
+            static fn ($value): string => trim((string) $value),
+            (array) ($validated['sections'] ?? [])
+        ), static fn (string $value): bool => $value !== ''));
+        $sectionValue = trim((string) ($validated['section'] ?? ''));
+        $sectionScope = $selectedSections !== []
+            ? implode(', ', $selectedSections)
+            : ($sectionValue !== '' ? $sectionValue : 'entire_plan');
+        $notes = (string) ($validated['notes'] ?? 'none');
+
+        $prompt = 'Revise the implementation plan.'
+            ."\nAction: ".(string) $validated['action']
+            ."\nSection: ".$sectionScope
+            ."\nSections: ".($selectedSections !== [] ? json_encode($selectedSections, JSON_UNESCAPED_SLASHES) : '[]')
+            ."\nNotes (Markdown):\n".$notes;
+
+        $now = CarbonImmutable::now('UTC')->toIso8601String();
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $metadata['plan'] = array_merge(
+            is_array($metadata['plan'] ?? null) ? $metadata['plan'] : [],
+            [
+                'revision_status' => 'queued',
+                'revision_requested_at' => $now,
+                'revision_updated_at' => $now,
+                'revision_error' => null,
+            ],
         );
+        $session->status = InterrogationSession::STATUS_PLANNING;
+        $session->phase = InterrogationSession::PHASE_PLANNING;
+        $session->finished_at = null;
+        $session->error_code = null;
+        $session->error_summary = null;
+        $session->metadata_json = $metadata;
+        $session->save();
+
+        (new InterrogationEventWriter($session))->appendSystem([
+            'notice' => 'plan_revision_queued',
+            'message' => 'Plan revision queued.',
+            'at' => $now,
+        ]);
 
         ExecuteInterrogationPlanJob::dispatch((int) $session->id, $prompt);
 
@@ -593,6 +684,8 @@ class InterrogationSessionController extends Controller
                 'accepted' => true,
                 'queued' => true,
                 'session_id' => $session->id,
+                'revision_status' => 'queued',
+                'message' => 'Plan revision queued. Regenerating plan now.',
             ],
         ], 202);
     }
@@ -1215,6 +1308,9 @@ class InterrogationSessionController extends Controller
             InterrogationSession::STATUS_PAUSED,
             InterrogationSession::STATUS_SETUP,
         ];
+        if ((int) $session->phase === InterrogationSession::PHASE_INTERROGATION) {
+            $allowedFromStatuses[] = InterrogationSession::STATUS_INTERROGATING;
+        }
 
         $transitioned = $transitions->transition(
             (int) $session->id,
@@ -1231,14 +1327,14 @@ class InterrogationSessionController extends Controller
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot be retried from its current state.', 409);
         }
 
-        if ((int) $session->phase === InterrogationSession::PHASE_INTERROGATION) {
-            $session->cli_session_id = null;
-            $session->save();
-        }
-
         $pendingQuestionId = null;
         if ((int) $session->phase === InterrogationSession::PHASE_INTERROGATION) {
             $pendingQuestionId = $this->latestUnansweredQuestionId($session);
+
+            if ($pendingQuestionId === null) {
+                $session->cli_session_id = null;
+                $session->save();
+            }
         }
 
         match ((int) $session->phase) {
@@ -1281,6 +1377,75 @@ class InterrogationSessionController extends Controller
                 'accepted' => true,
                 'queued' => $pendingQuestionId === null,
                 'pending_question_id' => $pendingQuestionId,
+                'session_id' => $session->id,
+                'status' => $session->status,
+                'phase' => $session->phase,
+            ],
+        ], 202);
+    }
+
+    public function restartFromBeginning(
+        Request $request,
+        int $id,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->withTrashed()->findOrFail($id);
+
+        if ($session->trashed()) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is deleted. Restore it before restarting.', 409);
+        }
+
+        InterrogationEvent::query()
+            ->where('interrogation_session_id', $session->id)
+            ->delete();
+
+        $session->buildTasks()->delete();
+
+        $source = trim((string) data_get($session->metadata_json, 'source', 'ui'));
+        $session->status = InterrogationSession::STATUS_SETUP;
+        $session->phase = InterrogationSession::PHASE_SETUP;
+        $session->cli_session_id = null;
+        $session->summary_json = [];
+        $session->plan_json = [];
+        $session->annotations_json = [];
+        $session->metadata_json = ['source' => $source !== '' ? $source : 'ui'];
+        $session->approved_at = null;
+        $session->error_code = null;
+        $session->error_summary = null;
+        $session->started_at = null;
+        $session->finished_at = null;
+        $session->save();
+
+        ExecuteInterrogationDiscoveryJob::dispatch((int) $session->id);
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.restart_from_beginning',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['status', 'phase', 'events', 'summary_json', 'plan_json', 'annotations_json', 'metadata_json', 'approved_at', 'error_code', 'error_summary', 'started_at', 'finished_at'],
+            before: null,
+            after: [
+                'status' => $session->status,
+                'phase' => $session->phase,
+                'events' => 0,
+                'summary_json' => [],
+                'plan_json' => [],
+                'annotations_json' => [],
+                'metadata_json' => $session->metadata_json,
+                'approved_at' => $this->toRfc3339Millis($session->approved_at),
+                'error_code' => $session->error_code,
+                'error_summary' => $session->error_summary,
+                'started_at' => $this->toRfc3339Millis($session->started_at),
+                'finished_at' => $this->toRfc3339Millis($session->finished_at),
+            ],
+        );
+
+        return response()->json([
+            'data' => [
+                'accepted' => true,
+                'queued' => true,
                 'session_id' => $session->id,
                 'status' => $session->status,
                 'phase' => $session->phase,
@@ -1335,14 +1500,266 @@ class InterrogationSessionController extends Controller
         $text = strtolower(trim((string) ($payload['question_text'] ?? '')));
 
         if ($text === '') {
-            return true;
+            return false;
         }
 
         if (preg_match('/\b(?:requirements\s+)?interrogation\s+is\s+now\s+complete\b/', $text) === 1) {
             return false;
         }
 
-        return preg_match('/\binterrogation\s+completed\b/', $text) !== 1;
+        if (preg_match('/\binterrogation\s+completed\b/', $text) === 1) {
+            return false;
+        }
+
+        $guard = new QuestionPayloadGuard;
+        $validation = $guard->validate($payload);
+
+        return (bool) ($validation['valid'] ?? false);
+    }
+
+    public function cleanupInvalidQuestions(
+        Request $request,
+        int $id,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        $pruned = $this->pruneInvalidQuestionEvents($session);
+        $queue = $this->sanitizeSummaryOpenQuestionQueue($session);
+        $dispatched = false;
+
+        if ($queue['removed_active_open_question'] === true
+            && (int) $session->phase === InterrogationSession::PHASE_INTERROGATION
+            && (string) $session->status === InterrogationSession::STATUS_INTERROGATING
+        ) {
+            $dispatched = $this->dispatchNextSummaryOpenQuestionFromQueue($session);
+        }
+
+        $result = [
+            ...$pruned,
+            ...$queue,
+            'queued_next_open_question' => $dispatched,
+        ];
+
+        $session->refresh();
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.cleanup_invalid_questions',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['events', 'metadata_json'],
+            before: null,
+            after: $result,
+        );
+
+        return response()->json([
+            'data' => [
+                'accepted' => true,
+                'session_id' => $session->id,
+                'removed_question_events' => $result['removed_question_events'],
+                'removed_answer_events' => $result['removed_answer_events'],
+                'removed_question_ids' => $result['removed_question_ids'],
+                'removed_pending_open_questions' => $result['removed_pending_open_questions'],
+                'removed_asked_open_questions' => $result['removed_asked_open_questions'],
+                'removed_active_open_question' => $result['removed_active_open_question'],
+                'queued_next_open_question' => $result['queued_next_open_question'],
+            ],
+        ]);
+    }
+
+    /**
+     * @return array{removed_question_events:int,removed_answer_events:int,removed_question_ids:array<int,string>}
+     */
+    private function pruneInvalidQuestionEvents(InterrogationSession $session): array
+    {
+        $questionEvents = $session->events()
+            ->where('event_type', InterrogationEvent::TYPE_QUESTION)
+            ->orderBy('sequence')
+            ->get(['id', 'payload']);
+
+        $removeQuestionEventIds = [];
+        $removeQuestionIds = [];
+
+        foreach ($questionEvents as $questionEvent) {
+            $payload = is_array($questionEvent->payload) ? $questionEvent->payload : [];
+
+            if (! $this->shouldRemoveQuestionPayload($payload)) {
+                continue;
+            }
+
+            $removeQuestionEventIds[] = (int) $questionEvent->id;
+            $questionId = trim((string) ($payload['question_id'] ?? ''));
+            if ($questionId !== '') {
+                $removeQuestionIds[$questionId] = true;
+            }
+        }
+
+        if ($removeQuestionEventIds === []) {
+            return [
+                'removed_question_events' => 0,
+                'removed_answer_events' => 0,
+                'removed_question_ids' => [],
+            ];
+        }
+
+        $removedAnswerEvents = 0;
+        $questionIds = array_keys($removeQuestionIds);
+        if ($questionIds !== []) {
+            $answerEvents = $session->events()
+                ->where('event_type', InterrogationEvent::TYPE_ANSWER)
+                ->get(['id', 'payload']);
+
+            $removeAnswerEventIds = [];
+            foreach ($answerEvents as $answerEvent) {
+                $payload = is_array($answerEvent->payload) ? $answerEvent->payload : [];
+                $questionId = trim((string) ($payload['question_id'] ?? ''));
+                if ($questionId === '' || ! isset($removeQuestionIds[$questionId])) {
+                    continue;
+                }
+
+                $removeAnswerEventIds[] = (int) $answerEvent->id;
+            }
+
+            if ($removeAnswerEventIds !== []) {
+                $removedAnswerEvents = InterrogationEvent::query()
+                    ->where('interrogation_session_id', $session->id)
+                    ->whereIn('id', $removeAnswerEventIds)
+                    ->delete();
+            }
+        }
+
+        $removedQuestionEvents = InterrogationEvent::query()
+            ->where('interrogation_session_id', $session->id)
+            ->whereIn('id', $removeQuestionEventIds)
+            ->delete();
+
+        return [
+            'removed_question_events' => (int) $removedQuestionEvents,
+            'removed_answer_events' => (int) $removedAnswerEvents,
+            'removed_question_ids' => array_values(array_keys($removeQuestionIds)),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function shouldRemoveQuestionPayload(array $payload): bool
+    {
+        if ($this->isCompletionQuestionPayload($payload)) {
+            return false;
+        }
+
+        return ! $this->isAnswerableQuestionPayload($payload);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function isCompletionQuestionPayload(array $payload): bool
+    {
+        if ((bool) ($payload['is_complete'] ?? false) === true) {
+            return true;
+        }
+
+        if (((int) ($payload['progress_estimate'] ?? 0)) >= 100) {
+            return true;
+        }
+
+        $text = strtolower(trim((string) ($payload['question_text'] ?? '')));
+        if ($text === '') {
+            return false;
+        }
+
+        return preg_match('/\b(?:requirements\s+)?interrogation\s+is\s+now\s+complete\b/', $text) === 1
+            || preg_match('/\binterrogation\s+completed\b/', $text) === 1;
+    }
+
+    /**
+     * @return array{queue_changed:bool,removed_pending_open_questions:int,removed_asked_open_questions:int,removed_active_open_question:bool}
+     */
+    private function sanitizeSummaryOpenQuestionQueue(InterrogationSession $session): array
+    {
+        $queue = $this->summaryOpenQuestionQueue($session);
+        if ($queue === null) {
+            return [
+                'queue_changed' => false,
+                'removed_pending_open_questions' => 0,
+                'removed_asked_open_questions' => 0,
+                'removed_active_open_question' => false,
+            ];
+        }
+
+        $queueChanged = false;
+
+        $rawPending = array_values(array_filter(
+            (array) ($queue['pending_questions'] ?? []),
+            static fn ($item): bool => is_string($item) && trim($item) !== ''
+        ));
+        $pending = $this->normalizeOpenQuestionList($rawPending);
+        $removedPending = max(0, count($rawPending) - count($pending));
+        if ($removedPending > 0 || $pending !== $rawPending) {
+            $queueChanged = true;
+        }
+
+        $asked = [];
+        $removedAsked = 0;
+        foreach ((array) ($queue['asked_questions'] ?? []) as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $text = trim((string) ($item['question_text'] ?? ''));
+            if ($text === '' || $this->normalizeOpenQuestionList([$text]) === []) {
+                $removedAsked++;
+                $queueChanged = true;
+
+                continue;
+            }
+
+            $asked[] = $item;
+        }
+
+        $active = is_array($queue['active_open_question'] ?? null)
+            ? $queue['active_open_question']
+            : null;
+        $removedActive = false;
+        if (is_array($active)) {
+            $activeText = trim((string) ($active['question_text'] ?? ''));
+            if ($activeText === '' || $this->normalizeOpenQuestionList([$activeText]) === []) {
+                unset($queue['active_open_question']);
+                $removedActive = true;
+                $queueChanged = true;
+            }
+        }
+
+        if (! $queueChanged) {
+            return [
+                'queue_changed' => false,
+                'removed_pending_open_questions' => 0,
+                'removed_asked_open_questions' => 0,
+                'removed_active_open_question' => false,
+            ];
+        }
+
+        $queue['pending_questions'] = array_values($pending);
+        $queue['asked_questions'] = array_values($asked);
+        $activeCount = isset($queue['active_open_question']) ? 1 : 0;
+        $queue['total'] = max(1, count($queue['pending_questions']) + count($queue['asked_questions']) + $activeCount);
+        $queue['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+
+        if ($queue['pending_questions'] === [] && $queue['asked_questions'] === [] && $activeCount === 0) {
+            $this->clearSummaryOpenQuestionQueue($session);
+        } else {
+            $this->persistSummaryOpenQuestionQueue($session, $queue);
+        }
+
+        return [
+            'queue_changed' => true,
+            'removed_pending_open_questions' => $removedPending,
+            'removed_asked_open_questions' => $removedAsked,
+            'removed_active_open_question' => $removedActive,
+        ];
     }
 
     public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
@@ -1436,7 +1853,7 @@ class InterrogationSessionController extends Controller
             'phase' => $session->phase,
             'cli_session_id' => $session->cli_session_id,
             'summary_json' => $this->normalizedSummaryJson($session, $includeLargePayloads),
-            'plan_json' => $session->plan_json,
+            'plan_json' => $this->normalizedPlanJson($session, $includeLargePayloads),
             'build' => $this->transformBuildState($session, $includeLargePayloads),
             'approved_at' => $this->toRfc3339Millis($session->approved_at),
             'annotations_json' => $session->annotations_json,
@@ -1653,6 +2070,269 @@ class InterrogationSessionController extends Controller
     }
 
     /**
+     * @param  array<int, mixed>  $openQuestions
+     * @return array<int, string>
+     */
+    private function normalizeOpenQuestionList(array $openQuestions): array
+    {
+        $normalized = [];
+        $guard = new QuestionPayloadGuard;
+
+        foreach ($openQuestions as $question) {
+            if (! is_string($question)) {
+                continue;
+            }
+
+            $text = trim($question);
+            if ($text === '') {
+                continue;
+            }
+
+            $validation = $guard->validate([
+                'question_text' => $text,
+                'answer_type' => 'freetext',
+                'options' => [],
+                'progress_estimate' => 0,
+                'is_complete' => false,
+            ]);
+            if (! (bool) ($validation['valid'] ?? false)) {
+                continue;
+            }
+
+            $normalized[] = $text;
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    /**
+     * @param  array<int, string>  $openQuestions
+     * @return array<string, mixed>
+     */
+    private function buildSummaryOpenQuestionQueue(array $openQuestions, string $focus): array
+    {
+        $timestamp = CarbonImmutable::now('UTC')->toIso8601String();
+
+        return [
+            'active' => true,
+            'total' => count($openQuestions),
+            'pending_questions' => array_values($openQuestions),
+            'asked_questions' => [],
+            'focus' => $focus,
+            'created_at' => $timestamp,
+            'updated_at' => $timestamp,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function summaryOpenQuestionQueue(InterrogationSession $session): ?array
+    {
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $queue = is_array($metadata['summary_open_question_queue'] ?? null)
+            ? $metadata['summary_open_question_queue']
+            : null;
+
+        if ($queue === null || (bool) ($queue['active'] ?? false) !== true) {
+            return null;
+        }
+
+        $pending = $this->normalizeOpenQuestionList((array) ($queue['pending_questions'] ?? []));
+        $asked = array_values(array_filter(
+            (array) ($queue['asked_questions'] ?? []),
+            static fn ($item): bool => is_array($item)
+        ));
+        $active = is_array($queue['active_open_question'] ?? null) ? $queue['active_open_question'] : null;
+
+        return [
+            ...$queue,
+            'active' => true,
+            'total' => max(1, (int) ($queue['total'] ?? (count($pending) + count($asked)))),
+            'pending_questions' => $pending,
+            'asked_questions' => $asked,
+            'active_open_question' => $active,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $queue
+     */
+    private function persistSummaryOpenQuestionQueue(InterrogationSession $session, array $queue): void
+    {
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $metadata['summary_open_question_queue'] = $queue;
+        $session->metadata_json = $metadata;
+        $session->save();
+    }
+
+    private function clearSummaryOpenQuestionQueue(InterrogationSession $session): void
+    {
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        if (! array_key_exists('summary_open_question_queue', $metadata)) {
+            return;
+        }
+
+        unset($metadata['summary_open_question_queue']);
+        $session->metadata_json = $metadata;
+        $session->save();
+    }
+
+    private function dispatchNextSummaryOpenQuestionFromQueue(InterrogationSession $session): bool
+    {
+        $queue = $this->summaryOpenQuestionQueue($session);
+        if ($queue === null) {
+            return false;
+        }
+
+        $pending = $this->normalizeOpenQuestionList((array) ($queue['pending_questions'] ?? []));
+        if ($pending === []) {
+            return false;
+        }
+
+        $nextQuestion = array_shift($pending);
+        if (! is_string($nextQuestion) || trim($nextQuestion) === '') {
+            return false;
+        }
+
+        $asked = array_values(array_filter(
+            (array) ($queue['asked_questions'] ?? []),
+            static fn ($item): bool => is_array($item)
+        ));
+        $total = max(1, (int) ($queue['total'] ?? (count($pending) + count($asked) + 1)));
+        $ordinal = count($asked) + 1;
+        $queue['pending_questions'] = array_values($pending);
+        $queue['active_open_question'] = [
+            'question_text' => $nextQuestion,
+            'ordinal' => $ordinal,
+            'total' => $total,
+            'dispatched_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+        ];
+        $queue['total'] = $total;
+        $queue['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+
+        $this->persistSummaryOpenQuestionQueue($session, $queue);
+
+        $focus = trim((string) ($queue['focus'] ?? ''));
+        $prompt = $this->summaryOpenQuestionPrompt($nextQuestion, $ordinal, $total, $focus);
+
+        ExecuteInterrogationRoundJob::dispatch((int) $session->id, $prompt, true);
+
+        return true;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function handleSummaryOpenQuestionQueueAnswer(
+        InterrogationSession $session,
+        array $validated,
+        SessionStateTransitionService $transitions,
+    ): bool {
+        $queue = $this->summaryOpenQuestionQueue($session);
+        if ($queue === null) {
+            return false;
+        }
+
+        $writer = new InterrogationEventWriter($session);
+        $writer->appendAnswer($this->normalizedAnswerEventPayload($validated));
+
+        $active = is_array($queue['active_open_question'] ?? null) ? $queue['active_open_question'] : null;
+        $answeredQuestionId = trim((string) ($validated['question_id'] ?? ''));
+
+        if (is_array($active)) {
+            $asked = array_values(array_filter(
+                (array) ($queue['asked_questions'] ?? []),
+                static fn ($item): bool => is_array($item)
+            ));
+
+            $asked[] = [
+                'question_id' => $answeredQuestionId !== '' ? $answeredQuestionId : null,
+                'question_text' => (string) ($active['question_text'] ?? ''),
+                'ordinal' => (int) ($active['ordinal'] ?? (count($asked) + 1)),
+                'asked_at' => (string) ($active['dispatched_at'] ?? CarbonImmutable::now('UTC')->toIso8601String()),
+                'answered_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ];
+
+            $queue['asked_questions'] = $asked;
+        }
+
+        unset($queue['active_open_question']);
+        $queue['last_answered_question_id'] = trim((string) ($validated['question_id'] ?? ''));
+        $queue['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+        $this->persistSummaryOpenQuestionQueue($session, $queue);
+
+        if ($this->dispatchNextSummaryOpenQuestionFromQueue($session)) {
+            return true;
+        }
+
+        $this->clearSummaryOpenQuestionQueue($session);
+
+        $moved = $transitions->transitionPhase(
+            (int) $session->id,
+            InterrogationSession::PHASE_INTERROGATION,
+            InterrogationSession::PHASE_SUMMARY,
+            InterrogationSession::STATUS_SUMMARIZING,
+            [InterrogationSession::STATUS_INTERROGATING, InterrogationSession::STATUS_PAUSED],
+        );
+
+        if ($moved) {
+            $session->refresh();
+            $writer = new InterrogationEventWriter($session);
+            $writer->appendPhaseTransition(
+                InterrogationSession::PHASE_INTERROGATION,
+                InterrogationSession::PHASE_SUMMARY,
+                (string) $session->status,
+                ['at' => CarbonImmutable::now('UTC')->toIso8601String(), 'source' => 'summary_open_question_queue']
+            );
+        }
+
+        ExecuteInterrogationSummaryJob::dispatch((int) $session->id);
+
+        return true;
+    }
+
+    private function summaryOpenQuestionPrompt(string $openQuestion, int $ordinal, int $total, string $focus): string
+    {
+        $prompt = 'Summary re-interrogation queue item '.$ordinal.' of '.$total.'. '
+            .'Resolve this unresolved open question: "'.$openQuestion."\".\n"
+            .'Ask exactly one high-signal question that resolves this item.\n'
+            .'Prefer answer_type="choice" with 2-5 concrete options when there is a clear decision to make; otherwise use answer_type="freetext". '
+            .'When using choice, options must be provided as a structured options[] array (not embedded in question_text). '
+            .'Set category to "open-question". '
+            .'Do not batch questions. Do not mark completion (is_complete must be false and progress_estimate must be < 100).';
+
+        if ($focus !== '') {
+            $prompt .= "\nAdditional user focus for this queue: ".$focus;
+        }
+
+        return $prompt;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function normalizedAnswerEventPayload(array $payload): array
+    {
+        $answerType = (string) ($payload['answer_type'] ?? 'freetext');
+        $questionId = isset($payload['question_id']) ? trim((string) $payload['question_id']) : '';
+
+        return [
+            'question_id' => $questionId !== '' ? $questionId : null,
+            'answer_type' => $answerType,
+            'answer_text' => (string) ($payload['answer_text'] ?? ''),
+            'selected_option' => (string) ($payload['selected_option'] ?? ''),
+            'selected_options' => array_values(array_filter(
+                (array) ($payload['selected_options'] ?? []),
+                static fn ($value): bool => is_string($value) && trim($value) !== ''
+            )),
+            'skip_reason' => (string) ($payload['skip_reason'] ?? ''),
+            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+        ];
+    }
+
+    /**
      * @param  array<string, mixed>  $validated
      */
     private function buildAnswerMessage(array $validated): string
@@ -1715,6 +2395,26 @@ class InterrogationSessionController extends Controller
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    private function normalizedPlanJson(InterrogationSession $session, bool $persist): array
+    {
+        if (! is_array($session->plan_json) || $session->plan_json === []) {
+            return [];
+        }
+
+        $normalizer = new PlanPayloadNormalizer;
+        $normalized = $normalizer->normalize($session->plan_json);
+
+        if ($persist && $normalized !== $session->plan_json) {
+            $session->plan_json = $normalized;
+            $session->save();
+        }
+
+        return $normalized;
+    }
+
+    /**
      * @param  array<string, mixed>  $summary
      * @return array<string, mixed>
      */
@@ -1761,6 +2461,7 @@ class InterrogationSessionController extends Controller
 
         $resolvedFingerprints = [];
         $resolvedOpenQuestionIndexes = [];
+        $resolvedOpenQuestionOrdinals = [];
         foreach ($events as $event) {
             if ($event->event_type !== InterrogationEvent::TYPE_ANSWER) {
                 continue;
@@ -1773,22 +2474,29 @@ class InterrogationSessionController extends Controller
             }
 
             $questionId = trim((string) ($payload['question_id'] ?? ''));
-            if ($questionId === '' || ! isset($questionsById[$questionId])) {
+            if ($questionId === '') {
                 continue;
             }
 
-            $fingerprint = $this->questionFingerprint($questionsById[$questionId]);
+            $questionText = (string) ($questionsById[$questionId] ?? '');
+            $fingerprint = $this->questionFingerprint($questionText);
             if ($fingerprint !== '') {
                 $resolvedFingerprints[] = $fingerprint;
             }
 
-            $ordinal = $this->extractOpenQuestionOrdinal($questionsById[$questionId]);
+            $ordinal = $this->extractOpenQuestionOrdinal($questionText);
             if ($ordinal !== null) {
                 $resolvedOpenQuestionIndexes[] = $ordinal - 1;
             }
+
+            $openQuestionOrdinal = $this->extractOpenQuestionMarkerOrdinal($questionText)
+                ?? $this->extractOpenQuestionMarkerOrdinalFromQuestionId($questionId);
+            if ($openQuestionOrdinal !== null) {
+                $resolvedOpenQuestionOrdinals[] = $openQuestionOrdinal;
+            }
         }
 
-        if ($resolvedFingerprints === [] && $resolvedOpenQuestionIndexes === []) {
+        if ($resolvedFingerprints === [] && $resolvedOpenQuestionIndexes === [] && $resolvedOpenQuestionOrdinals === []) {
             return $summary;
         }
 
@@ -1798,6 +2506,11 @@ class InterrogationSessionController extends Controller
             static fn (int $index): bool => $index >= 0
         )));
         $resolvedOpenQuestionIndexLookup = array_fill_keys($resolvedOpenQuestionIndexes, true);
+        $resolvedOpenQuestionOrdinals = array_values(array_unique(array_filter(
+            $resolvedOpenQuestionOrdinals,
+            static fn (int $ordinal): bool => $ordinal > 0
+        )));
+        $resolvedOpenQuestionOrdinalLookup = array_fill_keys($resolvedOpenQuestionOrdinals, true);
 
         $remaining = [];
         foreach ($openQuestions as $openIndex => $openQuestion) {
@@ -1806,6 +2519,11 @@ class InterrogationSessionController extends Controller
             }
 
             if (isset($resolvedOpenQuestionIndexLookup[$openIndex])) {
+                continue;
+            }
+
+            $openQuestionOrdinal = $this->extractOpenQuestionMarkerOrdinal($openQuestion);
+            if ($openQuestionOrdinal !== null && isset($resolvedOpenQuestionOrdinalLookup[$openQuestionOrdinal])) {
                 continue;
             }
 
@@ -1843,7 +2561,9 @@ class InterrogationSessionController extends Controller
 
         $normalized = preg_replace('/\r\n|\r/', "\n", $normalized) ?? $normalized;
         $normalized = preg_replace('/^\*+\s*/m', '', $normalized) ?? $normalized;
+        $normalized = preg_replace('/^open\s+question\s+\d+\s+of\s+\d+\s*:\s*/i', '', $normalized) ?? $normalized;
         $normalized = preg_replace('/^open\s+question\s+\d+\s*:\s*/i', '', $normalized) ?? $normalized;
+        $normalized = preg_replace('/^oq\s*[-_ ]?\d+\s*:\s*/i', '', $normalized) ?? $normalized;
         $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
         $normalized = preg_replace('/[^a-z0-9 ]/', '', $normalized) ?? $normalized;
         $normalized = trim($normalized);
@@ -1864,7 +2584,39 @@ class InterrogationSessionController extends Controller
             return null;
         }
 
-        if (preg_match('/open\s+question\s+(\d+)\s*:/i', $normalized, $matches) !== 1) {
+        if (preg_match('/open\s+question\s+(\d+)\b/i', $normalized, $matches) !== 1) {
+            return null;
+        }
+
+        $ordinal = (int) ($matches[1] ?? 0);
+
+        return $ordinal > 0 ? $ordinal : null;
+    }
+
+    private function extractOpenQuestionMarkerOrdinal(string $value): ?int
+    {
+        $normalized = strtolower(trim($value));
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (preg_match('/\boq\s*[-_ ]?(\d+)\b/i', $normalized, $matches) !== 1) {
+            return null;
+        }
+
+        $ordinal = (int) ($matches[1] ?? 0);
+
+        return $ordinal > 0 ? $ordinal : null;
+    }
+
+    private function extractOpenQuestionMarkerOrdinalFromQuestionId(string $questionId): ?int
+    {
+        $normalized = strtolower(trim($questionId));
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (preg_match('/(?:^|[^a-z0-9])oq[-_ ]?(\d+)(?:[^a-z0-9]|$)/i', $normalized, $matches) !== 1) {
             return null;
         }
 

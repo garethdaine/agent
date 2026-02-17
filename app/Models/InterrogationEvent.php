@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use JsonSerializable;
+use Stringable;
 
 class InterrogationEvent extends Model
 {
@@ -32,8 +35,104 @@ class InterrogationEvent extends Model
         return [
             'event_ts' => 'datetime',
             'sequence' => 'integer',
-            'payload' => 'array',
         ];
+    }
+
+    protected function payload(): Attribute
+    {
+        return Attribute::make(
+            get: function (mixed $value): array {
+                if (is_array($value)) {
+                    return $value;
+                }
+
+                if (! is_string($value) || trim($value) === '') {
+                    return [];
+                }
+
+                $decoded = json_decode($value, true);
+
+                return is_array($decoded) ? $decoded : [];
+            },
+            set: fn (mixed $value): string => $this->encodePayloadForStorage($value),
+        );
+    }
+
+    private function encodePayloadForStorage(mixed $value): string
+    {
+        $normalized = $this->normalizePayloadValue($value);
+
+        if (! is_array($normalized)) {
+            $normalized = ['message' => is_string($normalized) ? $normalized : 'Event payload normalization failed.'];
+        }
+
+        $encoded = json_encode(
+            $normalized,
+            JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR
+        );
+
+        return is_string($encoded) ? $encoded : '{"message":"Event payload encoding failed."}';
+    }
+
+    private function normalizePayloadValue(mixed $value): mixed
+    {
+        if (is_array($value)) {
+            $normalized = [];
+
+            foreach ($value as $key => $item) {
+                $normalizedKey = is_string($key) ? $this->normalizeUtf8($key) : $key;
+                if (! is_int($normalizedKey) && ! is_string($normalizedKey)) {
+                    $normalizedKey = (string) $normalizedKey;
+                }
+
+                $normalized[$normalizedKey] = $this->normalizePayloadValue($item);
+            }
+
+            return $normalized;
+        }
+
+        if (is_string($value)) {
+            return $this->normalizeUtf8($value);
+        }
+
+        if (is_int($value) || is_float($value) || is_bool($value) || $value === null) {
+            return $value;
+        }
+
+        if ($value instanceof JsonSerializable) {
+            return $this->normalizePayloadValue($value->jsonSerialize());
+        }
+
+        if ($value instanceof Stringable || (is_object($value) && method_exists($value, '__toString'))) {
+            return $this->normalizeUtf8((string) $value);
+        }
+
+        if (is_resource($value)) {
+            return '[resource]';
+        }
+
+        if (is_object($value)) {
+            return '[object '.get_class($value).']';
+        }
+
+        return $this->normalizeUtf8((string) $value);
+    }
+
+    private function normalizeUtf8(string $value): string
+    {
+        if (! mb_check_encoding($value, 'UTF-8')) {
+            $converted = @iconv('UTF-8', 'UTF-8//IGNORE', $value);
+
+            if (is_string($converted) && $converted !== '') {
+                $value = $converted;
+            } else {
+                $value = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+            }
+        }
+
+        $sanitized = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value);
+
+        return is_string($sanitized) ? $sanitized : $value;
     }
 
     public function session(): BelongsTo

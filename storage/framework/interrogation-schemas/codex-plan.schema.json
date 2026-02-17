@@ -1,0 +1,1 @@
+{"type":"object","required":["plan_markdown","sections","risks","assumptions"],"additionalProperties":false,"properties":{"plan_markdown":{"type":"string"},"sections":{"type":"array","items":{"type":"string"}},"risks":{"type":"array","items":{"type":"string"}},"assumptions":{"type":"array","items":{"type":"string"}}}}

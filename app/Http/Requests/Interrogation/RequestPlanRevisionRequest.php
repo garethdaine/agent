@@ -20,6 +20,8 @@ class RequestPlanRevisionRequest extends FormRequest
         return [
             'action' => ['required', Rule::in(['expand', 'simplify', 'add_examples', 'rewrite', 'split_into_steps', 'add_acceptance_criteria'])],
             'section' => ['nullable', 'string', 'max:255'],
+            'sections' => ['nullable', 'array', 'max:50'],
+            'sections.*' => ['string', 'max:255', 'distinct'],
             'notes' => ['nullable', 'string', 'max:5000'],
         ];
     }

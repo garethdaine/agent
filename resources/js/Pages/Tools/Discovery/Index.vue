@@ -48,6 +48,19 @@ const retrySession = async (sessionId) => {
     }
 };
 
+const restartSession = async (sessionId) => {
+    if (!window.confirm('Restart from the beginning? This will clear all questions, answers, and generated artifacts for this session.')) {
+        return;
+    }
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${sessionId}/restart-from-beginning`);
+        await load();
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to restart session.';
+    }
+};
+
 const deleteSession = async (sessionId) => {
     if (!window.confirm('Delete this session? You can restore it later from the Deleted filter.')) {
         return;
@@ -151,12 +164,22 @@ onMounted(load);
                                 <td class="px-4 py-3 text-right">
                                     <div class="flex items-center justify-end gap-2">
                                         <button
-                                            v-if="!session.deleted_at && ['failed', 'paused', 'setup'].includes(session.status)"
+                                            v-if="!session.deleted_at
+                                                && (['failed', 'paused', 'setup'].includes(session.status)
+                                                    || (session.status === 'interrogating' && session.phase === 2))"
                                             type="button"
                                             class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50"
                                             @click="retrySession(session.id)"
                                         >
                                             Retry
+                                        </button>
+                                        <button
+                                            v-if="!session.deleted_at"
+                                            type="button"
+                                            class="rounded border border-orange-300 px-2 py-1 text-xs text-orange-700 hover:bg-orange-50"
+                                            @click="restartSession(session.id)"
+                                        >
+                                            Restart
                                         </button>
                                         <button
                                             v-if="!session.deleted_at"

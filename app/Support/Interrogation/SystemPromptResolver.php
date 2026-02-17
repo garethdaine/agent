@@ -15,9 +15,13 @@ class SystemPromptResolver
             'discovery' => 'Phase: discovery. Inspect project context and emit concise human-readable progress lines only.',
             'interrogation' => 'Phase: interrogation. Return ONLY a single JSON object that matches the provided schema. Ask exactly one high-signal question (never batch multiple questions). '
                 .'For choice questions set answer_type="choice" and provide options as a structured string array. '
-                .'Do not include option blocks inside question_text.',
-            'summary' => 'Phase: summary. Return ONLY a single JSON object that matches the provided schema for summary output.',
-            'planning' => 'Phase: planning. Return ONLY a single JSON object that matches the provided schema for planning output.',
+                .'Do not include option blocks inside question_text. '
+                .'Never output process-status narration (for example "Resuming interrogation", "locating latest unanswered question", "loading session state"). '
+                .'question_text must be a direct, user-answerable question about product requirements.',
+            'summary' => 'Phase: summary. Return ONLY a single JSON object that matches the provided schema for summary output. '
+                .'Never include estimates or timeline projections (no days/weeks/months, ETA, total effort, critical path, or parallelization schedule).',
+            'planning' => 'Phase: planning. Return ONLY a single JSON object that matches the provided schema for planning output. '
+                .'Never include estimates or timeline projections (no days/weeks/months, ETA, total effort, critical path, or parallelization schedule).',
             'build_tasks' => 'Phase: build task generation. Return ONLY a single JSON object that matches the provided schema for executable build tasks.',
             default => 'Phase: setup.',
         };
@@ -27,7 +31,28 @@ class SystemPromptResolver
             $featureContext = "\n\nFeature Brief:\n".trim($session->feature_brief);
         }
 
-        return trim($base)."\n\n".$phaseInstructions.$featureContext;
+        $runnerInstructions = $this->runnerInstructions($session, $phase);
+
+        return trim($base)."\n\n".$phaseInstructions.$runnerInstructions.$featureContext;
+    }
+
+    private function runnerInstructions(InterrogationSession $session, string $phase): string
+    {
+        if ((string) $session->runner_type !== 'codex') {
+            return '';
+        }
+
+        return match ($phase) {
+            'interrogation' => "\n\nCodex parity rules: "
+                .'Match the depth/precision expected from Claude sessions. '
+                .'Prefer answer_type="choice" with 3-5 concrete options whenever the decision space is finite. '
+                .'Only use answer_type="freetext" when options would be speculative. '
+                .'Do not set is_complete=true until ambiguity is materially closed for scope, contracts, auth, lifecycle, errors, and testing expectations.',
+            'planning' => "\n\nCodex parity rules: "
+                .'Plan output must be production-ready and detailed; avoid thin summaries. '
+                .'Use specific implementation steps and concrete technical choices.',
+            default => '',
+        };
     }
 
     private function basePrompt(InterrogationSession $session): string

@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { isAnswerableQuestionEvent } from '@/Components/Interrogation/questionPresentation';
+import { isAnswerableQuestionEvent, normalizeQuestionCategory } from '@/Components/Interrogation/questionPresentation';
 
 const props = defineProps({
     session: {
@@ -21,7 +21,10 @@ const categories = computed(() => {
 
     props.events.forEach((event) => {
         if (isAnswerableQuestionEvent(event) && typeof event.payload?.category === 'string' && event.payload.category !== '') {
-            values.add(event.payload.category);
+            const normalized = normalizeQuestionCategory(event.payload.category);
+            if (normalized !== '') {
+                values.add(normalized);
+            }
         }
     });
 
@@ -29,7 +32,7 @@ const categories = computed(() => {
 });
 
 const latestProgress = computed(() => {
-    const questions = props.events.filter((event) => event.event_type === 'question');
+    const questions = props.events.filter((event) => isAnswerableQuestionEvent(event));
 
     if (questions.length === 0) {
         return 0;
