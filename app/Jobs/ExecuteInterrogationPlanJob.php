@@ -8,6 +8,7 @@ use App\Support\Interrogation\AdapterFactory;
 use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 use App\Support\Interrogation\ExportService;
 use App\Support\Interrogation\InterrogationEventWriter;
+use App\Support\Interrogation\PlanPayloadGuard;
 use App\Support\Interrogation\PlanPayloadNormalizer;
 use App\Support\Interrogation\SessionStateTransitionService;
 use App\Support\Interrogation\SystemPromptResolver;
@@ -36,6 +37,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
         SystemPromptResolver $promptResolver,
         ExportService $exportService,
         PlanPayloadNormalizer $planPayloadNormalizer,
+        PlanPayloadGuard $planPayloadGuard,
     ): void {
         $session = InterrogationSession::query()->find($this->sessionId);
         $isRevisionRequest = trim((string) $this->revisionPrompt) !== '';
@@ -69,32 +71,18 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
 
             if ($isRevisionRequest) {
                 $this->markRevisionState($session, 'running');
+            } else {
+                $this->markGenerationState($session, 'running');
             }
 
-            $planningPrompt = trim((string) $this->revisionPrompt);
-            if ($planningPrompt === '') {
-                $planningPrompt = 'Generate an implementation plan JSON with plan_markdown, sections, risks, and assumptions based on the confirmed summary.';
-            }
-            $planningPrompt .= "\n\n"
-                .'Hard constraints: '
-                .'Do not include any estimates or timelines in any field. '
-                .'Do not mention total effort, days, weeks, months, ETA, critical path, or parallelization schedules. '
-                .'Provide sequence/dependency order only, without duration predictions.';
+            $planningPrompt = $this->buildPlanningPrompt($session, $isRevisionRequest);
 
-            if ((string) $session->runner_type === 'codex') {
-                $planningPrompt .= "\n\n"
-                    .'Codex parity requirements (match Claude plan depth): '
-                    .'Produce a detailed, implementation-ready plan_markdown with explicit headings and concrete decisions. '
-                    .'Include sections for: scope boundary, architecture changes, data model/migrations, API/tool contracts, event contracts, '
-                    .'authorization/scope enforcement, failure/retry behavior, observability, test strategy (unit/feature/integration), '
-                    .'backward compatibility, rollout and rollback controls. '
-                    .'In each section, list specific implementation actions and impacted files/components where known. '
-                    .'Keep sections, risks, and assumptions comprehensive and non-overlapping; avoid generic filler text.';
-            }
+            $planningSession = clone $session;
+            $planningSession->cli_session_id = null;
 
             $process = $this->runPlanProcess(
                 $adapter,
-                $session,
+                $planningSession,
                 $planningPrompt,
                 $systemPrompt,
                 $isRevisionRequest,
@@ -105,8 +93,8 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                 $plan = $adapter->parsePlanResponse((string) $process->getOutput());
             }
 
-            $shouldRetryWithoutResume = is_string($session->cli_session_id)
-                && trim($session->cli_session_id) !== ''
+            $shouldRetryWithoutResume = is_string($planningSession->cli_session_id)
+                && trim($planningSession->cli_session_id) !== ''
                 && ($process->getExitCode() !== 0 || $plan === null);
 
             if ($shouldRetryWithoutResume) {
@@ -155,6 +143,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                     return;
                 }
 
+                $this->markGenerationState($session, 'failed', $message);
                 $transitions->transition(
                     (int) $session->id,
                     InterrogationSession::ACTIVE_STATUSES,
@@ -194,6 +183,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                     return;
                 }
 
+                $this->markGenerationState($session, 'failed', $message);
                 $transitions->transition(
                     (int) $session->id,
                     InterrogationSession::ACTIVE_STATUSES,
@@ -216,6 +206,84 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
             }
 
             $plan = $planPayloadNormalizer->normalize($plan);
+            $planValidation = $planPayloadGuard->validate($plan);
+            $payloadRetryLimit = max(0, (int) config('agent.interrogation.plan_payload_retry_attempts', 2));
+            $payloadRetryAttempt = 0;
+
+            while (! (bool) ($planValidation['valid'] ?? false) && $payloadRetryAttempt < $payloadRetryLimit) {
+                $payloadRetryAttempt++;
+                $reason = (string) ($planValidation['reason'] ?? 'invalid plan payload');
+                $retryPrompt = $this->buildPlanPayloadRetryPrompt(
+                    $planningPrompt,
+                    $plan,
+                    $reason,
+                    $payloadRetryAttempt,
+                    $payloadRetryLimit,
+                );
+
+                $retrySession = clone $session;
+                $retrySession->cli_session_id = null;
+
+                $retryProcess = $this->runPlanProcess(
+                    $adapter,
+                    $retrySession,
+                    $retryPrompt,
+                    $systemPrompt,
+                    $isRevisionRequest,
+                );
+
+                if ($retryProcess->getExitCode() !== 0) {
+                    continue;
+                }
+
+                $retryPlan = $adapter->parsePlanResponse((string) $retryProcess->getOutput());
+                if (! is_array($retryPlan)) {
+                    continue;
+                }
+
+                $plan = $planPayloadNormalizer->normalize($retryPlan);
+                $planValidation = $planPayloadGuard->validate($plan);
+            }
+
+            if (! (bool) ($planValidation['valid'] ?? false)) {
+                $message = 'Plan payload validation failed: '.(string) ($planValidation['reason'] ?? 'invalid plan payload');
+
+                if ($isRevisionRequest) {
+                    $this->markRevisionState($session, 'failed', $message);
+                    $writer->appendError([
+                        'code' => 'PLAN_REVISION_PAYLOAD_INVALID',
+                        'message' => $message,
+                    ]);
+                    $writer->appendSystem([
+                        'notice' => 'plan_revision_failed',
+                        'message' => $message,
+                        'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                    ]);
+
+                    return;
+                }
+
+                $this->markGenerationState($session, 'failed', $message);
+                $transitions->transition(
+                    (int) $session->id,
+                    InterrogationSession::ACTIVE_STATUSES,
+                    InterrogationSession::STATUS_FAILED,
+                    [
+                        'error_code' => 'PLAN_PAYLOAD_INVALID',
+                        'error_summary' => $message,
+                        'finished_at' => CarbonImmutable::now('UTC'),
+                    ],
+                );
+
+                $session->refresh();
+                $writer = new InterrogationEventWriter($session);
+                $writer->appendError([
+                    'code' => 'PLAN_PAYLOAD_INVALID',
+                    'message' => $message,
+                ]);
+
+                return;
+            }
 
             if ((string) $session->runner_type === 'codex') {
                 [$qualityOk, $qualityIssues] = $this->validateCodexPlanQuality($plan);
@@ -264,6 +332,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                         return;
                     }
 
+                    $this->markGenerationState($session, 'failed', $message);
                     $transitions->transition(
                         (int) $session->id,
                         InterrogationSession::ACTIVE_STATUSES,
@@ -307,6 +376,19 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                 'task_count' => 0,
                 'active_task_id' => null,
                 'active_run_id' => null,
+                'tasks_approved_at' => null,
+                'tasks_approved_by_user_id' => null,
+                'task_provider_sync' => [
+                    'status' => 'idle',
+                    'driver' => null,
+                    'project_mode' => 'create_new',
+                    'project_id' => null,
+                    'project_name' => null,
+                    'project_url' => null,
+                    'synced_task_count' => 0,
+                    'error' => null,
+                    'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                ],
                 'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
             ];
             if ($isRevisionRequest) {
@@ -317,6 +399,16 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                         'revision_completed_at' => CarbonImmutable::now('UTC')->toIso8601String(),
                         'revision_updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
                         'revision_error' => null,
+                    ],
+                );
+            } else {
+                $metadata['plan'] = array_merge(
+                    is_array($metadata['plan'] ?? null) ? $metadata['plan'] : [],
+                    [
+                        'generation_status' => 'idle',
+                        'generation_completed_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                        'generation_updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                        'generation_error' => null,
                     ],
                 );
             }
@@ -356,6 +448,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                 return;
             }
 
+            $this->markGenerationState($session, 'failed', $throwable->getMessage());
             $transitions->transition(
                 (int) $session->id,
                 InterrogationSession::ACTIVE_STATUSES,
@@ -402,6 +495,37 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
         $session->save();
     }
 
+    private function markGenerationState(InterrogationSession $session, string $status, ?string $error = null): void
+    {
+        $now = CarbonImmutable::now('UTC')->toIso8601String();
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $plan = array_merge(
+            is_array($metadata['plan'] ?? null) ? $metadata['plan'] : [],
+            [
+                'generation_status' => $status,
+                'generation_updated_at' => $now,
+            ],
+        );
+
+        if ($status === 'running') {
+            $plan['generation_started_at'] = $now;
+            $plan['generation_error'] = null;
+        }
+
+        if ($status === 'failed') {
+            $plan['generation_error'] = $error ?: 'Plan generation failed.';
+        }
+
+        if ($status === 'idle') {
+            $plan['generation_completed_at'] = $now;
+            $plan['generation_error'] = null;
+        }
+
+        $metadata['plan'] = $plan;
+        $session->metadata_json = $metadata;
+        $session->save();
+    }
+
     private function runPlanProcess(
         InterrogationRunnerAdapter $adapter,
         InterrogationSession $session,
@@ -418,6 +542,114 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
         $process->run();
 
         return $process;
+    }
+
+    private function buildPlanningPrompt(InterrogationSession $session, bool $isRevisionRequest): string
+    {
+        $planningPrompt = trim((string) ($isRevisionRequest ? $this->revisionPrompt : ''));
+        if ($planningPrompt === '') {
+            $planningPrompt = 'Generate a complete implementation plan JSON with plan_markdown, sections, risks, and assumptions from the confirmed summary.';
+        }
+
+        $planningPrompt .= "\n\n"
+            .'Locked summary baseline (authoritative context):'."\n"
+            .$this->summaryContextBlock($session)
+            ."\n\n"
+            .'Session metadata context:'."\n"
+            .$this->metadataContextBlock($session)
+            ."\n\n"
+            .'Hard constraints: '
+            .'Do not include any estimates or timelines in any field. '
+            .'Do not mention total effort, days, weeks, months, ETA, critical path, or parallelization schedules. '
+            .'Provide sequence/dependency order only, without duration predictions. '
+            .'Return finalized planning output only; never return process-status narration (for example "reviewing baseline", "I will rewrite", or "next I will").';
+
+        if ((string) $session->runner_type === 'codex') {
+            $planningPrompt .= "\n\n"
+                .'Codex parity requirements (match Claude plan depth): '
+                .'Produce a detailed, implementation-ready plan_markdown with explicit headings and concrete decisions. '
+                .'Include sections for: scope boundary, architecture changes, data model/migrations, API/tool contracts, event contracts, '
+                .'authorization/scope enforcement, failure/retry behavior, observability, test strategy (unit/feature/integration), '
+                .'backward compatibility, rollout and rollback controls. '
+                .'In each section, list specific implementation actions and impacted files/components where known. '
+                .'Keep sections, risks, and assumptions comprehensive and non-overlapping; avoid generic filler text.';
+        }
+
+        return $planningPrompt;
+    }
+
+    private function summaryContextBlock(InterrogationSession $session): string
+    {
+        $summary = is_array($session->summary_json) ? $session->summary_json : [];
+        if ($summary === []) {
+            return '- No summary_json is stored.';
+        }
+
+        $summaryMarkdown = trim((string) ($summary['summary_markdown'] ?? ''));
+        $goals = $this->normalizeStringList($summary['goals'] ?? null);
+        $constraints = $this->normalizeStringList($summary['constraints'] ?? null);
+        $acceptance = $this->normalizeStringList($summary['acceptance_criteria'] ?? null);
+        $openQuestions = $this->normalizeStringList($summary['open_questions'] ?? null);
+
+        $lines = [];
+        if ($summaryMarkdown !== '') {
+            $lines[] = "Summary markdown:\n".$summaryMarkdown;
+        }
+        if ($goals !== []) {
+            $lines[] = "Goals:\n- ".implode("\n- ", $goals);
+        }
+        if ($constraints !== []) {
+            $lines[] = "Constraints:\n- ".implode("\n- ", $constraints);
+        }
+        if ($acceptance !== []) {
+            $lines[] = "Acceptance criteria:\n- ".implode("\n- ", $acceptance);
+        }
+        if ($openQuestions !== []) {
+            $lines[] = "Open questions (must address explicitly):\n- ".implode("\n- ", $openQuestions);
+        }
+
+        return $lines === [] ? '- summary_json exists but has no usable fields.' : implode("\n\n", $lines);
+    }
+
+    private function metadataContextBlock(InterrogationSession $session): string
+    {
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+
+        $context = [
+            'session_id' => (int) $session->id,
+            'interrogation_type' => (string) $session->interrogation_type,
+            'runner_type' => (string) $session->runner_type,
+            'project_directory' => (string) $session->project_directory,
+            'plan_metadata' => is_array($metadata['plan'] ?? null) ? $metadata['plan'] : [],
+        ];
+
+        return json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizeStringList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($value as $item) {
+            if (! is_string($item)) {
+                continue;
+            }
+
+            $normalized = trim($item);
+            if ($normalized === '') {
+                continue;
+            }
+
+            $items[] = $normalized;
+        }
+
+        return array_values(array_unique($items));
     }
 
     /**
@@ -494,5 +726,33 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
             ."\n- Include explicit validation/authorization rules and test coverage mapping."
             ."\n- Keep sequence/dependency order and preserve no-estimates/no-timelines policy."
             ."\n\nCurrent plan to improve:\n{$currentPlan}";
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     */
+    private function buildPlanPayloadRetryPrompt(
+        string $basePrompt,
+        array $plan,
+        string $validationReason,
+        int $attempt,
+        int $limit,
+    ): string {
+        $currentPlan = trim((string) ($plan['plan_markdown'] ?? ''));
+        if ($currentPlan === '') {
+            $currentPlan = '[empty]';
+        }
+
+        return $basePrompt
+            ."\n\nYour previous output failed validation on attempt {$attempt}/{$limit}."
+            ."\nValidation failure reason: {$validationReason}."
+            ."\n\nReturn only final structured plan content in the output schema."
+            ."\nDo not include process narration, intent statements, or status updates."
+            ."\nMandatory output requirements:"
+            ."\n- `plan_markdown` must be a complete Markdown plan with multiple headings."
+            ."\n- Include numbered and/or bulleted implementation steps."
+            ."\n- `sections`, `risks`, and `assumptions` must be non-empty arrays."
+            ."\n- Keep content implementation-ready and concrete."
+            ."\n\nRejected output to replace:\n{$currentPlan}";
     }
 }

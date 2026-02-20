@@ -2,6 +2,7 @@
 
 namespace App\Support\Interrogation;
 
+use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
 use App\Models\InterrogationSetting;
 
@@ -16,24 +17,100 @@ class SystemPromptResolver
             'interrogation' => 'Phase: interrogation. Return ONLY a single JSON object that matches the provided schema. Ask exactly one high-signal question (never batch multiple questions). '
                 .'For choice questions set answer_type="choice" and provide options as a structured string array. '
                 .'Do not include option blocks inside question_text. '
+                .'Populate reasoning with a concise, user-safe explanation (1-3 sentences) of why this question matters. '
                 .'Never output process-status narration (for example "Resuming interrogation", "locating latest unanswered question", "loading session state"). '
                 .'question_text must be a direct, user-answerable question about product requirements.',
             'summary' => 'Phase: summary. Return ONLY a single JSON object that matches the provided schema for summary output. '
                 .'Never include estimates or timeline projections (no days/weeks/months, ETA, total effort, critical path, or parallelization schedule).',
             'planning' => 'Phase: planning. Return ONLY a single JSON object that matches the provided schema for planning output. '
                 .'Never include estimates or timeline projections (no days/weeks/months, ETA, total effort, critical path, or parallelization schedule).',
-            'build_tasks' => 'Phase: build task generation. Return ONLY a single JSON object that matches the provided schema for executable build tasks.',
+            'build_tasks' => 'Phase: build task generation. Return ONLY a single JSON object that matches the provided schema for executable build tasks. '
+                .'Every implementation task must enforce tests first: write or update tests before feature/refactor code, verify the tests fail for the intended reason, then implement the smallest clean change until tests pass. '
+                .'Apply Code Field rules in every task: state assumptions before coding, do not claim correctness without verification, do not handle only the happy path, and explicitly document conditions where the approach works.',
             default => 'Phase: setup.',
         };
 
-        $featureContext = '';
-        if ($session->interrogation_type === InterrogationSession::TYPE_FEATURE && is_string($session->feature_brief) && trim($session->feature_brief) !== '') {
-            $featureContext = "\n\nFeature Brief:\n".trim($session->feature_brief);
+        $runnerInstructions = $this->runnerInstructions($session, $phase);
+        $sessionContext = $this->sessionContext($session, $phase);
+
+        return trim($base)."\n\n".$phaseInstructions.$runnerInstructions.$sessionContext;
+    }
+
+    private function sessionContext(InterrogationSession $session, string $phase): string
+    {
+        $type = trim((string) $session->interrogation_type);
+        $brief = is_string($session->feature_brief) ? trim($session->feature_brief) : '';
+
+        $typeLabel = match ($type) {
+            InterrogationSession::TYPE_FEATURE => 'feature',
+            InterrogationSession::TYPE_GENERAL => 'general',
+            default => $type !== '' ? $type : 'unknown',
+        };
+
+        $context = "\n\nSession Context:\nInterrogation Type: {$typeLabel}";
+
+        if ($brief !== '') {
+            $briefLabel = $type === InterrogationSession::TYPE_FEATURE ? 'Feature Brief' : 'Session Brief';
+            $context .= "\n\n{$briefLabel}:\n{$brief}";
         }
 
-        $runnerInstructions = $this->runnerInstructions($session, $phase);
+        $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']);
+        if ($techStacks->isNotEmpty()) {
+            $context .= "\n\nSelected Tech Stack:\n";
 
-        return trim($base)."\n\n".$phaseInstructions.$runnerInstructions.$featureContext;
+            foreach ($techStacks as $stack) {
+                $name = trim((string) $stack->name);
+                $documentationUrl = trim((string) $stack->documentation_url);
+
+                if ($name === '' || $documentationUrl === '') {
+                    continue;
+                }
+
+                $context .= sprintf("- %s: %s\n", $name, $documentationUrl);
+            }
+
+            $context = rtrim($context);
+        }
+
+        if ($phase !== 'discovery') {
+            $discoveryFindings = $this->recentDiscoveryFindings($session);
+            if ($discoveryFindings !== []) {
+                $context .= "\n\nRecent Discovery Findings:\n- ".implode("\n- ", $discoveryFindings);
+            }
+        }
+
+        return $context;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function recentDiscoveryFindings(InterrogationSession $session): array
+    {
+        return $session->events()
+            ->where('event_type', InterrogationEvent::TYPE_DISCOVERY_ACTIVITY)
+            ->orderByDesc('sequence')
+            ->limit(12)
+            ->get(['payload'])
+            ->map(function (InterrogationEvent $event): string {
+                $payload = is_array($event->payload) ? $event->payload : [];
+                $message = trim((string) ($payload['message'] ?? ''));
+
+                if ($message === '') {
+                    return '';
+                }
+
+                if (mb_strlen($message) > 220) {
+                    return rtrim(mb_substr($message, 0, 220)).'…';
+                }
+
+                return $message;
+            })
+            ->filter(static fn (string $message): bool => $message !== '')
+            ->unique()
+            ->reverse()
+            ->values()
+            ->all();
     }
 
     private function runnerInstructions(InterrogationSession $session, string $phase): string

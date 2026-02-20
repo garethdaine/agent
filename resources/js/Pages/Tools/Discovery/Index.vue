@@ -61,6 +61,23 @@ const restartSession = async (sessionId) => {
     }
 };
 
+const renameSession = async (sessionId, currentName) => {
+    const nextName = window.prompt('Session name', currentName ?? '');
+    if (nextName === null) {
+        return;
+    }
+
+    try {
+        await axios.patch(`/agent/api/v1/interrogation/sessions/${sessionId}`, {
+            name: nextName,
+        });
+        await load();
+    } catch (e) {
+        const payload = e?.response?.data ?? {};
+        error.value = payload?.error?.message ?? payload?.message ?? 'Failed to rename session.';
+    }
+};
+
 const deleteSession = async (sessionId) => {
     if (!window.confirm('Delete this session? You can restore it later from the Deleted filter.')) {
         return;
@@ -166,7 +183,7 @@ onMounted(load);
                                         <button
                                             v-if="!session.deleted_at
                                                 && (['failed', 'paused', 'setup'].includes(session.status)
-                                                    || (session.status === 'interrogating' && session.phase === 2))"
+                                                    || (session.status === 'interrogating' && session.phase === 4))"
                                             type="button"
                                             class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50"
                                             @click="retrySession(session.id)"
@@ -184,11 +201,26 @@ onMounted(load);
                                         <button
                                             v-if="!session.deleted_at"
                                             type="button"
+                                            class="rounded border border-blue-300 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50"
+                                            @click="renameSession(session.id, session.name || '')"
+                                        >
+                                            Rename
+                                        </button>
+                                        <button
+                                            v-if="!session.deleted_at"
+                                            type="button"
                                             class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
                                             @click="deleteSession(session.id)"
                                         >
                                             Delete
                                         </button>
+                                        <Link
+                                            v-if="!session.deleted_at"
+                                            :href="route('tools.discovery.session.settings', session.id)"
+                                            class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700"
+                                        >
+                                            Settings
+                                        </Link>
                                         <button
                                             v-else
                                             type="button"

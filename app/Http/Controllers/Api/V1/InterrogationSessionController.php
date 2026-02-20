@@ -7,14 +7,18 @@ use App\Http\Requests\Interrogation\RequestPlanRevisionRequest;
 use App\Http\Requests\Interrogation\StoreInterrogationSessionRequest;
 use App\Http\Requests\Interrogation\SubmitAnswerRequest;
 use App\Http\Requests\Interrogation\UpdateAnnotationRequest;
+use App\Http\Requests\Interrogation\UpdateInterrogationSessionRequest;
 use App\Jobs\ExecuteInterrogationBuildJob;
 use App\Jobs\ExecuteInterrogationDiscoveryJob;
 use App\Jobs\ExecuteInterrogationPlanJob;
 use App\Jobs\ExecuteInterrogationRoundJob;
 use App\Jobs\ExecuteInterrogationSummaryJob;
 use App\Jobs\GenerateInterrogationBuildTasksJob;
+use App\Jobs\RegenerateInterrogationBuildTaskJob;
+use App\Jobs\SyncInterrogationTasksToTaskProviderJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentRunEvent;
+use App\Models\ConnectedProvider;
 use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
@@ -23,6 +27,7 @@ use App\Support\Agent\ErrorEnvelope;
 use App\Support\Agent\RunStateTransitionService;
 use App\Support\Interrogation\ExportService;
 use App\Support\Interrogation\InterrogationEventWriter;
+use App\Support\Interrogation\PlanPayloadGuard;
 use App\Support\Interrogation\PlanPayloadNormalizer;
 use App\Support\Interrogation\QuestionPayloadGuard;
 use App\Support\Interrogation\SessionStateTransitionService;
@@ -30,6 +35,9 @@ use App\Support\Interrogation\SummaryPayloadNormalizer;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class InterrogationSessionController extends Controller
 {
@@ -156,10 +164,193 @@ class InterrogationSessionController extends Controller
             after: $session->only(['id', 'name', 'runner_type', 'project_directory', 'interrogation_type', 'status', 'phase']),
         );
 
-        ExecuteInterrogationDiscoveryJob::dispatch((int) $session->id);
+        return response()->json([
+            'data' => $this->transformSession($session, false),
+        ], 202);
+    }
+
+    public function update(
+        UpdateInterrogationSessionRequest $request,
+        int $id,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->withTrashed()->findOrFail($id);
+        $validated = $request->validated();
+        $before = [
+            'name' => $session->name,
+            'feature_brief' => $session->feature_brief,
+        ];
+
+        if (array_key_exists('name', $validated)) {
+            $session->name = $validated['name'];
+        }
+
+        if (array_key_exists('feature_brief', $validated)) {
+            $session->feature_brief = $validated['feature_brief'];
+        }
+
+        $session->save();
+
+        $changedFields = [];
+        if ($before['name'] !== $session->name) {
+            $changedFields[] = 'name';
+        }
+        if ($before['feature_brief'] !== $session->feature_brief) {
+            $changedFields[] = 'feature_brief';
+        }
+
+        if ($changedFields !== []) {
+            $auditLogger->recordUserAction(
+                request: $request,
+                action: 'interrogation.session.update',
+                targetType: 'interrogation_session',
+                targetId: (int) $session->id,
+                ownerUserId: (int) $session->user_id,
+                changedFields: $changedFields,
+                before: $before,
+                after: [
+                    'name' => $session->name,
+                    'feature_brief' => $session->feature_brief,
+                ],
+            );
+        }
 
         return response()->json([
             'data' => $this->transformSession($session, false),
+        ]);
+    }
+
+    public function advancePreDiscovery(
+        Request $request,
+        int $id,
+        SessionStateTransitionService $transitions,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->findOrFail($id);
+
+        if ((int) $session->phase === InterrogationSession::PHASE_TECH_STACK_SETUP) {
+            return $this->startDiscovery($request, $id, $transitions, $auditLogger);
+        }
+
+        if ((int) $session->phase > InterrogationSession::PHASE_TECH_STACK_SETUP) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Pre-discovery setup is already complete.', 409);
+        }
+
+        $fromPhase = (int) $session->phase;
+        $toPhase = match ($fromPhase) {
+            InterrogationSession::PHASE_SETUP => InterrogationSession::PHASE_TECH_STACK_SETUP,
+            InterrogationSession::PHASE_PROVIDER_SETUP => InterrogationSession::PHASE_TECH_STACK_SETUP,
+            default => InterrogationSession::PHASE_TECH_STACK_SETUP,
+        };
+
+        $moved = $transitions->transitionPhase(
+            (int) $session->id,
+            $fromPhase,
+            $toPhase,
+            InterrogationSession::STATUS_SETUP,
+            [InterrogationSession::STATUS_SETUP, InterrogationSession::STATUS_PAUSED],
+        );
+
+        if (! $moved) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session state changed while advancing pre-discovery setup.', 409);
+        }
+
+        $session->refresh();
+
+        (new InterrogationEventWriter($session))->appendPhaseTransition(
+            $fromPhase,
+            $toPhase,
+            (string) $session->status,
+            [
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'source' => 'pre_discovery_setup',
+            ],
+        );
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.advance_pre_discovery',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['phase'],
+            before: ['phase' => $fromPhase],
+            after: ['phase' => $toPhase],
+        );
+
+        return response()->json([
+            'data' => [
+                'accepted' => true,
+                'session_id' => $session->id,
+                'phase' => $session->phase,
+                'status' => $session->status,
+            ],
+        ]);
+    }
+
+    public function startDiscovery(
+        Request $request,
+        int $id,
+        SessionStateTransitionService $transitions,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->findOrFail($id);
+
+        if ((int) $session->phase < InterrogationSession::PHASE_TECH_STACK_SETUP) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Pre-discovery setup must reach tech stack step before starting discovery.', 409);
+        }
+
+        if ((int) $session->phase >= InterrogationSession::PHASE_DISCOVERY) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Discovery has already started for this session.', 409);
+        }
+
+        $fromPhase = (int) $session->phase;
+
+        $moved = $transitions->transitionPhase(
+            (int) $session->id,
+            $fromPhase,
+            InterrogationSession::PHASE_DISCOVERY,
+            InterrogationSession::STATUS_SETUP,
+            [InterrogationSession::STATUS_SETUP, InterrogationSession::STATUS_PAUSED],
+        );
+
+        if (! $moved) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session state changed while starting discovery.', 409);
+        }
+
+        $session->refresh();
+
+        (new InterrogationEventWriter($session))->appendPhaseTransition(
+            $fromPhase,
+            InterrogationSession::PHASE_DISCOVERY,
+            (string) $session->status,
+            [
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'source' => 'pre_discovery_start_discovery',
+            ],
+        );
+
+        ExecuteInterrogationDiscoveryJob::dispatch((int) $session->id);
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.start_discovery',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['phase', 'status'],
+            before: ['phase' => $fromPhase, 'status' => InterrogationSession::STATUS_SETUP],
+            after: ['phase' => InterrogationSession::PHASE_DISCOVERY, 'status' => InterrogationSession::STATUS_SETUP],
+        );
+
+        return response()->json([
+            'data' => [
+                'accepted' => true,
+                'queued' => true,
+                'session_id' => $session->id,
+                'phase' => $session->phase,
+                'status' => $session->status,
+            ],
         ], 202);
     }
 
@@ -172,7 +363,27 @@ class InterrogationSessionController extends Controller
         $session = $request->user()->interrogationSessions()->findOrFail($id);
 
         if (in_array($session->status, InterrogationSession::TERMINAL_STATUSES, true)) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is terminal and cannot accept answers.', 409);
+            if ($this->shouldAutoRecoverInterruptedFailedSession($session)) {
+                $recovered = $transitions->transition(
+                    (int) $session->id,
+                    [InterrogationSession::STATUS_FAILED],
+                    InterrogationSession::STATUS_INTERROGATING,
+                    [
+                        'phase' => InterrogationSession::PHASE_INTERROGATION,
+                        'error_code' => null,
+                        'error_summary' => null,
+                        'finished_at' => null,
+                    ],
+                );
+
+                if (! $recovered) {
+                    return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session state changed while recovering from interruption.', 409);
+                }
+
+                $session->refresh();
+            } else {
+                return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is terminal and cannot accept answers.', 409);
+            }
         }
 
         $validated = $request->validated();
@@ -306,6 +517,7 @@ class InterrogationSessionController extends Controller
         );
 
         // Planning must always be regenerated from the latest confirmed summary.
+        $this->markPlanGenerationState($session, 'queued');
         ExecuteInterrogationPlanJob::dispatch((int) $session->id);
 
         return response()->json(['data' => ['confirmed' => true, 'session_id' => $session->id]]);
@@ -467,6 +679,7 @@ class InterrogationSessionController extends Controller
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is not ready to generate a plan.', 409);
         }
 
+        $this->markPlanGenerationState($session, 'queued');
         ExecuteInterrogationPlanJob::dispatch((int) $session->id);
 
         $auditLogger->recordUserAction(
@@ -485,6 +698,75 @@ class InterrogationSessionController extends Controller
                 'accepted' => true,
                 'queued' => true,
                 'session_id' => $session->id,
+            ],
+        ], 202);
+    }
+
+    public function regeneratePlan(
+        Request $request,
+        int $id,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        if ((int) $session->phase !== InterrogationSession::PHASE_PLANNING) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Plan regeneration is only available during planning phase.', 409);
+        }
+
+        $summary = is_array($session->summary_json) ? $session->summary_json : [];
+        if ($summary === []) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Summary must be present before plan regeneration.', 409);
+        }
+
+        $prompt = 'Regenerate the implementation plan from the confirmed summary and metadata context only. '
+            .'Ignore any prior plan drafts and rewrite the plan from scratch.';
+
+        $now = CarbonImmutable::now('UTC')->toIso8601String();
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $metadata['plan'] = array_merge(
+            is_array($metadata['plan'] ?? null) ? $metadata['plan'] : [],
+            [
+                'revision_status' => 'queued',
+                'revision_requested_at' => $now,
+                'revision_updated_at' => $now,
+                'revision_error' => null,
+                'regenerated_at' => $now,
+                'regenerated_by_user_id' => (int) $request->user()->id,
+            ],
+        );
+        $session->status = InterrogationSession::STATUS_PLANNING;
+        $session->phase = InterrogationSession::PHASE_PLANNING;
+        $session->finished_at = null;
+        $session->error_code = null;
+        $session->error_summary = null;
+        $session->metadata_json = $metadata;
+        $session->save();
+
+        (new InterrogationEventWriter($session))->appendSystem([
+            'notice' => 'plan_regeneration_queued',
+            'message' => 'Plan regeneration queued.',
+            'at' => $now,
+        ]);
+
+        ExecuteInterrogationPlanJob::dispatch((int) $session->id, $prompt);
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.regenerate_plan',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['revision_prompt'],
+            before: null,
+            after: ['action' => 'regenerate_from_summary'],
+        );
+
+        return response()->json([
+            'data' => [
+                'accepted' => true,
+                'queued' => true,
+                'session_id' => $session->id,
+                'revision_status' => 'queued',
+                'message' => 'Plan regeneration queued. Rebuilding from summary context now.',
             ],
         ], 202);
     }
@@ -536,8 +818,8 @@ class InterrogationSessionController extends Controller
         $moved = $transitions->transitionPhase(
             (int) $session->id,
             InterrogationSession::PHASE_PLANNING,
-            InterrogationSession::PHASE_BUILD_TASKS,
-            InterrogationSession::STATUS_BUILD_TASKS,
+            InterrogationSession::PHASE_BUILD_RULES,
+            InterrogationSession::STATUS_BUILD_RULES,
             [
                 InterrogationSession::STATUS_PLANNING,
                 InterrogationSession::STATUS_COMPLETED,
@@ -553,7 +835,7 @@ class InterrogationSessionController extends Controller
         $writer = new InterrogationEventWriter($session);
         $writer->appendPhaseTransition(
             InterrogationSession::PHASE_PLANNING,
-            InterrogationSession::PHASE_BUILD_TASKS,
+            InterrogationSession::PHASE_BUILD_RULES,
             (string) $session->status,
             ['at' => CarbonImmutable::now('UTC')->toIso8601String(), 'approved_by_user_id' => $request->user()->id],
         );
@@ -599,6 +881,19 @@ class InterrogationSessionController extends Controller
             'task_count' => 0,
             'active_task_id' => null,
             'active_run_id' => null,
+            'tasks_approved_at' => null,
+            'tasks_approved_by_user_id' => null,
+            'task_provider_sync' => [
+                'status' => 'idle',
+                'driver' => null,
+                'project_mode' => 'create_new',
+                'project_id' => null,
+                'project_name' => null,
+                'project_url' => null,
+                'synced_task_count' => 0,
+                'error' => null,
+                'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ],
             'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
         ];
 
@@ -685,7 +980,7 @@ class InterrogationSessionController extends Controller
                 'queued' => true,
                 'session_id' => $session->id,
                 'revision_status' => 'queued',
-                'message' => 'Plan revision queued. Regenerating plan now.',
+                'message' => 'Plan revision queued. Revising plan now.',
             ],
         ], 202);
     }
@@ -698,10 +993,10 @@ class InterrogationSessionController extends Controller
         $session = $request->user()->interrogationSessions()->findOrFail($id);
 
         if (
-            (int) $session->phase !== InterrogationSession::PHASE_BUILD_TASKS
-            || ! in_array($session->status, [InterrogationSession::STATUS_BUILD_TASKS, InterrogationSession::STATUS_PAUSED], true)
+            ! in_array((int) $session->phase, [InterrogationSession::PHASE_BUILD_RULES, InterrogationSession::PHASE_BUILD_TASKS], true)
+            || ! in_array($session->status, [InterrogationSession::STATUS_BUILD_RULES, InterrogationSession::STATUS_BUILD_TASKS, InterrogationSession::STATUS_PAUSED], true)
         ) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is not in build tasks phase.', 409);
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is not in build rules or build tasks phase.', 409);
         }
 
         if ($session->approved_at === null || ! $this->hasMeaningfulPlan($session)) {
@@ -710,7 +1005,12 @@ class InterrogationSessionController extends Controller
 
         $validated = $request->validate([
             'notes' => ['nullable', 'string', 'max:6000'],
+            'project_rules' => ['nullable'],
+            'project_rule_files' => ['nullable', 'array', 'max:20'],
+            'project_rule_files.*' => ['file', 'max:1024', 'mimes:md,markdown,txt'],
         ]);
+
+        $projectRulePayload = $this->resolveProjectRulesPayload($request);
 
         $build = $this->buildMetadata($session);
         $build['status'] = 'generating_tasks';
@@ -719,6 +1019,23 @@ class InterrogationSessionController extends Controller
         $build['error'] = null;
         $build['active_task_id'] = null;
         $build['active_run_id'] = null;
+        $build['tasks_approved_at'] = null;
+        $build['tasks_approved_by_user_id'] = null;
+        $build['task_provider_sync'] = [
+            'status' => 'idle',
+            'driver' => null,
+            'project_mode' => 'create_new',
+            'project_id' => null,
+            'project_name' => null,
+            'project_url' => null,
+            'synced_task_count' => 0,
+            'error' => null,
+            'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+        ];
+        if ($projectRulePayload['provided']) {
+            $build['project_rules'] = $projectRulePayload['rules'];
+            $build['project_rules_updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+        }
         $build['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
 
         $this->saveBuildMetadata($session, $build);
@@ -749,6 +1066,331 @@ class InterrogationSessionController extends Controller
         ], 202);
     }
 
+    public function storeBuildTask(
+        Request $request,
+        int $id,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        if ($conflict = $this->buildTaskEditingConflict($session)) {
+            return $conflict;
+        }
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:12000'],
+            'instructions_markdown' => ['nullable', 'string', 'max:120000'],
+        ]);
+
+        $title = trim((string) ($validated['title'] ?? ''));
+        if ($title === '') {
+            throw ValidationException::withMessages([
+                'title' => 'Task title is required.',
+            ]);
+        }
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => (int) $session->id,
+            'sequence' => ((int) ($session->buildTasks()->max('sequence') ?? 0)) + 1,
+            'title' => $title,
+            'description' => $this->normalizedNullableText($validated['description'] ?? null),
+            'instructions_markdown' => $this->normalizedNullableText($validated['instructions_markdown'] ?? null),
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+            'attempt_count' => 0,
+            'agent_job_run_id' => null,
+            'last_error' => null,
+            'metadata_json' => [
+                'source' => 'manual',
+                'created_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ],
+            'started_at' => null,
+            'finished_at' => null,
+        ]);
+
+        $this->invalidateBuildTaskApproval($session);
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.build_task.create',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['build.tasks'],
+            before: null,
+            after: [
+                'task_id' => (int) $task->id,
+                'sequence' => (int) $task->sequence,
+            ],
+        );
+
+        return response()->json([
+            'data' => $this->transformBuildTask($task->fresh()),
+        ], 201);
+    }
+
+    public function updateBuildTask(
+        Request $request,
+        int $id,
+        int $taskId,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        if ($conflict = $this->buildTaskEditingConflict($session)) {
+            return $conflict;
+        }
+
+        $task = $session->buildTasks()->whereKey($taskId)->firstOrFail();
+
+        $validated = $request->validate([
+            'title' => ['sometimes', 'string', 'max:255'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:12000'],
+            'instructions_markdown' => ['sometimes', 'nullable', 'string', 'max:120000'],
+        ]);
+
+        if (! array_key_exists('title', $validated) && ! array_key_exists('description', $validated) && ! array_key_exists('instructions_markdown', $validated)) {
+            throw ValidationException::withMessages([
+                'task' => 'At least one field must be provided.',
+            ]);
+        }
+
+        $before = [
+            'title' => (string) $task->title,
+            'description' => $task->description,
+            'instructions_markdown' => $task->instructions_markdown,
+            'status' => (string) $task->status,
+        ];
+
+        if (array_key_exists('title', $validated)) {
+            $title = trim((string) $validated['title']);
+            if ($title === '') {
+                throw ValidationException::withMessages([
+                    'title' => 'Task title is required.',
+                ]);
+            }
+
+            $task->title = $title;
+        }
+
+        if (array_key_exists('description', $validated)) {
+            $task->description = $this->normalizedNullableText($validated['description']);
+        }
+
+        if (array_key_exists('instructions_markdown', $validated)) {
+            $task->instructions_markdown = $this->normalizedNullableText($validated['instructions_markdown']);
+        }
+
+        $task->status = InterrogationBuildTask::STATUS_PENDING;
+        $task->attempt_count = 0;
+        $task->agent_job_run_id = null;
+        $task->last_error = null;
+        $task->started_at = null;
+        $task->finished_at = null;
+        $task->save();
+
+        $this->invalidateBuildTaskApproval($session);
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.build_task.update',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['build.tasks'],
+            before: $before,
+            after: [
+                'task_id' => (int) $task->id,
+                'title' => (string) $task->title,
+                'description' => $task->description,
+                'instructions_markdown' => $task->instructions_markdown,
+                'status' => (string) $task->status,
+            ],
+        );
+
+        return response()->json([
+            'data' => $this->transformBuildTask($task->fresh()),
+        ]);
+    }
+
+    public function destroyBuildTask(
+        Request $request,
+        int $id,
+        int $taskId,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        if ($conflict = $this->buildTaskEditingConflict($session)) {
+            return $conflict;
+        }
+
+        $task = $session->buildTasks()->whereKey($taskId)->firstOrFail();
+        $deletedTaskId = (int) $task->id;
+
+        $task->delete();
+        $this->resequenceBuildTasks($session);
+        $this->invalidateBuildTaskApproval($session);
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.build_task.delete',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['build.tasks'],
+            before: ['task_id' => $deletedTaskId],
+            after: ['task_id' => $deletedTaskId, 'deleted' => true],
+        );
+
+        return response()->json([
+            'data' => [
+                'deleted' => true,
+                'task_id' => $deletedTaskId,
+            ],
+        ]);
+    }
+
+    public function regenerateBuildTask(
+        Request $request,
+        int $id,
+        int $taskId,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        if ($conflict = $this->buildTaskEditingConflict($session)) {
+            return $conflict;
+        }
+
+        $task = $session->buildTasks()->whereKey($taskId)->firstOrFail();
+
+        $validated = $request->validate([
+            'amend_notes' => ['required', 'string', 'max:6000'],
+        ]);
+
+        $amendNotes = trim((string) ($validated['amend_notes'] ?? ''));
+        if ($amendNotes === '') {
+            throw ValidationException::withMessages([
+                'amend_notes' => 'Amend notes are required to regenerate a task.',
+            ]);
+        }
+
+        $metadata = is_array($task->metadata_json) ? $task->metadata_json : [];
+        $metadata['regeneration'] = [
+            'status' => 'queued',
+            'requested_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            'requested_by_user_id' => (int) $request->user()->id,
+            'amend_notes' => $amendNotes,
+        ];
+        $task->metadata_json = $metadata;
+        $task->save();
+
+        $this->invalidateBuildTaskApproval($session);
+
+        RegenerateInterrogationBuildTaskJob::dispatch(
+            (int) $session->id,
+            (int) $task->id,
+            $amendNotes,
+        );
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.build_task.regenerate',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['build.tasks'],
+            before: ['task_id' => (int) $task->id],
+            after: ['task_id' => (int) $task->id, 'queued' => true],
+        );
+
+        return response()->json([
+            'data' => [
+                'accepted' => true,
+                'queued' => true,
+                'session_id' => (int) $session->id,
+                'task_id' => (int) $task->id,
+            ],
+        ], 202);
+    }
+
+    public function approveBuildTasks(
+        Request $request,
+        int $id,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->findOrFail($id);
+
+        if ((int) $session->phase !== InterrogationSession::PHASE_BUILD_TASKS) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build task approval is only available from build tasks phase.', 409);
+        }
+
+        $tasks = $session->buildTasks()->ordered()->get();
+        if ($tasks->isEmpty()) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'No build tasks are available to approve.', 409);
+        }
+
+        $build = $this->buildMetadata($session);
+        if (($build['status'] ?? null) === 'generating_tasks') {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build tasks are still being generated.', 409);
+        }
+
+        $approvedAt = CarbonImmutable::now('UTC')->toIso8601String();
+        $build['tasks_approved_at'] = $approvedAt;
+        $build['tasks_approved_by_user_id'] = (int) $request->user()->id;
+        $build['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+
+        $provider = $session->providerIntegrations()
+            ->where('category', 'task_management')
+            ->orderByDesc('id')
+            ->first();
+
+        $syncQueued = false;
+
+        if ($provider instanceof ConnectedProvider) {
+            $projectSync = $this->providerProjectSyncPreference($provider);
+            $build['task_provider_sync'] = [
+                'driver' => (string) $provider->driver,
+                'status' => 'queued',
+                'project_mode' => $projectSync['mode'],
+                'project_id' => $projectSync['project_id'],
+                'project_name' => $projectSync['project_name'],
+                'project_url' => $projectSync['project_url'],
+                'synced_task_count' => 0,
+                'error' => null,
+                'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ];
+
+            $syncQueued = true;
+        }
+
+        $this->saveBuildMetadata($session, $build);
+
+        if ($syncQueued) {
+            SyncInterrogationTasksToTaskProviderJob::dispatch((int) $session->id);
+        }
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.approve_build_tasks',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['metadata_json'],
+            before: null,
+            after: [
+                'build_tasks_approved_at' => $approvedAt,
+                'task_provider_sync_queued' => $syncQueued,
+            ],
+        );
+
+        return response()->json([
+            'data' => [
+                'approved' => true,
+                'session_id' => $session->id,
+                'tasks_approved_at' => $approvedAt,
+                'task_provider_sync_queued' => $syncQueued,
+            ],
+        ], 202);
+    }
+
     public function startBuild(
         Request $request,
         int $id,
@@ -767,6 +1409,7 @@ class InterrogationSessionController extends Controller
 
         $validated = $request->validate([
             'restart_failed' => ['nullable', 'boolean'],
+            'restart_all' => ['nullable', 'boolean'],
         ]);
 
         $tasks = $session->buildTasks()->ordered()->get();
@@ -779,15 +1422,43 @@ class InterrogationSessionController extends Controller
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build tasks are still being generated.', 409);
         }
 
+        if (! is_string($build['tasks_approved_at'] ?? null) || trim((string) $build['tasks_approved_at']) === '') {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build tasks must be approved before execution starts.', 409);
+        }
+
+        $taskProviderSync = is_array($build['task_provider_sync'] ?? null) ? $build['task_provider_sync'] : [];
+        if (in_array((string) ($taskProviderSync['status'] ?? ''), ['queued', 'syncing'], true)) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Task provider sync is still running. Wait for completion before starting build.', 409);
+        }
+
         $currentBuildStatus = $this->normalizedBuildStatus($build);
         $restartFailed = (bool) ($validated['restart_failed'] ?? false);
+        $restartAll = (bool) ($validated['restart_all'] ?? false);
+        if ($restartAll) {
+            $restartFailed = true;
+        }
 
         if ($currentBuildStatus === 'completed' && ! $restartFailed) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build is already completed. Use restart_failed to re-run.', 409);
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build is already completed. Use restart_failed or restart_all to re-run.', 409);
         }
 
         if ($restartFailed) {
             foreach ($tasks as $task) {
+                if ($restartAll) {
+                    if ($task->status === InterrogationBuildTask::STATUS_PENDING) {
+                        continue;
+                    }
+
+                    $task->status = InterrogationBuildTask::STATUS_PENDING;
+                    $task->agent_job_run_id = null;
+                    $task->last_error = null;
+                    $task->started_at = null;
+                    $task->finished_at = null;
+                    $task->save();
+
+                    continue;
+                }
+
                 if (
                     $task->status === InterrogationBuildTask::STATUS_FAILED
                     || $task->status === InterrogationBuildTask::STATUS_BLOCKED
@@ -806,6 +1477,7 @@ class InterrogationSessionController extends Controller
 
         $build['status'] = 'running';
         $build['error'] = null;
+        $build['completion_summary'] = null;
         $build['pause_reason'] = null;
         $build['paused_at'] = null;
         $build['active_task_id'] = null;
@@ -813,8 +1485,13 @@ class InterrogationSessionController extends Controller
         $build['started_at'] = $build['started_at'] ?? CarbonImmutable::now('UTC')->toIso8601String();
         $build['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
         $build['approval_required'] = false;
+        $build['permission_required'] = false;
+        $build['permission_excerpt'] = null;
+        $build['clarification_required'] = false;
+        $build['clarification_excerpt'] = null;
         $build['rate_limit_detected'] = false;
         $build['rate_limit_reset_at'] = null;
+        $build['rate_limit_excerpt'] = null;
 
         $this->saveBuildMetadata($session, $build);
 
@@ -851,7 +1528,7 @@ class InterrogationSessionController extends Controller
             ownerUserId: (int) $session->user_id,
             changedFields: ['metadata_json'],
             before: null,
-            after: ['build_status' => 'running', 'restart_failed' => $restartFailed],
+            after: ['build_status' => 'running', 'restart_failed' => $restartFailed, 'restart_all' => $restartAll],
         );
 
         return response()->json([
@@ -996,9 +1673,18 @@ class InterrogationSessionController extends Controller
         $build['pause_reason'] = null;
         $build['paused_at'] = null;
         $build['error'] = null;
+        $build['completion_summary'] = null;
         $build['active_task_id'] = null;
         $build['active_run_id'] = null;
         $build['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+        $build['approval_required'] = false;
+        $build['permission_required'] = false;
+        $build['permission_excerpt'] = null;
+        $build['clarification_required'] = false;
+        $build['clarification_excerpt'] = null;
+        $build['rate_limit_detected'] = false;
+        $build['rate_limit_reset_at'] = null;
+        $build['rate_limit_excerpt'] = null;
 
         $this->saveBuildMetadata($session, $build);
 
@@ -1247,10 +1933,13 @@ class InterrogationSessionController extends Controller
         }
 
         $nextStatus = match ((int) $session->phase) {
+            InterrogationSession::PHASE_PROVIDER_SETUP => InterrogationSession::STATUS_SETUP,
+            InterrogationSession::PHASE_TECH_STACK_SETUP => InterrogationSession::STATUS_SETUP,
             InterrogationSession::PHASE_DISCOVERY => InterrogationSession::STATUS_DISCOVERING,
             InterrogationSession::PHASE_INTERROGATION => InterrogationSession::STATUS_INTERROGATING,
             InterrogationSession::PHASE_SUMMARY => InterrogationSession::STATUS_SUMMARIZING,
             InterrogationSession::PHASE_PLANNING => InterrogationSession::STATUS_PLANNING,
+            InterrogationSession::PHASE_BUILD_RULES => InterrogationSession::STATUS_BUILD_RULES,
             InterrogationSession::PHASE_BUILD_TASKS => InterrogationSession::STATUS_BUILD_TASKS,
             InterrogationSession::PHASE_BUILD_EXECUTION => InterrogationSession::STATUS_BUILD_EXECUTING,
             default => InterrogationSession::STATUS_SETUP,
@@ -1294,10 +1983,14 @@ class InterrogationSessionController extends Controller
         }
 
         $targetStatus = match ((int) $session->phase) {
-            InterrogationSession::PHASE_SETUP, InterrogationSession::PHASE_DISCOVERY => InterrogationSession::STATUS_SETUP,
+            InterrogationSession::PHASE_SETUP,
+            InterrogationSession::PHASE_PROVIDER_SETUP,
+            InterrogationSession::PHASE_TECH_STACK_SETUP,
+            InterrogationSession::PHASE_DISCOVERY => InterrogationSession::STATUS_SETUP,
             InterrogationSession::PHASE_INTERROGATION => InterrogationSession::STATUS_INTERROGATING,
             InterrogationSession::PHASE_SUMMARY => InterrogationSession::STATUS_SUMMARIZING,
             InterrogationSession::PHASE_PLANNING => InterrogationSession::STATUS_PLANNING,
+            InterrogationSession::PHASE_BUILD_RULES => InterrogationSession::STATUS_BUILD_RULES,
             InterrogationSession::PHASE_BUILD_TASKS => InterrogationSession::STATUS_BUILD_TASKS,
             InterrogationSession::PHASE_BUILD_EXECUTION => InterrogationSession::STATUS_BUILD_EXECUTING,
             default => InterrogationSession::STATUS_SETUP,
@@ -1337,10 +2030,19 @@ class InterrogationSessionController extends Controller
             }
         }
 
+        if ((int) $session->phase === InterrogationSession::PHASE_PLANNING) {
+            $this->markPlanGenerationState($session, 'queued');
+        }
+
+        $queued = true;
+
         match ((int) $session->phase) {
-            InterrogationSession::PHASE_SETUP, InterrogationSession::PHASE_DISCOVERY => ExecuteInterrogationDiscoveryJob::dispatch((int) $session->id),
+            InterrogationSession::PHASE_SETUP,
+            InterrogationSession::PHASE_PROVIDER_SETUP,
+            InterrogationSession::PHASE_TECH_STACK_SETUP => $queued = false,
+            InterrogationSession::PHASE_DISCOVERY => ExecuteInterrogationDiscoveryJob::dispatch((int) $session->id),
             InterrogationSession::PHASE_INTERROGATION => $pendingQuestionId !== null
-                    ? null
+                    ? $queued = false
                     : ExecuteInterrogationRoundJob::dispatch(
                         (int) $session->id,
                         'Retry current interrogation phase. Resume from the latest unanswered question before asking anything new.',
@@ -1348,6 +2050,7 @@ class InterrogationSessionController extends Controller
                     ),
             InterrogationSession::PHASE_SUMMARY => ExecuteInterrogationSummaryJob::dispatch((int) $session->id),
             InterrogationSession::PHASE_PLANNING => ExecuteInterrogationPlanJob::dispatch((int) $session->id),
+            InterrogationSession::PHASE_BUILD_RULES => GenerateInterrogationBuildTasksJob::dispatch((int) $session->id),
             InterrogationSession::PHASE_BUILD_TASKS => GenerateInterrogationBuildTasksJob::dispatch((int) $session->id),
             InterrogationSession::PHASE_BUILD_EXECUTION => ExecuteInterrogationBuildJob::dispatch((int) $session->id),
             default => ExecuteInterrogationDiscoveryJob::dispatch((int) $session->id),
@@ -1375,7 +2078,7 @@ class InterrogationSessionController extends Controller
         return response()->json([
             'data' => [
                 'accepted' => true,
-                'queued' => $pendingQuestionId === null,
+                'queued' => $queued,
                 'pending_question_id' => $pendingQuestionId,
                 'session_id' => $session->id,
                 'status' => $session->status,
@@ -1416,8 +2119,6 @@ class InterrogationSessionController extends Controller
         $session->finished_at = null;
         $session->save();
 
-        ExecuteInterrogationDiscoveryJob::dispatch((int) $session->id);
-
         $auditLogger->recordUserAction(
             request: $request,
             action: 'interrogation.session.restart_from_beginning',
@@ -1445,7 +2146,7 @@ class InterrogationSessionController extends Controller
         return response()->json([
             'data' => [
                 'accepted' => true,
-                'queued' => true,
+                'queued' => false,
                 'session_id' => $session->id,
                 'status' => $session->status,
                 'phase' => $session->phase,
@@ -1482,6 +2183,26 @@ class InterrogationSessionController extends Controller
         }
 
         return null;
+    }
+
+    private function shouldAutoRecoverInterruptedFailedSession(InterrogationSession $session): bool
+    {
+        if ($session->status !== InterrogationSession::STATUS_FAILED) {
+            return false;
+        }
+
+        if ((int) $session->phase !== InterrogationSession::PHASE_INTERROGATION) {
+            return false;
+        }
+
+        if ((string) $session->error_code !== 'ROUND_RUNTIME_EXCEPTION') {
+            return false;
+        }
+
+        $summary = (string) ($session->error_summary ?? '');
+
+        return str_contains($summary, 'signaled with signal "2"')
+            || str_contains($summary, 'signaled with signal "15"');
     }
 
     /**
@@ -1566,6 +2287,45 @@ class InterrogationSessionController extends Controller
                 'queued_next_open_question' => $result['queued_next_open_question'],
             ],
         ]);
+    }
+
+    private function markPlanGenerationState(
+        InterrogationSession $session,
+        string $status,
+        ?string $error = null,
+    ): void {
+        $now = CarbonImmutable::now('UTC')->toIso8601String();
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $plan = array_merge(
+            is_array($metadata['plan'] ?? null) ? $metadata['plan'] : [],
+            [
+                'generation_status' => $status,
+                'generation_updated_at' => $now,
+            ],
+        );
+
+        if ($status === 'queued') {
+            $plan['generation_queued_at'] = $now;
+            $plan['generation_error'] = null;
+        }
+
+        if ($status === 'running') {
+            $plan['generation_started_at'] = $now;
+            $plan['generation_error'] = null;
+        }
+
+        if ($status === 'idle') {
+            $plan['generation_completed_at'] = $now;
+            $plan['generation_error'] = null;
+        }
+
+        if ($status === 'failed') {
+            $plan['generation_error'] = $error ?: 'Plan generation failed.';
+        }
+
+        $metadata['plan'] = $plan;
+        $session->metadata_json = $metadata;
+        $session->save();
     }
 
     /**
@@ -1854,10 +2614,13 @@ class InterrogationSessionController extends Controller
             'cli_session_id' => $session->cli_session_id,
             'summary_json' => $this->normalizedSummaryJson($session, $includeLargePayloads),
             'plan_json' => $this->normalizedPlanJson($session, $includeLargePayloads),
+            'has_meaningful_plan' => $this->hasMeaningfulPlan($session),
             'build' => $this->transformBuildState($session, $includeLargePayloads),
             'approved_at' => $this->toRfc3339Millis($session->approved_at),
             'annotations_json' => $session->annotations_json,
             'metadata_json' => $session->metadata_json,
+            'task_providers' => $this->taskProviderPayloads($session),
+            'tech_stacks' => $this->techStackPayloads($session),
             'error_code' => $session->error_code,
             'error_summary' => $session->error_summary,
             'started_at' => $this->toRfc3339Millis($session->started_at),
@@ -1869,6 +2632,117 @@ class InterrogationSessionController extends Controller
     }
 
     /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function taskProviderPayloads(InterrogationSession $session): array
+    {
+        return $session->providerIntegrations()
+            ->where('category', 'task_management')
+            ->orderBy('id')
+            ->get()
+            ->map(function (ConnectedProvider $provider): array {
+                $metadata = is_array($provider->metadata_json) ? $provider->metadata_json : [];
+                $identity = is_array($metadata['identity'] ?? null) ? $metadata['identity'] : [];
+                $projectSync = is_array($metadata['project_sync'] ?? null) ? $metadata['project_sync'] : [];
+                $projectMode = in_array(($projectSync['mode'] ?? null), ['create_new', 'existing'], true)
+                    ? (string) $projectSync['mode']
+                    : 'create_new';
+
+                return [
+                    'id' => $provider->id,
+                    'driver' => $provider->driver,
+                    'category' => $provider->category,
+                    'provider_user_id' => $provider->provider_user_id,
+                    'provider_workspace_id' => $provider->provider_workspace_id,
+                    'provider_workspace_name' => $provider->provider_workspace_name,
+                    'provider_user_name' => $identity['provider_user_name'] ?? null,
+                    'provider_user_email' => $identity['provider_user_email'] ?? null,
+                    'team_id' => $identity['team_id'] ?? null,
+                    'team_name' => $identity['team_name'] ?? null,
+                    'project_mode' => $projectMode,
+                    'selected_project_id' => $projectMode === 'existing'
+                        ? (is_string($projectSync['selected_project_id'] ?? null) ? trim((string) $projectSync['selected_project_id']) : null)
+                        : null,
+                    'selected_project_name' => $projectMode === 'existing'
+                        ? ($projectSync['selected_project_name'] ?? null)
+                        : null,
+                    'selected_project_url' => $projectMode === 'existing'
+                        ? ($projectSync['selected_project_url'] ?? null)
+                        : null,
+                    'connected_at' => $metadata['connected_at'] ?? $this->toRfc3339Millis($provider->created_at),
+                    'expires_at' => $this->toRfc3339Millis($provider->expires_at),
+                    'created_at' => $this->toRfc3339Millis($provider->created_at),
+                    'updated_at' => $this->toRfc3339Millis($provider->updated_at),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array{mode:string,project_id:?string,project_name:?string,project_url:?string}
+     */
+    private function providerProjectSyncPreference(ConnectedProvider $provider): array
+    {
+        $metadata = is_array($provider->metadata_json) ? $provider->metadata_json : [];
+        $projectSync = is_array($metadata['project_sync'] ?? null) ? $metadata['project_sync'] : [];
+        $mode = in_array(($projectSync['mode'] ?? null), ['create_new', 'existing'], true)
+            ? (string) $projectSync['mode']
+            : 'create_new';
+
+        if ($mode !== 'existing') {
+            return [
+                'mode' => 'create_new',
+                'project_id' => null,
+                'project_name' => null,
+                'project_url' => null,
+            ];
+        }
+
+        $projectId = trim((string) ($projectSync['selected_project_id'] ?? ''));
+        if ($projectId === '') {
+            return [
+                'mode' => 'create_new',
+                'project_id' => null,
+                'project_name' => null,
+                'project_url' => null,
+            ];
+        }
+
+        return [
+            'mode' => 'existing',
+            'project_id' => $projectId,
+            'project_name' => is_string($projectSync['selected_project_name'] ?? null)
+                ? trim((string) $projectSync['selected_project_name'])
+                : null,
+            'project_url' => is_string($projectSync['selected_project_url'] ?? null)
+                ? trim((string) $projectSync['selected_project_url'])
+                : null,
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function techStackPayloads(InterrogationSession $session): array
+    {
+        return $session->techStacks()
+            ->ordered()
+            ->get()
+            ->map(fn ($stack): array => [
+                'id' => $stack->id,
+                'sequence' => $stack->sequence,
+                'name' => $stack->name,
+                'documentation_url' => $stack->documentation_url,
+                'metadata_json' => $stack->metadata_json,
+                'created_at' => $this->toRfc3339Millis($stack->created_at),
+                'updated_at' => $this->toRfc3339Millis($stack->updated_at),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function transformBuildState(InterrogationSession $session, bool $includeDetails): array
@@ -1877,6 +2751,9 @@ class InterrogationSessionController extends Controller
         $status = $this->normalizedBuildStatus($build);
 
         if (! $includeDetails) {
+            $projectRules = $this->normalizedProjectRules((array) ($build['project_rules'] ?? []));
+            $taskProviderSync = is_array($build['task_provider_sync'] ?? null) ? $build['task_provider_sync'] : [];
+
             return [
                 'status' => $status,
                 'summary' => [
@@ -1890,6 +2767,16 @@ class InterrogationSessionController extends Controller
                 ],
                 'active_task_id' => isset($build['active_task_id']) ? (int) $build['active_task_id'] : null,
                 'active_run_id' => isset($build['active_run_id']) ? (int) $build['active_run_id'] : null,
+                'project_rules_count' => count($projectRules),
+                'tasks_approved_at' => isset($build['tasks_approved_at']) ? (string) $build['tasks_approved_at'] : null,
+                'task_provider_sync' => [
+                    'driver' => isset($taskProviderSync['driver']) ? (string) $taskProviderSync['driver'] : null,
+                    'status' => isset($taskProviderSync['status']) ? (string) $taskProviderSync['status'] : 'idle',
+                    'project_mode' => isset($taskProviderSync['project_mode']) ? (string) $taskProviderSync['project_mode'] : 'create_new',
+                    'project_url' => isset($taskProviderSync['project_url']) ? (string) $taskProviderSync['project_url'] : null,
+                    'error' => isset($taskProviderSync['error']) ? (string) $taskProviderSync['error'] : null,
+                    'updated_at' => isset($taskProviderSync['updated_at']) ? (string) $taskProviderSync['updated_at'] : null,
+                ],
                 'updated_at' => $build['updated_at'] ?? null,
             ];
         }
@@ -1924,6 +2811,14 @@ class InterrogationSessionController extends Controller
             'approval_excerpt' => is_string($runMetadata['approval_excerpt'] ?? null)
                 ? $runMetadata['approval_excerpt']
                 : null,
+            'permission_required' => (bool) (($runMetadata['permission_blocker_detected'] ?? null) ?? ($build['permission_required'] ?? false)),
+            'permission_excerpt' => is_string($runMetadata['permission_blocker_excerpt'] ?? null)
+                ? $runMetadata['permission_blocker_excerpt']
+                : (is_string($build['permission_excerpt'] ?? null) ? $build['permission_excerpt'] : null),
+            'clarification_required' => (bool) (($runMetadata['clarification_required'] ?? null) ?? ($build['clarification_required'] ?? false)),
+            'clarification_excerpt' => is_string($runMetadata['clarification_excerpt'] ?? null)
+                ? $runMetadata['clarification_excerpt']
+                : (is_string($build['clarification_excerpt'] ?? null) ? $build['clarification_excerpt'] : null),
             'rate_limit_detected' => (bool) (($runMetadata['rate_limit_detected'] ?? null) ?? ($build['rate_limit_detected'] ?? false)),
             'rate_limit_reset_at' => (string) ($runMetadata['rate_limit_reset_at'] ?? $runMetadata['rate_limit_hold_until'] ?? $build['rate_limit_reset_at'] ?? ''),
             'rate_limit_excerpt' => is_string($runMetadata['rate_limit_excerpt'] ?? null)
@@ -1941,6 +2836,7 @@ class InterrogationSessionController extends Controller
             'tasks' => $tasks->map(fn (InterrogationBuildTask $task): array => $this->transformBuildTask($task))->values(),
             'active_task' => $activeTask !== null ? $this->transformBuildTask($activeTask) : null,
             'active_run' => $activeRun !== null ? $this->transformBuildRun($activeRun) : null,
+            'project_rules' => $this->normalizedProjectRules((array) ($build['project_rules'] ?? [])),
             'flags' => $flags,
             'pause_reason' => isset($build['pause_reason']) ? (string) $build['pause_reason'] : null,
             'error' => isset($build['error']) ? (string) $build['error'] : null,
@@ -1948,6 +2844,9 @@ class InterrogationSessionController extends Controller
             'started_at' => isset($build['started_at']) ? (string) $build['started_at'] : null,
             'paused_at' => isset($build['paused_at']) ? (string) $build['paused_at'] : null,
             'finished_at' => isset($build['finished_at']) ? (string) $build['finished_at'] : null,
+            'tasks_approved_at' => isset($build['tasks_approved_at']) ? (string) $build['tasks_approved_at'] : null,
+            'tasks_approved_by_user_id' => isset($build['tasks_approved_by_user_id']) ? (int) $build['tasks_approved_by_user_id'] : null,
+            'task_provider_sync' => is_array($build['task_provider_sync'] ?? null) ? $build['task_provider_sync'] : null,
             'updated_at' => isset($build['updated_at']) ? (string) $build['updated_at'] : null,
             'active_task_id' => $activeTask?->id,
             'active_run_id' => $activeRun?->id,
@@ -2038,6 +2937,80 @@ class InterrogationSessionController extends Controller
         $session->save();
     }
 
+    private function buildTaskEditingConflict(InterrogationSession $session): ?JsonResponse
+    {
+        if ((int) $session->phase !== InterrogationSession::PHASE_BUILD_TASKS) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build tasks can only be managed from the build tasks phase.', 409);
+        }
+
+        if (! in_array((string) $session->status, [
+            InterrogationSession::STATUS_BUILD_TASKS,
+            InterrogationSession::STATUS_PAUSED,
+            InterrogationSession::STATUS_FAILED,
+        ], true)) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build tasks cannot be managed in the current session state.', 409);
+        }
+
+        $build = $this->buildMetadata($session);
+        if (($build['status'] ?? null) === 'generating_tasks') {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build tasks are still being generated.', 409);
+        }
+
+        return null;
+    }
+
+    private function resequenceBuildTasks(InterrogationSession $session): void
+    {
+        $tasks = $session->buildTasks()->ordered()->get();
+
+        foreach ($tasks as $index => $task) {
+            $nextSequence = $index + 1;
+            if ((int) $task->sequence === $nextSequence) {
+                continue;
+            }
+
+            $task->sequence = $nextSequence;
+            $task->save();
+        }
+    }
+
+    private function invalidateBuildTaskApproval(InterrogationSession $session): void
+    {
+        $build = $this->buildMetadata($session);
+        $build['status'] = 'ready';
+        $build['task_count'] = (int) $session->buildTasks()->count();
+        $build['error'] = null;
+        $build['active_task_id'] = null;
+        $build['active_run_id'] = null;
+        $build['tasks_approved_at'] = null;
+        $build['tasks_approved_by_user_id'] = null;
+        $build['task_provider_sync'] = [
+            'status' => 'idle',
+            'driver' => null,
+            'project_mode' => 'create_new',
+            'project_id' => null,
+            'project_name' => null,
+            'project_url' => null,
+            'synced_task_count' => 0,
+            'error' => null,
+            'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+        ];
+        $build['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+
+        $this->saveBuildMetadata($session, $build);
+    }
+
+    private function normalizedNullableText(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $text = trim((string) $value);
+
+        return $text === '' ? null : $text;
+    }
+
     /**
      * @param  array<string, mixed>  $build
      */
@@ -2052,21 +3025,179 @@ class InterrogationSessionController extends Controller
         return 'idle';
     }
 
+    /**
+     * @return array{provided:bool,rules:array<int,array<string,mixed>>}
+     */
+    private function resolveProjectRulesPayload(Request $request): array
+    {
+        $provided = $request->exists('project_rules') || $request->hasFile('project_rule_files');
+        $rawRules = $request->input('project_rules');
+
+        if (is_string($rawRules)) {
+            $decoded = json_decode($rawRules, true);
+            if ($rawRules !== '' && ! is_array($decoded)) {
+                throw ValidationException::withMessages([
+                    'project_rules' => 'project_rules must be a valid JSON array when provided as text.',
+                ]);
+            }
+
+            $rawRules = $decoded;
+        }
+
+        if ($rawRules === null) {
+            $rawRules = [];
+        }
+
+        if (! is_array($rawRules)) {
+            throw ValidationException::withMessages([
+                'project_rules' => 'project_rules must be an array.',
+            ]);
+        }
+
+        $rules = $this->normalizedProjectRules($rawRules, true);
+        $uploadedRuleFiles = $request->file('project_rule_files', []);
+        $uploads = is_array($uploadedRuleFiles) ? $uploadedRuleFiles : [$uploadedRuleFiles];
+        $uploadRules = $this->normalizedProjectRulesFromUploads($uploads);
+
+        return [
+            'provided' => $provided,
+            'rules' => array_values(array_merge($rules, $uploadRules)),
+        ];
+    }
+
+    /**
+     * @param  array<int, mixed>  $rules
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizedProjectRules(array $rules, bool $strict = false): array
+    {
+        $normalized = [];
+
+        foreach ($rules as $index => $rule) {
+            if (! is_array($rule)) {
+                continue;
+            }
+
+            $title = trim((string) ($rule['title'] ?? $rule['name'] ?? ''));
+            $markdown = trim((string) ($rule['markdown'] ?? $rule['content'] ?? ''));
+            $source = strtolower(trim((string) ($rule['source'] ?? 'manual')));
+            $filename = trim((string) ($rule['filename'] ?? ''));
+
+            if ($title === '' && $markdown === '') {
+                continue;
+            }
+
+            if ($markdown === '') {
+                if ($strict) {
+                    throw ValidationException::withMessages([
+                        'project_rules' => sprintf('project_rules[%d].markdown is required when title is provided.', (int) $index),
+                    ]);
+                }
+
+                continue;
+            }
+
+            if (mb_strlen($title) > 120) {
+                if ($strict) {
+                    throw ValidationException::withMessages([
+                        'project_rules' => sprintf('project_rules[%d].title must be 120 characters or fewer.', (int) $index),
+                    ]);
+                }
+
+                $title = mb_substr($title, 0, 120);
+            }
+
+            if (mb_strlen($markdown) > 20000) {
+                if ($strict) {
+                    throw ValidationException::withMessages([
+                        'project_rules' => sprintf('project_rules[%d].markdown must be 20000 characters or fewer.', (int) $index),
+                    ]);
+                }
+
+                $markdown = mb_substr($markdown, 0, 20000);
+            }
+
+            if (! in_array($source, ['manual', 'uploaded'], true)) {
+                $source = 'manual';
+            }
+
+            $normalized[] = [
+                'id' => trim((string) ($rule['id'] ?? '')) !== '' ? substr(trim((string) $rule['id']), 0, 80) : 'rule-'.Str::uuid()->toString(),
+                'title' => $title !== '' ? $title : 'Rule '.(count($normalized) + 1),
+                'markdown' => $markdown,
+                'source' => $source,
+                'filename' => $filename !== '' ? substr($filename, 0, 255) : null,
+            ];
+        }
+
+        return array_values($normalized);
+    }
+
+    /**
+     * @param  array<int, mixed>  $uploads
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizedProjectRulesFromUploads(array $uploads): array
+    {
+        $normalized = [];
+
+        foreach ($uploads as $index => $upload) {
+            if (! $upload instanceof UploadedFile) {
+                continue;
+            }
+
+            $rawContent = @file_get_contents($upload->getRealPath());
+            if (! is_string($rawContent)) {
+                throw ValidationException::withMessages([
+                    'project_rule_files' => sprintf('Could not read uploaded project rule file at index %d.', (int) $index),
+                ]);
+            }
+
+            if (! mb_check_encoding($rawContent, 'UTF-8')) {
+                throw ValidationException::withMessages([
+                    'project_rule_files' => sprintf('Uploaded project rule file "%s" must be UTF-8 encoded.', $upload->getClientOriginalName()),
+                ]);
+            }
+
+            $markdown = trim($rawContent);
+            if ($markdown === '') {
+                throw ValidationException::withMessages([
+                    'project_rule_files' => sprintf('Uploaded project rule file "%s" is empty.', $upload->getClientOriginalName()),
+                ]);
+            }
+
+            if (mb_strlen($markdown) > 20000) {
+                throw ValidationException::withMessages([
+                    'project_rule_files' => sprintf('Uploaded project rule file "%s" exceeds 20000 characters.', $upload->getClientOriginalName()),
+                ]);
+            }
+
+            $originalName = trim((string) $upload->getClientOriginalName());
+            $title = pathinfo($originalName !== '' ? $originalName : 'Uploaded Rule '.($index + 1), PATHINFO_FILENAME);
+            $title = trim((string) $title);
+
+            $normalized[] = [
+                'id' => 'rule-'.Str::uuid()->toString(),
+                'title' => $title !== '' ? substr($title, 0, 120) : 'Uploaded Rule '.(count($normalized) + 1),
+                'markdown' => $markdown,
+                'source' => 'uploaded',
+                'filename' => $originalName !== '' ? substr($originalName, 0, 255) : null,
+            ];
+        }
+
+        return array_values($normalized);
+    }
+
     private function hasMeaningfulPlan(InterrogationSession $session): bool
     {
         if (! is_array($session->plan_json)) {
             return false;
         }
 
-        $plan = $session->plan_json;
-        $markdown = trim((string) ($plan['plan_markdown'] ?? ''));
-        if ($markdown !== '' && preg_match('/^plan not generated yet\.?$/i', $markdown) !== 1) {
-            return true;
-        }
+        $guard = new PlanPayloadGuard;
+        $validation = $guard->validate($session->plan_json);
 
-        return (is_array($plan['sections'] ?? null) && $plan['sections'] !== [])
-            || (is_array($plan['risks'] ?? null) && $plan['risks'] !== [])
-            || (is_array($plan['assumptions'] ?? null) && $plan['assumptions'] !== []);
+        return (bool) ($validation['valid'] ?? false);
     }
 
     /**

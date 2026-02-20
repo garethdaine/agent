@@ -165,7 +165,7 @@ const submit = () => {
 
 <template>
     <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-        <div v-if="!question" class="flex items-center gap-2 text-sm text-gray-500">
+        <div v-if="!question" class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
             <span>Waiting for the next question...</span>
         </div>
@@ -181,7 +181,7 @@ const submit = () => {
                 </div>
             </div>
 
-            <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Your Answer</p>
+            <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Your Answer</p>
 
             <div v-if="form.mode === 'choice' && hasChoiceOptions" class="overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
                 <button
@@ -228,7 +228,7 @@ const submit = () => {
                 <textarea
                     v-model="form.answer_text"
                     rows="6"
-                    class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900"
+                    class="w-full rounded-md border-gray-300 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400"
                     placeholder="Type your answer..."
                 />
                 <button
@@ -244,11 +244,11 @@ const submit = () => {
 
             <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-2">
-                    <label for="skip-reason" class="text-xs text-gray-500">Skip reason</label>
+                    <label for="skip-reason" class="text-xs text-gray-500 dark:text-gray-400">Skip reason</label>
                     <select
                         id="skip-reason"
                         v-model="form.skip_reason"
-                        class="rounded-md border-gray-300 py-1 text-xs dark:border-gray-700 dark:bg-gray-900"
+                        class="rounded-md border-gray-300 py-1 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
                     >
                         <option value="user_skipped">Skip for now</option>
                         <option value="unknown">I do not know yet</option>
@@ -256,7 +256,7 @@ const submit = () => {
                         <option value="not_applicable">Not applicable</option>
                     </select>
                 </div>
-                <p class="text-xs text-gray-500">
+                <p class="text-xs text-gray-500 dark:text-gray-400">
                     {{ allowsMultiple && form.mode === 'choice' ? 'You can select multiple options.' : 'Select an option or provide a custom answer.' }}
                 </p>
                 <div class="flex items-center gap-2">

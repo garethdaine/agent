@@ -34,6 +34,24 @@ class GenerateInterrogationBuildTasksJob implements ShouldQueue
         }
 
         $writer = new InterrogationEventWriter($session);
+        $now = CarbonImmutable::now('UTC');
+
+        $metadata = (array) ($session->metadata_json ?? []);
+        $build = is_array($metadata['build'] ?? null) ? $metadata['build'] : [];
+        $build['status'] = 'generating_tasks';
+        $build['error'] = null;
+        $build['failed_at'] = null;
+        $build['updated_at'] = $now->toIso8601String();
+        $build['started_at'] = $build['started_at'] ?? $now->toIso8601String();
+        $metadata['build'] = $build;
+        $session->metadata_json = $metadata;
+        $session->save();
+
+        $writer->appendSystem([
+            'notice' => 'build_task_generation_started',
+            'message' => 'Build task generation started. Preparing executable task list.',
+            'at' => $now->toIso8601String(),
+        ]);
 
         try {
             $generated = $buildTaskGenerator->generate($session, $this->notes);
@@ -72,6 +90,19 @@ class GenerateInterrogationBuildTasksJob implements ShouldQueue
                 $build['error'] = null;
                 $build['active_task_id'] = null;
                 $build['active_run_id'] = null;
+                $build['tasks_approved_at'] = null;
+                $build['tasks_approved_by_user_id'] = null;
+                $build['task_provider_sync'] = [
+                    'status' => 'idle',
+                    'driver' => null,
+                    'project_id' => null,
+                    'project_name' => null,
+                    'project_url' => null,
+                    'synced_task_count' => 0,
+                    'error' => null,
+                    'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                ];
+                $build['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
 
                 $metadata['build'] = $build;
                 $session->metadata_json = $metadata;
@@ -92,19 +123,49 @@ class GenerateInterrogationBuildTasksJob implements ShouldQueue
 
             $metadata = (array) ($session->metadata_json ?? []);
             $build = is_array($metadata['build'] ?? null) ? $metadata['build'] : [];
+            $normalizedError = $this->normalizeBuildGenerationError($throwable);
+
             $build['status'] = 'failed';
-            $build['error'] = substr($throwable->getMessage(), 0, 1000);
+            $build['error'] = $normalizedError;
             $build['failed_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+            $build['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
             $metadata['build'] = $build;
             $session->metadata_json = $metadata;
-            $session->phase = InterrogationSession::PHASE_BUILD_TASKS;
-            $session->status = InterrogationSession::STATUS_BUILD_TASKS;
+            if ((int) $session->phase === InterrogationSession::PHASE_BUILD_TASKS) {
+                $session->phase = InterrogationSession::PHASE_BUILD_TASKS;
+                $session->status = InterrogationSession::STATUS_BUILD_TASKS;
+            } else {
+                $session->phase = InterrogationSession::PHASE_BUILD_RULES;
+                $session->status = InterrogationSession::STATUS_BUILD_RULES;
+            }
+            $session->error_code = 'BUILD_TASK_GENERATION_FAILED';
+            $session->error_summary = $normalizedError;
             $session->save();
 
             $writer->appendError([
                 'code' => 'BUILD_TASK_GENERATION_FAILED',
-                'message' => $throwable->getMessage(),
+                'message' => $normalizedError,
             ]);
         }
+    }
+
+    private function normalizeBuildGenerationError(\Throwable $throwable): string
+    {
+        $message = trim((string) $throwable->getMessage());
+        if ($message === '') {
+            return 'Build task generation failed unexpectedly.';
+        }
+
+        if (str_contains($message, 'exceeded the timeout of')) {
+            return 'Build task generation timed out after 600 seconds. Try again or reduce plan scope for task generation.';
+        }
+
+        if (str_contains($message, 'The process "') || str_contains($message, '--system-prompt') || str_contains($message, '--json-schema')) {
+            return 'Build task generation failed while invoking the AI runner. Try again. If this keeps happening, reduce plan scope or check runner health.';
+        }
+
+        $firstLine = trim((string) strtok($message, "\n"));
+
+        return substr($firstLine !== '' ? $firstLine : $message, 0, 300);
     }
 }

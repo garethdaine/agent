@@ -458,4 +458,59 @@ class AgentApiWorkflowTest extends TestCase
             ->assertJsonPath('data.id', $job->id)
             ->assertJsonPath('data.task_markdown_content', "# Show Task\n\nInline content check.\n");
     }
+
+    public function test_jobs_index_can_filter_user_jobs_and_build_jobs_separately(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $taskFile = $this->sandboxBase.'/tasks/filter-source.md';
+        file_put_contents($taskFile, "# Source filter\n");
+
+        $buildJob = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Interrogation Build S12 T01',
+            'description' => 'build generated',
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => false,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'command_template' => config('agent.default_templates.codex'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+            'env_json' => [
+                'AGENT_JOB_SOURCE' => 'interrogation_build',
+            ],
+        ]);
+
+        $userJob = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Normal User Job',
+            'description' => 'user created',
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'command_template' => config('agent.default_templates.codex'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+            'env_json' => [
+                'MODE' => 'user',
+            ],
+        ]);
+
+        $this->getJson('/agent/api/v1/jobs?source=build')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $buildJob->id)
+            ->assertJsonMissing(['id' => $userJob->id]);
+
+        $this->getJson('/agent/api/v1/jobs?source=user')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $userJob->id)
+            ->assertJsonMissing(['id' => $buildJob->id]);
+    }
 }

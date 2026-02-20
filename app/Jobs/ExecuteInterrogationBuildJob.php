@@ -186,6 +186,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $task->last_error = 'Run record not found for active build task.';
             $task->finished_at = CarbonImmutable::now('UTC');
             $task->save();
+            $this->queueTaskProviderStatusSync($session, $task);
 
             $this->saveBuildMetadata($session, $build);
 
@@ -200,37 +201,26 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
 
         $runStatus = (string) $run->status;
         $runMetadata = is_array($run->metadata_json) ? $run->metadata_json : [];
-
-        if ($runStatus === AgentJobRun::STATUS_SUCCEEDED) {
-            $task->status = InterrogationBuildTask::STATUS_COMPLETED;
-            $task->last_error = null;
-            $task->finished_at = CarbonImmutable::now('UTC');
-            $task->save();
-
-            $this->saveBuildMetadata($session, $build);
-
-            $writer->appendSystem([
-                'notice' => 'build_task_completed',
-                'task_id' => $task->id,
-                'sequence' => $task->sequence,
-                'title' => $task->title,
-                'run_id' => $run->id,
-                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
-            ]);
-
-            return true;
-        }
+        $permissionBlockerDetected = ($runMetadata['permission_blocker_detected'] ?? false) === true;
+        $clarificationRequired = ($runMetadata['clarification_required'] ?? false) === true;
 
         if (($runMetadata['rate_limit_detected'] ?? false) === true) {
             $task->status = InterrogationBuildTask::STATUS_BLOCKED;
             $task->last_error = trim((string) ($run->error_summary ?? 'Rate limit detected while executing build task.'));
             $task->finished_at = CarbonImmutable::now('UTC');
             $task->save();
+            $this->queueTaskProviderStatusSync($session, $task);
 
             $build['status'] = 'paused';
             $build['pause_reason'] = 'rate_limit';
             $build['rate_limit_reset_at'] = $runMetadata['rate_limit_reset_at'] ?? $runMetadata['rate_limit_hold_until'] ?? null;
             $build['rate_limit_excerpt'] = $runMetadata['rate_limit_excerpt'] ?? null;
+            $build['permission_required'] = false;
+            $build['permission_excerpt'] = null;
+            $build['clarification_required'] = false;
+            $build['clarification_excerpt'] = null;
+            $build['active_task_id'] = (int) $task->id;
+            $build['active_run_id'] = (int) $run->id;
             $build['paused_at'] = CarbonImmutable::now('UTC')->toIso8601String();
             $this->saveBuildMetadata($session, $build);
 
@@ -245,6 +235,68 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             return false;
         }
 
+        if ($clarificationRequired) {
+            $task->status = InterrogationBuildTask::STATUS_BLOCKED;
+            $task->last_error = trim((string) ($run->error_summary ?? 'Clarification required before continuing this task.'));
+            $task->finished_at = CarbonImmutable::now('UTC');
+            $task->save();
+            $this->queueTaskProviderStatusSync($session, $task);
+
+            $build['status'] = 'paused';
+            $build['pause_reason'] = 'clarification';
+            $build['permission_required'] = false;
+            $build['permission_excerpt'] = null;
+            $build['clarification_required'] = true;
+            $build['clarification_excerpt'] = is_string($runMetadata['clarification_excerpt'] ?? null)
+                ? $runMetadata['clarification_excerpt']
+                : null;
+            $build['rate_limit_detected'] = false;
+            $build['rate_limit_reset_at'] = null;
+            $build['rate_limit_excerpt'] = null;
+            $build['active_task_id'] = (int) $task->id;
+            $build['active_run_id'] = (int) $run->id;
+            $build['paused_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+            $this->saveBuildMetadata($session, $build);
+
+            $writer->appendSystem([
+                'notice' => 'build_paused_clarification',
+                'task_id' => $task->id,
+                'run_id' => $run->id,
+                'message' => $build['clarification_excerpt'] ?? null,
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ]);
+
+            return false;
+        }
+
+        if ($runStatus === AgentJobRun::STATUS_SUCCEEDED) {
+            $task->status = InterrogationBuildTask::STATUS_COMPLETED;
+            $task->last_error = null;
+            $task->finished_at = CarbonImmutable::now('UTC');
+            $task->save();
+            $this->queueTaskProviderStatusSync($session, $task);
+
+            $build['permission_required'] = false;
+            $build['permission_excerpt'] = null;
+            $build['clarification_required'] = false;
+            $build['clarification_excerpt'] = null;
+            $build['rate_limit_detected'] = false;
+            $build['rate_limit_reset_at'] = null;
+            $build['rate_limit_excerpt'] = null;
+            $this->saveBuildMetadata($session, $build);
+
+            $writer->appendSystem([
+                'notice' => 'build_task_completed',
+                'task_id' => $task->id,
+                'sequence' => $task->sequence,
+                'title' => $task->title,
+                'run_id' => $run->id,
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ]);
+
+            return true;
+        }
+
         if (($build['status'] ?? null) === 'paused' && in_array($runStatus, [
             AgentJobRun::STATUS_KILLED,
             AgentJobRun::STATUS_STOPPING,
@@ -253,7 +305,10 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $task->last_error = 'Execution paused before completion.';
             $task->finished_at = CarbonImmutable::now('UTC');
             $task->save();
+            $this->queueTaskProviderStatusSync($session, $task);
 
+            $build['active_task_id'] = (int) $task->id;
+            $build['active_run_id'] = (int) $run->id;
             $this->saveBuildMetadata($session, $build);
 
             return false;
@@ -263,9 +318,20 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $task->last_error = trim((string) ($run->error_summary ?? 'Build task execution failed.'));
         $task->finished_at = CarbonImmutable::now('UTC');
         $task->save();
+        $this->queueTaskProviderStatusSync($session, $task);
 
         $build['status'] = 'failed';
         $build['error'] = substr(trim((string) ($run->error_summary ?? 'Build task execution failed.')), 0, 1000);
+        $build['permission_required'] = $permissionBlockerDetected;
+        $build['permission_excerpt'] = $permissionBlockerDetected
+            ? (is_string($runMetadata['permission_blocker_excerpt'] ?? null) ? $runMetadata['permission_blocker_excerpt'] : null)
+            : null;
+        $build['clarification_required'] = $clarificationRequired;
+        $build['clarification_excerpt'] = $clarificationRequired
+            ? (is_string($runMetadata['clarification_excerpt'] ?? null) ? $runMetadata['clarification_excerpt'] : null)
+            : null;
+        $build['active_task_id'] = (int) $task->id;
+        $build['active_run_id'] = (int) $run->id;
         $build['failed_at'] = CarbonImmutable::now('UTC')->toIso8601String();
         $this->saveBuildMetadata($session, $build);
 
@@ -290,6 +356,14 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
 
         $runMetadata = is_array($run->metadata_json) ? $run->metadata_json : [];
         $build['approval_required'] = (bool) ($runMetadata['approval_required'] ?? false);
+        $build['permission_required'] = (bool) ($runMetadata['permission_blocker_detected'] ?? false);
+        $build['permission_excerpt'] = is_string($runMetadata['permission_blocker_excerpt'] ?? null)
+            ? $runMetadata['permission_blocker_excerpt']
+            : null;
+        $build['clarification_required'] = (bool) ($runMetadata['clarification_required'] ?? false);
+        $build['clarification_excerpt'] = is_string($runMetadata['clarification_excerpt'] ?? null)
+            ? $runMetadata['clarification_excerpt']
+            : null;
         $build['rate_limit_detected'] = (bool) ($runMetadata['rate_limit_detected'] ?? false);
         $build['rate_limit_reset_at'] = $runMetadata['rate_limit_reset_at'] ?? $runMetadata['rate_limit_hold_until'] ?? null;
 
@@ -350,5 +424,10 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $metadata['build'] = $build;
         $session->metadata_json = $metadata;
         $session->save();
+    }
+
+    private function queueTaskProviderStatusSync(InterrogationSession $session, InterrogationBuildTask $task): void
+    {
+        SyncInterrogationTaskStatusToTaskProviderJob::dispatch((int) $session->id, (int) $task->id);
     }
 }

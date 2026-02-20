@@ -19,16 +19,7 @@ class InterrogationSessionPolicy
 
     public function create(User $user): bool
     {
-        if ($user === null) {
-            return false;
-        }
-
-        $activeCount = InterrogationSession::query()
-            ->forUser($user->id)
-            ->active()
-            ->count();
-
-        return $activeCount < 3;
+        return $user !== null;
     }
 
     public function update(User $user, InterrogationSession $session): bool

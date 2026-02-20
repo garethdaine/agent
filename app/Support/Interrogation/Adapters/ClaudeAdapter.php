@@ -719,14 +719,14 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
     {
         return json_encode([
             'type' => 'object',
-            'required' => ['question_text', 'answer_type', 'progress_estimate'],
+            'required' => ['question_text', 'answer_type', 'progress_estimate', 'reasoning'],
             'additionalProperties' => false,
             'properties' => [
                 'question_id' => ['type' => 'string'],
                 'question_text' => ['type' => 'string'],
                 'answer_type' => ['type' => 'string', 'enum' => ['choice', 'freetext', 'skip_allowed']],
                 'options' => ['type' => 'array', 'items' => ['type' => 'string']],
-                'reasoning' => ['type' => 'string'],
+                'reasoning' => ['type' => 'string', 'minLength' => 1],
                 'category' => ['type' => 'string'],
                 'progress_estimate' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100],
                 'is_complete' => ['type' => 'boolean'],

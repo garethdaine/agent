@@ -8,12 +8,19 @@ use App\Jobs\ExecuteInterrogationPlanJob;
 use App\Jobs\ExecuteInterrogationRoundJob;
 use App\Jobs\ExecuteInterrogationSummaryJob;
 use App\Jobs\GenerateInterrogationBuildTasksJob;
+use App\Jobs\RegenerateInterrogationBuildTaskJob;
+use App\Jobs\SyncInterrogationTasksToTaskProviderJob;
+use App\Models\ConnectedProvider;
 use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
 use App\Models\User;
+use App\Support\TaskProviders\Contracts\TaskManagementProviderDriver;
+use App\Support\TaskProviders\TaskManagementProviderManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
+use RuntimeException;
 use Tests\TestCase;
 
 class InterrogationApiWorkflowTest extends TestCase
@@ -38,14 +45,28 @@ class InterrogationApiWorkflowTest extends TestCase
         $sessionId = $create->json('data.id');
 
         $this->assertNotNull($sessionId);
+        $create
+            ->assertJsonPath('data.phase', InterrogationSession::PHASE_SETUP)
+            ->assertJsonPath('data.status', InterrogationSession::STATUS_SETUP);
 
-        Queue::assertPushed(ExecuteInterrogationDiscoveryJob::class, function (ExecuteInterrogationDiscoveryJob $job) use ($sessionId) {
-            return (int) $job->sessionId === (int) $sessionId;
-        });
+        Queue::assertNotPushed(ExecuteInterrogationDiscoveryJob::class);
 
         $this->getJson('/agent/api/v1/interrogation/sessions/'.$sessionId)
             ->assertOk()
             ->assertJsonPath('data.id', $sessionId);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$sessionId.'/advance-pre-discovery')
+            ->assertOk()
+            ->assertJsonPath('data.phase', InterrogationSession::PHASE_TECH_STACK_SETUP);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$sessionId.'/start-discovery')
+            ->assertStatus(202)
+            ->assertJsonPath('data.queued', true)
+            ->assertJsonPath('data.phase', InterrogationSession::PHASE_DISCOVERY);
+
+        Queue::assertPushed(ExecuteInterrogationDiscoveryJob::class, function (ExecuteInterrogationDiscoveryJob $job) use ($sessionId) {
+            return (int) $job->sessionId === (int) $sessionId;
+        });
 
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$sessionId.'/answer', [
             'question_id' => 'q-1',
@@ -74,6 +95,9 @@ class InterrogationApiWorkflowTest extends TestCase
 
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$sessionId.'/generate-plan')
             ->assertStatus(202);
+
+        $session = InterrogationSession::query()->findOrFail($sessionId);
+        $this->assertSame('queued', (string) data_get($session->metadata_json, 'plan.generation_status'));
 
         Queue::assertPushed(ExecuteInterrogationPlanJob::class, function (ExecuteInterrogationPlanJob $job) use ($sessionId) {
             return (int) $job->sessionId === (int) $sessionId;
@@ -136,6 +160,43 @@ class InterrogationApiWorkflowTest extends TestCase
         $this->getJson('/agent/api/v1/interrogation/settings')
             ->assertOk()
             ->assertJsonPath('data.0.key', 'interrogation.system_prompt');
+    }
+
+    public function test_session_name_and_feature_brief_can_be_updated_and_cleared(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Original Name',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'feature_brief' => 'Rename behavior',
+            'status' => InterrogationSession::STATUS_SETUP,
+            'phase' => InterrogationSession::PHASE_SETUP,
+        ]);
+
+        $this->patchJson('/agent/api/v1/interrogation/sessions/'.$session->id, [
+            'name' => '  Renamed Session  ',
+            'feature_brief' => '  Updated initial brief content.  ',
+        ])->assertOk()
+            ->assertJsonPath('data.name', 'Renamed Session');
+
+        $session->refresh();
+        $this->assertSame('Renamed Session', $session->name);
+        $this->assertSame('Updated initial brief content.', $session->feature_brief);
+
+        $this->patchJson('/agent/api/v1/interrogation/sessions/'.$session->id, [
+            'name' => '',
+            'feature_brief' => '',
+        ])->assertOk()
+            ->assertJsonPath('data.name', null);
+
+        $session->refresh();
+        $this->assertNull($session->name);
+        $this->assertNull($session->feature_brief);
     }
 
     public function test_retry_endpoint_requeues_failed_session_for_current_phase(): void
@@ -246,6 +307,46 @@ class InterrogationApiWorkflowTest extends TestCase
             'question_id' => 'q-multi-2',
             'answer_type' => 'choice',
         ])->assertStatus(422);
+    }
+
+    public function test_submit_answer_auto_recovers_failed_interrogation_interrupted_by_signal(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Interrupted interrogation session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_FAILED,
+            'phase' => InterrogationSession::PHASE_INTERROGATION,
+            'error_code' => 'ROUND_RUNTIME_EXCEPTION',
+            'error_summary' => 'The process has been signaled with signal "2".',
+            'finished_at' => now('UTC'),
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/answer', [
+            'question_id' => 'q-recover-1',
+            'answer_type' => 'choice',
+            'selected_option' => 'Option 1',
+        ])->assertStatus(202);
+
+        $session->refresh();
+
+        $this->assertSame(InterrogationSession::STATUS_INTERROGATING, (string) $session->status);
+        $this->assertNull($session->error_code);
+        $this->assertNull($session->error_summary);
+        $this->assertNull($session->finished_at);
+
+        Queue::assertPushed(ExecuteInterrogationRoundJob::class, function (ExecuteInterrogationRoundJob $job) use ($session): bool {
+            return (int) $job->sessionId === (int) $session->id
+                && is_array($job->answerPayload)
+                && ($job->answerPayload['question_id'] ?? null) === 'q-recover-1';
+        });
     }
 
     public function test_retry_interrogation_with_unanswered_latest_question_does_not_queue_next_round(): void
@@ -473,7 +574,7 @@ class InterrogationApiWorkflowTest extends TestCase
         Queue::assertNotPushed(ExecuteInterrogationRoundJob::class);
     }
 
-    public function test_restart_from_beginning_clears_history_and_requeues_discovery(): void
+    public function test_restart_from_beginning_clears_history_and_resets_to_setup_without_requeueing_discovery(): void
     {
         Queue::fake();
 
@@ -536,7 +637,7 @@ class InterrogationApiWorkflowTest extends TestCase
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/restart-from-beginning')
             ->assertStatus(202)
             ->assertJsonPath('data.accepted', true)
-            ->assertJsonPath('data.queued', true)
+            ->assertJsonPath('data.queued', false)
             ->assertJsonPath('data.session_id', $session->id)
             ->assertJsonPath('data.status', InterrogationSession::STATUS_SETUP)
             ->assertJsonPath('data.phase', InterrogationSession::PHASE_SETUP);
@@ -559,9 +660,72 @@ class InterrogationApiWorkflowTest extends TestCase
         $this->assertSame(0, InterrogationEvent::query()->where('interrogation_session_id', $session->id)->count());
         $this->assertSame(0, InterrogationBuildTask::query()->where('interrogation_session_id', $session->id)->count());
 
-        Queue::assertPushed(ExecuteInterrogationDiscoveryJob::class, function (ExecuteInterrogationDiscoveryJob $job) use ($session): bool {
-            return (int) $job->sessionId === (int) $session->id;
-        });
+        Queue::assertNotPushed(ExecuteInterrogationDiscoveryJob::class);
+    }
+
+    public function test_tech_stack_endpoints_add_and_remove_entries(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Tech stack setup session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SETUP,
+            'phase' => InterrogationSession::PHASE_SETUP,
+        ]);
+
+        $createResponse = $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/tech-stacks', [
+            'name' => 'Laravel 12',
+            'documentation_url' => 'https://laravel.com/docs/12.x',
+        ])->assertStatus(201)
+            ->assertJsonPath('data.name', 'Laravel 12')
+            ->assertJsonPath('data.documentation_url', 'https://laravel.com/docs/12.x');
+
+        $stackId = (int) $createResponse->json('data.id');
+
+        $session->refresh();
+        $this->assertSame(InterrogationSession::PHASE_TECH_STACK_SETUP, (int) $session->phase);
+
+        $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id)
+            ->assertOk()
+            ->assertJsonPath('data.tech_stacks.0.id', $stackId)
+            ->assertJsonPath('data.tech_stacks.0.name', 'Laravel 12');
+
+        $this->deleteJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/tech-stacks/'.$stackId)
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true)
+            ->assertJsonPath('data.id', $stackId);
+
+        $this->assertDatabaseMissing('interrogation_tech_stacks', [
+            'id' => $stackId,
+        ]);
+    }
+
+    public function test_start_discovery_requires_tech_stack_phase_to_be_reached(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Start discovery guard session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SETUP,
+            'phase' => InterrogationSession::PHASE_SETUP,
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/start-discovery')
+            ->assertStatus(409);
+
+        Queue::assertNotPushed(ExecuteInterrogationDiscoveryJob::class);
     }
 
     public function test_cleanup_invalid_questions_removes_bad_history_and_sanitizes_open_question_queue(): void
@@ -844,6 +1008,9 @@ class InterrogationApiWorkflowTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.confirmed', true);
 
+        $session->refresh();
+        $this->assertSame('queued', (string) data_get($session->metadata_json, 'plan.generation_status'));
+
         Queue::assertPushed(ExecuteInterrogationPlanJob::class, function (ExecuteInterrogationPlanJob $job) use ($session): bool {
             return (int) $job->sessionId === (int) $session->id;
         });
@@ -972,6 +1139,75 @@ class InterrogationApiWorkflowTest extends TestCase
                 && str_contains($job->revisionPrompt, 'Sections: ["Architecture Changes","API and Tool Contracts"]')
                 && str_contains($job->revisionPrompt, 'Notes (Markdown):');
         });
+    }
+
+    public function test_regenerate_plan_queues_full_plan_rebuild_from_summary_context(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Plan regeneration flow',
+            'runner_type' => 'codex',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_PLANNING,
+            'phase' => InterrogationSession::PHASE_PLANNING,
+            'summary_json' => [
+                'summary_markdown' => 'Canonical summary.',
+                'goals' => ['Deliver MCP v1'],
+                'constraints' => ['No timeline estimates'],
+                'acceptance_criteria' => ['Stable tool schemas'],
+                'open_questions' => [],
+            ],
+            'plan_json' => [
+                'plan_markdown' => 'Stale plan content',
+            ],
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/regenerate-plan')
+            ->assertStatus(202)
+            ->assertJsonPath('data.queued', true)
+            ->assertJsonPath('data.revision_status', 'queued');
+
+        Queue::assertPushed(ExecuteInterrogationPlanJob::class, function (ExecuteInterrogationPlanJob $job) use ($session): bool {
+            return (int) $job->sessionId === (int) $session->id
+                && is_string($job->revisionPrompt)
+                && str_contains($job->revisionPrompt, 'Regenerate the implementation plan from the confirmed summary');
+        });
+
+        $session->refresh();
+        $this->assertSame('queued', (string) data_get($session->metadata_json, 'plan.revision_status'));
+        $this->assertNotNull(data_get($session->metadata_json, 'plan.regenerated_at'));
+    }
+
+    public function test_show_marks_operational_status_plan_as_not_meaningful(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Invalid plan payload',
+            'runner_type' => 'codex',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_PLANNING,
+            'phase' => InterrogationSession::PHASE_PLANNING,
+            'plan_json' => [
+                'plan_markdown' => 'Reviewing the locked discovery baseline and existing docs first, then I\'ll rewrite the full implementation plan.',
+                'sections' => [],
+                'risks' => [],
+                'assumptions' => [],
+            ],
+        ]);
+
+        $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id)
+            ->assertOk()
+            ->assertJsonPath('data.has_meaningful_plan', false);
     }
 
     public function test_summary_open_question_queue_advances_until_summary_regeneration(): void
@@ -1352,19 +1588,22 @@ class InterrogationApiWorkflowTest extends TestCase
             'status' => InterrogationSession::STATUS_PLANNING,
             'phase' => InterrogationSession::PHASE_PLANNING,
             'plan_json' => [
-                'plan_markdown' => 'Plan body',
+                'plan_markdown' => "## Scope & Acceptance Criteria\n- Define v1 MCP workflow scope.\n- Lock acceptance criteria by lifecycle state.\n\n## Technical Design\n- Document canonical request/response contracts.\n- Define failure and retry semantics.\n\n## Verification\n- Add regression tests for plan regeneration and payload guard paths.",
+                'sections' => ['Scope & Acceptance Criteria', 'Technical Design', 'Verification'],
+                'risks' => ['Schema drift across clients'],
+                'assumptions' => ['Summary is locked before planning'],
             ],
         ]);
 
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/approve-plan')
             ->assertOk()
-            ->assertJsonPath('data.phase', InterrogationSession::PHASE_BUILD_TASKS)
-            ->assertJsonPath('data.status', InterrogationSession::STATUS_BUILD_TASKS);
+            ->assertJsonPath('data.phase', InterrogationSession::PHASE_BUILD_RULES)
+            ->assertJsonPath('data.status', InterrogationSession::STATUS_BUILD_RULES);
 
         $session->refresh();
         $this->assertNotNull($session->approved_at);
-        $this->assertSame(InterrogationSession::PHASE_BUILD_TASKS, (int) $session->phase);
-        $this->assertSame(InterrogationSession::STATUS_BUILD_TASKS, $session->status);
+        $this->assertSame(InterrogationSession::PHASE_BUILD_RULES, (int) $session->phase);
+        $this->assertSame(InterrogationSession::STATUS_BUILD_RULES, $session->status);
 
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/generate-build-tasks')
             ->assertStatus(202)
@@ -1390,7 +1629,14 @@ class InterrogationApiWorkflowTest extends TestCase
                 'task_count' => 1,
             ],
         ];
+        $session->phase = InterrogationSession::PHASE_BUILD_TASKS;
+        $session->status = InterrogationSession::STATUS_BUILD_TASKS;
         $session->save();
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/approve-build-tasks')
+            ->assertStatus(202)
+            ->assertJsonPath('data.approved', true)
+            ->assertJsonPath('data.task_provider_sync_queued', false);
 
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/start-build')
             ->assertStatus(202)
@@ -1420,6 +1666,485 @@ class InterrogationApiWorkflowTest extends TestCase
         Queue::assertPushed(ExecuteInterrogationBuildJob::class, 2);
     }
 
+    public function test_build_tasks_can_be_created_updated_and_deleted_during_task_phase(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build task CRUD session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_BUILD_TASKS,
+            'phase' => InterrogationSession::PHASE_BUILD_TASKS,
+            'approved_at' => now('UTC'),
+            'metadata_json' => [
+                'build' => [
+                    'status' => 'ready',
+                    'task_count' => 1,
+                    'tasks_approved_at' => now('UTC')->subMinute()->toIso8601String(),
+                    'task_provider_sync' => [
+                        'status' => 'synced',
+                        'driver' => 'linear',
+                    ],
+                ],
+            ],
+        ]);
+
+        InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Existing task',
+            'description' => 'Keep this task',
+            'instructions_markdown' => 'Run tests first.',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+        ]);
+
+        $create = $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/build-tasks', [
+            'title' => 'Add API validation',
+            'description' => 'Add validation for new route.',
+            'instructions_markdown' => "1. Add request validation.\n2. Add feature coverage.",
+        ])->assertStatus(201)
+            ->assertJsonPath('data.title', 'Add API validation')
+            ->assertJsonPath('data.sequence', 2);
+
+        $createdTaskId = (int) $create->json('data.id');
+
+        $this->patchJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/build-tasks/'.$createdTaskId, [
+            'title' => 'Add API validation and tests',
+            'description' => 'Cover error and success response cases.',
+            'instructions_markdown' => "1. Write failing tests.\n2. Implement endpoint updates.\n3. Re-run suite.",
+        ])->assertOk()
+            ->assertJsonPath('data.title', 'Add API validation and tests')
+            ->assertJsonPath('data.status', InterrogationBuildTask::STATUS_PENDING);
+
+        $this->deleteJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/build-tasks/'.$createdTaskId)
+            ->assertOk()
+            ->assertJsonPath('data.deleted', true)
+            ->assertJsonPath('data.task_id', $createdTaskId);
+
+        $session->refresh();
+
+        $this->assertNull(data_get($session->metadata_json, 'build.tasks_approved_at'));
+        $this->assertSame('idle', (string) data_get($session->metadata_json, 'build.task_provider_sync.status'));
+        $this->assertSame(1, InterrogationBuildTask::query()->where('interrogation_session_id', $session->id)->count());
+        $this->assertDatabaseMissing('interrogation_build_tasks', [
+            'id' => $createdTaskId,
+        ]);
+    }
+
+    public function test_regenerate_single_build_task_queues_job_with_amend_notes(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Task regeneration session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_BUILD_TASKS,
+            'phase' => InterrogationSession::PHASE_BUILD_TASKS,
+            'approved_at' => now('UTC'),
+            'metadata_json' => [
+                'build' => [
+                    'status' => 'ready',
+                    'task_count' => 1,
+                    'tasks_approved_at' => now('UTC')->subMinute()->toIso8601String(),
+                ],
+            ],
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Current task',
+            'description' => 'Existing description',
+            'instructions_markdown' => 'Existing instructions',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/build-tasks/'.$task->id.'/regenerate', [
+            'amend_notes' => 'Split this into API-first implementation with stricter acceptance checks.',
+        ])->assertStatus(202)
+            ->assertJsonPath('data.queued', true)
+            ->assertJsonPath('data.task_id', $task->id);
+
+        Queue::assertPushed(RegenerateInterrogationBuildTaskJob::class, function (RegenerateInterrogationBuildTaskJob $job) use ($session, $task): bool {
+            return (int) $job->sessionId === (int) $session->id
+                && (int) $job->taskId === (int) $task->id
+                && str_contains($job->amendNotes, 'API-first implementation');
+        });
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame('queued', (string) data_get($task->metadata_json, 'regeneration.status'));
+        $this->assertSame('Split this into API-first implementation with stricter acceptance checks.', (string) data_get($task->metadata_json, 'regeneration.amend_notes'));
+        $this->assertNull(data_get($session->metadata_json, 'build.tasks_approved_at'));
+        $this->assertSame('idle', (string) data_get($session->metadata_json, 'build.task_provider_sync.status'));
+    }
+
+    public function test_approve_build_tasks_queues_task_provider_sync_when_provider_connected(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build task provider sync session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_BUILD_TASKS,
+            'phase' => InterrogationSession::PHASE_BUILD_TASKS,
+            'approved_at' => now('UTC'),
+            'metadata_json' => [
+                'build' => [
+                    'status' => 'ready',
+                    'task_count' => 1,
+                ],
+            ],
+        ]);
+
+        InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Sync me',
+            'description' => 'Task should sync to provider',
+            'instructions_markdown' => 'Execute sync',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+        ]);
+
+        ConnectedProvider::query()->create([
+            'user_id' => $user->id,
+            'providerable_type' => InterrogationSession::class,
+            'providerable_id' => $session->id,
+            'category' => 'task_management',
+            'driver' => 'linear',
+            'metadata_json' => [
+                'team_id' => 'team_123',
+                'project_sync' => [
+                    'mode' => 'existing',
+                    'selected_project_id' => 'project_abc',
+                    'selected_project_name' => 'Existing Linear Project',
+                    'selected_project_url' => 'https://linear.app/acme/project/existing',
+                ],
+            ],
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/approve-build-tasks')
+            ->assertStatus(202)
+            ->assertJsonPath('data.approved', true)
+            ->assertJsonPath('data.task_provider_sync_queued', true);
+
+        Queue::assertPushed(SyncInterrogationTasksToTaskProviderJob::class, function (SyncInterrogationTasksToTaskProviderJob $job) use ($session): bool {
+            return (int) $job->sessionId === (int) $session->id;
+        });
+
+        $session->refresh();
+
+        $this->assertSame('queued', (string) data_get($session->metadata_json, 'build.task_provider_sync.status'));
+        $this->assertSame('linear', (string) data_get($session->metadata_json, 'build.task_provider_sync.driver'));
+        $this->assertSame('existing', (string) data_get($session->metadata_json, 'build.task_provider_sync.project_mode'));
+        $this->assertSame('project_abc', (string) data_get($session->metadata_json, 'build.task_provider_sync.project_id'));
+        $this->assertSame('Existing Linear Project', (string) data_get($session->metadata_json, 'build.task_provider_sync.project_name'));
+        $this->assertNotNull(data_get($session->metadata_json, 'build.tasks_approved_at'));
+    }
+
+    public function test_provider_projects_endpoint_returns_projects_for_connected_provider(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Provider projects list session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SETUP,
+            'phase' => InterrogationSession::PHASE_SETUP,
+        ]);
+
+        ConnectedProvider::query()->create([
+            'user_id' => $user->id,
+            'providerable_type' => InterrogationSession::class,
+            'providerable_id' => $session->id,
+            'category' => 'task_management',
+            'driver' => 'linear',
+            'metadata_json' => [
+                'project_sync' => [
+                    'mode' => 'existing',
+                    'selected_project_id' => 'proj-2',
+                    'selected_project_name' => 'Beta',
+                    'selected_project_url' => 'https://linear.app/acme/project/beta',
+                ],
+            ],
+        ]);
+
+        $driver = new class implements TaskManagementProviderDriver
+        {
+            public function key(): string
+            {
+                return 'linear';
+            }
+
+            public function authorizationUrl(string $state, string $redirectUri): string
+            {
+                return '';
+            }
+
+            public function exchangeAuthorizationCode(string $code, string $redirectUri): array
+            {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function fetchIdentity(string $accessToken): array
+            {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function createProject(ConnectedProvider $provider, InterrogationSession $session, string $projectName): array
+            {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function listProjects(ConnectedProvider $provider): array
+            {
+                return [
+                    ['id' => 'proj-1', 'name' => 'Alpha', 'url' => 'https://linear.app/acme/project/alpha', 'state' => 'started'],
+                    ['id' => 'proj-2', 'name' => 'Beta', 'url' => 'https://linear.app/acme/project/beta', 'state' => 'planned'],
+                ];
+            }
+
+            public function createTask(
+                ConnectedProvider $provider,
+                InterrogationSession $session,
+                InterrogationBuildTask $task,
+                string $projectId,
+                int $priority,
+                array $labels,
+                string $description,
+            ): array {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function updateTaskStatus(
+                ConnectedProvider $provider,
+                InterrogationSession $session,
+                string $externalTaskId,
+                string $status,
+                ?string $note = null,
+            ): void {
+                throw new RuntimeException('Not used in this test.');
+            }
+        };
+
+        $this->app->instance(TaskManagementProviderManager::class, new class($driver) extends TaskManagementProviderManager
+        {
+            public function __construct(private readonly TaskManagementProviderDriver $driver) {}
+
+            public function driver(string $driver): TaskManagementProviderDriver
+            {
+                return $this->driver;
+            }
+        });
+
+        $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/providers/linear/projects')
+            ->assertOk()
+            ->assertJsonPath('data.driver', 'linear')
+            ->assertJsonPath('data.project_mode', 'existing')
+            ->assertJsonPath('data.selected_project_id', 'proj-2')
+            ->assertJsonPath('data.projects.0.id', 'proj-1')
+            ->assertJsonPath('data.projects.1.id', 'proj-2');
+    }
+
+    public function test_provider_settings_endpoint_persists_existing_project_selection(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Provider settings session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SETUP,
+            'phase' => InterrogationSession::PHASE_SETUP,
+        ]);
+
+        $provider = ConnectedProvider::query()->create([
+            'user_id' => $user->id,
+            'providerable_type' => InterrogationSession::class,
+            'providerable_id' => $session->id,
+            'category' => 'task_management',
+            'driver' => 'linear',
+            'metadata_json' => [
+                'identity' => [
+                    'team_id' => 'team_1',
+                    'team_name' => 'Acme',
+                ],
+            ],
+        ]);
+
+        $driver = new class implements TaskManagementProviderDriver
+        {
+            public function key(): string
+            {
+                return 'linear';
+            }
+
+            public function authorizationUrl(string $state, string $redirectUri): string
+            {
+                return '';
+            }
+
+            public function exchangeAuthorizationCode(string $code, string $redirectUri): array
+            {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function fetchIdentity(string $accessToken): array
+            {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function createProject(ConnectedProvider $provider, InterrogationSession $session, string $projectName): array
+            {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function listProjects(ConnectedProvider $provider): array
+            {
+                return [
+                    ['id' => 'project-1', 'name' => 'Project One', 'url' => 'https://linear.app/acme/project/one', 'state' => 'started'],
+                    ['id' => 'project-2', 'name' => 'Project Two', 'url' => 'https://linear.app/acme/project/two', 'state' => 'planned'],
+                ];
+            }
+
+            public function createTask(
+                ConnectedProvider $provider,
+                InterrogationSession $session,
+                InterrogationBuildTask $task,
+                string $projectId,
+                int $priority,
+                array $labels,
+                string $description,
+            ): array {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function updateTaskStatus(
+                ConnectedProvider $provider,
+                InterrogationSession $session,
+                string $externalTaskId,
+                string $status,
+                ?string $note = null,
+            ): void {
+                throw new RuntimeException('Not used in this test.');
+            }
+        };
+
+        $this->app->instance(TaskManagementProviderManager::class, new class($driver) extends TaskManagementProviderManager
+        {
+            public function __construct(private readonly TaskManagementProviderDriver $driver) {}
+
+            public function driver(string $driver): TaskManagementProviderDriver
+            {
+                return $this->driver;
+            }
+        });
+
+        $this->patchJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/providers/linear/settings', [
+            'project_mode' => 'existing',
+            'existing_project_id' => 'project-2',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.project_mode', 'existing')
+            ->assertJsonPath('data.selected_project_id', 'project-2')
+            ->assertJsonPath('data.selected_project_name', 'Project Two');
+
+        $provider->refresh();
+
+        $this->assertSame('existing', (string) data_get($provider->metadata_json, 'project_sync.mode'));
+        $this->assertSame('project-2', (string) data_get($provider->metadata_json, 'project_sync.selected_project_id'));
+        $this->assertSame('Project Two', (string) data_get($provider->metadata_json, 'project_sync.selected_project_name'));
+    }
+
+    public function test_generate_build_tasks_persists_project_rules_from_markdown_and_uploaded_files(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build rules context session',
+            'runner_type' => 'codex',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_BUILD_RULES,
+            'phase' => InterrogationSession::PHASE_BUILD_RULES,
+            'approved_at' => now('UTC'),
+            'plan_json' => [
+                'plan_markdown' => "## Scope\n- Add build rules context support.\n\n## Validation\n- Add tests.",
+                'sections' => ['Scope', 'Validation'],
+                'risks' => [],
+                'assumptions' => ['Plan approved'],
+            ],
+            'metadata_json' => [
+                'build' => [
+                    'status' => 'ready',
+                ],
+            ],
+        ]);
+
+        $response = $this->post(
+            '/agent/api/v1/interrogation/sessions/'.$session->id.'/generate-build-tasks',
+            [
+                'project_rules' => json_encode([
+                    [
+                        'title' => 'Manual Rule',
+                        'markdown' => 'Keep controllers thin and push business logic to services.',
+                    ],
+                ], JSON_UNESCAPED_SLASHES),
+                'project_rule_files' => [
+                    UploadedFile::fake()->createWithContent('rules.md', "# Uploaded Rule\n\nAlways add regression tests for bug fixes.\n"),
+                ],
+            ],
+            [
+                'Accept' => 'application/json',
+            ]
+        );
+
+        $response->assertStatus(202)
+            ->assertJsonPath('data.build_status', 'generating_tasks');
+
+        $session->refresh();
+
+        $rules = data_get($session->metadata_json, 'build.project_rules', []);
+        $this->assertIsArray($rules);
+        $this->assertCount(2, $rules);
+        $this->assertSame('Manual Rule', data_get($rules, '0.title'));
+        $this->assertSame('manual', data_get($rules, '0.source'));
+        $this->assertSame('uploaded', data_get($rules, '1.source'));
+        $this->assertStringContainsString('Always add regression tests', (string) data_get($rules, '1.markdown'));
+
+        Queue::assertPushed(GenerateInterrogationBuildTasksJob::class, function (GenerateInterrogationBuildTasksJob $job) use ($session): bool {
+            return (int) $job->sessionId === (int) $session->id;
+        });
+    }
+
     public function test_approve_plan_accepts_legacy_completed_status_in_planning_phase(): void
     {
         $user = User::factory()->create();
@@ -1434,19 +2159,22 @@ class InterrogationApiWorkflowTest extends TestCase
             'status' => InterrogationSession::STATUS_COMPLETED,
             'phase' => InterrogationSession::PHASE_PLANNING,
             'plan_json' => [
-                'plan_markdown' => 'Plan body',
+                'plan_markdown' => "## Scope\n- Preserve legacy completed status compatibility for planning approvals.\n\n## Implementation\n- Transition approved plan to build-tasks phase.\n- Persist approval timestamp.\n\n## Validation\n- Ensure API returns build-tasks state on success.",
+                'sections' => ['Scope', 'Implementation', 'Validation'],
+                'risks' => ['Legacy status behavior may regress'],
+                'assumptions' => ['Session is in planning phase'],
             ],
         ]);
 
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/approve-plan')
             ->assertOk()
-            ->assertJsonPath('data.phase', InterrogationSession::PHASE_BUILD_TASKS)
-            ->assertJsonPath('data.status', InterrogationSession::STATUS_BUILD_TASKS);
+            ->assertJsonPath('data.phase', InterrogationSession::PHASE_BUILD_RULES)
+            ->assertJsonPath('data.status', InterrogationSession::STATUS_BUILD_RULES);
 
         $session->refresh();
         $this->assertNotNull($session->approved_at);
-        $this->assertSame(InterrogationSession::PHASE_BUILD_TASKS, (int) $session->phase);
-        $this->assertSame(InterrogationSession::STATUS_BUILD_TASKS, $session->status);
+        $this->assertSame(InterrogationSession::PHASE_BUILD_RULES, (int) $session->phase);
+        $this->assertSame(InterrogationSession::STATUS_BUILD_RULES, $session->status);
     }
 
     public function test_start_build_requires_generated_tasks(): void
@@ -1470,5 +2198,82 @@ class InterrogationApiWorkflowTest extends TestCase
 
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/start-build')
             ->assertStatus(409);
+    }
+
+    public function test_start_build_restart_all_requeues_completed_and_failed_tasks(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build rerun all',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_BUILD_EXECUTING,
+            'phase' => InterrogationSession::PHASE_BUILD_EXECUTION,
+            'plan_json' => [
+                'plan_markdown' => 'Plan body',
+            ],
+            'approved_at' => now('UTC'),
+            'metadata_json' => [
+                'build' => [
+                    'status' => 'failed',
+                    'task_count' => 2,
+                    'tasks_approved_at' => now('UTC')->toIso8601String(),
+                ],
+            ],
+        ]);
+
+        $completedTask = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Completed task',
+            'description' => 'done',
+            'instructions_markdown' => 'done',
+            'status' => InterrogationBuildTask::STATUS_COMPLETED,
+            'attempt_count' => 1,
+            'started_at' => now('UTC')->subMinutes(3),
+            'finished_at' => now('UTC')->subMinutes(2),
+        ]);
+
+        $failedTask = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 2,
+            'title' => 'Failed task',
+            'description' => 'failed',
+            'instructions_markdown' => 'failed',
+            'status' => InterrogationBuildTask::STATUS_FAILED,
+            'attempt_count' => 1,
+            'last_error' => 'Build task execution failed.',
+            'started_at' => now('UTC')->subMinute(),
+            'finished_at' => now('UTC'),
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/start-build', [
+            'restart_all' => true,
+        ])->assertStatus(202)
+            ->assertJsonPath('data.build_status', 'running');
+
+        $completedTask->refresh();
+        $failedTask->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_PENDING, (string) $completedTask->status);
+        $this->assertNull($completedTask->last_error);
+        $this->assertNull($completedTask->started_at);
+        $this->assertNull($completedTask->finished_at);
+
+        $this->assertSame(InterrogationBuildTask::STATUS_PENDING, (string) $failedTask->status);
+        $this->assertNull($failedTask->last_error);
+        $this->assertNull($failedTask->started_at);
+        $this->assertNull($failedTask->finished_at);
+
+        Queue::assertPushed(ExecuteInterrogationBuildJob::class, function (ExecuteInterrogationBuildJob $job) use ($session): bool {
+            return (int) $job->sessionId === (int) $session->id;
+        });
     }
 }

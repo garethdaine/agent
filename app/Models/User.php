@@ -86,4 +86,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(InterrogationSetting::class);
     }
+
+    public function connectedProviders(): HasMany
+    {
+        return $this->hasMany(ConnectedProvider::class);
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Support\Interrogation;
 
+use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationSession;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -18,10 +19,166 @@ class BuildTaskGenerator
      */
     public function generate(InterrogationSession $session, ?string $notes = null): array
     {
-        $adapter = $this->adapterFactory->make((string) $session->runner_type);
         $systemPrompt = $this->promptResolver->resolveForPhase($session, 'build_tasks');
-
         $prompt = $this->buildPrompt($session, $notes);
+        $parsed = $this->runBuildTaskGeneration($session, $prompt, $systemPrompt);
+
+        return [
+            'tasks' => array_values($parsed['tasks']),
+        ];
+    }
+
+    /**
+     * @return array{title:string,description:string,instructions_markdown:string}
+     */
+    public function regenerateTask(
+        InterrogationSession $session,
+        InterrogationBuildTask $task,
+        string $amendNotes,
+    ): array {
+        $systemPrompt = $this->promptResolver->resolveForPhase($session, 'build_tasks');
+        $prompt = $this->buildTaskRegenerationPrompt($session, $task, $amendNotes);
+        $parsed = $this->runBuildTaskGeneration($session, $prompt, $systemPrompt);
+
+        $candidate = is_array($parsed['tasks'][0] ?? null) ? $parsed['tasks'][0] : null;
+        if ($candidate === null) {
+            throw new RuntimeException('Task regeneration response could not be parsed.');
+        }
+
+        $title = trim((string) ($candidate['title'] ?? ''));
+        if ($title === '') {
+            throw new RuntimeException('Task regeneration did not return a valid title.');
+        }
+
+        return [
+            'title' => $title,
+            'description' => trim((string) ($candidate['description'] ?? '')),
+            'instructions_markdown' => trim((string) ($candidate['instructions_markdown'] ?? '')),
+        ];
+    }
+
+    private function buildPrompt(InterrogationSession $session, ?string $notes): string
+    {
+        $plan = is_array($session->plan_json) ? $session->plan_json : [];
+        $summary = is_array($session->summary_json) ? $session->summary_json : [];
+
+        $planMarkdown = trim((string) ($plan['plan_markdown'] ?? ''));
+        $summaryMarkdown = trim((string) ($summary['summary_markdown'] ?? ''));
+
+        $parts = [
+            'Generate an actionable build task list for execution.',
+            'Return only valid JSON matching the schema.',
+            'Each task should be independently executable and scoped to a single outcome.',
+            'Use concrete instructions with file paths, commands, and expected checks when possible.',
+            'Prefer 3-12 tasks unless the plan clearly requires more.',
+            'Never include destructive database commands (`migrate:fresh`, `migrate:refresh`, `db:wipe`, `DROP`, `TRUNCATE`) in task instructions.',
+            'For every task that changes behavior, enforce tests first: write or update tests before implementation/refactor code, verify failure, then implement the minimum clean change until tests pass.',
+            'Apply Code Field rules in task instructions: state assumptions first, define scope boundaries, cover edge/failure paths (not only happy path), and require explicit verification before claiming correctness.',
+        ];
+
+        if ($summaryMarkdown !== '') {
+            $parts[] = "\nSummary context:\n{$summaryMarkdown}";
+        }
+
+        if ($planMarkdown !== '') {
+            $parts[] = "\nImplementation plan:\n{$planMarkdown}";
+        }
+
+        $sections = is_array($plan['sections'] ?? null) ? array_values($plan['sections']) : [];
+        if ($sections !== []) {
+            $parts[] = "\nPlan sections:\n- ".implode("\n- ", array_map(static fn ($item): string => trim((string) $item), $sections));
+        }
+
+        $risks = is_array($plan['risks'] ?? null) ? array_values($plan['risks']) : [];
+        if ($risks !== []) {
+            $parts[] = "\nKnown risks:\n- ".implode("\n- ", array_map(static fn ($item): string => trim((string) $item), $risks));
+        }
+
+        $assumptions = is_array($plan['assumptions'] ?? null) ? array_values($plan['assumptions']) : [];
+        if ($assumptions !== []) {
+            $parts[] = "\nAssumptions:\n- ".implode("\n- ", array_map(static fn ($item): string => trim((string) $item), $assumptions));
+        }
+
+        $projectRules = $this->projectRulesFromMetadata($session);
+        if ($projectRules !== []) {
+            $parts[] = "\nProject rules to enforce:\n".$this->renderProjectRules($projectRules);
+        }
+
+        $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']);
+        if ($techStacks->isNotEmpty()) {
+            $parts[] = "\nSelected tech stack:\n- ".$techStacks
+                ->map(fn ($stack): string => trim((string) $stack->name).': '.trim((string) $stack->documentation_url))
+                ->implode("\n- ");
+        }
+
+        $notes = trim((string) $notes);
+        if ($notes !== '') {
+            $parts[] = "\nUser notes:\n{$notes}";
+        }
+
+        return implode("\n", $parts);
+    }
+
+    private function buildTaskRegenerationPrompt(
+        InterrogationSession $session,
+        InterrogationBuildTask $task,
+        string $amendNotes,
+    ): string {
+        $plan = is_array($session->plan_json) ? $session->plan_json : [];
+        $summary = is_array($session->summary_json) ? $session->summary_json : [];
+
+        $summaryMarkdown = trim((string) ($summary['summary_markdown'] ?? ''));
+        $planMarkdown = trim((string) ($plan['plan_markdown'] ?? ''));
+
+        $parts = [
+            'Regenerate exactly one build task based on user amendments.',
+            'Return only valid JSON matching the schema with a tasks array that contains exactly one item.',
+            'Do not return multiple tasks.',
+            'Keep the task independently executable and scoped to a single outcome.',
+            'Use concrete instructions with file paths, commands, and expected checks when possible.',
+            'Never include destructive database commands (`migrate:fresh`, `migrate:refresh`, `db:wipe`, `DROP`, `TRUNCATE`) in task instructions.',
+            'For this task, enforce tests first: write/update tests, verify failure, then implement minimum clean changes until tests pass.',
+            'Apply Code Field rules: assumptions first, clear scope boundaries, edge/failure paths, and explicit verification.',
+            "\nCurrent task to regenerate:\n"
+            .'Sequence: '.((int) $task->sequence)
+            ."\nTitle: ".trim((string) $task->title)
+            ."\nDescription: ".trim((string) ($task->description ?? ''))
+            ."\nInstructions:\n".trim((string) ($task->instructions_markdown ?? '')),
+            "\nAmend notes from user:\n".trim($amendNotes),
+        ];
+
+        if ($summaryMarkdown !== '') {
+            $parts[] = "\nSummary context:\n{$summaryMarkdown}";
+        }
+
+        if ($planMarkdown !== '') {
+            $parts[] = "\nImplementation plan:\n{$planMarkdown}";
+        }
+
+        $projectRules = $this->projectRulesFromMetadata($session);
+        if ($projectRules !== []) {
+            $parts[] = "\nProject rules to enforce:\n".$this->renderProjectRules($projectRules);
+        }
+
+        $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']);
+        if ($techStacks->isNotEmpty()) {
+            $parts[] = "\nSelected tech stack:\n- ".$techStacks
+                ->map(fn ($stack): string => trim((string) $stack->name).': '.trim((string) $stack->documentation_url))
+                ->implode("\n- ");
+        }
+
+        return implode("\n", $parts);
+    }
+
+    /**
+     * @return array{tasks:array<int,array<string,mixed>>}
+     */
+    private function runBuildTaskGeneration(
+        InterrogationSession $session,
+        string $prompt,
+        string $systemPrompt,
+    ): array {
+        $adapter = $this->adapterFactory->make((string) $session->runner_type);
 
         $process = new Process(
             $adapter->buildBuildTasksCommand($session, $prompt, $systemPrompt),
@@ -74,54 +231,79 @@ class BuildTaskGenerator
         }
 
         return [
-            'tasks' => array_values($parsed['tasks']),
+            'tasks' => array_values((array) $parsed['tasks']),
         ];
     }
 
-    private function buildPrompt(InterrogationSession $session, ?string $notes): string
+    /**
+     * @return array<int, array{title:string,markdown:string,source:string,filename:?string}>
+     */
+    private function projectRulesFromMetadata(InterrogationSession $session): array
     {
-        $plan = is_array($session->plan_json) ? $session->plan_json : [];
-        $summary = is_array($session->summary_json) ? $session->summary_json : [];
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $build = is_array($metadata['build'] ?? null) ? $metadata['build'] : [];
+        $rules = is_array($build['project_rules'] ?? null) ? $build['project_rules'] : [];
 
-        $planMarkdown = trim((string) ($plan['plan_markdown'] ?? ''));
-        $summaryMarkdown = trim((string) ($summary['summary_markdown'] ?? ''));
+        $normalized = [];
 
-        $parts = [
-            'Generate an actionable build task list for execution.',
-            'Return only valid JSON matching the schema.',
-            'Each task should be independently executable and scoped to a single outcome.',
-            'Use concrete instructions with file paths, commands, and expected checks when possible.',
-            'Prefer 3-12 tasks unless the plan clearly requires more.',
-        ];
+        foreach ($rules as $rule) {
+            if (! is_array($rule)) {
+                continue;
+            }
 
-        if ($summaryMarkdown !== '') {
-            $parts[] = "\nSummary context:\n{$summaryMarkdown}";
+            $title = trim((string) ($rule['title'] ?? ''));
+            $markdown = trim((string) ($rule['markdown'] ?? ''));
+            if ($markdown === '') {
+                continue;
+            }
+
+            $source = strtolower(trim((string) ($rule['source'] ?? 'manual')));
+            if (! in_array($source, ['manual', 'uploaded'], true)) {
+                $source = 'manual';
+            }
+
+            $filename = trim((string) ($rule['filename'] ?? ''));
+
+            $normalized[] = [
+                'title' => $title !== '' ? $title : 'Rule '.(count($normalized) + 1),
+                'markdown' => $markdown,
+                'source' => $source,
+                'filename' => $filename !== '' ? $filename : null,
+            ];
         }
 
-        if ($planMarkdown !== '') {
-            $parts[] = "\nImplementation plan:\n{$planMarkdown}";
+        return array_values($normalized);
+    }
+
+    /**
+     * @param  array<int, array{title:string,markdown:string,source:string,filename:?string}>  $rules
+     */
+    private function renderProjectRules(array $rules): string
+    {
+        $lines = [];
+
+        foreach ($rules as $index => $rule) {
+            $title = trim((string) ($rule['title'] ?? ''));
+            $markdown = trim((string) ($rule['markdown'] ?? ''));
+            if ($markdown === '') {
+                continue;
+            }
+
+            $source = strtolower(trim((string) ($rule['source'] ?? 'manual')));
+            if (! in_array($source, ['manual', 'uploaded'], true)) {
+                $source = 'manual';
+            }
+
+            $filename = trim((string) ($rule['filename'] ?? ''));
+            $label = $title !== '' ? $title : 'Rule '.($index + 1);
+            $suffix = $source === 'uploaded' && $filename !== ''
+                ? sprintf(' (%s from %s)', $source, $filename)
+                : sprintf(' (%s)', $source);
+
+            $lines[] = sprintf('- %s%s', $label, $suffix);
+            $lines[] = $markdown;
         }
 
-        $sections = is_array($plan['sections'] ?? null) ? array_values($plan['sections']) : [];
-        if ($sections !== []) {
-            $parts[] = "\nPlan sections:\n- ".implode("\n- ", array_map(static fn ($item): string => trim((string) $item), $sections));
-        }
-
-        $risks = is_array($plan['risks'] ?? null) ? array_values($plan['risks']) : [];
-        if ($risks !== []) {
-            $parts[] = "\nKnown risks:\n- ".implode("\n- ", array_map(static fn ($item): string => trim((string) $item), $risks));
-        }
-
-        $assumptions = is_array($plan['assumptions'] ?? null) ? array_values($plan['assumptions']) : [];
-        if ($assumptions !== []) {
-            $parts[] = "\nAssumptions:\n- ".implode("\n- ", array_map(static fn ($item): string => trim((string) $item), $assumptions));
-        }
-
-        $notes = trim((string) $notes);
-        if ($notes !== '') {
-            $parts[] = "\nUser notes:\n{$notes}";
-        }
-
-        return implode("\n", $parts);
+        return implode("\n", $lines);
     }
 }

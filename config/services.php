@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'linear' => [
+        'client_id' => env('LINEAR_CLIENT_ID'),
+        'client_secret' => env('LINEAR_CLIENT_SECRET'),
+        'redirect_uri' => env('LINEAR_REDIRECT_URI'),
+        'authorize_url' => env('LINEAR_AUTHORIZE_URL', 'https://linear.app/oauth/authorize'),
+        'token_url' => env('LINEAR_TOKEN_URL', 'https://api.linear.app/oauth/token'),
+        'graphql_url' => env('LINEAR_GRAPHQL_URL', 'https://api.linear.app/graphql'),
+        'oauth_scopes' => env('LINEAR_OAUTH_SCOPES', 'read write'),
+    ],
+
 ];

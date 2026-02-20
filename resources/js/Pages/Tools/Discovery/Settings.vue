@@ -8,15 +8,24 @@ const settings = ref([]);
 const loading = ref(false);
 const saving = ref(false);
 const error = ref('');
+const validation = ref({});
+
+const firstValidationError = (field) => {
+    const messages = validation.value?.[field];
+
+    return Array.isArray(messages) && messages.length > 0 ? messages[0] : '';
+};
 
 const form = reactive({
     system_prompt: '',
     default_runner: 'claude',
+    max_active_sessions: 3,
 });
 
 const load = async () => {
     loading.value = true;
     error.value = '';
+    validation.value = {};
 
     try {
         const { data } = await axios.get('/agent/api/v1/interrogation/settings');
@@ -24,9 +33,12 @@ const load = async () => {
 
         const prompt = settings.value.find((item) => item.key === 'interrogation.system_prompt');
         const runner = settings.value.find((item) => item.key === 'interrogation.default_runner');
+        const maxActive = settings.value.find((item) => item.key === 'interrogation.max_active_sessions');
 
         form.system_prompt = typeof prompt?.value === 'string' ? prompt.value : (prompt?.value?.text || '');
         form.default_runner = typeof runner?.value === 'string' ? runner.value : 'claude';
+        const parsedMaxActive = Number.parseInt(String(maxActive?.value ?? ''), 10);
+        form.max_active_sessions = Number.isInteger(parsedMaxActive) && parsedMaxActive > 0 ? parsedMaxActive : 3;
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load settings.';
     } finally {
@@ -37,6 +49,7 @@ const load = async () => {
 const save = async () => {
     saving.value = true;
     error.value = '';
+    validation.value = {};
 
     try {
         await axios.put('/agent/api/v1/interrogation/settings/interrogation.system_prompt', {
@@ -47,9 +60,25 @@ const save = async () => {
             value: form.default_runner,
         });
 
+        await axios.put('/agent/api/v1/interrogation/settings/interrogation.max_active_sessions', {
+            value: Number(form.max_active_sessions),
+        });
+
         await load();
     } catch (e) {
-        error.value = e?.response?.data?.error?.message ?? 'Failed to save settings.';
+        const payload = e?.response?.data ?? {};
+        const envelope = payload?.error ?? null;
+
+        if (envelope) {
+            validation.value = envelope?.details ?? {};
+            error.value = envelope?.message ?? 'Failed to save settings.';
+        } else if (payload?.errors && typeof payload.errors === 'object') {
+            validation.value = payload.errors;
+            error.value = payload?.message ?? 'The given data was invalid.';
+        } else {
+            validation.value = {};
+            error.value = payload?.message ?? 'Failed to save settings.';
+        }
     } finally {
         saving.value = false;
     }
@@ -85,6 +114,19 @@ onMounted(load);
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">System Prompt Override</label>
                     <textarea v-model="form.system_prompt" rows="14" class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm dark:border-gray-700 dark:bg-gray-900" />
                     <p class="mt-1 text-xs text-gray-500">Leave empty to use the built-in runtime-safe prompt.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Max Active Sessions</label>
+                    <input
+                        v-model.number="form.max_active_sessions"
+                        type="number"
+                        min="1"
+                        max="50"
+                        class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900"
+                    />
+                    <p class="mt-1 text-xs text-gray-500">Maximum concurrently active discovery sessions per user.</p>
+                    <p v-if="firstValidationError('value')" class="mt-1 text-sm text-red-600">{{ firstValidationError('value') }}</p>
                 </div>
 
                 <div class="flex justify-end">

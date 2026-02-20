@@ -50,6 +50,24 @@ class AgentJobController extends Controller
             $query->where('runner_type', $request->string('runner_type')->toString());
         }
 
+        $source = strtolower(trim($request->string('source')->toString()));
+        if ($source === 'build') {
+            $query->where(function ($builder): void {
+                $builder->where('name', 'like', 'Interrogation Build S%')
+                    ->orWhere('env_json->AGENT_JOB_SOURCE', 'interrogation_build');
+            });
+        } elseif ($source === 'user') {
+            $query->where(function ($builder): void {
+                $builder->where('name', 'not like', 'Interrogation Build S%')
+                    ->where(function ($inner): void {
+                        $inner->whereNull('env_json->AGENT_JOB_SOURCE')
+                            ->orWhere('env_json->AGENT_JOB_SOURCE', '!=', 'interrogation_build');
+                    });
+            });
+        } else {
+            $source = '';
+        }
+
         $sort = $request->string('sort', 'name')->toString();
         $dir = strtolower($request->string('dir', 'asc')->toString()) === 'desc' ? 'desc' : 'asc';
 
@@ -88,6 +106,7 @@ class AgentJobController extends Controller
                 'runner_type' => $request->input('runner_type'),
                 'active' => $request->input('active'),
                 'deleted' => $request->input('deleted'),
+                'source' => $source,
             ],
             'sort' => [
                 'sort' => $sort,
@@ -480,6 +499,7 @@ class AgentJobController extends Controller
         }
 
         $activeHold = $this->usageLimitState->getActiveHold((int) $job->id);
+        $jobScope = $this->isBuildJob($job) ? 'build' : 'user';
 
         $payload = [
             'id' => $job->id,
@@ -504,6 +524,8 @@ class AgentJobController extends Controller
             'last_run_finished_at' => optional($lastRun?->finished_at)?->toIso8601String(),
             'rate_limit_hold_until' => $activeHold !== null ? $activeHold['hold_until']->toIso8601String() : null,
             'rate_limit_hold_active' => $activeHold !== null,
+            'job_scope' => $jobScope,
+            'is_build_job' => $jobScope === 'build',
         ];
 
         if ($includeTaskContent) {
@@ -511,6 +533,18 @@ class AgentJobController extends Controller
         }
 
         return $payload;
+    }
+
+    private function isBuildJob(AgentJob $job): bool
+    {
+        $name = trim((string) $job->name);
+        if (str_starts_with($name, 'Interrogation Build S')) {
+            return true;
+        }
+
+        $env = is_array($job->env_json) ? $job->env_json : [];
+
+        return ($env['AGENT_JOB_SOURCE'] ?? null) === 'interrogation_build';
     }
 
     /**

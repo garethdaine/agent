@@ -93,6 +93,100 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         $this->assertSame('completed', data_get($session->metadata_json, 'build.status'));
     }
 
+    public function test_job_preserves_failed_permission_blocker_context_for_build_retry_and_visibility(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ]);
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_FAILED, [
+            'error_code' => 'PERMISSION_REQUIRED',
+            'error_summary' => 'Write permissions were denied for this task.',
+            'metadata_json' => [
+                'permission_blocker_detected' => true,
+                'permission_blocker_excerpt' => 'All file write operations are denied by the permission system.',
+            ],
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 2,
+            'title' => 'Blocked task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_FAILED, (string) $task->status);
+        $this->assertSame('Write permissions were denied for this task.', (string) $task->last_error);
+        $this->assertSame('failed', data_get($session->metadata_json, 'build.status'));
+        $this->assertTrue((bool) data_get($session->metadata_json, 'build.permission_required'));
+        $this->assertSame(
+            'All file write operations are denied by the permission system.',
+            data_get($session->metadata_json, 'build.permission_excerpt')
+        );
+        $this->assertSame($task->id, data_get($session->metadata_json, 'build.active_task_id'));
+        $this->assertSame($run->id, data_get($session->metadata_json, 'build.active_run_id'));
+    }
+
+    public function test_job_pauses_build_when_run_requests_clarification_even_if_run_succeeded(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ]);
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'clarification_required' => true,
+                'clarification_excerpt' => 'Could you clarify whether we should use existing event names?',
+            ],
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 3,
+            'title' => 'Clarify task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_BLOCKED, (string) $task->status);
+        $this->assertSame('paused', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame('clarification', data_get($session->metadata_json, 'build.pause_reason'));
+        $this->assertTrue((bool) data_get($session->metadata_json, 'build.clarification_required'));
+        $this->assertSame(
+            'Could you clarify whether we should use existing event names?',
+            data_get($session->metadata_json, 'build.clarification_excerpt')
+        );
+        $this->assertSame($task->id, data_get($session->metadata_json, 'build.active_task_id'));
+        $this->assertSame($run->id, data_get($session->metadata_json, 'build.active_run_id'));
+    }
+
     /**
      * @param  array<string, mixed>  $build
      */
@@ -111,7 +205,10 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         ]);
     }
 
-    private function makeRun(User $user, string $status): AgentJobRun
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function makeRun(User $user, string $status, array $overrides = []): AgentJobRun
     {
         $job = AgentJob::query()->create([
             'user_id' => $user->id,
@@ -127,13 +224,15 @@ class ExecuteInterrogationBuildJobTest extends TestCase
             'working_directory' => base_path(),
         ]);
 
-        return AgentJobRun::query()->create([
+        $payload = array_merge([
             'agent_job_id' => $job->id,
             'user_id' => $user->id,
             'initiated_by_user_id' => $user->id,
             'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
             'status' => $status,
             'metadata_json' => [],
-        ]);
+        ], $overrides);
+
+        return AgentJobRun::query()->create($payload);
     }
 }

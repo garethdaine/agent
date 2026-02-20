@@ -228,6 +228,135 @@ class AgentRunnerLifecycleTest extends TestCase
         $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $metadata['approval_resolution'] ?? null);
     }
 
+    public function test_write_permission_blocker_output_forces_failed_status_even_with_zero_exit_code(): void
+    {
+        $permissionExec = $this->sandboxBase.'/bin/write-permission-runner';
+        file_put_contents($permissionExec, "#!/bin/sh\necho \"I need your permission to write files to app/ and database/.\"\necho \"All file write operations are denied by the permission system.\"\nexit 0\n");
+        chmod($permissionExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $permissionExec,
+            'codex' => $permissionExec,
+            'custom' => $permissionExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $permissionExec.' -p {{task_markdown_path}}',
+            'codex' => $permissionExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/write-blocked.md';
+        file_put_contents($taskFile, "# Blocked\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Write Permission Blocker',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+                'approval_required' => false,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_FAILED, $run->status);
+        $this->assertSame('PERMISSION_REQUIRED', $run->error_code);
+        $this->assertTrue((bool) ($metadata['permission_blocker_detected'] ?? false));
+        $this->assertNotEmpty($metadata['permission_blocker_detected_at'] ?? null);
+        $this->assertSame(AgentJobRun::STATUS_FAILED, $metadata['permission_blocker_resolution'] ?? null);
+        $this->assertSame(AgentJobRun::STATUS_FAILED, $metadata['approval_resolution'] ?? null);
+    }
+
+    public function test_clarification_request_output_sets_clarification_metadata(): void
+    {
+        $clarifyExec = $this->sandboxBase.'/bin/clarify-runner';
+        file_put_contents($clarifyExec, "#!/bin/sh\necho \"Could you clarify whether we should keep the old policy mapping?\"\nexit 0\n");
+        chmod($clarifyExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $clarifyExec,
+            'codex' => $clarifyExec,
+            'custom' => $clarifyExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $clarifyExec.' -p {{task_markdown_path}}',
+            'codex' => $clarifyExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/clarify.md';
+        file_put_contents($taskFile, "# Clarify\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Clarification Metadata',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertTrue((bool) ($metadata['clarification_required'] ?? false));
+        $this->assertNotEmpty($metadata['clarification_detected_at'] ?? null);
+        $this->assertStringContainsString('Could you clarify', (string) ($metadata['clarification_excerpt'] ?? ''));
+    }
+
     public function test_approval_detection_ignores_codex_banner_lines(): void
     {
         $bannerExec = $this->sandboxBase.'/bin/codex-banner-runner';

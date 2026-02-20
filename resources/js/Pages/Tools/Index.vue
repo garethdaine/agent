@@ -22,6 +22,14 @@ import { Head, Link } from '@inertiajs/vue3';
                         <h3 class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">Interactive discovery wizard</h3>
                         <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Guide AI-led requirements interrogation and generate summaries/plans.</p>
                     </Link>
+                    <Link
+                        :href="route('tools.backups.settings')"
+                        class="rounded-lg border border-gray-200 bg-white p-5 transition hover:border-emerald-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                    >
+                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-600">Operations</p>
+                        <h3 class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">Database backup settings</h3>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Configure daily DB backups, retention window, timezone, and run immediate backups.</p>
+                    </Link>
                 </div>
             </div>
         </div>

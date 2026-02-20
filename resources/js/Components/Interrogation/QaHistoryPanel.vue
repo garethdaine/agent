@@ -77,7 +77,7 @@ const answerPreview = (answerPayload) => {
     <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
         <div class="mb-3 flex items-center justify-between gap-2">
             <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-200">Q&A History</h3>
-            <span class="text-xs text-gray-500">{{ unansweredCount }} unanswered</span>
+            <span class="text-xs text-gray-500 dark:text-gray-400">{{ unansweredCount }} unanswered</span>
         </div>
 
         <div class="max-h-[32rem] space-y-3 overflow-auto pr-1">
@@ -89,10 +89,10 @@ const answerPreview = (answerPayload) => {
                     ? 'border-indigo-300 bg-indigo-50/40 dark:border-indigo-600 dark:bg-indigo-900/20'
                     : 'border-gray-200 dark:border-gray-700'"
             >
-                <p class="text-xs uppercase tracking-wide text-gray-500">Question</p>
+                <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Question</p>
                 <p class="mt-1 text-sm text-gray-800 dark:text-gray-100">{{ pair.questionPreview }}</p>
 
-                <p class="mt-3 text-xs uppercase tracking-wide text-gray-500">Answer</p>
+                <p class="mt-3 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Answer</p>
                 <p class="mt-1 text-sm text-gray-700 dark:text-gray-200">{{ answerPreview(pair.answer?.payload) }}</p>
 
                 <button
@@ -105,7 +105,7 @@ const answerPreview = (answerPayload) => {
                 </button>
             </div>
 
-            <p v-if="qaPairs.length === 0" class="text-sm text-gray-500">No Q&A history yet.</p>
+            <p v-if="qaPairs.length === 0" class="text-sm text-gray-500 dark:text-gray-400">No Q&A history yet.</p>
         </div>
     </div>
 </template>

@@ -98,6 +98,21 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        'pgsql_testing' => [
+            'driver' => 'pgsql',
+            'url' => env('TEST_DB_URL'),
+            'host' => env('TEST_DB_HOST', '127.0.0.1'),
+            'port' => env('TEST_DB_PORT', '5432'),
+            'database' => env('TEST_DB_DATABASE', 'agent_test'),
+            'username' => env('TEST_DB_USERNAME', 'root'),
+            'password' => env('TEST_DB_PASSWORD', ''),
+            'charset' => env('TEST_DB_CHARSET', env('DB_CHARSET', 'utf8')),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => env('TEST_DB_SEARCH_PATH', 'public'),
+            'sslmode' => env('TEST_DB_SSLMODE', env('DB_SSLMODE', 'prefer')),
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),

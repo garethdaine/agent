@@ -28,6 +28,10 @@ class RunEventWriter
 
     private const APPROVAL_PATTERN = '/\b(?:need|needs|required|requires)\s+(?:your\s+)?permission\b|\bcould you approve\b|\bplease approve\b|\bapproval required\b/i';
 
+    private const PERMISSION_BLOCKER_PATTERN = '/\b(?:need|needs|required|requires)\s+(?:your\s+)?(?:file\s+)?write\s+permissions?\b|\bgrant\s+(?:file\s+)?write\s+permissions?\b|\bwrite\s+permissions?\s+(?:have\s+not\s+been|haven\'t\s+been|were\s+not|are\s+not)\s+granted\b|\b(?:all\s+)?file\s+write\s+operations?\s+are\s+denied\b|\bcannot\s+(?:create|write)\s+(?:any\s+)?(?:new\s+)?files?\b|\bpermission\s+(?:loop|wall)\b/i';
+
+    private const CLARIFICATION_PATTERN = '/\b(?:could|can)\s+you\s+clarify\b|\bneed(?:s)?\s+(?:your\s+)?clarification\b|\bplease\s+clarify\b|\bi\s+need\s+clarification\b|\bquestion\s+for\s+you\b|\bcan\s+you\s+confirm\b|\bshould\s+i\s+(?:proceed|continue|use|do)\b/i';
+
     private const RATE_LIMIT_PATTERN = '/hit your limit|rate limit|too many requests|quota exceeded|usage limit/i';
 
     public function __construct(private AgentJobRun $run)
@@ -91,6 +95,16 @@ class RunEventWriter
         if (($eventType === 'stdout' || $eventType === 'stderr')
             && preg_match(self::APPROVAL_PATTERN, $chunk) === 1) {
             $this->markApprovalRequired($chunk);
+        }
+
+        if (($eventType === 'stdout' || $eventType === 'stderr')
+            && preg_match(self::PERMISSION_BLOCKER_PATTERN, $chunk) === 1) {
+            $this->markPermissionBlockerDetected($chunk);
+        }
+
+        if (($eventType === 'stdout' || $eventType === 'stderr')
+            && preg_match(self::CLARIFICATION_PATTERN, $chunk) === 1) {
+            $this->markClarificationRequired($chunk);
         }
 
         if (($eventType === 'stdout' || $eventType === 'stderr')
@@ -286,6 +300,46 @@ class RunEventWriter
         $metadata['approval_excerpt'] = substr(trim($excerpt), 0, 1000);
 
         $this->run->metadata_json = $metadata;
+    }
+
+    private function markPermissionBlockerDetected(string $excerpt): void
+    {
+        $metadata = (array) ($this->run->metadata_json ?? []);
+
+        if (($metadata['permission_blocker_detected'] ?? false) === true) {
+            return;
+        }
+
+        $now = CarbonImmutable::now('UTC')->toIso8601String();
+        $metadata['permission_blocker_detected'] = true;
+        $metadata['permission_blocker_detected_at'] = $now;
+        $metadata['permission_blocker_excerpt'] = substr(trim($excerpt), 0, 1000);
+        $this->run->metadata_json = $metadata;
+
+        $this->appendLifecycle([
+            'type' => 'permission_blocker_detected',
+            'at' => $now,
+        ]);
+    }
+
+    private function markClarificationRequired(string $excerpt): void
+    {
+        $metadata = (array) ($this->run->metadata_json ?? []);
+
+        if (($metadata['clarification_required'] ?? false) === true) {
+            return;
+        }
+
+        $now = CarbonImmutable::now('UTC')->toIso8601String();
+        $metadata['clarification_required'] = true;
+        $metadata['clarification_detected_at'] = $now;
+        $metadata['clarification_excerpt'] = substr(trim($excerpt), 0, 1000);
+        $this->run->metadata_json = $metadata;
+
+        $this->appendLifecycle([
+            'type' => 'clarification_requested',
+            'at' => $now,
+        ]);
     }
 
     private function markRateLimitDetected(string $excerpt): void

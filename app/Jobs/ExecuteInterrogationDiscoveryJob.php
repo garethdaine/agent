@@ -128,9 +128,19 @@ class ExecuteInterrogationDiscoveryJob implements ShouldQueue
             $session->cli_session_id = null;
             $session->save();
 
+            $typeLabel = trim((string) $session->interrogation_type);
+            $brief = trim((string) ($session->feature_brief ?? ''));
+            $kickoffMessage = 'Start requirements interrogation.'
+                ."\nSession type: ".($typeLabel !== '' ? $typeLabel : 'general').'.'
+                ."\nAsk the first question.";
+
+            if ($brief !== '') {
+                $kickoffMessage .= "\n\nSession brief:\n".$brief;
+            }
+
             ExecuteInterrogationRoundJob::dispatch(
                 (int) $session->id,
-                'Start requirements interrogation. Ask the first question.',
+                $kickoffMessage,
                 true,
             );
         } catch (\Throwable $throwable) {

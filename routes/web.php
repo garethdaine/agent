@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\TaskProviderOAuthController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -18,6 +19,17 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
+    Route::get('/integrations/oauth/{provider}/callback', [TaskProviderOAuthController::class, 'callback'])
+        ->name('integrations.oauth.callback');
+
+    // Backward compatibility for previously configured OAuth callback URLs.
+    Route::get('/tools/discovery/providers/{driver}/oauth/callback', function (string $driver) {
+        return redirect()->route('integrations.oauth.callback', [
+            'provider' => $driver,
+            ...request()->query(),
+        ]);
+    })->name('tools.discovery.provider.callback');
+
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
@@ -55,6 +67,16 @@ Route::middleware([
     Route::get('/tools/discovery/settings', function () {
         return Inertia::render('Tools/Discovery/Settings');
     })->name('tools.discovery.settings');
+
+    Route::get('/tools/discovery/{id}/settings', function (int $id) {
+        return Inertia::render('Tools/Discovery/SessionSettings', [
+            'sessionId' => $id,
+        ]);
+    })->name('tools.discovery.session.settings');
+
+    Route::get('/tools/backups/settings', function () {
+        return Inertia::render('Tools/Backups/Settings');
+    })->name('tools.backups.settings');
 
     Route::get('/tools/discovery/{id}', function (int $id) {
         return Inertia::render('Tools/Discovery/Wizard', [

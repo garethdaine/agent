@@ -17,3 +17,7 @@ Schedule::command('agent:prune --runs --events')
 
 Schedule::command('agent:prune --jobs')
     ->dailyAt('03:20');
+
+Schedule::command('agent:backup-database')
+    ->everyMinute()
+    ->withoutOverlapping(10);

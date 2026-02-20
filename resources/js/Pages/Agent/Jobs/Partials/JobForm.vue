@@ -496,7 +496,7 @@ const submit = () => {
 </script>
 
 <template>
-    <form class="space-y-6" @submit.prevent="submit">
+    <form class="space-y-6 text-gray-900 dark:text-gray-100" @submit.prevent="submit">
         <div v-if="errors._form" class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
             {{ Array.isArray(errors._form) ? errors._form[0] : errors._form }}
         </div>
@@ -505,7 +505,7 @@ const submit = () => {
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Name</label>
                 <input v-model="form.name" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500">A human-friendly label for this job in the UI.</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">A human-friendly label for this job in the UI.</p>
                 <p v-if="errors.name" class="mt-1 text-sm text-red-600">{{ errors.name[0] }}</p>
             </div>
 
@@ -516,7 +516,7 @@ const submit = () => {
                     <option value="codex">codex</option>
                     <option value="custom">custom</option>
                 </select>
-                <p class="mt-1 text-xs text-gray-500">Chooses the executable policy and default command template.</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Chooses the executable policy and default command template.</p>
                 <p v-if="errors.runner_type" class="mt-1 text-sm text-red-600">{{ errors.runner_type[0] }}</p>
             </div>
 
@@ -524,7 +524,7 @@ const submit = () => {
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <div>
                         <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Schedule</p>
-                        <p class="text-xs text-gray-500">Use Basic mode for guided scheduling or Advanced mode to type a cron expression.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Use Basic mode for guided scheduling or Advanced mode to type a cron expression.</p>
                     </div>
                     <div class="flex items-center gap-4 text-sm">
                         <label class="inline-flex items-center gap-2">
@@ -609,7 +609,7 @@ const submit = () => {
                 <div v-else>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Cron Expression</label>
                     <input v-model="form.cron_expression" type="text" class="mt-1 w-full rounded-md border-gray-300 font-mono dark:border-gray-700 dark:bg-gray-900" />
-                    <p class="mt-1 text-xs text-gray-500">5-part numeric cron. Supports numbers, <code>*</code>, ranges, lists, and step values.</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">5-part numeric cron. Supports numbers, <code>*</code>, ranges, lists, and step values.</p>
                 </div>
 
                 <p v-if="errors.cron_expression" class="mt-2 text-sm text-red-600">{{ errors.cron_expression[0] }}</p>
@@ -621,21 +621,21 @@ const submit = () => {
                 <datalist id="timezone-suggestions">
                     <option v-for="tz in timezoneSuggestions" :key="tz" :value="tz" />
                 </datalist>
-                <p class="mt-1 text-xs text-gray-500">IANA timezone used to evaluate the schedule (for example, <code>America/New_York</code>).</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">IANA timezone used to evaluate the schedule (for example, <code>America/New_York</code>).</p>
                 <p v-if="errors.timezone" class="mt-1 text-sm text-red-600">{{ errors.timezone[0] }}</p>
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Max Runtime Seconds</label>
                 <input v-model="form.max_runtime_seconds" type="number" min="10" max="86400" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500">Hard timeout for a single run. The runner will terminate the process after this limit.</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Hard timeout for a single run. The runner will terminate the process after this limit.</p>
                 <p v-if="errors.max_runtime_seconds" class="mt-1 text-sm text-red-600">{{ errors.max_runtime_seconds[0] }}</p>
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Cooldown Seconds</label>
                 <input v-model="form.cooldown_seconds" type="number" min="0" max="86400" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500">Minimum wait after the last finished non-skipped run before a scheduled run can start.</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Minimum wait after the last finished non-skipped run before a scheduled run can start.</p>
                 <p v-if="errors.cooldown_seconds" class="mt-1 text-sm text-red-600">{{ errors.cooldown_seconds[0] }}</p>
             </div>
 
@@ -643,7 +643,7 @@ const submit = () => {
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Task Prompt Source</p>
-                        <p class="text-xs text-gray-500">Choose a markdown file path or write markdown directly.</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Choose a markdown file path or write markdown directly.</p>
                     </div>
                     <div class="flex items-center gap-4 text-sm">
                         <label class="inline-flex items-center gap-2">
@@ -660,7 +660,7 @@ const submit = () => {
                 <div v-if="taskSource.mode === 'path'" class="mt-3">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Task Markdown Path</label>
                     <input v-model="form.task_markdown_path" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                    <p class="mt-1 text-xs text-gray-500">Absolute path to an existing markdown task/prompt file.</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Absolute path to an existing markdown task/prompt file.</p>
                     <p v-if="errors.task_markdown_path" class="mt-1 text-sm text-red-600">{{ errors.task_markdown_path[0] }}</p>
                 </div>
 
@@ -672,7 +672,7 @@ const submit = () => {
                         class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm dark:border-gray-700 dark:bg-gray-900"
                         placeholder="# Task title&#10;&#10;Describe exactly what the agent should do."
                     />
-                    <p class="mt-1 text-xs text-gray-500">Markdown text is persisted into a managed file path automatically.</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Markdown text is persisted into a managed file path automatically.</p>
                     <p v-if="errors.task_markdown_content" class="mt-1 text-sm text-red-600">{{ errors.task_markdown_content[0] }}</p>
                 </div>
             </div>
@@ -680,7 +680,7 @@ const submit = () => {
             <div class="lg:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Working Directory</label>
                 <input v-model="form.working_directory" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500">
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     Absolute directory where the command will execute. Paths with spaces are supported. If this path is outside allowed bases, add its parent via <code>AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES</code> in <code>.env</code>.
                 </p>
                 <p v-if="errors.working_directory" class="mt-1 text-sm text-red-600">{{ errors.working_directory[0] }}</p>
@@ -693,28 +693,28 @@ const submit = () => {
                         <select v-model="templateBuilder.preset" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
                             <option v-for="option in presetOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                         </select>
-                        <p class="mt-1 text-xs text-gray-500">Generate a safe command template from runner-aware options.</p>
-                        <p class="mt-1 text-xs text-gray-500">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Generate a safe command template from runner-aware options.</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             Base format: <code>{{ runnerCommandHint }}</code>
                         </p>
                     </div>
 
                     <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Permission Profile</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Permission Profile</p>
                         <div v-if="permissionProfileOptions.length > 0" class="mt-2 space-y-2">
                             <select v-model="templateBuilder.permissionProfile" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
                                 <option v-for="option in permissionProfileOptions" :key="`perm-${option.value}`" :value="option.value">{{ option.label }}</option>
                             </select>
-                            <p class="text-xs text-gray-500">{{ selectedPermissionProfile?.description }}</p>
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ selectedPermissionProfile?.description }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
                                 Active flags:
                                 <span v-if="(selectedPermissionProfile?.tokens?.length ?? 0) === 0">none</span>
                                 <span v-else class="font-mono">{{ selectedPermissionProfile.tokens.join(' ') }}</span>
                             </p>
                         </div>
-                        <p v-else class="mt-2 text-xs text-gray-500">No built-in permission flags for <code>custom</code> runners.</p>
+                        <p v-else class="mt-2 text-xs text-gray-500 dark:text-gray-400">No built-in permission flags for <code>custom</code> runners.</p>
 
-                        <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-500">Optional Placeholder Tokens</p>
+                        <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Optional Placeholder Tokens</p>
                         <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
                             <label class="inline-flex items-center gap-2">
                                 <input v-model="templateBuilder.includeWorkingDirectory" type="checkbox" class="rounded border-gray-300" />
@@ -768,7 +768,7 @@ const submit = () => {
             <div class="lg:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Command Template (optional for claude/codex)</label>
                 <input v-model="form.command_template" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500">
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     Optional command override. Leave empty to use runner defaults. For paths containing spaces, prefer placeholders like <code>&#123;&#123;task_markdown_path&#125;&#125;</code> and <code>&#123;&#123;working_directory&#125;&#125;</code> so the backend applies safe tokenization.
                 </p>
                 <p v-if="errors.command_template" class="mt-1 text-sm text-red-600">{{ errors.command_template[0] }}</p>
@@ -777,14 +777,14 @@ const submit = () => {
             <div class="lg:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Description</label>
                 <textarea v-model="form.description" rows="3" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500">Optional free-text notes about what this job does.</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional free-text notes about what this job does.</p>
                 <p v-if="errors.description" class="mt-1 text-sm text-red-600">{{ errors.description[0] }}</p>
             </div>
 
             <div class="lg:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">env_json</label>
                 <textarea v-model="form.env_json_text" rows="8" class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500">Optional environment variable overrides as JSON object. Restricted by security policy.</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional environment variable overrides as JSON object. Restricted by security policy.</p>
                 <p v-if="errors.env_json" class="mt-1 text-sm text-red-600">{{ errors.env_json[0] }}</p>
             </div>
 

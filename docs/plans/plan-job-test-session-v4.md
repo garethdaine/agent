@@ -1,5 +1,30 @@
 # Implementation Plan
 
-Derived from discovery session 1.
+Derived from discovery session 14.
 
-Revised plan
+Detailed plan
+- Update app/Support/Interrogation/Adapters/CodexAdapter.php
+- Add tests/Feature/InterrogationApiWorkflowTest.php assertions
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+## Sections
+
+- Scope
+- Implementation
+- Validation
+- Testing
+- Rollout
+- Observability
+- Risks
+- Assumptions
+
+
+## Risks
+
+- Risk
+
+
+## Assumptions
+
+- Assumption
+

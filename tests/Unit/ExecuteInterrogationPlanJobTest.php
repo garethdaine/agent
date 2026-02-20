@@ -78,9 +78,11 @@ class ExecuteInterrogationPlanJobTest extends TestCase
 
         $this->assertSame(InterrogationSession::STATUS_FAILED, (string) $session->status);
         $this->assertSame('PLAN_COMMAND_FAILED', (string) $session->error_code);
+        $this->assertSame('failed', (string) data_get($session->metadata_json, 'plan.generation_status'));
+        $this->assertStringContainsString('plan command failed', (string) data_get($session->metadata_json, 'plan.generation_error'));
     }
 
-    public function test_revision_retries_without_resume_after_initial_command_failure(): void
+    public function test_revision_plan_generation_uses_fresh_non_resumed_context(): void
     {
         $session = $this->planningSession();
         $session->cli_session_id = 'resume-session-id';
@@ -90,25 +92,19 @@ class ExecuteInterrogationPlanJobTest extends TestCase
         $adapter->shouldReceive('buildPlanCommand')
             ->once()
             ->withArgs(function (InterrogationSession $sessionArg): bool {
-                return (string) $sessionArg->cli_session_id === 'resume-session-id';
-            })
-            ->andReturn(['php', '-r', 'fwrite(STDERR, "resume failed"); exit(1);']);
-        $adapter->shouldReceive('buildPlanCommand')
-            ->once()
-            ->withArgs(function (InterrogationSession $sessionArg): bool {
                 return (string) $sessionArg->cli_session_id === '';
             })
-            ->andReturn(['php', '-r', 'echo json_encode(["plan_markdown" => "Revised plan"]);']);
+            ->andReturn(['php', '-r', 'echo json_encode(["plan_markdown" => "## Revised plan\n- Update app/Jobs/ExecuteInterrogationPlanJob.php", "sections" => ["Implementation"], "risks" => ["Risk"], "assumptions" => ["Assumption"]]);']);
         $adapter->shouldReceive('buildEnvironment')
-            ->twice()
+            ->once()
             ->andReturn([]);
         $adapter->shouldReceive('parsePlanResponse')
             ->once()
             ->andReturn([
-                'plan_markdown' => 'Revised plan',
-                'sections' => [],
-                'risks' => [],
-                'assumptions' => [],
+                'plan_markdown' => '## Revised plan'.PHP_EOL.'- Update app/Jobs/ExecuteInterrogationPlanJob.php',
+                'sections' => ['Implementation'],
+                'risks' => ['Risk'],
+                'assumptions' => ['Assumption'],
             ]);
 
         $factory = $this->mock(AdapterFactory::class);
@@ -122,8 +118,12 @@ class ExecuteInterrogationPlanJobTest extends TestCase
         $session->refresh();
 
         $this->assertSame(InterrogationSession::STATUS_PLANNING, (string) $session->status);
-        $this->assertSame('idle', (string) data_get($session->metadata_json, 'plan.revision_status'));
-        $this->assertSame('Revised plan', (string) data_get($session->plan_json, 'plan_markdown'));
+        $this->assertSame(
+            'idle',
+            (string) data_get($session->metadata_json, 'plan.revision_status'),
+            'Revision error: '.(string) data_get($session->metadata_json, 'plan.revision_error')
+        );
+        $this->assertStringContainsString('## Revised plan', (string) data_get($session->plan_json, 'plan_markdown'));
     }
 
     public function test_codex_plan_prompt_includes_parity_depth_requirements(): void
@@ -184,6 +184,7 @@ class ExecuteInterrogationPlanJobTest extends TestCase
         config()->set('agent.interrogation.codex_plan_min_markdown_chars', 500);
         config()->set('agent.interrogation.codex_plan_min_sections', 8);
         config()->set('agent.interrogation.codex_plan_min_concrete_references', 6);
+        config()->set('agent.interrogation.plan_payload_retry_attempts', 0);
 
         $session = $this->planningSession('codex');
         $session->plan_json = [
@@ -222,7 +223,7 @@ class ExecuteInterrogationPlanJobTest extends TestCase
 
         $this->assertSame(InterrogationSession::STATUS_PLANNING, (string) $session->status);
         $this->assertSame('failed', (string) data_get($session->metadata_json, 'plan.revision_status'));
-        $this->assertStringContainsString('Plan quality requirements not met', (string) data_get($session->metadata_json, 'plan.revision_error'));
+        $this->assertStringContainsString('Plan payload validation failed', (string) data_get($session->metadata_json, 'plan.revision_error'));
         $this->assertSame('## Existing Plan'.PHP_EOL.'- Keep me', (string) data_get($session->plan_json, 'plan_markdown'));
         $this->assertSame(['Scope', 'Implementation'], data_get($session->plan_json, 'sections'));
 
@@ -230,7 +231,104 @@ class ExecuteInterrogationPlanJobTest extends TestCase
             InterrogationEvent::query()
                 ->where('interrogation_session_id', $session->id)
                 ->where('event_type', InterrogationEvent::TYPE_ERROR)
-                ->where('payload->code', 'PLAN_REVISION_QUALITY_FAILED')
+                ->where('payload->code', 'PLAN_REVISION_PAYLOAD_INVALID')
+                ->exists()
+        );
+    }
+
+    public function test_plan_revision_retries_invalid_payload_and_persists_fixed_plan(): void
+    {
+        config()->set('agent.interrogation.plan_payload_retry_attempts', 2);
+        config()->set('agent.interrogation.codex_plan_quality_retries', 0);
+        config()->set('agent.interrogation.codex_plan_min_markdown_chars', 1);
+        config()->set('agent.interrogation.codex_plan_min_sections', 1);
+        config()->set('agent.interrogation.codex_plan_min_concrete_references', 1);
+
+        $session = $this->planningSession('codex');
+        $session->plan_json = [
+            'plan_markdown' => '## Existing Plan'.PHP_EOL.'- Keep me',
+            'sections' => ['Scope'],
+            'risks' => ['Risk A'],
+            'assumptions' => ['Assumption A'],
+        ];
+        $session->save();
+
+        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $buildCall = 0;
+        $adapter->shouldReceive('buildPlanCommand')
+            ->twice()
+            ->andReturnUsing(function (
+                InterrogationSession $sessionArg,
+                string $planningPrompt,
+                string $systemPrompt
+            ) use (&$buildCall): array {
+                $buildCall++;
+                $this->assertSame('', (string) $sessionArg->cli_session_id);
+                $this->assertNotSame('', trim($systemPrompt));
+
+                if ($buildCall === 1) {
+                    return ['php', '-r', 'echo json_encode(["plan_markdown" => "I\'m revising the plan against the locked baseline now.", "sections" => [], "risks" => [], "assumptions" => []]);'];
+                }
+
+                $this->assertStringContainsString('failed validation on attempt 1/2', $planningPrompt);
+                $this->assertStringContainsString('Do not include process narration', $planningPrompt);
+
+                return ['php', '-r', 'echo json_encode(["plan_markdown" => "## Scope\\n- Update app/Jobs/ExecuteInterrogationPlanJob.php\\n\\n## Implementation\\n- Wire App\\\\Jobs\\\\ExecuteInterrogationPlanJob retry path\\n\\n## Test Strategy\\n- Add tests/Unit/ExecuteInterrogationPlanJobTest.php assertions\\n'.str_repeat('x', 360).'","sections" => ["Scope", "Implementation", "Test Strategy"], "risks" => ["Risk"], "assumptions" => ["Assumption"]]);'];
+            });
+        $adapter->shouldReceive('buildEnvironment')
+            ->twice()
+            ->andReturn([]);
+        $parseCall = 0;
+        $adapter->shouldReceive('parsePlanResponse')
+            ->twice()
+            ->andReturnUsing(function () use (&$parseCall): array {
+                $parseCall++;
+
+                if ($parseCall === 1) {
+                    return [
+                        'plan_markdown' => 'I\'m revising the plan against the locked baseline now.',
+                        'sections' => [],
+                        'risks' => [],
+                        'assumptions' => [],
+                    ];
+                }
+
+                return [
+                    'plan_markdown' => '## Scope'.PHP_EOL
+                        .'- Update app/Jobs/ExecuteInterrogationPlanJob.php'.PHP_EOL
+                        .'## Implementation'.PHP_EOL
+                        .'- Wire App\\Jobs\\ExecuteInterrogationPlanJob retry path'.PHP_EOL
+                        .'## Test Strategy'.PHP_EOL
+                        .'- Add tests/Unit/ExecuteInterrogationPlanJobTest.php assertions'.PHP_EOL
+                        .str_repeat('x', 360),
+                    'sections' => ['Scope', 'Implementation', 'Test Strategy'],
+                    'risks' => ['Risk'],
+                    'assumptions' => ['Assumption'],
+                ];
+            });
+
+        $factory = $this->mock(AdapterFactory::class);
+        $factory->shouldReceive('make')
+            ->once()
+            ->andReturn($adapter);
+
+        $job = new ExecuteInterrogationPlanJob((int) $session->id, 'Rewrite the plan with stronger detail.');
+        $this->app->call([$job, 'handle']);
+
+        $session->refresh();
+
+        $this->assertSame(
+            'idle',
+            (string) data_get($session->metadata_json, 'plan.revision_status'),
+            'Revision error: '.(string) data_get($session->metadata_json, 'plan.revision_error')
+        );
+        $this->assertStringContainsString('Update app/Jobs/ExecuteInterrogationPlanJob.php', (string) data_get($session->plan_json, 'plan_markdown'));
+        $this->assertSame(['Scope', 'Implementation', 'Test Strategy'], data_get($session->plan_json, 'sections'));
+        $this->assertFalse(
+            InterrogationEvent::query()
+                ->where('interrogation_session_id', $session->id)
+                ->where('event_type', InterrogationEvent::TYPE_ERROR)
+                ->where('payload->code', 'PLAN_REVISION_PAYLOAD_INVALID')
                 ->exists()
         );
     }
@@ -303,6 +401,7 @@ class ExecuteInterrogationPlanJobTest extends TestCase
         $session->refresh();
 
         $this->assertStringContainsString('app/Support/Interrogation/Adapters/CodexAdapter.php', (string) data_get($session->plan_json, 'plan_markdown'));
+        $this->assertSame('idle', (string) data_get($session->metadata_json, 'plan.generation_status'));
     }
 
     private function planningSession(string $runnerType = 'claude'): InterrogationSession

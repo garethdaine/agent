@@ -11,6 +11,7 @@ use App\Policies\AgentJobPolicy;
 use App\Policies\AgentJobRunPolicy;
 use App\Policies\InterrogationSessionPolicy;
 use App\Support\Agent\ErrorEnvelope;
+use App\Support\Interrogation\InterrogationBuildCommandGuard;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -32,6 +33,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->runningInConsole()) {
+            app(InterrogationBuildCommandGuard::class)->enforceFromGlobals();
+        }
+
         Gate::policy(AgentJob::class, AgentJobPolicy::class);
         Gate::policy(AgentJobRun::class, AgentJobRunPolicy::class);
         Gate::policy(AgentAuditLog::class, AgentAuditLogPolicy::class);

@@ -32,8 +32,19 @@ const submit = async () => {
 
         router.visit(route('tools.discovery.index'));
     } catch (e) {
-        validation.value = e?.response?.data?.error?.details ?? {};
-        error.value = e?.response?.data?.error?.message ?? 'Failed to create session.';
+        const payload = e?.response?.data ?? {};
+        const envelope = payload?.error ?? null;
+
+        if (envelope) {
+            validation.value = envelope?.details ?? {};
+            error.value = envelope?.message ?? 'Failed to create session.';
+        } else if (payload?.errors && typeof payload.errors === 'object') {
+            validation.value = payload.errors;
+            error.value = payload?.message ?? 'The given data was invalid.';
+        } else {
+            validation.value = {};
+            error.value = payload?.message ?? 'Failed to create session.';
+        }
     } finally {
         submitting.value = false;
     }
@@ -53,18 +64,18 @@ const submit = async () => {
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-4xl space-y-4 rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                <p v-if="error" class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
+                <p v-if="error" class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{{ error }}</p>
 
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Name (optional)</label>
-                        <input v-model="form.name" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
+                        <input v-model="form.name" type="text" class="mt-1 w-full rounded-md border-gray-300 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
                         <p v-if="validation.name" class="mt-1 text-sm text-red-600">{{ validation.name[0] }}</p>
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Runner</label>
-                        <select v-model="form.runner_type" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <select v-model="form.runner_type" class="mt-1 w-full rounded-md border-gray-300 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
                             <option value="claude">claude</option>
                             <option value="codex">codex</option>
                         </select>
@@ -74,14 +85,14 @@ const submit = async () => {
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Project Directory</label>
-                    <input v-model="form.project_directory" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                    <p class="mt-1 text-xs text-gray-500">Absolute path where discovery commands run.</p>
+                    <input v-model="form.project_directory" type="text" class="mt-1 w-full rounded-md border-gray-300 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Absolute path where discovery commands run.</p>
                     <p v-if="validation.project_directory" class="mt-1 text-sm text-red-600">{{ validation.project_directory[0] }}</p>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Interrogation Type</label>
-                    <select v-model="form.interrogation_type" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    <select v-model="form.interrogation_type" class="mt-1 w-full rounded-md border-gray-300 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
                         <option value="feature">feature</option>
                         <option value="general">general</option>
                     </select>
@@ -93,10 +104,10 @@ const submit = async () => {
                     <textarea
                         v-model="form.feature_brief"
                         rows="10"
-                        class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm dark:border-gray-700 dark:bg-gray-900"
+                        class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400"
                         placeholder="Describe the feature scope, users, and constraints."
                     />
-                    <p class="mt-1 text-xs text-gray-500">Required for feature sessions.</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Required for feature sessions.</p>
                     <p v-if="validation.feature_brief" class="mt-1 text-sm text-red-600">{{ validation.feature_brief[0] }}</p>
                 </div>
 

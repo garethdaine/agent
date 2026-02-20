@@ -246,32 +246,45 @@ class ExecuteAgentRunJob implements ShouldQueue
             }
 
             $exitCode = $process->getExitCode();
+            $metadata = (array) ($run->metadata_json ?? []);
+            $permissionBlockerDetected = ($metadata['permission_blocker_detected'] ?? false) === true;
             $finalStatus = AgentJobRun::STATUS_FAILED;
+            $errorCode = null;
+            $errorSummary = null;
 
             if ($timedOut) {
                 $finalStatus = AgentJobRun::STATUS_TIMED_OUT;
             } elseif ($run->status === AgentJobRun::STATUS_STOPPING) {
                 $finalStatus = AgentJobRun::STATUS_KILLED;
-            } elseif ($exitCode === 0) {
+            } elseif ($exitCode === 0 && ! $permissionBlockerDetected) {
                 $finalStatus = AgentJobRun::STATUS_SUCCEEDED;
             }
 
-            $metadata = (array) ($run->metadata_json ?? []);
+            if ($finalStatus === AgentJobRun::STATUS_FAILED && $permissionBlockerDetected) {
+                $errorCode = 'PERMISSION_REQUIRED';
+                $errorSummary = $this->resolvePermissionBlockerSummary($metadata);
+            }
+
             if ($terminationMode !== null) {
                 $metadata['termination_mode'] = $terminationMode;
             }
 
-            $this->finalizeTerminal(
-                $run,
-                $transitions,
-                $finalStatus,
-                [
-                    'exit_code' => $exitCode,
-                    'signal' => $process->getTermSignal(),
-                    'metadata_json' => $metadata,
-                    'resolved_executable_path' => $run->resolved_executable_path,
-                ]
-            );
+            $payload = [
+                'exit_code' => $exitCode,
+                'signal' => $process->getTermSignal(),
+                'metadata_json' => $metadata,
+                'resolved_executable_path' => $run->resolved_executable_path,
+            ];
+
+            if (is_string($errorCode) && $errorCode !== '') {
+                $payload['error_code'] = $errorCode;
+            }
+
+            if (is_string($errorSummary) && trim($errorSummary) !== '') {
+                $payload['error_summary'] = $errorSummary;
+            }
+
+            $this->finalizeTerminal($run, $transitions, $finalStatus, $payload);
         } catch (\Throwable $throwable) {
             report($throwable);
             $this->failRunSafely($run, $transitions, $throwable);
@@ -335,10 +348,30 @@ class ExecuteAgentRunJob implements ShouldQueue
             }
         }
 
+        if ($status === AgentJobRun::STATUS_FAILED && ($mergedMetadata['permission_blocker_detected'] ?? false) === true) {
+            if (! isset($extra['error_code']) || ! is_string($extra['error_code']) || trim((string) $extra['error_code']) === '') {
+                $extra['error_code'] = 'PERMISSION_REQUIRED';
+            }
+
+            if (! isset($extra['error_summary']) || ! is_string($extra['error_summary']) || trim((string) $extra['error_summary']) === '') {
+                $extra['error_summary'] = $this->resolvePermissionBlockerSummary($mergedMetadata);
+            }
+        }
+
         if (($mergedMetadata['approval_required'] ?? false) === true) {
             $mergedMetadata['approval_required'] = false;
             $mergedMetadata['approval_resolved_at'] = $finishedAt->toIso8601String();
             $mergedMetadata['approval_resolution'] = $status;
+        }
+
+        if (($mergedMetadata['permission_blocker_detected'] ?? false) === true) {
+            $mergedMetadata['permission_blocker_resolved_at'] = $finishedAt->toIso8601String();
+            $mergedMetadata['permission_blocker_resolution'] = $status;
+        }
+
+        if (($mergedMetadata['clarification_required'] ?? false) === true) {
+            $mergedMetadata['clarification_resolved_at'] = $finishedAt->toIso8601String();
+            $mergedMetadata['clarification_resolution'] = $status;
         }
 
         $extra['metadata_json'] = $mergedMetadata;
@@ -504,6 +537,14 @@ class ExecuteAgentRunJob implements ShouldQueue
             $metadata['approval_resolved_at'] = $finishedAt->toIso8601String();
             $metadata['approval_resolution'] = 'runner_exception';
         }
+        if (($metadata['permission_blocker_detected'] ?? false) === true) {
+            $metadata['permission_blocker_resolved_at'] = $finishedAt->toIso8601String();
+            $metadata['permission_blocker_resolution'] = 'runner_exception';
+        }
+        if (($metadata['clarification_required'] ?? false) === true) {
+            $metadata['clarification_resolved_at'] = $finishedAt->toIso8601String();
+            $metadata['clarification_resolution'] = 'runner_exception';
+        }
 
         $transitions->transition(
             (int) $run->id,
@@ -517,5 +558,19 @@ class ExecuteAgentRunJob implements ShouldQueue
                 'metadata_json' => $metadata,
             ]
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    private function resolvePermissionBlockerSummary(array $metadata): string
+    {
+        $excerpt = trim((string) ($metadata['permission_blocker_excerpt'] ?? ''));
+
+        if ($excerpt !== '') {
+            return substr($excerpt, 0, 500);
+        }
+
+        return 'Runner reported missing write permissions and could not proceed.';
     }
 }

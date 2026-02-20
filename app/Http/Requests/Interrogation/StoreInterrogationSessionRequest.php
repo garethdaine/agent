@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Interrogation;
 
 use App\Models\InterrogationSession;
+use App\Models\InterrogationSetting;
 use App\Support\Agent\PathPolicy;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -50,15 +51,28 @@ class StoreInterrogationSessionRequest extends FormRequest
             }
 
             if ($this->user() !== null) {
+                $maxActiveSessions = $this->resolveMaxActiveSessions((int) $this->user()->id);
                 $activeCount = InterrogationSession::query()
                     ->forUser((int) $this->user()->id)
                     ->active()
                     ->count();
 
-                if ($activeCount >= 3) {
-                    $validator->errors()->add('runner_type', 'You already have 3 active interrogation sessions.');
+                if ($activeCount >= $maxActiveSessions) {
+                    $validator->errors()->add('runner_type', sprintf('You already have %d active interrogation sessions.', $maxActiveSessions));
                 }
             }
         });
+    }
+
+    private function resolveMaxActiveSessions(int $userId): int
+    {
+        $default = max(1, (int) config('agent.interrogation.max_active_sessions', 3));
+        $setting = InterrogationSetting::getForUser($userId, 'interrogation.max_active_sessions', $default);
+
+        if (is_numeric($setting)) {
+            return max(1, min(50, (int) $setting));
+        }
+
+        return $default;
     }
 }

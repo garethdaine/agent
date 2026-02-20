@@ -5,3 +5,23 @@
 [x-cloak] {
     display: none;
 }
+
+@layer base {
+    .dark input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    .dark select,
+    .dark textarea {
+        color: rgb(243 244 246);
+        caret-color: rgb(243 244 246);
+        color-scheme: dark;
+    }
+
+    .dark input:not([type='checkbox']):not([type='radio']):not([type='range'])::placeholder,
+    .dark textarea::placeholder {
+        color: rgb(156 163 175);
+    }
+
+    .dark select option {
+        color: rgb(243 244 246);
+        background-color: rgb(15 23 42);
+    }
+}

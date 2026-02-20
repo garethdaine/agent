@@ -16,6 +16,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "phpoffice/phpspreadsheet": "^5.4",
+        "spatie/laravel-backup": "^10.0",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {

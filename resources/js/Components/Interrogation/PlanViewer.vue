@@ -206,7 +206,7 @@ const renderItemMarkdown = (item) => {
             >
                 <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-gray-800/40">
                     <span>{{ section.title }}</span>
-                    <span class="text-xs font-medium text-gray-500">{{ section.items.length }}</span>
+                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ section.items.length }}</span>
                 </summary>
                 <div class="border-t border-gray-200 px-3 py-3 dark:border-gray-700">
                     <ul v-if="section.items.length > 0" class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
@@ -221,15 +221,15 @@ const renderItemMarkdown = (item) => {
                             />
                         </li>
                     </ul>
-                    <p v-else class="text-sm text-gray-500">No items provided.</p>
+                    <p v-else class="text-sm text-gray-500 dark:text-gray-400">No items provided.</p>
                 </div>
             </details>
         </div>
 
         <div v-if="hasPlan" class="mt-5 rounded-md border border-gray-200 p-3 dark:border-gray-700">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Request Revision</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Request Revision</p>
             <div class="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
-                <select v-model="revision.action" class="rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+                <select v-model="revision.action" class="rounded-md border-gray-300 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
                     <option value="expand">Expand</option>
                     <option value="simplify">Simplify</option>
                     <option value="add_examples">Add Examples</option>
@@ -271,7 +271,7 @@ const renderItemMarkdown = (item) => {
             </div>
 
             <div class="mt-3">
-                <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Revision Notes (Markdown)</label>
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Revision Notes (Markdown)</label>
                 <MarkdownEditor
                     v-model="revision.notes"
                     placeholder="Describe what should change. Markdown supported."

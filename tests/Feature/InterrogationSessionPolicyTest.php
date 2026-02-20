@@ -111,7 +111,7 @@ class InterrogationSessionPolicyTest extends TestCase
         $this->assertTrue($user->can('create', InterrogationSession::class));
     }
 
-    public function test_user_cannot_create_when_at_active_limit(): void
+    public function test_user_can_create_when_at_active_limit_and_validation_handles_quota(): void
     {
         $user = User::factory()->create();
 
@@ -125,7 +125,7 @@ class InterrogationSessionPolicyTest extends TestCase
             ]);
         }
 
-        $this->assertFalse($user->can('create', InterrogationSession::class));
+        $this->assertTrue($user->can('create', InterrogationSession::class));
     }
 
     public function test_completed_sessions_do_not_count_toward_limit(): void

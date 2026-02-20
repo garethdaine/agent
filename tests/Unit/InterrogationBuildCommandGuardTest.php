@@ -1,0 +1,107 @@
+<?php
+
+namespace Tests\Unit;
+
+use App\Support\Interrogation\InterrogationBuildCommandGuard;
+use RuntimeException;
+use Tests\TestCase;
+
+class InterrogationBuildCommandGuardTest extends TestCase
+{
+    public function test_it_ignores_non_interrogation_commands(): void
+    {
+        $guard = app(InterrogationBuildCommandGuard::class);
+
+        $guard->enforce(
+            ['php', 'artisan', 'migrate:fresh'],
+            [
+                'AGENT_JOB_SOURCE' => 'manual',
+                'DB_CONNECTION' => 'pgsql',
+                'DB_DATABASE' => 'agent',
+            ],
+        );
+
+        $this->assertTrue(true);
+    }
+
+    public function test_it_blocks_destructive_artisan_commands_for_interrogation_build_runs(): void
+    {
+        $guard = app(InterrogationBuildCommandGuard::class);
+        $path = $this->sandboxDatabasePath('blocked.sqlite');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('migrate:fresh');
+
+        $guard->enforce(
+            ['php', 'artisan', 'migrate:fresh', '--seed'],
+            [
+                'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'DB_CONNECTION' => 'sqlite',
+                'DB_DATABASE' => $path,
+            ],
+        );
+    }
+
+    public function test_it_requires_sqlite_connection_for_interrogation_build_runs(): void
+    {
+        $guard = app(InterrogationBuildCommandGuard::class);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('DB_CONNECTION must be sqlite');
+
+        $guard->enforce(
+            ['php', 'artisan', 'test'],
+            [
+                'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'DB_CONNECTION' => 'pgsql',
+                'DB_DATABASE' => 'agent',
+            ],
+        );
+    }
+
+    public function test_it_requires_sqlite_database_path_inside_sandbox(): void
+    {
+        $guard = app(InterrogationBuildCommandGuard::class);
+        $outsidePath = storage_path('framework/testing/outside-interrogation.sqlite');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('DB_DATABASE must be inside');
+
+        $guard->enforce(
+            ['php', 'artisan', 'test'],
+            [
+                'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'DB_CONNECTION' => 'sqlite',
+                'DB_DATABASE' => $outsidePath,
+            ],
+        );
+    }
+
+    public function test_it_allows_safe_artisan_commands_with_isolated_sqlite_database(): void
+    {
+        $guard = app(InterrogationBuildCommandGuard::class);
+        $path = $this->sandboxDatabasePath('allowed.sqlite');
+
+        $guard->enforce(
+            ['php', 'artisan', 'test'],
+            [
+                'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'DB_CONNECTION' => 'sqlite',
+                'DB_DATABASE' => $path,
+            ],
+        );
+
+        $this->assertTrue(true);
+    }
+
+    private function sandboxDatabasePath(string $fileName): string
+    {
+        $directory = storage_path('framework/interrogation-build');
+        @mkdir($directory, 0777, true);
+
+        $path = $directory.'/'.$fileName;
+        @touch($path);
+
+        return $path;
+    }
+}

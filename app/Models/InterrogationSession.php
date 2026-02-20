@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -27,6 +28,8 @@ class InterrogationSession extends Model
 
     public const STATUS_PLANNING = 'planning';
 
+    public const STATUS_BUILD_RULES = 'build_rules';
+
     public const STATUS_BUILD_TASKS = 'build_tasks';
 
     public const STATUS_BUILD_EXECUTING = 'build_executing';
@@ -37,7 +40,7 @@ class InterrogationSession extends Model
 
     public const STATUS_PAUSED = 'paused';
 
-    public const ACTIVE_STATUSES = ['setup', 'discovering', 'interrogating', 'summarizing', 'planning', 'build_tasks', 'build_executing'];
+    public const ACTIVE_STATUSES = ['setup', 'discovering', 'interrogating', 'summarizing', 'planning', 'build_rules', 'build_tasks', 'build_executing'];
 
     public const TERMINAL_STATUSES = ['completed', 'failed'];
 
@@ -45,17 +48,23 @@ class InterrogationSession extends Model
 
     public const PHASE_SETUP = 0;
 
-    public const PHASE_DISCOVERY = 1;
+    public const PHASE_PROVIDER_SETUP = 1;
 
-    public const PHASE_INTERROGATION = 2;
+    public const PHASE_TECH_STACK_SETUP = 2;
 
-    public const PHASE_SUMMARY = 3;
+    public const PHASE_DISCOVERY = 3;
 
-    public const PHASE_PLANNING = 4;
+    public const PHASE_INTERROGATION = 4;
 
-    public const PHASE_BUILD_TASKS = 5;
+    public const PHASE_SUMMARY = 5;
 
-    public const PHASE_BUILD_EXECUTION = 6;
+    public const PHASE_PLANNING = 6;
+
+    public const PHASE_BUILD_RULES = 7;
+
+    public const PHASE_BUILD_TASKS = 8;
+
+    public const PHASE_BUILD_EXECUTION = 9;
 
     public const TYPE_FEATURE = 'feature';
 
@@ -88,6 +97,16 @@ class InterrogationSession extends Model
     public function buildTasks(): HasMany
     {
         return $this->hasMany(InterrogationBuildTask::class)->orderBy('sequence')->orderBy('id');
+    }
+
+    public function techStacks(): HasMany
+    {
+        return $this->hasMany(InterrogationTechStack::class)->orderBy('sequence')->orderBy('id');
+    }
+
+    public function providerIntegrations(): MorphMany
+    {
+        return $this->morphMany(ConnectedProvider::class, 'providerable');
     }
 
     public function scopeActive(Builder $query): void

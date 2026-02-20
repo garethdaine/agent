@@ -19,6 +19,7 @@ class InterrogationSessionModelTest extends TestCase
         $this->assertSame('interrogating', InterrogationSession::STATUS_INTERROGATING);
         $this->assertSame('summarizing', InterrogationSession::STATUS_SUMMARIZING);
         $this->assertSame('planning', InterrogationSession::STATUS_PLANNING);
+        $this->assertSame('build_rules', InterrogationSession::STATUS_BUILD_RULES);
         $this->assertSame('build_tasks', InterrogationSession::STATUS_BUILD_TASKS);
         $this->assertSame('build_executing', InterrogationSession::STATUS_BUILD_EXECUTING);
         $this->assertSame('completed', InterrogationSession::STATUS_COMPLETED);
@@ -43,6 +44,7 @@ class InterrogationSessionModelTest extends TestCase
         $this->assertContains('interrogating', InterrogationSession::ACTIVE_STATUSES);
         $this->assertContains('summarizing', InterrogationSession::ACTIVE_STATUSES);
         $this->assertContains('planning', InterrogationSession::ACTIVE_STATUSES);
+        $this->assertContains('build_rules', InterrogationSession::ACTIVE_STATUSES);
         $this->assertContains('build_tasks', InterrogationSession::ACTIVE_STATUSES);
         $this->assertContains('build_executing', InterrogationSession::ACTIVE_STATUSES);
     }
@@ -62,12 +64,15 @@ class InterrogationSessionModelTest extends TestCase
     public function test_phase_constants_are_sequential(): void
     {
         $this->assertSame(0, InterrogationSession::PHASE_SETUP);
-        $this->assertSame(1, InterrogationSession::PHASE_DISCOVERY);
-        $this->assertSame(2, InterrogationSession::PHASE_INTERROGATION);
-        $this->assertSame(3, InterrogationSession::PHASE_SUMMARY);
-        $this->assertSame(4, InterrogationSession::PHASE_PLANNING);
-        $this->assertSame(5, InterrogationSession::PHASE_BUILD_TASKS);
-        $this->assertSame(6, InterrogationSession::PHASE_BUILD_EXECUTION);
+        $this->assertSame(1, InterrogationSession::PHASE_PROVIDER_SETUP);
+        $this->assertSame(2, InterrogationSession::PHASE_TECH_STACK_SETUP);
+        $this->assertSame(3, InterrogationSession::PHASE_DISCOVERY);
+        $this->assertSame(4, InterrogationSession::PHASE_INTERROGATION);
+        $this->assertSame(5, InterrogationSession::PHASE_SUMMARY);
+        $this->assertSame(6, InterrogationSession::PHASE_PLANNING);
+        $this->assertSame(7, InterrogationSession::PHASE_BUILD_RULES);
+        $this->assertSame(8, InterrogationSession::PHASE_BUILD_TASKS);
+        $this->assertSame(9, InterrogationSession::PHASE_BUILD_EXECUTION);
     }
 
     public function test_type_constants_exist(): void

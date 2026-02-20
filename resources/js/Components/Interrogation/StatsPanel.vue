@@ -76,7 +76,7 @@ const elapsedLabel = computed(() => {
         </dl>
 
         <div>
-            <div class="mb-1 flex items-center justify-between text-xs text-gray-500">
+            <div class="mb-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                 <span>Progress</span>
                 <span>{{ latestProgress }}%</span>
             </div>
@@ -86,7 +86,7 @@ const elapsedLabel = computed(() => {
         </div>
 
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Categories</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Categories</p>
             <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">{{ categories.length > 0 ? categories.join(', ') : 'No categories yet' }}</p>
         </div>
     </div>
