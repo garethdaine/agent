@@ -1,6 +1,8 @@
 <script setup>
 import MarkdownEditor from '@/Components/Markdown/MarkdownEditor.vue';
+import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import { formatInterrogationError } from '@/Components/Interrogation/errorFormatting';
+import { formatAgentRunEventEntries } from '@/Support/agentRunEventFormatting';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -150,27 +152,10 @@ watch(
     { immediate: true }
 );
 
-const activeRunLogLines = computed(() => {
+const activeRunLogEntries = computed(() => {
     const tail = Array.isArray(activeRun.value?.log_tail) ? activeRun.value.log_tail : [];
 
-    return tail
-        .map((entry) => {
-            const payload = entry?.payload;
-            if (typeof payload === 'string') {
-                return payload;
-            }
-
-            if (payload && typeof payload === 'object') {
-                try {
-                    return JSON.stringify(payload);
-                } catch {
-                    return '[unprintable payload]';
-                }
-            }
-
-            return String(payload ?? '');
-        })
-        .filter((line) => line.trim() !== '');
+    return formatAgentRunEventEntries(tail);
 });
 
 const addProjectRule = () => {
@@ -618,9 +603,24 @@ const submitTaskRegeneration = (task) => {
             <p v-if="activeRun" class="mt-2 text-xs text-gray-600 dark:text-gray-300">Run #{{ activeRun.id }} · {{ activeRun.status }}</p>
         </div>
 
-        <div v-if="isExecutionMode && activeRunLogLines.length > 0" class="mt-4">
+        <div v-if="isExecutionMode && activeRunLogEntries.length > 0" class="mt-4">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Active Run Log Tail</p>
-            <pre class="mt-2 max-h-56 overflow-auto rounded border border-gray-200 bg-gray-950 p-3 text-xs text-gray-100 dark:border-gray-700">{{ activeRunLogLines.join('\n') }}</pre>
+            <div class="mt-2 max-h-56 overflow-auto rounded border border-gray-200 bg-gray-950 p-3 text-xs text-gray-100 dark:border-gray-700">
+                <div v-for="entry in activeRunLogEntries" :key="entry.key" class="mb-2 whitespace-pre-wrap break-words">
+                    <div class="text-[11px] text-gray-400">{{ entry.prefix }}</div>
+                    <MarkdownRenderer
+                        v-if="entry.format === 'markdown'"
+                        :markdown="entry.payload"
+                        :normalize="false"
+                        class="tail-markdown prose prose-sm mt-1 max-w-none rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 font-sans text-emerald-100 dark:prose-invert prose-headings:mb-2 prose-headings:mt-3 prose-p:my-1.5 prose-li:my-0.5 prose-code:rounded prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5"
+                    />
+                    <pre v-else class="mt-0.5 whitespace-pre-wrap break-words font-mono" :class="{
+                        'text-rose-300': entry.tone === 'stderr',
+                        'text-sky-200': entry.tone === 'lifecycle',
+                        'text-emerald-200': entry.tone === 'structured',
+                    }">{{ entry.payload }}</pre>
+                </div>
+            </div>
         </div>
 
         <div v-if="isExecutionMode" class="mt-4 rounded border border-gray-200 p-3 dark:border-gray-700">

@@ -25,7 +25,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        //
+        $middleware->alias([
+            'delegation' => \App\Http\Middleware\DelegationFeatureGate::class,
+            'delegation.ui' => \App\Http\Middleware\DelegationUiFeatureGate::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (ValidationException $exception, Request $request) {

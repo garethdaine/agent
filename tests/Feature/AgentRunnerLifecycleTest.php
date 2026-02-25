@@ -482,6 +482,71 @@ class AgentRunnerLifecycleTest extends TestCase
         $this->assertSame('timeout', $metadata['termination_mode'] ?? null);
     }
 
+    public function test_silent_run_emits_heartbeat_lifecycle_events_while_active(): void
+    {
+        $silentExec = $this->sandboxBase.'/bin/silent-runner';
+        file_put_contents($silentExec, "#!/bin/sh\nsleep 2\nexit 0\n");
+        chmod($silentExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $silentExec,
+            'codex' => $silentExec,
+            'custom' => $silentExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $silentExec.' -p {{task_markdown_path}}',
+            'codex' => $silentExec.' exec {{task_markdown_path}}',
+        ]);
+        config()->set('agent.run_output_heartbeat_seconds', 1);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/silent-heartbeat.md';
+        file_put_contents($taskFile, "# Silent Heartbeat\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Silent Heartbeat Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 10,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $heartbeatEvent = $run->events()
+            ->where('event_type', 'lifecycle')
+            ->where('payload', 'like', '%"type":"heartbeat"%')
+            ->first();
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertNotNull($heartbeatEvent);
+    }
+
     public function test_rate_limit_output_sets_rate_limited_error_and_job_hold(): void
     {
         $rateLimitedExec = $this->sandboxBase.'/bin/rate-limited-runner';
@@ -546,6 +611,70 @@ class AgentRunnerLifecycleTest extends TestCase
         $this->assertTrue((bool) ($metadata['rate_limit_detected'] ?? false));
         $this->assertNotEmpty($metadata['rate_limit_hold_until'] ?? null);
         $this->assertNotNull($state);
+    }
+
+    public function test_rate_limit_handling_summary_text_does_not_trigger_rate_limit_detection(): void
+    {
+        $summaryExec = $this->sandboxBase.'/bin/summary-runner';
+        file_put_contents($summaryExec, "#!/bin/sh\necho \"Implemented rate limit handling (429 responses with Retry-After support)\"\nexit 0\n");
+        chmod($summaryExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $summaryExec,
+            'codex' => $summaryExec,
+            'custom' => $summaryExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $summaryExec.' -p {{task_markdown_path}}',
+            'codex' => $summaryExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limit-summary.md';
+        file_put_contents($taskFile, "# Rate Limit Summary\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limit Summary Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+        $state = AgentSystemState::query()->find(sprintf('job_rate_limit_hold_until:%d', $job->id));
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
+        $this->assertNull($metadata['rate_limit_hold_until'] ?? null);
+        $this->assertNull($state);
     }
 
     private function runExecuteAgentRunJob(int $runId): void

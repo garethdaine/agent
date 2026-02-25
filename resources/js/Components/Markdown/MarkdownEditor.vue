@@ -203,6 +203,12 @@ const setLink = () => {
     color: #f3f4f6;
 }
 
+@media (prefers-color-scheme: dark) {
+    :deep(.markdown-editor-content .tiptap) {
+        color: #f3f4f6;
+    }
+}
+
 :deep(.markdown-editor-content .tiptap p) {
     margin: 0.5rem 0;
 }
@@ -224,6 +230,12 @@ const setLink = () => {
     background: #1f2937;
 }
 
+@media (prefers-color-scheme: dark) {
+    :deep(.markdown-editor-content .tiptap code) {
+        background: #1f2937;
+    }
+}
+
 :deep(.markdown-editor-content .tiptap a) {
     color: #4f46e5;
     text-decoration: underline;
@@ -233,11 +245,23 @@ const setLink = () => {
     color: #818cf8;
 }
 
+@media (prefers-color-scheme: dark) {
+    :deep(.markdown-editor-content .tiptap a) {
+        color: #818cf8;
+    }
+}
+
 :deep(.markdown-editor-content .tiptap p.is-editor-empty:first-child::before) {
     content: attr(data-placeholder);
     color: #9ca3af;
     float: left;
     height: 0;
     pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    :deep(.markdown-editor-content .tiptap p.is-editor-empty:first-child::before) {
+        color: #6b7280;
+    }
 }
 </style>

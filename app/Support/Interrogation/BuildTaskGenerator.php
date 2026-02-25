@@ -9,6 +9,8 @@ use Symfony\Component\Process\Process;
 
 class BuildTaskGenerator
 {
+    private const MIN_TIMEOUT_SECONDS = 3600;
+
     public function __construct(
         private readonly AdapterFactory $adapterFactory,
         private readonly SystemPromptResolver $promptResolver,
@@ -74,6 +76,8 @@ class BuildTaskGenerator
             'Never include destructive database commands (`migrate:fresh`, `migrate:refresh`, `db:wipe`, `DROP`, `TRUNCATE`) in task instructions.',
             'For every task that changes behavior, enforce tests first: write or update tests before implementation/refactor code, verify failure, then implement the minimum clean change until tests pass.',
             'Apply Code Field rules in task instructions: state assumptions first, define scope boundaries, cover edge/failure paths (not only happy path), and require explicit verification before claiming correctness.',
+            'If the plan describes user-facing or operator-facing capabilities (for example dashboard, control surface, settings page, wizard, in-app workflow), include explicit tasks for route registration, page/component wiring, and navigation/discoverability.',
+            'Include at least one verification step that proves the new surface is reachable in-app (not only API/backend completion).',
         ];
 
         if ($summaryMarkdown !== '') {
@@ -139,6 +143,7 @@ class BuildTaskGenerator
             'Never include destructive database commands (`migrate:fresh`, `migrate:refresh`, `db:wipe`, `DROP`, `TRUNCATE`) in task instructions.',
             'For this task, enforce tests first: write/update tests, verify failure, then implement minimum clean changes until tests pass.',
             'Apply Code Field rules: assumptions first, clear scope boundaries, edge/failure paths, and explicit verification.',
+            'If this regenerated task is part of user-facing/operator-facing capability delivery, include explicit route/page/nav wiring and in-app discoverability verification.',
             "\nCurrent task to regenerate:\n"
             .'Sequence: '.((int) $task->sequence)
             ."\nTitle: ".trim((string) $task->title)
@@ -178,6 +183,7 @@ class BuildTaskGenerator
         string $prompt,
         string $systemPrompt,
     ): array {
+        $timeoutSeconds = max(self::MIN_TIMEOUT_SECONDS, (int) config('agent.interrogation.build_task_generation_timeout_seconds', 7200));
         $adapter = $this->adapterFactory->make((string) $session->runner_type);
 
         $process = new Process(
@@ -185,7 +191,7 @@ class BuildTaskGenerator
             (string) $session->project_directory,
             $adapter->buildEnvironment($session),
         );
-        $process->setTimeout(600);
+        $process->setTimeout($timeoutSeconds);
         $process->run();
         $parsed = $process->getExitCode() === 0
             ? $adapter->parseBuildTasksResponse((string) $process->getOutput())
@@ -204,7 +210,7 @@ class BuildTaskGenerator
                 (string) $session->project_directory,
                 $adapter->buildEnvironment($freshSession),
             );
-            $fallback->setTimeout(600);
+            $fallback->setTimeout($timeoutSeconds);
             $fallback->run();
 
             $fallbackParsed = $fallback->getExitCode() === 0

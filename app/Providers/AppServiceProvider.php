@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Listeners\DelegationBroadcastSubscriber;
+use App\Listeners\DelegationCoordinator;
+use App\Listeners\DelegationRecoveryHandler;
 use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
@@ -13,6 +16,7 @@ use App\Policies\InterrogationSessionPolicy;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Interrogation\InterrogationBuildCommandGuard;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -31,10 +35,17 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+    public function boot(Dispatcher $events): void
     {
         if ($this->app->runningInConsole()) {
             app(InterrogationBuildCommandGuard::class)->enforceFromGlobals();
+        }
+
+        // Register delegation event subscribers (only if delegation is enabled)
+        if (config('delegation.enabled', false)) {
+            $events->subscribe(DelegationCoordinator::class);
+            $events->subscribe(DelegationRecoveryHandler::class);
+            $events->subscribe(DelegationBroadcastSubscriber::class);
         }
 
         Gate::policy(AgentJob::class, AgentJobPolicy::class);

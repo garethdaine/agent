@@ -3,6 +3,7 @@
 namespace App\Support\Agent;
 
 use App\Models\AgentAuditLog;
+use App\Models\ChatAction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -77,6 +78,48 @@ class AuditLogger
             requestId: null,
             ipAddress: null,
             userAgent: null,
+            hostname: gethostname() ?: null,
+            outcome: $outcome,
+            errorCode: $errorCode,
+            errorMessage: $errorMessage,
+        );
+    }
+
+    /**
+     * Record an action initiated through the messenger control plane.
+     *
+     * @param  array<int, string>  $changedFields
+     * @param  array<string, mixed>|null  $before
+     * @param  array<string, mixed>|null  $after
+     */
+    public function recordMessengerAction(
+        ChatAction $action,
+        string $targetType,
+        string|int $targetId,
+        array $changedFields = [],
+        ?array $before = null,
+        ?array $after = null,
+        string $outcome = 'success',
+        ?string $errorCode = null,
+        ?string $errorMessage = null,
+    ): AgentAuditLog {
+        $message = $action->message;
+        $session = $message?->session;
+        $connector = $message?->connectorAccount ?? $session?->connectorAccount;
+
+        return $this->record(
+            userId: $session?->user_id,
+            actorType: 'messenger',
+            actorId: $action->id,
+            action: $action->action_type,
+            targetType: $targetType,
+            targetId: (string) $targetId,
+            changedFields: $changedFields,
+            before: $before,
+            after: $after,
+            requestId: $session?->id,
+            ipAddress: null,
+            userAgent: $connector ? "messenger/{$connector->provider}" : 'messenger/unknown',
             hostname: gethostname() ?: null,
             outcome: $outcome,
             errorCode: $errorCode,

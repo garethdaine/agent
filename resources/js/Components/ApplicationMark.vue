@@ -1,6 +1,24 @@
 <template>
-    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M11.395 44.428C4.557 40.198 0 32.632 0 24 0 10.745 10.745 0 24 0a23.891 23.891 0 0113.997 4.502c-.2 17.907-11.097 33.245-26.602 39.926z" fill="#6875F5" />
-        <path d="M14.134 45.885A23.914 23.914 0 0024 48c13.255 0 24-10.745 24-24 0-3.516-.756-6.856-2.115-9.866-4.659 15.143-16.608 27.092-31.75 31.751z" fill="#6875F5" />
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="agentMarkGradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#0EA5E9" />
+                <stop offset="1" stop-color="#4F46E5" />
+            </linearGradient>
+        </defs>
+
+        <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#agentMarkGradient)" />
+        <circle cx="32" cy="32" r="14.5" stroke="white" stroke-opacity="0.95" stroke-width="3.5" />
+
+        <path d="M32 32V24" stroke="white" stroke-width="3.5" stroke-linecap="round" />
+        <path d="M32 32L40 36" stroke="white" stroke-width="3.5" stroke-linecap="round" />
+
+        <circle cx="20" cy="21" r="3" fill="#99F6E4" />
+        <circle cx="46" cy="24" r="3" fill="#BFDBFE" />
+        <circle cx="24" cy="46" r="3" fill="#C4B5FD" />
+
+        <path d="M22 22L28.5 27.5" stroke="white" stroke-opacity="0.8" stroke-width="2" stroke-linecap="round" />
+        <path d="M43.5 25L37.5 29.5" stroke="white" stroke-opacity="0.8" stroke-width="2" stroke-linecap="round" />
+        <path d="M25.5 43.5L30 37.5" stroke="white" stroke-opacity="0.8" stroke-width="2" stroke-linecap="round" />
     </svg>
 </template>

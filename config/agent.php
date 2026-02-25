@@ -42,16 +42,19 @@ return [
     ],
 
     'default_templates' => [
-        'claude' => trim($claudeExecutable.' -p {{task_markdown_path}}'),
-        'codex' => trim($codexExecutable.$codexModelArgs.' exec {{task_markdown_path}}'),
+        'claude' => trim($claudeExecutable.' --verbose -p --output-format stream-json --include-partial-messages {{task_markdown_path}}'),
+        'codex' => trim($codexExecutable.$codexModelArgs.' exec --json {{task_markdown_path}}'),
     ],
 
     'interrogation' => [
         'codex_model' => trim((string) env('AGENT_INTERROGATION_CODEX_MODEL', $codexModel)),
         'build_execution_templates' => [
-            'claude' => trim((string) env('AGENT_INTERROGATION_BUILD_TEMPLATE_CLAUDE', $claudeExecutable.' --dangerously-skip-permissions -p {{task_markdown_path}}')),
-            'codex' => trim((string) env('AGENT_INTERROGATION_BUILD_TEMPLATE_CODEX', trim($codexExecutable.$codexModelArgs.' --dangerously-bypass-approvals-and-sandbox --search exec {{task_markdown_path}}'))),
+            'claude' => trim((string) env('AGENT_INTERROGATION_BUILD_TEMPLATE_CLAUDE', $claudeExecutable.' --dangerously-skip-permissions --verbose -p --output-format stream-json --include-partial-messages {{task_markdown_path}}')),
+            'codex' => trim((string) env('AGENT_INTERROGATION_BUILD_TEMPLATE_CODEX', trim($codexExecutable.$codexModelArgs.' --dangerously-bypass-approvals-and-sandbox --search exec --json {{task_markdown_path}}'))),
         ],
+        'build_task_generation_timeout_seconds' => (int) env('AGENT_INTERROGATION_BUILD_TASK_GENERATION_TIMEOUT_SECONDS', 7200),
+        'build_task_generation_job_timeout_seconds' => (int) env('AGENT_INTERROGATION_BUILD_TASK_GENERATION_JOB_TIMEOUT_SECONDS', 7500),
+        'max_text_length' => (int) env('AGENT_INTERROGATION_MAX_TEXT_LENGTH', 60000),
         'max_active_sessions' => (int) env('AGENT_INTERROGATION_MAX_ACTIVE_SESSIONS', 3),
         'codex_min_feature_answers' => (int) env('AGENT_INTERROGATION_CODEX_MIN_FEATURE_ANSWERS', 5),
         'codex_min_general_answers' => (int) env('AGENT_INTERROGATION_CODEX_MIN_GENERAL_ANSWERS', 3),
@@ -87,4 +90,6 @@ return [
     'env_max_payload_bytes' => 16 * 1024,
 
     'rate_limit_default_hold_minutes' => (int) env('AGENT_RATE_LIMIT_DEFAULT_HOLD_MINUTES', 15),
+
+    'run_output_heartbeat_seconds' => (int) env('AGENT_RUN_OUTPUT_HEARTBEAT_SECONDS', 5),
 ];

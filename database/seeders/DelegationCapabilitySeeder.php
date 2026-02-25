@@ -12,15 +12,22 @@ class DelegationCapabilitySeeder extends Seeder
      */
     public function run(): void
     {
-        $slugs = config('delegation.capabilities_seed', []);
+        $capabilities = config('delegation.capabilities_seed', [
+            'code_execution',
+            'review',
+            'testing',
+            'documentation',
+            'deployment',
+            'monitoring',
+        ]);
 
-        foreach ($slugs as $slug) {
-            DelegationCapability::updateOrCreate(
+        foreach ($capabilities as $slug) {
+            DelegationCapability::firstOrCreate(
                 ['slug' => $slug],
                 [
                     'name' => ucwords(str_replace('_', ' ', $slug)),
                     'is_active' => true,
-                ],
+                ]
             );
         }
     }

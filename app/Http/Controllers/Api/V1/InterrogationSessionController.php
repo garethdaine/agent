@@ -2657,8 +2657,9 @@ class InterrogationSessionController extends Controller
                     'provider_workspace_name' => $provider->provider_workspace_name,
                     'provider_user_name' => $identity['provider_user_name'] ?? null,
                     'provider_user_email' => $identity['provider_user_email'] ?? null,
-                    'team_id' => $identity['team_id'] ?? null,
-                    'team_name' => $identity['team_name'] ?? null,
+                    'team_id' => $metadata['team_id'] ?? ($identity['team_id'] ?? null),
+                    'team_name' => $metadata['team_name'] ?? ($identity['team_name'] ?? null),
+                    'team_key' => $metadata['team_key'] ?? ($identity['team_key'] ?? null),
                     'project_mode' => $projectMode,
                     'selected_project_id' => $projectMode === 'existing'
                         ? (is_string($projectSync['selected_project_id'] ?? null) ? trim((string) $projectSync['selected_project_id']) : null)

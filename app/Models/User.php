@@ -91,4 +91,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(ConnectedProvider::class);
     }
+
+    public function delegationGraphs(): HasMany
+    {
+        return $this->hasMany(DelegationGraph::class);
+    }
+
+    public function delegateeProfiles(): HasMany
+    {
+        return $this->hasMany(DelegateeProfile::class);
+    }
 }

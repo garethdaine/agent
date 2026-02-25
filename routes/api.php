@@ -3,11 +3,23 @@
 use App\Http\Controllers\Api\V1\AgentBackupSettingsController;
 use App\Http\Controllers\Api\V1\AgentJobController;
 use App\Http\Controllers\Api\V1\AgentRunController;
+use App\Http\Controllers\Api\V1\ChatActionController;
+use App\Http\Controllers\Api\V1\ChatSessionController;
 use App\Http\Controllers\Api\V1\InterrogationSessionController;
 use App\Http\Controllers\Api\V1\InterrogationSettingsController;
 use App\Http\Controllers\Api\V1\InterrogationTaskProviderController;
 use App\Http\Controllers\Api\V1\InterrogationTechStackController;
+use App\Http\Controllers\Api\V1\Messenger\MessengerHealthController;
+use App\Http\Controllers\Api\V1\Messenger\MessengerMetricsController;
+use App\Http\Controllers\Api\V1\Messenger\WebhookController;
+use App\Http\Controllers\Api\V1\DelegateeProfileController;
+use App\Http\Controllers\Api\V1\DelegationGraphController;
+use App\Http\Controllers\Api\V1\DelegationTaskController;
+use App\Http\Controllers\Api\V1\MessengerConnectorController;
 use App\Http\Middleware\AgentApiVersionHeader;
+use App\Http\Middleware\Messenger\CorrelationId;
+use App\Http\Middleware\Messenger\ReplayProtection;
+use App\Http\Middleware\Messenger\VerifyWebhookSignature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +52,9 @@ Route::middleware([AgentApiVersionHeader::class])
 
             Route::get('/dashboard/metrics', [AgentRunController::class, 'dashboardMetrics']);
             Route::get('/health/scheduler', [AgentRunController::class, 'schedulerHealth']);
+            Route::get('/health/messenger', [MessengerHealthController::class, 'index']);
+
+            Route::get('/messenger/metrics', [MessengerMetricsController::class, 'index']);
             Route::get('/backups/settings', [AgentBackupSettingsController::class, 'show']);
             Route::put('/backups/settings', [AgentBackupSettingsController::class, 'update'])->middleware('throttle:agent-mutations');
             Route::post('/backups/run-now', [AgentBackupSettingsController::class, 'runNow'])->middleware('throttle:agent-mutations');
@@ -90,5 +105,81 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/interrogation/settings', [InterrogationSettingsController::class, 'index']);
             Route::get('/interrogation/settings/{key}', [InterrogationSettingsController::class, 'show']);
             Route::put('/interrogation/settings/{key}', [InterrogationSettingsController::class, 'update'])->middleware('throttle:interrogation');
+
+            // Chat session endpoints
+            Route::get('/chat/sessions', [ChatSessionController::class, 'index']);
+            Route::get('/chat/sessions/{id}', [ChatSessionController::class, 'show']);
+            Route::get('/chat/sessions/{id}/messages', [ChatSessionController::class, 'messages']);
+            Route::get('/chat/sessions/{id}/actions', [ChatSessionController::class, 'actions']);
+
+            // Chat action endpoints
+            Route::get('/chat/actions/{id}', [ChatActionController::class, 'show']);
+            Route::get('/chat/actions/{id}/status', [ChatActionController::class, 'status']);
+            Route::post('/chat/actions/{id}/confirm', [ChatActionController::class, 'confirm'])
+                ->middleware('throttle:agent-mutations');
+            Route::post('/chat/actions/{id}/cancel', [ChatActionController::class, 'cancel'])
+                ->middleware('throttle:agent-mutations');
+
+            // Messenger connector management endpoints
+            Route::get('/messenger/connectors/schema', [MessengerConnectorController::class, 'schema']);
+            Route::get('/messenger/connectors', [MessengerConnectorController::class, 'index']);
+            Route::post('/messenger/connectors', [MessengerConnectorController::class, 'store'])
+                ->middleware('throttle:agent-mutations');
+            Route::get('/messenger/connectors/{id}', [MessengerConnectorController::class, 'show']);
+            Route::put('/messenger/connectors/{id}', [MessengerConnectorController::class, 'update'])
+                ->middleware('throttle:agent-mutations');
+            Route::delete('/messenger/connectors/{id}', [MessengerConnectorController::class, 'destroy'])
+                ->middleware('throttle:agent-mutations');
+            Route::post('/messenger/connectors/{id}/test', [MessengerConnectorController::class, 'test'])
+                ->middleware('throttle:agent-mutations');
+
+            // Delegation routes (gated by feature flag)
+            Route::prefix('delegation')->middleware(['delegation'])->group(function (): void {
+                // Graphs - CRUD
+                Route::get('/graphs', [DelegationGraphController::class, 'index']);
+                Route::post('/graphs', [DelegationGraphController::class, 'store'])->middleware('throttle:agent-mutations');
+                Route::get('/graphs/{id}', [DelegationGraphController::class, 'show']);
+                Route::put('/graphs/{id}', [DelegationGraphController::class, 'update'])->middleware('throttle:agent-mutations');
+                Route::delete('/graphs/{id}', [DelegationGraphController::class, 'destroy'])->middleware('throttle:agent-mutations');
+
+                // Graphs - Custom actions
+                Route::post('/graphs/{id}/restore', [DelegationGraphController::class, 'restore'])->middleware('throttle:agent-mutations');
+                Route::post('/graphs/{id}/validate', [DelegationGraphController::class, 'validate']);
+                Route::post('/graphs/{id}/start', [DelegationGraphController::class, 'start'])->middleware('throttle:agent-mutations');
+                Route::post('/graphs/{id}/cancel', [DelegationGraphController::class, 'cancel'])->middleware('throttle:agent-mutations');
+                Route::post('/graphs/{id}/clone', [DelegationGraphController::class, 'clone'])->middleware('throttle:agent-mutations');
+                Route::get('/graphs/{id}/events', [DelegationGraphController::class, 'events']);
+
+                // Tasks
+                Route::get('/graphs/{graphId}/tasks', [DelegationTaskController::class, 'index']);
+                Route::get('/graphs/{graphId}/tasks/{taskId}', [DelegationTaskController::class, 'show']);
+                Route::post('/graphs/{graphId}/tasks/{taskId}/verification/resolve', [DelegationTaskController::class, 'resolveVerification'])->middleware('throttle:agent-mutations');
+
+                // Delegatee Profiles - CRUD
+                Route::get('/delegatee-profiles', [DelegateeProfileController::class, 'index']);
+                Route::post('/delegatee-profiles', [DelegateeProfileController::class, 'store'])->middleware('throttle:agent-mutations');
+                Route::get('/delegatee-profiles/{id}', [DelegateeProfileController::class, 'show']);
+                Route::put('/delegatee-profiles/{id}', [DelegateeProfileController::class, 'update'])->middleware('throttle:agent-mutations');
+                Route::delete('/delegatee-profiles/{id}', [DelegateeProfileController::class, 'destroy'])->middleware('throttle:agent-mutations');
+                Route::post('/delegatee-profiles/{id}/restore', [DelegateeProfileController::class, 'restore'])->middleware('throttle:agent-mutations');
+            });
         });
+
+        // Messenger webhook routes (no auth required, signature verified by middleware)
+        Route::middleware([CorrelationId::class, VerifyWebhookSignature::class, ReplayProtection::class])
+            ->prefix('connectors')
+            ->group(function (): void {
+                Route::post('/slack/webhook', [WebhookController::class, 'handleSlack'])
+                    ->defaults('provider', 'slack')
+                    ->name('agent.api.connectors.slack.webhook');
+                Route::post('/telegram/webhook/{accountKey}', [WebhookController::class, 'handleTelegram'])
+                    ->defaults('provider', 'telegram')
+                    ->name('agent.api.connectors.telegram.webhook');
+                Route::post('/discord/webhook', [WebhookController::class, 'handleDiscord'])
+                    ->defaults('provider', 'discord')
+                    ->name('agent.api.connectors.discord.webhook');
+                Route::post('/whatsapp/webhook', [WebhookController::class, 'handleWhatsApp'])
+                    ->defaults('provider', 'whatsapp')
+                    ->name('agent.api.connectors.whatsapp.webhook');
+            });
     });

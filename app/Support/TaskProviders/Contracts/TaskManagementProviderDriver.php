@@ -33,6 +33,27 @@ interface TaskManagementProviderDriver
     public function listProjects(ConnectedProvider $provider): array;
 
     /**
+     * @return array<int, array{id:string,name:?string,key:?string}>
+     */
+    public function listTeams(ConnectedProvider $provider): array;
+
+    /**
+     * @return array<int, array{id:string,name:?string}>
+     */
+    public function listProjectMilestones(ConnectedProvider $provider, string $projectId): array;
+
+    /**
+     * @return array{id:string,name:?string}
+     */
+    public function createProjectMilestone(
+        ConnectedProvider $provider,
+        InterrogationSession $session,
+        string $projectId,
+        string $name,
+        ?string $description = null,
+    ): array;
+
+    /**
      * @param  array<int, string>  $labels
      * @return array{id:string,identifier:?string,url:?string}
      */
@@ -44,6 +65,9 @@ interface TaskManagementProviderDriver
         int $priority,
         array $labels,
         string $description,
+        ?string $projectMilestoneId = null,
+        ?string $parentTaskId = null,
+        ?string $title = null,
     ): array;
 
     public function updateTaskStatus(

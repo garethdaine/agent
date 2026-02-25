@@ -136,6 +136,8 @@ class BuildTaskRunFactoryTest extends TestCase
         $this->assertIsString($markdown);
         $this->assertStringContainsString('## Mandatory Workflow', $markdown);
         $this->assertStringContainsString('Write or update tests first', $markdown);
+        $this->assertStringContainsString('tests are runnable with `php artisan test`', $markdown);
+        $this->assertStringContainsString('Do not emit generic PostgreSQL disclaimers', $markdown);
         $this->assertStringContainsString('## Code Field Rules', $markdown);
         $this->assertStringContainsString('Do not write code before stating assumptions', $markdown);
         $this->assertStringContainsString('## Project Rules Context', $markdown);

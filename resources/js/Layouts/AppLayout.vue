@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import ApplicationMark from '@/Components/ApplicationMark.vue';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Banner from '@/Components/Banner.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
@@ -42,7 +42,7 @@ const logout = () => {
                             <!-- Logo -->
                             <div class="shrink-0 flex items-center">
                                 <Link :href="route('dashboard')">
-                                    <ApplicationMark class="block h-9 w-auto" />
+                                    <ApplicationLogo class="block h-9 w-auto" />
                                 </Link>
                             </div>
 
@@ -57,8 +57,18 @@ const logout = () => {
                                 <NavLink :href="route('agent.monitor.index')" :active="route().current('agent.monitor.*')">
                                     Monitor
                                 </NavLink>
-                                <NavLink :href="route('tools.index')" :active="route().current('tools.*')">
+                                <NavLink :href="route('tools.messenger.index')" :active="route().current('tools.messenger.*')">
+                                    Messenger
+                                </NavLink>
+                                <NavLink :href="route('tools.index')" :active="route().current('tools.index') || route().current('tools.discovery.*') || route().current('tools.backups.*')">
                                     Tools
+                                </NavLink>
+                                <NavLink
+                                    v-if="$page.props.delegationEnabled"
+                                    :href="route('agent.delegation.index')"
+                                    :active="route().current('agent.delegation.*')"
+                                >
+                                    Delegation
                                 </NavLink>
                             </div>
                         </div>
@@ -126,7 +136,7 @@ const logout = () => {
                             <div class="ms-3 relative">
                                 <Dropdown align="right" width="48">
                                     <template #trigger>
-                                        <button v-if="$page.props.jetstream.managesProfilePhotos" class="flex text-sm border-2 border-transparent rounded-full focus:outline-none focus:border-gray-300 transition">
+                                        <button v-if="$page.props.jetstream.managesProfilePhotos" type="button" class="flex text-sm border-2 border-transparent rounded-full focus:outline-none focus:border-gray-300 transition">
                                             <img class="size-8 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.name">
                                         </button>
 
@@ -209,8 +219,18 @@ const logout = () => {
                         <ResponsiveNavLink :href="route('agent.monitor.index')" :active="route().current('agent.monitor.*')">
                             Monitor
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('tools.index')" :active="route().current('tools.*')">
+                        <ResponsiveNavLink :href="route('tools.messenger.index')" :active="route().current('tools.messenger.*')">
+                            Messenger
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="route('tools.index')" :active="route().current('tools.index') || route().current('tools.discovery.*') || route().current('tools.backups.*')">
                             Tools
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="$page.props.delegationEnabled"
+                            :href="route('agent.delegation.index')"
+                            :active="route().current('agent.delegation.*')"
+                        >
+                            Delegation
                         </ResponsiveNavLink>
                     </div>
 

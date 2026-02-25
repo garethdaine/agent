@@ -10,7 +10,7 @@ class InterrogationHorizonConfigTest extends TestCase
     {
         $this->assertSame(30, config('horizon.waits.redis:interrogation'));
         $this->assertSame(['interrogation'], config('horizon.defaults.supervisor-interrogation.queue'));
-        $this->assertSame(900, config('horizon.defaults.supervisor-interrogation.timeout'));
+        $this->assertSame(7800, config('horizon.defaults.supervisor-interrogation.timeout'));
         $this->assertSame(1, config('horizon.defaults.supervisor-interrogation.tries'));
     }
 }

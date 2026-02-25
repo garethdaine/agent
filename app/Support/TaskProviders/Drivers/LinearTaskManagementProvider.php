@@ -13,6 +13,8 @@ use RuntimeException;
 
 class LinearTaskManagementProvider implements TaskManagementProviderDriver
 {
+    private const LINEAR_PROJECT_DESCRIPTION_MAX_LENGTH = 255;
+
     public function key(): string
     {
         return 'linear';
@@ -155,6 +157,7 @@ GRAPHQL,
                 'input' => [
                     'name' => $projectName,
                     'description' => $this->projectDescription($session),
+                    'content' => $this->projectContent($session),
                     'teamIds' => [$teamId],
                 ],
             ],
@@ -229,6 +232,145 @@ GRAPHQL,
         return array_values($projects);
     }
 
+    public function listTeams(ConnectedProvider $provider): array
+    {
+        $data = $this->graphql(
+            $this->providerAccessToken($provider),
+            <<<'GRAPHQL'
+query Teams {
+  teams(first: 250) {
+    nodes {
+      id
+      name
+      key
+    }
+  }
+}
+GRAPHQL,
+        );
+
+        $nodes = data_get($data, 'teams.nodes', []);
+        if (! is_array($nodes)) {
+            return [];
+        }
+
+        $teams = [];
+
+        foreach ($nodes as $node) {
+            if (! is_array($node)) {
+                continue;
+            }
+
+            $id = trim((string) ($node['id'] ?? ''));
+            if ($id === '') {
+                continue;
+            }
+
+            $teams[] = [
+                'id' => $id,
+                'name' => trim((string) ($node['name'] ?? '')) ?: null,
+                'key' => trim((string) ($node['key'] ?? '')) ?: null,
+            ];
+        }
+
+        usort($teams, static function (array $left, array $right): int {
+            return strcasecmp((string) ($left['name'] ?? ''), (string) ($right['name'] ?? ''));
+        });
+
+        return array_values($teams);
+    }
+
+    public function listProjectMilestones(ConnectedProvider $provider, string $projectId): array
+    {
+        $data = $this->graphql(
+            $this->providerAccessToken($provider),
+            <<<'GRAPHQL'
+query ProjectMilestones($projectId: String!) {
+  project(id: $projectId) {
+    projectMilestones(first: 250) {
+      nodes {
+        id
+        name
+      }
+    }
+  }
+}
+GRAPHQL,
+            [
+                'projectId' => $projectId,
+            ],
+        );
+
+        $nodes = data_get($data, 'project.projectMilestones.nodes', []);
+        if (! is_array($nodes)) {
+            return [];
+        }
+
+        $milestones = [];
+
+        foreach ($nodes as $node) {
+            if (! is_array($node)) {
+                continue;
+            }
+
+            $id = trim((string) ($node['id'] ?? ''));
+            if ($id === '') {
+                continue;
+            }
+
+            $milestones[] = [
+                'id' => $id,
+                'name' => trim((string) ($node['name'] ?? '')) ?: null,
+            ];
+        }
+
+        usort($milestones, static function (array $left, array $right): int {
+            return strcasecmp((string) ($left['name'] ?? ''), (string) ($right['name'] ?? ''));
+        });
+
+        return array_values($milestones);
+    }
+
+    public function createProjectMilestone(
+        ConnectedProvider $provider,
+        InterrogationSession $session,
+        string $projectId,
+        string $name,
+        ?string $description = null,
+    ): array {
+        $data = $this->graphql(
+            $this->providerAccessToken($provider),
+            <<<'GRAPHQL'
+mutation CreateProjectMilestone($input: ProjectMilestoneCreateInput!) {
+  projectMilestoneCreate(input: $input) {
+    success
+    projectMilestone {
+      id
+      name
+    }
+  }
+}
+GRAPHQL,
+            [
+                'input' => array_filter([
+                    'projectId' => $projectId,
+                    'name' => trim((string) $name),
+                    'description' => is_string($description) ? trim($description) : null,
+                ], static fn ($value): bool => $value !== null && (! is_string($value) || $value !== '')),
+            ],
+        );
+
+        $milestone = data_get($data, 'projectMilestoneCreate.projectMilestone');
+        if (! is_array($milestone) || trim((string) ($milestone['id'] ?? '')) === '') {
+            throw new RuntimeException('Linear project milestone creation failed: no milestone id returned.');
+        }
+
+        return [
+            'id' => trim((string) $milestone['id']),
+            'name' => trim((string) ($milestone['name'] ?? '')) ?: null,
+        ];
+    }
+
     public function createTask(
         ConnectedProvider $provider,
         InterrogationSession $session,
@@ -237,16 +379,27 @@ GRAPHQL,
         int $priority,
         array $labels,
         string $description,
+        ?string $projectMilestoneId = null,
+        ?string $parentTaskId = null,
+        ?string $title = null,
     ): array {
         $teamId = $this->teamIdFromProvider($provider);
 
         $input = [
             'teamId' => $teamId,
             'projectId' => $projectId,
-            'title' => trim((string) $task->title),
+            'title' => trim((string) ($title ?? $task->title)),
             'description' => $description,
             'priority' => max(0, min(4, $priority)),
         ];
+
+        if (is_string($projectMilestoneId) && trim($projectMilestoneId) !== '') {
+            $input['projectMilestoneId'] = trim($projectMilestoneId);
+        }
+
+        if (is_string($parentTaskId) && trim($parentTaskId) !== '') {
+            $input['parentId'] = trim($parentTaskId);
+        }
 
         $labelIds = $this->resolveIssueLabelIds(
             $this->providerAccessToken($provider),
@@ -487,9 +640,14 @@ GRAPHQL,
 
         if (is_array($payload['errors'] ?? null) && $payload['errors'] !== []) {
             $firstError = Arr::first($payload['errors']);
-            $message = is_array($firstError)
-                ? trim((string) ($firstError['message'] ?? 'Linear API returned an error.'))
-                : 'Linear API returned an error.';
+            $message = 'Linear API returned an error.';
+
+            if (is_array($firstError)) {
+                $userMessage = trim((string) data_get($firstError, 'extensions.userPresentableMessage', ''));
+                $message = $userMessage !== ''
+                    ? $userMessage
+                    : trim((string) ($firstError['message'] ?? $message));
+            }
 
             throw new RuntimeException($message !== '' ? $message : 'Linear API returned an error.');
         }
@@ -539,24 +697,62 @@ GRAPHQL,
 
     private function projectDescription(InterrogationSession $session): string
     {
+        $parts = [
+            'Generated by Agent requirements discovery build pipeline.',
+            'Session #'.$session->id,
+        ];
+
+        $name = trim((string) ($session->name ?? ''));
+        if ($name !== '') {
+            $parts[] = 'Name: '.mb_substr($name, 0, 80);
+        }
+
+        $type = trim((string) ($session->interrogation_type ?? ''));
+        if ($type !== '') {
+            $parts[] = 'Type: '.$type;
+        }
+
+        $description = implode(' ', $parts);
+
+        return mb_substr($description, 0, self::LINEAR_PROJECT_DESCRIPTION_MAX_LENGTH);
+    }
+
+    private function projectContent(InterrogationSession $session): string
+    {
         $summary = trim((string) data_get($session->summary_json, 'summary_markdown', ''));
         $brief = trim((string) ($session->feature_brief ?? ''));
 
-        $parts = [
-            'Generated by Agent requirements discovery build pipeline.',
-            'Session ID: '.$session->id,
+        $content = [
+            '## Agent Build Context',
+            '',
+            '- Session ID: '.$session->id,
         ];
 
+        $name = trim((string) ($session->name ?? ''));
+        if ($name !== '') {
+            $content[] = '- Session Name: '.$name;
+        }
+
+        $type = trim((string) ($session->interrogation_type ?? ''));
+        if ($type !== '') {
+            $content[] = '- Interrogation Type: '.$type;
+        }
+
         if ($brief !== '') {
-            $parts[] = 'Feature Brief: '.mb_substr($brief, 0, 2000);
+            $content[] = '';
+            $content[] = '## Feature Brief';
+            $content[] = '';
+            $content[] = $brief;
         }
 
         if ($summary !== '') {
-            $parts[] = 'Summary Context:';
-            $parts[] = mb_substr($summary, 0, 6000);
+            $content[] = '';
+            $content[] = '## Summary Context';
+            $content[] = '';
+            $content[] = $summary;
         }
 
-        return implode("\n\n", $parts);
+        return trim(implode("\n", $content));
     }
 
     private function graphqlEndpoint(): string

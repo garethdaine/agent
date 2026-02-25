@@ -1881,6 +1881,8 @@ class InterrogationApiWorkflowTest extends TestCase
             'category' => 'task_management',
             'driver' => 'linear',
             'metadata_json' => [
+                'team_id' => 'team-2',
+                'team_name' => 'Games',
                 'project_sync' => [
                     'mode' => 'existing',
                     'selected_project_id' => 'proj-2',
@@ -1925,6 +1927,29 @@ class InterrogationApiWorkflowTest extends TestCase
                 ];
             }
 
+            public function listTeams(ConnectedProvider $provider): array
+            {
+                return [
+                    ['id' => 'team-1', 'name' => 'Acme', 'key' => 'ACME'],
+                    ['id' => 'team-2', 'name' => 'Games', 'key' => 'GAME'],
+                ];
+            }
+
+            public function listProjectMilestones(ConnectedProvider $provider, string $projectId): array
+            {
+                return [];
+            }
+
+            public function createProjectMilestone(
+                ConnectedProvider $provider,
+                InterrogationSession $session,
+                string $projectId,
+                string $name,
+                ?string $description = null,
+            ): array {
+                throw new RuntimeException('Not used in this test.');
+            }
+
             public function createTask(
                 ConnectedProvider $provider,
                 InterrogationSession $session,
@@ -1933,6 +1958,9 @@ class InterrogationApiWorkflowTest extends TestCase
                 int $priority,
                 array $labels,
                 string $description,
+                ?string $projectMilestoneId = null,
+                ?string $parentTaskId = null,
+                ?string $title = null,
             ): array {
                 throw new RuntimeException('Not used in this test.');
             }
@@ -1961,6 +1989,9 @@ class InterrogationApiWorkflowTest extends TestCase
         $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/providers/linear/projects')
             ->assertOk()
             ->assertJsonPath('data.driver', 'linear')
+            ->assertJsonPath('data.selected_team_id', 'team-2')
+            ->assertJsonPath('data.selected_team_name', 'Games')
+            ->assertJsonPath('data.teams.0.id', 'team-1')
             ->assertJsonPath('data.project_mode', 'existing')
             ->assertJsonPath('data.selected_project_id', 'proj-2')
             ->assertJsonPath('data.projects.0.id', 'proj-1')
@@ -2031,6 +2062,29 @@ class InterrogationApiWorkflowTest extends TestCase
                 ];
             }
 
+            public function listTeams(ConnectedProvider $provider): array
+            {
+                return [
+                    ['id' => 'team-1', 'name' => 'Acme', 'key' => 'ACME'],
+                    ['id' => 'team-2', 'name' => 'Games', 'key' => 'GAME'],
+                ];
+            }
+
+            public function listProjectMilestones(ConnectedProvider $provider, string $projectId): array
+            {
+                return [];
+            }
+
+            public function createProjectMilestone(
+                ConnectedProvider $provider,
+                InterrogationSession $session,
+                string $projectId,
+                string $name,
+                ?string $description = null,
+            ): array {
+                throw new RuntimeException('Not used in this test.');
+            }
+
             public function createTask(
                 ConnectedProvider $provider,
                 InterrogationSession $session,
@@ -2039,6 +2093,9 @@ class InterrogationApiWorkflowTest extends TestCase
                 int $priority,
                 array $labels,
                 string $description,
+                ?string $projectMilestoneId = null,
+                ?string $parentTaskId = null,
+                ?string $title = null,
             ): array {
                 throw new RuntimeException('Not used in this test.');
             }
@@ -2065,19 +2122,153 @@ class InterrogationApiWorkflowTest extends TestCase
         });
 
         $this->patchJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/providers/linear/settings', [
+            'team_id' => 'team-2',
             'project_mode' => 'existing',
             'existing_project_id' => 'project-2',
         ])
             ->assertOk()
+            ->assertJsonPath('data.selected_team_id', 'team-2')
+            ->assertJsonPath('data.selected_team_name', 'Games')
             ->assertJsonPath('data.project_mode', 'existing')
             ->assertJsonPath('data.selected_project_id', 'project-2')
             ->assertJsonPath('data.selected_project_name', 'Project Two');
 
         $provider->refresh();
 
+        $this->assertSame('team-2', (string) data_get($provider->metadata_json, 'team_id'));
+        $this->assertSame('Games', (string) data_get($provider->metadata_json, 'team_name'));
         $this->assertSame('existing', (string) data_get($provider->metadata_json, 'project_sync.mode'));
         $this->assertSame('project-2', (string) data_get($provider->metadata_json, 'project_sync.selected_project_id'));
         $this->assertSame('Project Two', (string) data_get($provider->metadata_json, 'project_sync.selected_project_name'));
+    }
+
+    public function test_provider_settings_endpoint_rejects_invalid_team_selection(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Provider invalid team selection session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SETUP,
+            'phase' => InterrogationSession::PHASE_SETUP,
+        ]);
+
+        ConnectedProvider::query()->create([
+            'user_id' => $user->id,
+            'providerable_type' => InterrogationSession::class,
+            'providerable_id' => $session->id,
+            'category' => 'task_management',
+            'driver' => 'linear',
+            'metadata_json' => [
+                'identity' => [
+                    'team_id' => 'team-1',
+                    'team_name' => 'Acme',
+                ],
+            ],
+        ]);
+
+        $driver = new class implements TaskManagementProviderDriver
+        {
+            public function key(): string
+            {
+                return 'linear';
+            }
+
+            public function authorizationUrl(string $state, string $redirectUri): string
+            {
+                return '';
+            }
+
+            public function exchangeAuthorizationCode(string $code, string $redirectUri): array
+            {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function fetchIdentity(string $accessToken): array
+            {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function createProject(ConnectedProvider $provider, InterrogationSession $session, string $projectName): array
+            {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function listProjects(ConnectedProvider $provider): array
+            {
+                return [];
+            }
+
+            public function listTeams(ConnectedProvider $provider): array
+            {
+                return [
+                    ['id' => 'team-1', 'name' => 'Acme', 'key' => 'ACME'],
+                    ['id' => 'team-2', 'name' => 'Games', 'key' => 'GAME'],
+                ];
+            }
+
+            public function listProjectMilestones(ConnectedProvider $provider, string $projectId): array
+            {
+                return [];
+            }
+
+            public function createProjectMilestone(
+                ConnectedProvider $provider,
+                InterrogationSession $session,
+                string $projectId,
+                string $name,
+                ?string $description = null,
+            ): array {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function createTask(
+                ConnectedProvider $provider,
+                InterrogationSession $session,
+                InterrogationBuildTask $task,
+                string $projectId,
+                int $priority,
+                array $labels,
+                string $description,
+                ?string $projectMilestoneId = null,
+                ?string $parentTaskId = null,
+                ?string $title = null,
+            ): array {
+                throw new RuntimeException('Not used in this test.');
+            }
+
+            public function updateTaskStatus(
+                ConnectedProvider $provider,
+                InterrogationSession $session,
+                string $externalTaskId,
+                string $status,
+                ?string $note = null,
+            ): void {
+                throw new RuntimeException('Not used in this test.');
+            }
+        };
+
+        $this->app->instance(TaskManagementProviderManager::class, new class($driver) extends TaskManagementProviderManager
+        {
+            public function __construct(private readonly TaskManagementProviderDriver $driver) {}
+
+            public function driver(string $driver): TaskManagementProviderDriver
+            {
+                return $this->driver;
+            }
+        });
+
+        $this->patchJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/providers/linear/settings', [
+            'team_id' => 'team-unknown',
+            'project_mode' => 'create_new',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'TASK_PROVIDER_TEAM_INVALID')
+            ->assertJsonPath('errors.team_id.0', 'Selected Linear team is not available to this connection.');
     }
 
     public function test_generate_build_tasks_persists_project_rules_from_markdown_and_uploaded_files(): void

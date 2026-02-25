@@ -247,6 +247,8 @@ class BuildTaskRunFactory
         $content[] = '';
         $content[] = '- Make concrete changes in the repository that satisfy this task.';
         $content[] = '- Run relevant tests or validation commands when possible.';
+        $content[] = '- For this repository, tests are runnable with `php artisan test`; PHPUnit configuration already forces `DB_CONNECTION=pgsql_testing`.';
+        $content[] = '- Do not emit generic PostgreSQL disclaimers unless you actually ran a test command and captured a failing output that proves the issue.';
         $content[] = '- Include assumptions, conditions for correctness, and explicit non-goals in the final report.';
         $content[] = '- If blocked, report precise blockers and impacted files.';
         $content[] = '';

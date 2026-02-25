@@ -30,12 +30,14 @@ class StoreInterrogationSessionRequest extends FormRequest
      */
     public function rules(): array
     {
+        $maxTextLength = max(1, (int) config('agent.interrogation.max_text_length', 60000));
+
         return [
             'name' => ['nullable', 'string', 'max:255'],
             'runner_type' => ['required', Rule::in(['claude', 'codex'])],
             'project_directory' => ['required', 'string', 'max:1024'],
             'interrogation_type' => ['required', Rule::in([InterrogationSession::TYPE_FEATURE, InterrogationSession::TYPE_GENERAL])],
-            'feature_brief' => ['nullable', 'string', 'max:50000', 'required_if:interrogation_type,'.InterrogationSession::TYPE_FEATURE],
+            'feature_brief' => ['nullable', 'string', 'max:'.$maxTextLength, 'required_if:interrogation_type,'.InterrogationSession::TYPE_FEATURE],
         ];
     }
 

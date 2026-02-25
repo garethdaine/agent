@@ -15,12 +15,17 @@ class GenerateInterrogationBuildTasksJob implements ShouldQueue
 {
     use Queueable;
 
+    private const MIN_GENERATION_TIMEOUT_SECONDS = 3600;
+
+    private const MIN_JOB_TIMEOUT_SECONDS = 3900;
+
     public int $tries = 1;
 
-    public int $timeout = 900;
+    public int $timeout = self::MIN_JOB_TIMEOUT_SECONDS;
 
     public function __construct(public int $sessionId, public ?string $notes = null)
     {
+        $this->timeout = max(self::MIN_JOB_TIMEOUT_SECONDS, (int) config('agent.interrogation.build_task_generation_job_timeout_seconds', 7500));
         $this->onConnection('redis');
         $this->onQueue('interrogation');
     }
@@ -152,12 +157,13 @@ class GenerateInterrogationBuildTasksJob implements ShouldQueue
     private function normalizeBuildGenerationError(\Throwable $throwable): string
     {
         $message = trim((string) $throwable->getMessage());
+        $timeoutSeconds = max(self::MIN_GENERATION_TIMEOUT_SECONDS, (int) config('agent.interrogation.build_task_generation_timeout_seconds', 7200));
         if ($message === '') {
             return 'Build task generation failed unexpectedly.';
         }
 
         if (str_contains($message, 'exceeded the timeout of')) {
-            return 'Build task generation timed out after 600 seconds. Try again or reduce plan scope for task generation.';
+            return "Build task generation timed out after {$timeoutSeconds} seconds. Try again or reduce plan scope for task generation.";
         }
 
         if (str_contains($message, 'The process "') || str_contains($message, '--system-prompt') || str_contains($message, '--json-schema')) {

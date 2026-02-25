@@ -48,12 +48,12 @@ const alignmentClasses = computed(() => {
 
 <template>
     <div class="relative">
-        <div @click="open = ! open">
+        <div @click.stop="open = !open">
             <slot name="trigger" />
         </div>
 
         <!-- Full Screen Dropdown Overlay -->
-        <div v-show="open" class="fixed inset-0 z-40" @click="open = false" />
+        <div v-if="open" class="fixed inset-0 z-40" @click="open = false" />
 
         <transition
             enter-active-class="transition ease-out duration-200"
@@ -64,10 +64,9 @@ const alignmentClasses = computed(() => {
             leave-to-class="transform opacity-0 scale-95"
         >
             <div
-                v-show="open"
+                v-if="open"
                 class="absolute z-50 mt-2 rounded-md shadow-lg"
                 :class="[widthClass, alignmentClasses]"
-                style="display: none;"
                 @click="open = false"
             >
                 <div class="rounded-md ring-1 ring-black ring-opacity-5" :class="contentClasses">

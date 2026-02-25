@@ -96,6 +96,7 @@ class InterrogationTaskProviderController extends Controller
         try {
             $providerDriver = $providerManager->driver($normalizedDriver);
             $projects = $providerDriver->listProjects($provider);
+            $teams = $providerDriver->listTeams($provider);
         } catch (InvalidArgumentException $exception) {
             return response()->json([
                 'error' => [
@@ -114,16 +115,25 @@ class InterrogationTaskProviderController extends Controller
             ], 422);
         }
 
-        $projectSync = is_array(data_get($provider->metadata_json, 'project_sync', []))
-            ? data_get($provider->metadata_json, 'project_sync', [])
+        $metadata = is_array($provider->metadata_json) ? $provider->metadata_json : [];
+        $identity = is_array($metadata['identity'] ?? null) ? $metadata['identity'] : [];
+        $projectSync = is_array(data_get($metadata, 'project_sync', []))
+            ? data_get($metadata, 'project_sync', [])
             : [];
         $mode = in_array(($projectSync['mode'] ?? null), ['create_new', 'existing'], true)
             ? (string) $projectSync['mode']
             : 'create_new';
+        $selectedTeamId = trim((string) ($metadata['team_id'] ?? ($identity['team_id'] ?? '')));
+        $selectedTeamName = trim((string) ($metadata['team_name'] ?? ($identity['team_name'] ?? '')));
+        $selectedTeamKey = trim((string) ($metadata['team_key'] ?? ($identity['team_key'] ?? '')));
 
         return response()->json([
             'data' => [
                 'driver' => $normalizedDriver,
+                'selected_team_id' => $selectedTeamId !== '' ? $selectedTeamId : null,
+                'selected_team_name' => $selectedTeamName !== '' ? $selectedTeamName : null,
+                'selected_team_key' => $selectedTeamKey !== '' ? $selectedTeamKey : null,
+                'teams' => $teams,
                 'project_mode' => $mode,
                 'selected_project_id' => $mode === 'existing'
                     ? (string) ($projectSync['selected_project_id'] ?? '')
@@ -159,6 +169,58 @@ class InterrogationTaskProviderController extends Controller
         }
 
         $validated = $request->validated();
+        $metadata = is_array($provider->metadata_json) ? $provider->metadata_json : [];
+        $identity = is_array($metadata['identity'] ?? null) ? $metadata['identity'] : [];
+        $teamId = trim((string) ($validated['team_id'] ?? ''));
+
+        if ($teamId !== '') {
+            try {
+                $providerDriver = $providerManager->driver($normalizedDriver);
+                $teams = $providerDriver->listTeams($provider);
+            } catch (InvalidArgumentException $exception) {
+                return response()->json([
+                    'error' => [
+                        'code' => 'TASK_PROVIDER_UNSUPPORTED',
+                        'message' => $exception->getMessage(),
+                    ],
+                ], 422);
+            } catch (\Throwable $throwable) {
+                report($throwable);
+
+                return response()->json([
+                    'error' => [
+                        'code' => 'TASK_PROVIDER_TEAMS_FETCH_FAILED',
+                        'message' => $throwable->getMessage(),
+                    ],
+                ], 422);
+            }
+
+            $selectedTeam = collect($teams)->first(
+                static fn (array $team): bool => trim((string) ($team['id'] ?? '')) === $teamId
+            );
+
+            if (! is_array($selectedTeam)) {
+                return response()->json([
+                    'error' => [
+                        'code' => 'TASK_PROVIDER_TEAM_INVALID',
+                        'message' => 'Selected Linear team is not available to this connection.',
+                    ],
+                    'errors' => [
+                        'team_id' => ['Selected Linear team is not available to this connection.'],
+                    ],
+                ], 422);
+            }
+
+            $metadata['team_id'] = trim((string) ($selectedTeam['id'] ?? ''));
+            $metadata['team_name'] = $selectedTeam['name'] ?? null;
+            $metadata['team_key'] = $selectedTeam['key'] ?? null;
+            $identity['team_id'] = $metadata['team_id'];
+            $identity['team_name'] = $metadata['team_name'];
+            $identity['team_key'] = $metadata['team_key'];
+            $metadata['identity'] = $identity;
+            $provider->metadata_json = $metadata;
+        }
+
         $projectMode = (string) $validated['project_mode'];
         $selectedProjectId = null;
         $selectedProjectName = null;
@@ -208,7 +270,6 @@ class InterrogationTaskProviderController extends Controller
             $selectedProjectUrl = $selected['url'] ?? null;
         }
 
-        $metadata = is_array($provider->metadata_json) ? $provider->metadata_json : [];
         $metadata['project_sync'] = [
             'mode' => $projectMode,
             'selected_project_id' => $selectedProjectId,
@@ -223,6 +284,9 @@ class InterrogationTaskProviderController extends Controller
         return response()->json([
             'data' => [
                 'driver' => $normalizedDriver,
+                'selected_team_id' => $metadata['team_id'] ?? ($identity['team_id'] ?? null),
+                'selected_team_name' => $metadata['team_name'] ?? ($identity['team_name'] ?? null),
+                'selected_team_key' => $metadata['team_key'] ?? ($identity['team_key'] ?? null),
                 'project_mode' => $projectMode,
                 'selected_project_id' => $selectedProjectId,
                 'selected_project_name' => $selectedProjectName,

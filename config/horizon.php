@@ -99,6 +99,9 @@ return [
     'waits' => [
         'redis:agent' => 60,
         'redis:interrogation' => 30,
+        'redis:messenger-high' => 10,
+        'redis:messenger-default' => 30,
+        'redis:delegation' => 60,
     ],
 
     /*
@@ -223,6 +226,34 @@ return [
             'memory' => 128,
             'tries' => 1,
             'backoff' => 0,
+            'timeout' => (int) env('HORIZON_INTERROGATION_TIMEOUT', 7800),
+            'nice' => 0,
+        ],
+        'supervisor-messenger' => [
+            'connection' => 'redis',
+            'queue' => ['messenger-high', 'messenger-default'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(4, (int) env('HORIZON_MESSENGER_MAX_PROCESSES', 3))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'backoff' => [5, 30, 60],
+            'timeout' => 60,
+            'nice' => 0,
+        ],
+        'supervisor-delegation' => [
+            'connection' => 'redis',
+            'queue' => ['delegation'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(8, (int) env('HORIZON_DELEGATION_MAX_PROCESSES', 2))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 1,
+            'backoff' => 0,
             'timeout' => 900,
             'nice' => 0,
         ],
@@ -240,6 +271,16 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-messenger' => [
+                'maxProcesses' => max(1, min(4, (int) env('HORIZON_MESSENGER_MAX_PROCESSES', 3))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-delegation' => [
+                'maxProcesses' => max(1, min(8, (int) env('HORIZON_DELEGATION_MAX_PROCESSES', 2))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
         ],
 
         'local' => [
@@ -248,6 +289,14 @@ return [
             ],
             'supervisor-interrogation' => [
                 //
+            ],
+            'supervisor-messenger' => [
+                //
+            ],
+            'supervisor-delegation' => [
+                'maxProcesses' => max(1, min(8, (int) env('HORIZON_DELEGATION_MAX_PROCESSES', 2))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
             ],
         ],
     ],

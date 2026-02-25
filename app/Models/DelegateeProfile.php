@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+/**
+ * @mixin Builder
+ */
+class DelegateeProfile extends Model
+{
+    use HasFactory;
+    use SoftDeletes;
+
+    protected $guarded = [];
+
+    protected function casts(): array
+    {
+        return [
+            'env_json' => 'array',
+            'config_json' => 'array',
+            'is_active' => 'boolean',
+        ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function capabilities(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            DelegationCapability::class,
+            'delegatee_capabilities_pivot',
+            'delegatee_profile_id',
+            'delegation_capability_id'
+        )->using(DelegateeCapabilityPivot::class);
+    }
+
+    public function metric(): HasOne
+    {
+        return $this->hasOne(DelegateeMetric::class);
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true)->whereNull('deleted_at');
+    }
+}

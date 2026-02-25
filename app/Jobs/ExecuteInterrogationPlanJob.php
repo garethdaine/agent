@@ -41,6 +41,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
     ): void {
         $session = InterrogationSession::query()->find($this->sessionId);
         $isRevisionRequest = trim((string) $this->revisionPrompt) !== '';
+        $baselinePlan = [];
 
         if ($session === null) {
             return;
@@ -53,6 +54,9 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
         }
 
         $writer = new InterrogationEventWriter($session);
+        if ($isRevisionRequest && is_array($session->plan_json) && $session->plan_json !== []) {
+            $baselinePlan = $planPayloadNormalizer->normalize($session->plan_json);
+        }
 
         try {
             if ((int) $session->phase !== InterrogationSession::PHASE_PLANNING || $session->status !== InterrogationSession::STATUS_PLANNING) {
@@ -75,7 +79,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                 $this->markGenerationState($session, 'running');
             }
 
-            $planningPrompt = $this->buildPlanningPrompt($session, $isRevisionRequest);
+            $planningPrompt = $this->buildPlanningPrompt($session, $isRevisionRequest, $baselinePlan);
 
             $planningSession = clone $session;
             $planningSession->cli_session_id = null;
@@ -356,6 +360,75 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                 }
             }
 
+            if ($isRevisionRequest && $baselinePlan !== []) {
+                [$revisionValid, $revisionIssues] = $this->validatePlanRevisionOutput($baselinePlan, $plan);
+
+                if (! $revisionValid) {
+                    $revisionRetryPrompt = $this->buildPlanRevisionStabilityRetryPrompt(
+                        $planningPrompt,
+                        $baselinePlan,
+                        $plan,
+                        $revisionIssues,
+                    );
+
+                    $revisionRetrySession = clone $session;
+                    $revisionRetrySession->cli_session_id = null;
+                    $revisionRetryProcess = $this->runPlanProcess(
+                        $adapter,
+                        $revisionRetrySession,
+                        $revisionRetryPrompt,
+                        $systemPrompt,
+                        true,
+                    );
+
+                    if ($revisionRetryProcess->getExitCode() === 0) {
+                        $revisionRetryPlan = $adapter->parsePlanResponse((string) $revisionRetryProcess->getOutput());
+                        if (is_array($revisionRetryPlan)) {
+                            $plan = $planPayloadNormalizer->normalize($revisionRetryPlan);
+                            $planValidation = $planPayloadGuard->validate($plan);
+                            if ((bool) ($planValidation['valid'] ?? false)) {
+                                if ((string) $session->runner_type === 'codex') {
+                                    [$qualityOk, $qualityIssues] = $this->validateCodexPlanQuality($plan);
+                                    if (! $qualityOk) {
+                                        $revisionIssues[] = 'retry revision failed codex plan quality checks';
+                                    }
+                                }
+
+                                if (! isset($qualityOk) || $qualityOk) {
+                                    [$revisionValid, $revisionIssues] = $this->validatePlanRevisionOutput($baselinePlan, $plan);
+                                } else {
+                                    $revisionValid = false;
+                                }
+                            } else {
+                                $revisionIssues[] = 'retry revision failed payload validation: '.(string) ($planValidation['reason'] ?? 'invalid plan payload');
+                            }
+                        } else {
+                            $revisionIssues[] = 'retry revision response could not be parsed';
+                        }
+                    } else {
+                        $revisionIssues[] = 'retry revision command failed';
+                    }
+
+                    if (! $revisionValid) {
+                        $message = 'Plan revision was rejected because it diverged too far from the baseline: '.implode('; ', $revisionIssues);
+                        $this->markRevisionState($session, 'failed', $message);
+                        $writer->appendError([
+                            'code' => 'PLAN_REVISION_REWRITE_REJECTED',
+                            'message' => $message,
+                            'issues' => $revisionIssues,
+                        ]);
+                        $writer->appendSystem([
+                            'notice' => 'plan_revision_failed',
+                            'message' => $message,
+                            'issues' => $revisionIssues,
+                            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                        ]);
+
+                        return;
+                    }
+                }
+            }
+
             $session->plan_json = $plan;
             $session->approved_at = null;
 
@@ -544,7 +617,10 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
         return $process;
     }
 
-    private function buildPlanningPrompt(InterrogationSession $session, bool $isRevisionRequest): string
+    /**
+     * @param  array<string, mixed>  $baselinePlan
+     */
+    private function buildPlanningPrompt(InterrogationSession $session, bool $isRevisionRequest, array $baselinePlan = []): string
     {
         $planningPrompt = trim((string) ($isRevisionRequest ? $this->revisionPrompt : ''));
         if ($planningPrompt === '') {
@@ -562,7 +638,17 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
             .'Do not include any estimates or timelines in any field. '
             .'Do not mention total effort, days, weeks, months, ETA, critical path, or parallelization schedules. '
             .'Provide sequence/dependency order only, without duration predictions. '
+            .'For any user-facing or operator-facing capability, include explicit implementation detail for route/page/navigation exposure and in-app discoverability acceptance checks (not API-only completion). '
             .'Return finalized planning output only; never return process-status narration (for example "reviewing baseline", "I will rewrite", or "next I will").';
+
+        if ($isRevisionRequest && $baselinePlan !== []) {
+            $planningPrompt .= "\n\n"
+                .'Revision mode rules: apply targeted edits to the current plan baseline. '
+                .'Do not rewrite unrelated sections. Preserve existing structure and depth unless the revision request explicitly asks otherwise.'
+                ."\n\n"
+                .'Current plan baseline (edit in place):'."\n"
+                .$this->planContextBlock($baselinePlan);
+        }
 
         if ((string) $session->runner_type === 'codex') {
             $planningPrompt .= "\n\n"
@@ -570,12 +656,99 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                 .'Produce a detailed, implementation-ready plan_markdown with explicit headings and concrete decisions. '
                 .'Include sections for: scope boundary, architecture changes, data model/migrations, API/tool contracts, event contracts, '
                 .'authorization/scope enforcement, failure/retry behavior, observability, test strategy (unit/feature/integration), '
-                .'backward compatibility, rollout and rollback controls. '
+                .'backward compatibility, rollout and rollback controls, and user/operator surface exposure (routes/pages/navigation/discoverability). '
                 .'In each section, list specific implementation actions and impacted files/components where known. '
                 .'Keep sections, risks, and assumptions comprehensive and non-overlapping; avoid generic filler text.';
         }
 
         return $planningPrompt;
+    }
+
+    /**
+     * @param  array<string, mixed>  $plan
+     */
+    private function planContextBlock(array $plan): string
+    {
+        $planMarkdown = trim((string) ($plan['plan_markdown'] ?? ''));
+        $sections = $this->normalizeStringList($plan['sections'] ?? null);
+        $risks = $this->normalizeStringList($plan['risks'] ?? null);
+        $assumptions = $this->normalizeStringList($plan['assumptions'] ?? null);
+
+        $lines = [];
+        if ($planMarkdown !== '') {
+            $lines[] = "Plan markdown:\n".$planMarkdown;
+        }
+        if ($sections !== []) {
+            $lines[] = "Sections:\n- ".implode("\n- ", $sections);
+        }
+        if ($risks !== []) {
+            $lines[] = "Risks:\n- ".implode("\n- ", $risks);
+        }
+        if ($assumptions !== []) {
+            $lines[] = "Assumptions:\n- ".implode("\n- ", $assumptions);
+        }
+
+        return $lines === [] ? '- no plan baseline fields present' : implode("\n\n", $lines);
+    }
+
+    /**
+     * @param  array<string, mixed>  $baseline
+     * @param  array<string, mixed>  $candidate
+     * @return array{0:bool,1:array<int,string>}
+     */
+    private function validatePlanRevisionOutput(array $baseline, array $candidate): array
+    {
+        $issues = [];
+
+        $baselineMarkdownLength = mb_strlen((string) ($baseline['plan_markdown'] ?? ''));
+        $candidateMarkdownLength = mb_strlen((string) ($candidate['plan_markdown'] ?? ''));
+        if ($baselineMarkdownLength >= 2000 && $candidateMarkdownLength < (int) floor($baselineMarkdownLength * 0.60)) {
+            $issues[] = 'plan_markdown shrank by more than 40% from baseline';
+        }
+
+        $baselineSections = count($this->normalizeStringList($baseline['sections'] ?? null));
+        $candidateSections = count($this->normalizeStringList($candidate['sections'] ?? null));
+        if ($baselineSections >= 6 && $candidateSections < (int) floor($baselineSections * 0.60)) {
+            $issues[] = sprintf('sections list shrank too aggressively (%d -> %d)', $baselineSections, $candidateSections);
+        }
+
+        $baselineRisks = count($this->normalizeStringList($baseline['risks'] ?? null));
+        $candidateRisks = count($this->normalizeStringList($candidate['risks'] ?? null));
+        if ($baselineRisks > 0 && $candidateRisks === 0) {
+            $issues[] = 'risks list was dropped from baseline';
+        }
+
+        $baselineAssumptions = count($this->normalizeStringList($baseline['assumptions'] ?? null));
+        $candidateAssumptions = count($this->normalizeStringList($candidate['assumptions'] ?? null));
+        if ($baselineAssumptions > 0 && $candidateAssumptions === 0) {
+            $issues[] = 'assumptions list was dropped from baseline';
+        }
+
+        return [$issues === [], $issues];
+    }
+
+    /**
+     * @param  array<string, mixed>  $baseline
+     * @param  array<string, mixed>  $candidate
+     * @param  array<int, string>  $issues
+     */
+    private function buildPlanRevisionStabilityRetryPrompt(
+        string $basePrompt,
+        array $baseline,
+        array $candidate,
+        array $issues,
+    ): string {
+        $issuesText = $issues === [] ? '- output diverged from revision expectations' : '- '.implode("\n- ", $issues);
+
+        return $basePrompt
+            ."\n\nPlan revision quality check failed."
+            ."\nProblems detected:\n".$issuesText
+            ."\n\nMandatory correction rules:"
+            ."\n- Keep baseline plan structure unless explicitly changed by the revision request."
+            ."\n- Preserve depth and implementation detail across unaffected sections."
+            ."\n- Do not remove risks/assumptions without explicit request."
+            ."\n\nBaseline plan:\n".$this->planContextBlock($baseline)
+            ."\n\nRejected revision plan:\n".$this->planContextBlock($candidate);
     }
 
     private function summaryContextBlock(InterrogationSession $session): string
@@ -724,6 +897,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
             ."\n- Include concrete file-level targets where known (for example app/...php, routes/api.php, resources/js/..., tests/...)."
             ."\n- Include explicit API/action contracts and error behavior where relevant."
             ."\n- Include explicit validation/authorization rules and test coverage mapping."
+            ."\n- If functionality is user-facing or operator-facing, include route/page/nav wiring and in-app discoverability validation."
             ."\n- Keep sequence/dependency order and preserve no-estimates/no-timelines policy."
             ."\n\nCurrent plan to improve:\n{$currentPlan}";
     }

@@ -16,6 +16,7 @@ class UpdateInterrogationTaskProviderSettingsRequest extends FormRequest
     {
         $projectMode = $this->input('project_mode');
         $existingProjectId = $this->input('existing_project_id');
+        $teamId = $this->input('team_id');
 
         if (is_string($projectMode)) {
             $this->merge([
@@ -27,6 +28,13 @@ class UpdateInterrogationTaskProviderSettingsRequest extends FormRequest
             $trimmed = trim($existingProjectId);
             $this->merge([
                 'existing_project_id' => $trimmed === '' ? null : $trimmed,
+            ]);
+        }
+
+        if (is_string($teamId)) {
+            $trimmed = trim($teamId);
+            $this->merge([
+                'team_id' => $trimmed === '' ? null : $trimmed,
             ]);
         }
     }
@@ -44,6 +52,7 @@ class UpdateInterrogationTaskProviderSettingsRequest extends FormRequest
                 'string',
                 'max:255',
             ],
+            'team_id' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

@@ -13,7 +13,7 @@ const filters = reactive({
     q: '',
     is_enabled: '',
     runner_type: '',
-    source: '',
+    source: 'user',
     deleted: '',
     page: 1,
 });

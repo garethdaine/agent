@@ -24,6 +24,8 @@ class UpdateSettingsRequest extends FormRequest
      */
     public function rules(): array
     {
+        $maxTextLength = max(1, (int) config('agent.interrogation.max_text_length', 60000));
+
         return match ((string) $this->route('key')) {
             'interrogation.max_active_sessions' => [
                 'value' => ['required', 'integer', 'between:1,50'],
@@ -32,7 +34,7 @@ class UpdateSettingsRequest extends FormRequest
                 'value' => ['required', Rule::in(['claude', 'codex'])],
             ],
             'interrogation.system_prompt' => [
-                'value' => ['present', 'string', 'max:50000'],
+                'value' => ['present', 'string', 'max:'.$maxTextLength],
             ],
             default => [
                 'value' => ['required'],

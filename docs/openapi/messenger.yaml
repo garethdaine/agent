@@ -1,0 +1,856 @@
+openapi: 3.1.0
+info:
+  title: Agent Messenger Control Plane API
+  description: |
+    API endpoints for the Messenger Control Plane feature of Agent.
+
+    This API provides:
+    - Webhook endpoints for receiving messages from messenger providers (Slack, Telegram, etc.)
+    - Account linking endpoints for connecting messenger users to Agent users
+    - Chat session and action management endpoints
+    - Connector account management endpoints
+  version: 1.0.0
+  contact:
+    name: Agent Support
+  license:
+    name: MIT
+
+servers:
+  - url: /agent/api/v1
+    description: Agent API v1
+
+tags:
+  - name: Webhooks
+    description: Webhook endpoints for messenger providers
+  - name: Account Linking
+    description: Account linking flow endpoints
+  - name: Chat
+    description: Chat session and message endpoints
+  - name: Connectors
+    description: Connector account management
+
+paths:
+  /connectors/slack/webhook:
+    post:
+      tags:
+        - Webhooks
+      summary: Slack webhook endpoint
+      description: |
+        Receives webhook events from Slack. Verifies HMAC-SHA256 signature
+        and processes message events.
+      operationId: slackWebhook
+      security: []
+      parameters:
+        - name: X-Slack-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC-SHA256 signature of the request
+        - name: X-Slack-Request-Timestamp
+          in: header
+          required: true
+          schema:
+            type: integer
+          description: Unix timestamp when the request was made
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/SlackUrlVerification'
+                - $ref: '#/components/schemas/SlackEventCallback'
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      challenge:
+                        type: string
+                        description: Echo of the challenge for URL verification
+                  - type: object
+                    properties:
+                      ok:
+                        type: boolean
+                        example: true
+        '401':
+          description: Invalid signature or replay attack detected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /connectors/telegram/webhook/{accountKey}:
+    post:
+      tags:
+        - Webhooks
+      summary: Telegram webhook endpoint
+      description: |
+        Receives webhook updates from Telegram Bot API. Verifies secret token
+        and processes message updates.
+      operationId: telegramWebhook
+      security: []
+      parameters:
+        - name: accountKey
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier for the bot account
+        - name: X-Telegram-Bot-Api-Secret-Token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Secret token for webhook verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramUpdate'
+      responses:
+        '200':
+          description: Update processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '401':
+          description: Invalid secret token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /chat/sessions:
+    get:
+      tags:
+        - Chat
+      summary: List chat sessions
+      description: Returns all chat sessions for the authenticated user
+      operationId: listChatSessions
+      security:
+        - sanctum: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived]
+          description: Filter by session status
+        - name: provider
+          in: query
+          schema:
+            type: string
+            enum: [slack, telegram, discord, whatsapp]
+          description: Filter by messenger provider
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 15
+            maximum: 100
+          description: Number of results per page
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+      responses:
+        '200':
+          description: List of chat sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChatSession'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /chat/sessions/{id}/messages:
+    get:
+      tags:
+        - Chat
+      summary: Get session messages
+      description: Returns message history for a specific chat session
+      operationId: getSessionMessages
+      security:
+        - sanctum: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Chat session ID
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+          description: Number of messages per page
+        - name: before
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Return messages before this timestamp
+      responses:
+        '200':
+          description: List of chat messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChatMessage'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to view this session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /chat/actions/{id}:
+    get:
+      tags:
+        - Chat
+      summary: Get action status
+      description: Returns the status and result of a chat action
+      operationId: getActionStatus
+      security:
+        - sanctum: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Chat action ID
+      responses:
+        '200':
+          description: Action details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatAction'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to view this action
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Action not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /chat/runs/{id}/stream:
+    get:
+      tags:
+        - Chat
+      summary: Stream run updates
+      description: |
+        Server-Sent Events stream for real-time run updates.
+        Returns progress updates, output, and completion status.
+      operationId: streamRunUpdates
+      security:
+        - sanctum: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Agent job run ID
+      responses:
+        '200':
+          description: SSE stream of run events
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-sent events stream
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to view this run
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /chat/attachments/{id}:
+    get:
+      tags:
+        - Chat
+      summary: Get attachment URL
+      description: |
+        Returns a presigned URL for accessing an attachment.
+        URL is valid for 15 minutes.
+      operationId: getAttachmentUrl
+      security:
+        - sanctum: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Attachment ID
+      responses:
+        '200':
+          description: Presigned URL for attachment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    description: Presigned URL (valid for 15 minutes)
+                  filename:
+                    type: string
+                    description: Original filename
+                  mime_type:
+                    type: string
+                    description: MIME type of the file
+                  size_bytes:
+                    type: integer
+                    description: File size in bytes
+                  expires_at:
+                    type: string
+                    format: date-time
+                    description: URL expiration timestamp
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to access this attachment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Attachment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /connectors:
+    get:
+      tags:
+        - Connectors
+      summary: List connectors
+      description: Returns all configured connector accounts
+      operationId: listConnectors
+      security:
+        - sanctum: []
+      parameters:
+        - name: provider
+          in: query
+          schema:
+            type: string
+            enum: [slack, telegram, discord, whatsapp]
+          description: Filter by provider
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [connected, disconnected, error]
+          description: Filter by status
+      responses:
+        '200':
+          description: List of connector accounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConnectorAccount'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Connectors
+      summary: Add connector
+      description: Configure a new connector account
+      operationId: createConnector
+      security:
+        - sanctum: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConnectorRequest'
+      responses:
+        '201':
+          description: Connector created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectorAccount'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /connectors/{id}:
+    delete:
+      tags:
+        - Connectors
+      summary: Remove connector
+      description: Remove a connector account and all associated data
+      operationId: deleteConnector
+      security:
+        - sanctum: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Connector account ID
+      responses:
+        '204':
+          description: Connector deleted successfully
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to delete this connector
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Connector not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /connectors/{id}/test:
+    post:
+      tags:
+        - Connectors
+      summary: Test connector
+      description: Test connectivity to the messenger provider
+      operationId: testConnector
+      security:
+        - sanctum: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Connector account ID
+      responses:
+        '200':
+          description: Connectivity test result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  latency_ms:
+                    type: integer
+                    description: Round-trip latency in milliseconds
+                  error:
+                    type: string
+                    nullable: true
+                    description: Error message if test failed
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Connector not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    sanctum:
+      type: http
+      scheme: bearer
+      bearerFormat: Token
+      description: Laravel Sanctum token authentication
+
+  schemas:
+    SlackUrlVerification:
+      type: object
+      required:
+        - type
+        - challenge
+      properties:
+        type:
+          type: string
+          enum: [url_verification]
+        challenge:
+          type: string
+
+    SlackEventCallback:
+      type: object
+      required:
+        - type
+        - event
+        - event_id
+      properties:
+        type:
+          type: string
+          enum: [event_callback]
+        token:
+          type: string
+        team_id:
+          type: string
+        event:
+          type: object
+          properties:
+            type:
+              type: string
+            user:
+              type: string
+            channel:
+              type: string
+            text:
+              type: string
+            ts:
+              type: string
+            thread_ts:
+              type: string
+        event_id:
+          type: string
+        event_time:
+          type: integer
+
+    TelegramUpdate:
+      type: object
+      required:
+        - update_id
+      properties:
+        update_id:
+          type: integer
+        message:
+          type: object
+          properties:
+            message_id:
+              type: integer
+            from:
+              type: object
+              properties:
+                id:
+                  type: integer
+                first_name:
+                  type: string
+                username:
+                  type: string
+            chat:
+              type: object
+              properties:
+                id:
+                  type: integer
+                type:
+                  type: string
+                  enum: [private, group, supergroup, channel]
+            date:
+              type: integer
+            text:
+              type: string
+            reply_to_message:
+              type: object
+              properties:
+                message_id:
+                  type: integer
+
+    ChatSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: integer
+        connector_account_id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum: [slack, telegram, discord, whatsapp]
+        channel_id:
+          type: string
+        thread_id:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, archived]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        chat_session_id:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        content:
+          type: string
+        attachment_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        provider_message_id:
+          type: string
+          nullable: true
+        provider_timestamp:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatAction'
+
+    ChatAction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        chat_message_id:
+          type: string
+          format: uuid
+        action_type:
+          type: string
+          enum:
+            - jobs.create
+            - jobs.update
+            - jobs.delete
+            - jobs.list
+            - runs.list_active
+            - runs.stop
+            - runs.retry
+            - runs.run_now
+            - runs.steer
+        parameters:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+          enum: [pending, executing, completed, failed, cancelled, timeout]
+        result:
+          type: object
+          nullable: true
+          additionalProperties: true
+        error:
+          type: string
+          nullable: true
+        requires_confirmation:
+          type: boolean
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        executed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ConnectorAccount:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum: [slack, telegram, discord, whatsapp]
+        name:
+          type: string
+        connection_mode:
+          type: string
+          enum: [local, webhook]
+        status:
+          type: string
+          enum: [connected, disconnected, error]
+        config:
+          type: object
+          additionalProperties: true
+          description: Provider-specific configuration (excludes sensitive data)
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateConnectorRequest:
+      type: object
+      required:
+        - provider
+        - name
+        - credentials
+      properties:
+        provider:
+          type: string
+          enum: [slack, telegram, discord, whatsapp]
+        name:
+          type: string
+          maxLength: 255
+        connection_mode:
+          type: string
+          enum: [local, webhook]
+          default: local
+        credentials:
+          type: object
+          description: Provider-specific credentials
+          additionalProperties: true
+        config:
+          type: object
+          description: Provider-specific configuration
+          additionalProperties: true
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        last_page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string

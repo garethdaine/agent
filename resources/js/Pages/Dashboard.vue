@@ -59,13 +59,13 @@ onMounted(loadMetrics);
                 <div class="flex items-center gap-2">
                     <select
                         v-model="windowKey"
-                        class="rounded border-gray-300 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900"
+                        class="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
                         @change="loadMetrics"
                     >
                         <option value="24h">Last 24h</option>
                         <option value="7d">Last 7 days</option>
                     </select>
-                    <button class="rounded border border-gray-300 px-2 py-1 text-sm hover:bg-gray-50 dark:hover:bg-gray-800" @click="loadMetrics">
+                    <button class="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800" @click="loadMetrics">
                         Refresh
                     </button>
                 </div>

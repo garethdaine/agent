@@ -30,6 +30,14 @@ import { Head, Link } from '@inertiajs/vue3';
                         <h3 class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">Database backup settings</h3>
                         <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Configure daily DB backups, retention window, timezone, and run immediate backups.</p>
                     </Link>
+                    <Link
+                        :href="route('tools.messenger.index')"
+                        class="rounded-lg border border-gray-200 bg-white p-5 transition hover:border-sky-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                    >
+                        <p class="text-xs font-semibold uppercase tracking-wide text-sky-600">Messenger</p>
+                        <h3 class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">Control plane dashboard</h3>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">View connector health, chat sessions, recent actions, and control-plane metrics.</p>
+                    </Link>
                 </div>
             </div>
         </div>

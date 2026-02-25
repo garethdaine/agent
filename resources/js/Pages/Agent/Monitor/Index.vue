@@ -1,5 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
+import { formatAgentRunEventEntries } from '@/Support/agentRunEventFormatting';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
@@ -59,6 +61,7 @@ const selectedRunNoOutputSeconds = computed(() => {
     return Math.max(0, Math.floor((Date.now() - parsed) / 1000));
 });
 const selectedRunLikelySilent = computed(() => (selectedRunNoOutputSeconds.value ?? 0) >= 20);
+const formattedEvents = computed(() => formatAgentRunEventEntries(events.value));
 
 const approvalStateForRun = (run) => {
     if (!run) {
@@ -114,6 +117,8 @@ const rateLimitStateForRun = (run) => {
         return null;
     }
 
+    const runStatus = String(run.status ?? '').toLowerCase();
+
     const holdUntilRaw = metadata.rate_limit_hold_until ?? metadata.rate_limit_reset_at ?? null;
     let holdUntil = null;
     let holdActive = false;
@@ -122,6 +127,12 @@ const rateLimitStateForRun = (run) => {
         holdUntil = holdUntilRaw;
         const parsed = new Date(holdUntilRaw).getTime();
         holdActive = Number.isFinite(parsed) && parsed > Date.now();
+    }
+
+    // Historical metadata may include false positives on succeeded runs; only surface when
+    // there's an active hold or the run did not succeed.
+    if (runStatus === 'succeeded' && !holdActive) {
+        return null;
     }
 
     return {
@@ -334,22 +345,22 @@ const pollUntilTerminal = async (runId, attempts = 12) => {
 
 const buildNonInteractiveTemplate = (job) => {
     if (job.runner_type === 'codex') {
-        return `/opt/homebrew/bin/codex -m ${CODEX_DEFAULT_MODEL} --dangerously-bypass-approvals-and-sandbox --search exec {{task_markdown_path}}`;
+        return `/opt/homebrew/bin/codex -m ${CODEX_DEFAULT_MODEL} --dangerously-bypass-approvals-and-sandbox --search exec --json {{task_markdown_path}}`;
     }
 
     if (job.runner_type === 'claude') {
-        return '/Users/garethdaine/.local/bin/claude --dangerously-skip-permissions -p {{task_markdown_path}}';
+        return '/Users/garethdaine/.local/bin/claude --dangerously-skip-permissions --verbose -p --output-format stream-json --include-partial-messages {{task_markdown_path}}';
     }
 
     if (job.runner_type === 'custom') {
         const current = String(job.command_template ?? '');
 
         if (current.includes('/opt/homebrew/bin/codex') || /\bcodex\b/.test(current)) {
-            return `/opt/homebrew/bin/codex -m ${CODEX_DEFAULT_MODEL} --dangerously-bypass-approvals-and-sandbox --search exec {{task_markdown_path}}`;
+            return `/opt/homebrew/bin/codex -m ${CODEX_DEFAULT_MODEL} --dangerously-bypass-approvals-and-sandbox --search exec --json {{task_markdown_path}}`;
         }
 
         if (current.includes('/Users/garethdaine/.local/bin/claude') || /\bclaude\b/.test(current)) {
-            return '/Users/garethdaine/.local/bin/claude --dangerously-skip-permissions -p {{task_markdown_path}}';
+            return '/Users/garethdaine/.local/bin/claude --dangerously-skip-permissions --verbose -p --output-format stream-json --include-partial-messages {{task_markdown_path}}';
         }
 
         throw new Error('Custom runner approval cannot be auto-applied. Update this job command template to a non-interactive mode first.');
@@ -614,9 +625,19 @@ onBeforeUnmount(() => {
                         <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Event Tail</h3>
                     </div>
                     <div id="event-tail" class="h-[30rem] overflow-auto bg-gray-950 p-3 font-mono text-xs text-gray-100">
-                        <div v-for="event in events" :key="event.id" class="mb-1 whitespace-pre-wrap break-words">
-                            <span class="text-gray-400">[{{ event.sequence }} {{ event.event_type }}]</span>
-                            <span class="ml-1">{{ event.payload }}</span>
+                        <div v-for="entry in formattedEvents" :key="entry.key" class="mb-2 whitespace-pre-wrap break-words">
+                            <div class="text-[11px] text-gray-400">{{ entry.prefix }}</div>
+                            <MarkdownRenderer
+                                v-if="entry.format === 'markdown'"
+                                :markdown="entry.payload"
+                                :normalize="false"
+                                class="tail-markdown prose prose-sm mt-1 max-w-none rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 font-sans text-emerald-100 dark:prose-invert prose-headings:mb-2 prose-headings:mt-3 prose-p:my-1.5 prose-li:my-0.5 prose-code:rounded prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5"
+                            />
+                            <pre v-else class="mt-0.5 whitespace-pre-wrap break-words" :class="{
+                                'text-rose-300': entry.tone === 'stderr',
+                                'text-sky-200': entry.tone === 'lifecycle',
+                                'text-emerald-200': entry.tone === 'structured',
+                            }">{{ entry.payload }}</pre>
                         </div>
                         <p
                             v-if="selectedRunLikelySilent && selectedRunNoOutputSeconds !== null"

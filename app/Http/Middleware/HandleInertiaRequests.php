@@ -36,6 +36,7 @@ class HandleInertiaRequests extends Middleware
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
+            'delegationEnabled' => config('delegation.ui_enabled', false),
         ];
     }
 }

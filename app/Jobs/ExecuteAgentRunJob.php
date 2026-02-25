@@ -149,6 +149,11 @@ class ExecuteAgentRunJob implements ShouldQueue
                 'pid' => $run->pid,
             ]);
 
+            $heartbeatIntervalSeconds = max(0, (int) config('agent.run_output_heartbeat_seconds', 5));
+            $nextHeartbeatAt = $heartbeatIntervalSeconds > 0
+                ? CarbonImmutable::now('UTC')->addSeconds($heartbeatIntervalSeconds)
+                : null;
+
             while ($process->isRunning()) {
                 $stdout = $process->getIncrementalOutput();
                 if ($stdout !== '') {
@@ -159,6 +164,8 @@ class ExecuteAgentRunJob implements ShouldQueue
                 if ($stderr !== '') {
                     $writer->appendOutput('stderr', $stderr);
                 }
+
+                $emittedOutput = $stdout !== '' || $stderr !== '';
 
                 $run->refresh();
 
@@ -193,6 +200,19 @@ class ExecuteAgentRunJob implements ShouldQueue
                 }
 
                 $elapsedSeconds = (int) max(0, floor((hrtime(true) - $startedAtMonotonicNs) / 1_000_000_000));
+
+                if (! $emittedOutput && $nextHeartbeatAt instanceof CarbonImmutable) {
+                    $now = CarbonImmutable::now('UTC');
+                    if ($now->greaterThanOrEqualTo($nextHeartbeatAt)) {
+                        $writer->appendLifecycle([
+                            'type' => 'heartbeat',
+                            'at' => $now->toIso8601String(),
+                            'elapsed_seconds' => $elapsedSeconds,
+                            'status' => (string) ($run->status ?? AgentJobRun::STATUS_RUNNING),
+                        ]);
+                        $nextHeartbeatAt = $now->addSeconds($heartbeatIntervalSeconds);
+                    }
+                }
 
                 if ($elapsedSeconds >= (int) $run->job->max_runtime_seconds) {
                     $timedOut = true;

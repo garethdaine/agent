@@ -21,3 +21,19 @@ Schedule::command('agent:prune --jobs')
 Schedule::command('agent:backup-database')
     ->everyMinute()
     ->withoutOverlapping(10);
+
+Schedule::command('messenger:prune --deduplication')
+    ->hourly()
+    ->withoutOverlapping();
+
+Schedule::command('messenger:prune --sessions --messages --attachments')
+    ->dailyAt('04:00')
+    ->withoutOverlapping();
+
+Schedule::command('delegation:reconcile')
+    ->everyTwoMinutes()
+    ->withoutOverlapping();
+
+Schedule::command('delegation:recompute-metrics')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();

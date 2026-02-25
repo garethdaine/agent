@@ -37,11 +37,23 @@ const providerProjectForm = reactive({
     project_mode: 'create_new',
     existing_project_id: '',
 });
+const providerTeamForm = reactive({
+    team_id: '',
+});
 const linearProjects = ref([]);
+const linearTeams = ref([]);
 
 const taskProviders = computed(() => (Array.isArray(session.value?.task_providers) ? session.value.task_providers : []));
 const linearProvider = computed(() => taskProviders.value.find((provider) => String(provider?.driver ?? '').toLowerCase() === 'linear') ?? null);
 const techStacks = computed(() => (Array.isArray(session.value?.tech_stacks) ? session.value.tech_stacks : []));
+const selectedLinearTeam = computed(() => {
+    const targetId = String(providerTeamForm.team_id ?? '').trim();
+    if (targetId === '') {
+        return null;
+    }
+
+    return linearTeams.value.find((team) => String(team?.id ?? '').trim() === targetId) ?? null;
+});
 const selectedLinearProject = computed(() => {
     const targetId = String(providerProjectForm.existing_project_id ?? '').trim();
     if (targetId === '') {
@@ -91,6 +103,7 @@ const syncProviderProjectDraftFromSession = () => {
     providerProjectForm.existing_project_id = providerProjectForm.project_mode === 'existing'
         ? String(linearProvider.value?.selected_project_id ?? '').trim()
         : '';
+    providerTeamForm.team_id = String(linearProvider.value?.team_id ?? '').trim();
 };
 
 const loadLinearProjects = async ({ force = false } = {}) => {
@@ -109,7 +122,13 @@ const loadLinearProjects = async ({ force = false } = {}) => {
     try {
         const { data } = await axios.get(`/agent/api/v1/interrogation/sessions/${props.sessionId}/providers/linear/projects`);
         const projects = Array.isArray(data?.data?.projects) ? data.data.projects : [];
+        const teams = Array.isArray(data?.data?.teams) ? data.data.teams : [];
         linearProjects.value = projects;
+        linearTeams.value = teams;
+        const selectedTeamId = String(data?.data?.selected_team_id ?? '').trim();
+        if (selectedTeamId !== '') {
+            providerTeamForm.team_id = selectedTeamId;
+        }
         providerProjectsLoaded.value = true;
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load Linear projects.';
@@ -169,7 +188,9 @@ const disconnectProvider = async (driver = 'linear') => {
         await axios.delete(`/agent/api/v1/interrogation/sessions/${props.sessionId}/providers/${driver}`);
         notice.value = `${driver} disconnected.`;
         linearProjects.value = [];
+        linearTeams.value = [];
         providerProjectsLoaded.value = false;
+        providerTeamForm.team_id = '';
         providerProjectForm.project_mode = 'create_new';
         providerProjectForm.existing_project_id = '';
         await loadSession();
@@ -191,15 +212,17 @@ const saveProviderProjectSettings = async () => {
 
     try {
         await axios.patch(`/agent/api/v1/interrogation/sessions/${props.sessionId}/providers/linear/settings`, {
+            team_id: String(providerTeamForm.team_id ?? '').trim() || null,
             project_mode: providerProjectForm.project_mode,
             existing_project_id: providerProjectForm.project_mode === 'existing'
                 ? String(providerProjectForm.existing_project_id ?? '').trim()
                 : null,
         });
 
+        const teamLabel = selectedLinearTeam.value?.name || linearProvider.value?.team_name || 'selected team';
         notice.value = providerProjectForm.project_mode === 'existing'
-            ? `Linear will sync tasks into ${selectedLinearProject.value?.name ?? 'the selected project'}.`
-            : 'Linear will create a new project when syncing tasks.';
+            ? `Linear team set to ${teamLabel}. Tasks will sync into ${selectedLinearProject.value?.name ?? 'the selected project'}.`
+            : `Linear team set to ${teamLabel}. Linear will create a new project when syncing tasks.`;
         await loadSession();
     } catch (e) {
         const payload = e?.response?.data ?? {};
@@ -275,7 +298,9 @@ onMounted(async () => {
 watch(linearProvider, (provider) => {
     if (!provider) {
         linearProjects.value = [];
+        linearTeams.value = [];
         providerProjectsLoaded.value = false;
+        providerTeamForm.team_id = '';
         providerProjectForm.project_mode = 'create_new';
         providerProjectForm.existing_project_id = '';
         return;
@@ -292,6 +317,18 @@ watch(() => providerProjectForm.project_mode, async (mode) => {
 
     if (!providerProjectsLoaded.value && linearProvider.value) {
         await loadLinearProjects();
+    }
+});
+
+watch(() => providerTeamForm.team_id, (nextTeamId) => {
+    const currentTeamId = String(linearProvider.value?.team_id ?? '').trim();
+    if (String(nextTeamId ?? '').trim() === currentTeamId) {
+        return;
+    }
+
+    if (providerProjectForm.project_mode === 'existing') {
+        providerProjectForm.project_mode = 'create_new';
+        providerProjectForm.existing_project_id = '';
     }
 });
 </script>
@@ -396,6 +433,33 @@ watch(() => providerProjectForm.project_mode, async (mode) => {
                             </div>
 
                             <div v-if="linearProvider" class="mt-4 space-y-3 rounded border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900/50">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Team</p>
+                                <div class="space-y-2">
+                                    <div class="flex items-center gap-2">
+                                        <select
+                                            v-model="providerTeamForm.team_id"
+                                            class="w-full rounded border border-gray-300 px-2 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                                        >
+                                            <option value="">Select a Linear team...</option>
+                                            <option v-for="team in linearTeams" :key="team.id" :value="team.id">
+                                                {{ team.name || team.id }}
+                                            </option>
+                                        </select>
+                                        <button
+                                            type="button"
+                                            class="rounded border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
+                                            :disabled="providerProjectsLoading"
+                                            @click="loadLinearProjects({ force: true })"
+                                        >
+                                            {{ providerProjectsLoading ? 'Loading...' : 'Refresh' }}
+                                        </button>
+                                    </div>
+                                    <p v-if="firstValidationError('team_id')" class="text-xs text-red-600">{{ firstValidationError('team_id') }}</p>
+                                    <p v-if="selectedLinearTeam" class="text-xs text-gray-500 dark:text-gray-400">
+                                        Selected team: {{ selectedLinearTeam.name || selectedLinearTeam.id }}
+                                    </p>
+                                </div>
+
                                 <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Project Sync Target</p>
                                 <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
                                     <input v-model="providerProjectForm.project_mode" type="radio" value="create_new" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500" />
@@ -437,7 +501,7 @@ watch(() => providerProjectForm.project_mode, async (mode) => {
                                     <button
                                         type="button"
                                         class="rounded bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-                                        :disabled="providerSettingsSaving || (providerProjectForm.project_mode === 'existing' && providerProjectForm.existing_project_id.trim() === '')"
+                                        :disabled="providerSettingsSaving || providerTeamForm.team_id.trim() === '' || (providerProjectForm.project_mode === 'existing' && providerProjectForm.existing_project_id.trim() === '')"
                                         @click="saveProviderProjectSettings"
                                     >
                                         {{ providerSettingsSaving ? 'Saving...' : 'Save Provider Settings' }}

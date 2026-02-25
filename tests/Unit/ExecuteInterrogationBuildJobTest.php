@@ -3,11 +3,13 @@
 namespace Tests\Unit;
 
 use App\Jobs\ExecuteInterrogationBuildJob;
+use App\Jobs\SyncInterrogationTaskStatusToTaskProviderJob;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationSession;
 use App\Models\User;
+use App\Support\Interrogation\BuildExecutionBackupService;
 use App\Support\Interrogation\BuildTaskRunFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -53,8 +55,14 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         $this->assertSame('running', data_get($session->metadata_json, 'build.status'));
         $this->assertSame($task->id, data_get($session->metadata_json, 'build.active_task_id'));
         $this->assertSame($run->id, data_get($session->metadata_json, 'build.active_run_id'));
+        $this->assertSame('succeeded', data_get($session->metadata_json, 'build.execution_backup.build_start.status'));
+        $this->assertCount(1, (array) data_get($session->metadata_json, 'build.execution_backup.task_starts', []));
 
         Queue::assertPushed(ExecuteInterrogationBuildJob::class);
+        Queue::assertPushed(SyncInterrogationTaskStatusToTaskProviderJob::class, function (SyncInterrogationTaskStatusToTaskProviderJob $job) use ($session, $task): bool {
+            return (int) $job->sessionId === (int) $session->id
+                && (int) $job->taskId === (int) $task->id;
+        });
     }
 
     public function test_job_marks_build_completed_after_terminal_successful_task(): void
@@ -85,6 +93,10 @@ class ExecuteInterrogationBuildJobTest extends TestCase
 
         $task->refresh();
         $this->assertSame(InterrogationBuildTask::STATUS_COMPLETED, (string) $task->status);
+        Queue::assertPushed(SyncInterrogationTaskStatusToTaskProviderJob::class, function (SyncInterrogationTaskStatusToTaskProviderJob $job) use ($session, $task): bool {
+            return (int) $job->sessionId === (int) $session->id
+                && (int) $job->taskId === (int) $task->id;
+        });
 
         $this->app->call([$job, 'handle']);
 
@@ -139,6 +151,10 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         );
         $this->assertSame($task->id, data_get($session->metadata_json, 'build.active_task_id'));
         $this->assertSame($run->id, data_get($session->metadata_json, 'build.active_run_id'));
+        Queue::assertPushed(SyncInterrogationTaskStatusToTaskProviderJob::class, function (SyncInterrogationTaskStatusToTaskProviderJob $job) use ($session, $task): bool {
+            return (int) $job->sessionId === (int) $session->id
+                && (int) $job->taskId === (int) $task->id;
+        });
     }
 
     public function test_job_pauses_build_when_run_requests_clarification_even_if_run_succeeded(): void
@@ -185,6 +201,103 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         );
         $this->assertSame($task->id, data_get($session->metadata_json, 'build.active_task_id'));
         $this->assertSame($run->id, data_get($session->metadata_json, 'build.active_run_id'));
+        Queue::assertPushed(SyncInterrogationTaskStatusToTaskProviderJob::class, function (SyncInterrogationTaskStatusToTaskProviderJob $job) use ($session, $task): bool {
+            return (int) $job->sessionId === (int) $session->id
+                && (int) $job->taskId === (int) $task->id;
+        });
+    }
+
+    public function test_job_does_not_pause_on_rate_limit_metadata_when_run_succeeded(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ]);
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'rate_limit_detected' => true,
+                'rate_limit_excerpt' => 'Retrying after 429 response.',
+            ],
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 4,
+            'title' => 'Rate limit recovered task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_COMPLETED, (string) $task->status);
+        $this->assertNotSame('paused', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame(null, data_get($session->metadata_json, 'build.pause_reason'));
+        Queue::assertPushed(SyncInterrogationTaskStatusToTaskProviderJob::class, function (SyncInterrogationTaskStatusToTaskProviderJob $job) use ($session, $task): bool {
+            return (int) $job->sessionId === (int) $session->id
+                && (int) $job->taskId === (int) $task->id;
+        });
+    }
+
+    public function test_job_pauses_when_pre_build_backup_fails_before_starting_task(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Task waiting for backup',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+            'attempt_count' => 0,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $backupService = $this->mock(BuildExecutionBackupService::class);
+        $backupService->shouldReceive('backupBeforeBuildStart')
+            ->once()
+            ->andReturn([
+                'ok' => false,
+                'attempted_at' => now('UTC')->toIso8601String(),
+                'message' => 'Backup subsystem unavailable.',
+                'output' => null,
+                'skipped' => false,
+            ]);
+        $backupService->shouldReceive('backupBeforeTaskStart')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_PENDING, (string) $task->status);
+        $this->assertNull($task->agent_job_run_id);
+        $this->assertSame('paused', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame('backup_failed', data_get($session->metadata_json, 'build.pause_reason'));
+        $this->assertStringContainsString(
+            'Database backup failed before build execution started',
+            (string) data_get($session->metadata_json, 'build.error')
+        );
+
+        Queue::assertNotPushed(SyncInterrogationTaskStatusToTaskProviderJob::class);
     }
 
     /**

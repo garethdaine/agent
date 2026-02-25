@@ -30,6 +30,7 @@ Local-first Laravel app for managing and running scheduled agent jobs.
 - Monitor now surfaces per-run rate-limit alerts and supports explicit "Run Anyway Now" override
 - Phases 0-7 checklist completed in `docs/minimal-cron-agent-task-list.md`
 - Phase 8 maintenance baseline implemented (`agent:prune` + audit logging + retention schedules)
+- Messenger Control Plane for chat-based job management (Slack, Telegram)
 
 ## Prerequisites
 - PHP 8.3+
@@ -104,3 +105,35 @@ DB_PORT=3306 php artisan migrate:fresh --database=mysql --force --no-interaction
   - `backoff=0`
   - `timeout=86500`
   - `maxProcesses=2` (bounded to `1..8` via env)
+
+## Messenger Control Plane
+
+Control your Agent installation through chat commands via Slack, Telegram, and other messenger platforms.
+
+### Quick Start
+
+```bash
+# Configure messenger connectors
+php artisan agent:install --connector=slack,telegram
+
+# Check connector status
+php artisan messenger:status
+```
+
+### Features
+
+- **Natural language commands:** Create, update, and delete jobs using chat
+- **Run control:** Stop, retry, or trigger immediate execution
+- **Multi-provider support:** Slack and Telegram (Discord and WhatsApp planned)
+- **Secure:** Cryptographic signature verification, replay protection, account linking
+
+### Example Commands
+
+```
+list my jobs
+create a job called "daily backup" that runs "php artisan backup:run" every day at 2am
+stop run abc-123
+retry run xyz-789
+```
+
+See [docs/messenger-control-plane.md](docs/messenger-control-plane.md) for detailed setup and configuration.

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Messenger\AccountLinkController;
 use App\Http\Controllers\TaskProviderOAuthController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +13,15 @@ Route::get('/', function () {
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
+});
+
+// Messenger account linking routes
+Route::get('/messenger/link/{token}', [AccountLinkController::class, 'show'])
+    ->name('messenger.link.show');
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/messenger/link/{token}', [AccountLinkController::class, 'store'])
+        ->name('messenger.link.store');
 });
 
 Route::middleware([
@@ -78,9 +88,33 @@ Route::middleware([
         return Inertia::render('Tools/Backups/Settings');
     })->name('tools.backups.settings');
 
+    Route::get('/tools/messenger', function () {
+        return Inertia::render('Tools/Messenger/Index');
+    })->name('tools.messenger.index');
+
     Route::get('/tools/discovery/{id}', function (int $id) {
         return Inertia::render('Tools/Discovery/Wizard', [
             'sessionId' => $id,
         ]);
     })->name('tools.discovery.wizard');
+
+    // Delegation routes (guarded by delegation UI feature flag)
+    Route::middleware(['delegation.ui'])->group(function () {
+        Route::get('/agent/delegation', fn () => Inertia::render('Agent/Delegation/Index'))
+            ->name('agent.delegation.index');
+        Route::get('/agent/delegation/create', fn () => Inertia::render('Agent/Delegation/Create'))
+            ->name('agent.delegation.create');
+        Route::get('/agent/delegation/{id}', fn (int $id) => Inertia::render('Agent/Delegation/Show', ['graphId' => $id]))
+            ->name('agent.delegation.show');
+        Route::get('/agent/delegation/{graphId}/tasks/{taskId}', fn (int $graphId, int $taskId) => Inertia::render('Agent/Delegation/TaskDetail', ['graphId' => $graphId, 'taskId' => $taskId]))
+            ->name('agent.delegation.task');
+        Route::get('/agent/delegation/{graphId}/tasks/{taskId}/approve', fn (int $graphId, int $taskId) => Inertia::render('Agent/Delegation/VerificationApproval', ['graphId' => $graphId, 'taskId' => $taskId]))
+            ->name('agent.delegation.task.approve');
+        Route::get('/agent/delegatee-profiles', fn () => Inertia::render('Agent/Delegation/ProfileIndex'))
+            ->name('agent.delegation.profiles.index');
+        Route::get('/agent/delegatee-profiles/create', fn () => Inertia::render('Agent/Delegation/ProfileForm'))
+            ->name('agent.delegation.profiles.create');
+        Route::get('/agent/delegatee-profiles/{id}/edit', fn (int $id) => Inertia::render('Agent/Delegation/ProfileForm', ['profileId' => $id]))
+            ->name('agent.delegation.profiles.edit');
+    });
 });

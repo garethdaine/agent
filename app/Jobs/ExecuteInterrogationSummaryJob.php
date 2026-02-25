@@ -54,6 +54,10 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
         }
 
         $writer = new InterrogationEventWriter($session);
+        $isRevisionRequest = is_string($this->revisionNotes) && trim($this->revisionNotes) !== '';
+        $baselineSummary = is_array($session->summary_json) && $session->summary_json !== []
+            ? $summaryPayloadNormalizer->normalize($session->summary_json)
+            : [];
 
         try {
             $adapter = $adapterFactory->make((string) $session->runner_type);
@@ -66,15 +70,21 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
                 .'Make the summary implementation-ready and comprehensive (not abbreviated): include concrete decisions, entities, services, config values, and acceptance criteria. '
                 .'Do not include estimates or timelines (no days/weeks/months, ETA, total effort, critical path, or parallelization schedule).';
 
-            if (is_string($this->revisionNotes) && trim($this->revisionNotes) !== '') {
+            if ($isRevisionRequest) {
                 $summaryPrompt = 'Revise the structured summary JSON for this discovery session using the following user amendment notes. '
                     .'Keep the same schema fields (summary_markdown, goals, constraints, acceptance_criteria, open_questions, private_notes). '
                     .'Return arrays as real JSON arrays of strings, never embedded inside summary_markdown. '
                     .'Do not emit XML-like parameter tags such as <parameter ...>. '
+                    .'Treat this as a targeted amendment pass, not a rewrite from scratch. Preserve existing structure and detail unless the notes explicitly request changes. '
                     .'Keep full implementation detail (decisions, entities, services, config, acceptance criteria); do not collapse to high-level prose. '
                     .'Do not include estimates or timelines (no days/weeks/months, ETA, total effort, critical path, or parallelization schedule). '
                     .'Only keep items in open_questions that are truly unresolved after applying the notes.'."\n\n"
                     .'Amendment notes:'."\n".trim($this->revisionNotes);
+
+                if ($baselineSummary !== []) {
+                    $summaryPrompt .= "\n\nCurrent summary baseline (apply amendments in place; do not drop unaffected content):\n"
+                        .$this->summaryContextBlock($baselineSummary);
+                }
             }
 
             $summaryPrompt .= "\n\n"
@@ -135,6 +145,37 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
 
             $summary = $summaryPayloadNormalizer->normalize($summary);
 
+            if ($isRevisionRequest && $baselineSummary !== []) {
+                $summary = $this->preserveUnrequestedRevisionFields($baselineSummary, $summary);
+                [$revisionStable, $revisionIssues] = $this->validateRevisionOutput($baselineSummary, $summary);
+                if (! $revisionStable) {
+                    $retryPrompt = $this->buildRevisionStabilityPrompt($summaryPrompt, $baselineSummary, $summary, $revisionIssues);
+                    $retrySession = clone $session;
+                    $retrySession->cli_session_id = null;
+
+                    $retryProcess = $this->runSummaryProcess($adapter, $retrySession, $retryPrompt, $systemPrompt);
+                    if ($retryProcess->getExitCode() === 0) {
+                        $retrySummary = $adapter->parseSummaryResponse((string) $retryProcess->getOutput());
+                        if (is_array($retrySummary)) {
+                            $summary = $summaryPayloadNormalizer->normalize($retrySummary);
+                            $summary = $this->preserveUnrequestedRevisionFields($baselineSummary, $summary);
+                            [$revisionStable, $revisionIssues] = $this->validateRevisionOutput($baselineSummary, $summary);
+                        }
+                    }
+
+                    if (! $revisionStable) {
+                        $writer->appendSystem([
+                            'notice' => 'summary_revision_rejected',
+                            'message' => 'Summary revision was rejected because it removed too much baseline detail. Keeping previous summary.',
+                            'issues' => $revisionIssues,
+                            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                        ]);
+
+                        return;
+                    }
+                }
+            }
+
             $metadata = (array) ($session->metadata_json ?? []);
             $metadata['summary_ready'] = true;
             $metadata['summary_generated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
@@ -172,6 +213,157 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
                 'message' => $throwable->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $summary
+     */
+    private function summaryContextBlock(array $summary): string
+    {
+        $summaryMarkdown = trim((string) ($summary['summary_markdown'] ?? ''));
+        $goals = $this->normalizeStringList($summary['goals'] ?? null);
+        $constraints = $this->normalizeStringList($summary['constraints'] ?? null);
+        $acceptance = $this->normalizeStringList($summary['acceptance_criteria'] ?? null);
+        $openQuestions = $this->normalizeStringList($summary['open_questions'] ?? null);
+        $privateNotes = trim((string) ($summary['private_notes'] ?? ''));
+
+        $lines = [];
+        if ($summaryMarkdown !== '') {
+            $lines[] = "Summary markdown:\n".$summaryMarkdown;
+        }
+        if ($goals !== []) {
+            $lines[] = "Goals:\n- ".implode("\n- ", $goals);
+        }
+        if ($constraints !== []) {
+            $lines[] = "Constraints:\n- ".implode("\n- ", $constraints);
+        }
+        if ($acceptance !== []) {
+            $lines[] = "Acceptance criteria:\n- ".implode("\n- ", $acceptance);
+        }
+        if ($openQuestions !== []) {
+            $lines[] = "Open questions:\n- ".implode("\n- ", $openQuestions);
+        }
+        if ($privateNotes !== '') {
+            $lines[] = "Private notes:\n".$privateNotes;
+        }
+
+        return $lines === [] ? '- no baseline fields present' : implode("\n\n", $lines);
+    }
+
+    /**
+     * @param  array<string, mixed>  $baseline
+     * @param  array<string, mixed>  $candidate
+     * @return array{0:bool,1:array<int,string>}
+     */
+    private function validateRevisionOutput(array $baseline, array $candidate): array
+    {
+        $issues = [];
+
+        $baselineMarkdownLength = mb_strlen((string) ($baseline['summary_markdown'] ?? ''));
+        $candidateMarkdownLength = mb_strlen((string) ($candidate['summary_markdown'] ?? ''));
+        if ($baselineMarkdownLength >= 2000 && $candidateMarkdownLength < (int) floor($baselineMarkdownLength * 0.60)) {
+            $issues[] = 'summary_markdown shrank by more than 40% from baseline';
+        }
+
+        foreach (['goals', 'constraints', 'acceptance_criteria'] as $field) {
+            $baselineCount = count($this->normalizeStringList($baseline[$field] ?? null));
+            $candidateCount = count($this->normalizeStringList($candidate[$field] ?? null));
+            if ($baselineCount >= 6 && $candidateCount < (int) floor($baselineCount * 0.70)) {
+                $issues[] = sprintf('%s list shrank too aggressively (%d -> %d)', $field, $baselineCount, $candidateCount);
+            }
+        }
+
+        $baselineOpen = count($this->normalizeStringList($baseline['open_questions'] ?? null));
+        $candidateOpen = count($this->normalizeStringList($candidate['open_questions'] ?? null));
+        if ($baselineOpen === 0 && $candidateOpen > 0) {
+            $issues[] = 'open_questions reintroduced despite baseline having none';
+        }
+
+        if (! $this->revisionMentionsPrivateNotes()) {
+            $baselinePrivateNotesLength = mb_strlen(trim((string) ($baseline['private_notes'] ?? '')));
+            $candidatePrivateNotesLength = mb_strlen(trim((string) ($candidate['private_notes'] ?? '')));
+            if ($baselinePrivateNotesLength >= 800 && $candidatePrivateNotesLength < (int) floor($baselinePrivateNotesLength * 0.70)) {
+                $issues[] = sprintf('private_notes shrank too aggressively (%d -> %d)', $baselinePrivateNotesLength, $candidatePrivateNotesLength);
+            }
+        }
+
+        return [$issues === [], $issues];
+    }
+
+    /**
+     * @param  array<string, mixed>  $baseline
+     * @param  array<string, mixed>  $candidate
+     * @param  array<int, string>  $issues
+     */
+    private function buildRevisionStabilityPrompt(string $basePrompt, array $baseline, array $candidate, array $issues): string
+    {
+        $issuesText = $issues === [] ? '- output diverged from baseline quality expectations' : '- '.implode("\n- ", $issues);
+
+        return $basePrompt
+            ."\n\nRevision quality check failed."
+            ."\nProblems detected:\n".$issuesText
+            ."\n\nMandatory correction rules:"
+            ."\n- Preserve baseline structure and detail unless amendment notes explicitly request removal."
+            ."\n- Do not reintroduce open questions that were already resolved."
+            ."\n- Keep lists (goals, constraints, acceptance_criteria) comprehensive."
+            ."\n- Keep private_notes content unless amendment notes explicitly request changing private notes."
+            ."\n\nBaseline summary:\n".$this->summaryContextBlock($baseline)
+            ."\n\nRejected revision summary:\n".$this->summaryContextBlock($candidate);
+    }
+
+    /**
+     * @param  array<string, mixed>  $baseline
+     * @param  array<string, mixed>  $candidate
+     * @return array<string, mixed>
+     */
+    private function preserveUnrequestedRevisionFields(array $baseline, array $candidate): array
+    {
+        if (! $this->revisionMentionsPrivateNotes()) {
+            $baselinePrivateNotes = trim((string) ($baseline['private_notes'] ?? ''));
+            if ($baselinePrivateNotes !== '') {
+                $candidate['private_notes'] = $baseline['private_notes'];
+            }
+        }
+
+        return $candidate;
+    }
+
+    private function revisionMentionsPrivateNotes(): bool
+    {
+        $notes = strtolower((string) $this->revisionNotes);
+        if ($notes === '') {
+            return false;
+        }
+
+        return str_contains($notes, 'private notes')
+            || str_contains($notes, 'private_notes')
+            || str_contains($notes, 'private-notes');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function normalizeStringList(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($value as $item) {
+            if (! is_string($item)) {
+                continue;
+            }
+
+            $normalized = trim($item);
+            if ($normalized === '') {
+                continue;
+            }
+
+            $items[] = $normalized;
+        }
+
+        return array_values(array_unique($items));
     }
 
     private function runSummaryProcess(InterrogationRunnerAdapter $adapter, InterrogationSession $session, string $summaryPrompt, string $systemPrompt): Process

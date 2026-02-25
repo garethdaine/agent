@@ -32,7 +32,9 @@ class RunEventWriter
 
     private const CLARIFICATION_PATTERN = '/\b(?:could|can)\s+you\s+clarify\b|\bneed(?:s)?\s+(?:your\s+)?clarification\b|\bplease\s+clarify\b|\bi\s+need\s+clarification\b|\bquestion\s+for\s+you\b|\bcan\s+you\s+confirm\b|\bshould\s+i\s+(?:proceed|continue|use|do)\b/i';
 
-    private const RATE_LIMIT_PATTERN = '/hit your limit|rate limit|too many requests|quota exceeded|usage limit/i';
+    private const RATE_LIMIT_PATTERN = '/\bhit(?:ting)?\s+(?:your\s+)?limit\b|\brate[-\s]?limited\b|\btoo many requests\b|\bquota exceeded\b|\busage(?:\/rate)? limit\b/i';
+
+    private const RATE_LIMIT_FALSE_POSITIVE_PATTERN = '/\brate limit handling\b|\brate limits? handling\b|\berror handling\s*\([^)]*rate limits?[^)]*\)/i';
 
     public function __construct(private AgentJobRun $run)
     {
@@ -108,7 +110,7 @@ class RunEventWriter
         }
 
         if (($eventType === 'stdout' || $eventType === 'stderr')
-            && preg_match(self::RATE_LIMIT_PATTERN, $chunk) === 1) {
+            && $this->shouldMarkRateLimitDetected($chunk)) {
             $this->markRateLimitDetected($chunk);
         }
 
@@ -374,6 +376,20 @@ class RunEventWriter
         }
 
         $this->appendLifecycle($payload);
+    }
+
+    private function shouldMarkRateLimitDetected(string $chunk): bool
+    {
+        if (preg_match(self::RATE_LIMIT_PATTERN, $chunk) !== 1) {
+            return false;
+        }
+
+        // Ignore descriptive implementation language that is not an actual runtime limit event.
+        if (preg_match(self::RATE_LIMIT_FALSE_POSITIVE_PATTERN, $chunk) === 1) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

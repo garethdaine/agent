@@ -26,7 +26,8 @@ class SystemPromptResolver
                 .'Never include estimates or timeline projections (no days/weeks/months, ETA, total effort, critical path, or parallelization schedule).',
             'build_tasks' => 'Phase: build task generation. Return ONLY a single JSON object that matches the provided schema for executable build tasks. '
                 .'Every implementation task must enforce tests first: write or update tests before feature/refactor code, verify the tests fail for the intended reason, then implement the smallest clean change until tests pass. '
-                .'Apply Code Field rules in every task: state assumptions before coding, do not claim correctness without verification, do not handle only the happy path, and explicitly document conditions where the approach works.',
+                .'Apply Code Field rules in every task: state assumptions before coding, do not claim correctness without verification, do not handle only the happy path, and explicitly document conditions where the approach works. '
+                .'When capability is user-facing/operator-facing, require explicit route/page/navigation wiring and in-app discoverability verification in tasks.',
             default => 'Phase: setup.',
         };
 

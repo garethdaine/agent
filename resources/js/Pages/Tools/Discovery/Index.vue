@@ -120,8 +120,8 @@ onMounted(load);
         <div class="px-4 py-6 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-7xl space-y-4">
                 <div class="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-4 md:grid-cols-5 dark:border-gray-700 dark:bg-gray-800">
-                    <input v-model="filters.q" placeholder="Search sessions" class="rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900" @change="load" />
-                    <select v-model="filters.status" class="rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900" @change="load">
+                    <input v-model="filters.q" placeholder="Search sessions" class="rounded-md border border-gray-300 bg-white text-sm text-gray-800 placeholder:text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" @change="load" />
+                    <select v-model="filters.status" class="rounded-md border border-gray-300 bg-white text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" @change="load">
                         <option value="">All statuses</option>
                         <option value="setup">setup</option>
                         <option value="discovering">discovering</option>
@@ -134,24 +134,24 @@ onMounted(load);
                         <option value="completed">completed</option>
                         <option value="failed">failed</option>
                     </select>
-                    <select v-model="filters.type" class="rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900" @change="load">
+                    <select v-model="filters.type" class="rounded-md border border-gray-300 bg-white text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" @change="load">
                         <option value="">All types</option>
                         <option value="feature">feature</option>
                         <option value="general">general</option>
                     </select>
-                    <select v-model="filters.runner" class="rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900" @change="load">
+                    <select v-model="filters.runner" class="rounded-md border border-gray-300 bg-white text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" @change="load">
                         <option value="">All runners</option>
                         <option value="claude">claude</option>
                         <option value="codex">codex</option>
                     </select>
-                    <select v-model="filters.deleted" class="rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900" @change="load">
+                    <select v-model="filters.deleted" class="rounded-md border border-gray-300 bg-white text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" @change="load">
                         <option value="">Active only</option>
                         <option value="all">All</option>
                         <option value="true">Deleted only</option>
                     </select>
                 </div>
 
-                <p v-if="error" class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
+                <p v-if="error" class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{{ error }}</p>
 
                 <div class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -185,7 +185,7 @@ onMounted(load);
                                                 && (['failed', 'paused', 'setup'].includes(session.status)
                                                     || (session.status === 'interrogating' && session.phase === 4))"
                                             type="button"
-                                            class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50"
+                                            class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50 dark:border-amber-700/70 dark:text-amber-300 dark:hover:bg-amber-950/30"
                                             @click="retrySession(session.id)"
                                         >
                                             Retry
@@ -193,7 +193,7 @@ onMounted(load);
                                         <button
                                             v-if="!session.deleted_at"
                                             type="button"
-                                            class="rounded border border-orange-300 px-2 py-1 text-xs text-orange-700 hover:bg-orange-50"
+                                            class="rounded border border-orange-300 px-2 py-1 text-xs text-orange-700 hover:bg-orange-50 dark:border-orange-700/70 dark:text-orange-300 dark:hover:bg-orange-950/30"
                                             @click="restartSession(session.id)"
                                         >
                                             Restart
@@ -201,7 +201,7 @@ onMounted(load);
                                         <button
                                             v-if="!session.deleted_at"
                                             type="button"
-                                            class="rounded border border-blue-300 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50"
+                                            class="rounded border border-blue-300 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50 dark:border-blue-700/70 dark:text-blue-300 dark:hover:bg-blue-950/30"
                                             @click="renameSession(session.id, session.name || '')"
                                         >
                                             Rename
@@ -209,7 +209,7 @@ onMounted(load);
                                         <button
                                             v-if="!session.deleted_at"
                                             type="button"
-                                            class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+                                            class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:border-red-800/70 dark:text-red-300 dark:hover:bg-red-950/30"
                                             @click="deleteSession(session.id)"
                                         >
                                             Delete
@@ -217,19 +217,19 @@ onMounted(load);
                                         <Link
                                             v-if="!session.deleted_at"
                                             :href="route('tools.discovery.session.settings', session.id)"
-                                            class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700"
+                                            class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
                                         >
                                             Settings
                                         </Link>
                                         <button
                                             v-else
                                             type="button"
-                                            class="rounded border border-green-300 px-2 py-1 text-xs text-green-700 hover:bg-green-50"
+                                            class="rounded border border-green-300 px-2 py-1 text-xs text-green-700 hover:bg-green-50 dark:border-green-800/70 dark:text-green-300 dark:hover:bg-green-950/30"
                                             @click="restoreSession(session.id)"
                                         >
                                             Restore
                                         </button>
-                                        <Link :href="route('tools.discovery.wizard', session.id)" class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 dark:border-gray-700">
+                                        <Link :href="route('tools.discovery.wizard', session.id)" class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50">
                                             Open
                                         </Link>
                                     </div>
@@ -245,8 +245,8 @@ onMounted(load);
                 <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
                     <p>Showing page {{ meta.current_page }} of {{ meta.last_page }} ({{ meta.total }} total)</p>
                     <div class="flex gap-2">
-                        <button class="rounded border border-gray-300 px-3 py-1 disabled:opacity-50" :disabled="meta.current_page <= 1" @click="setPage(meta.current_page - 1)">Prev</button>
-                        <button class="rounded border border-gray-300 px-3 py-1 disabled:opacity-50" :disabled="meta.current_page >= meta.last_page" @click="setPage(meta.current_page + 1)">Next</button>
+                        <button class="rounded border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" :disabled="meta.current_page <= 1" @click="setPage(meta.current_page - 1)">Prev</button>
+                        <button class="rounded border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" :disabled="meta.current_page >= meta.last_page" @click="setPage(meta.current_page + 1)">Next</button>
                     </div>
                 </div>
             </div>

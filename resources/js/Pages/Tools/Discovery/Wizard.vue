@@ -67,6 +67,11 @@ const actionState = ref({
 });
 const providerConnecting = ref(false);
 const providerDisconnecting = ref(false);
+const providerSettingsSaving = ref(false);
+const providerContextLoading = ref(false);
+const providerContextLoaded = ref(false);
+const providerTeamId = ref('');
+const linearTeams = ref([]);
 const techStackSubmitting = ref(false);
 const techStackDraft = ref({
     name: '',
@@ -198,6 +203,14 @@ const latestPlanReadySequence = computed(() => {
 const build = computed(() => (session.value?.build && typeof session.value.build === 'object' ? session.value.build : {}));
 const taskProviders = computed(() => (Array.isArray(session.value?.task_providers) ? session.value.task_providers : []));
 const linearProvider = computed(() => taskProviders.value.find((provider) => String(provider?.driver ?? '').toLowerCase() === 'linear') ?? null);
+const selectedLinearTeam = computed(() => {
+    const targetId = String(providerTeamId.value ?? '').trim();
+    if (targetId === '') {
+        return null;
+    }
+
+    return linearTeams.value.find((team) => String(team?.id ?? '').trim() === targetId) ?? null;
+});
 const techStacks = computed(() => (Array.isArray(session.value?.tech_stacks) ? session.value.tech_stacks : []));
 const displayError = computed(() => formatInterrogationError(error.value, { allowDetails: true, maxSummaryLength: 240 }));
 const buildActivity = computed(() => {
@@ -305,6 +318,60 @@ watch(
     }
 );
 
+const syncProviderTeamDraftFromSession = () => {
+    providerTeamId.value = String(linearProvider.value?.team_id ?? '').trim();
+};
+
+watch(linearProvider, async (provider, previousProvider) => {
+    if (!provider) {
+        linearTeams.value = [];
+        providerContextLoaded.value = false;
+        providerTeamId.value = '';
+        return;
+    }
+
+    const previousTeamId = String(previousProvider?.team_id ?? '').trim();
+    const currentDraftTeamId = String(providerTeamId.value ?? '').trim();
+    if (currentDraftTeamId === '' || currentDraftTeamId === previousTeamId) {
+        syncProviderTeamDraftFromSession();
+    }
+
+    if (!providerContextLoaded.value) {
+        await loadLinearProviderContext();
+    }
+});
+
+const loadLinearProviderContext = async ({ force = false } = {}) => {
+    if (!linearProvider.value) {
+        linearTeams.value = [];
+        providerContextLoaded.value = false;
+        providerTeamId.value = '';
+        return;
+    }
+
+    if (providerContextLoading.value || (providerContextLoaded.value && !force)) {
+        return;
+    }
+
+    providerContextLoading.value = true;
+    error.value = '';
+
+    try {
+        const { data } = await axios.get(`/agent/api/v1/interrogation/sessions/${props.sessionId}/providers/linear/projects`);
+        linearTeams.value = Array.isArray(data?.data?.teams) ? data.data.teams : [];
+        providerContextLoaded.value = true;
+
+        const selectedTeamId = String(data?.data?.selected_team_id ?? '').trim();
+        providerTeamId.value = selectedTeamId !== ''
+            ? selectedTeamId
+            : String(linearProvider.value?.team_id ?? '').trim();
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to load Linear team options.';
+    } finally {
+        providerContextLoading.value = false;
+    }
+};
+
 const loadSession = async (includeEvents = true) => {
     try {
         const { data } = await axios.get(`/agent/api/v1/interrogation/sessions/${props.sessionId}`, {
@@ -320,14 +387,22 @@ const loadSession = async (includeEvents = true) => {
         }
 
         const revisionError = String(session.value?.metadata_json?.plan?.revision_error ?? '').trim();
+        const revisionStatus = String(session.value?.metadata_json?.plan?.revision_status ?? '').trim().toLowerCase();
         const sessionError = String(session.value?.error_summary ?? '').trim();
         const buildError = String(session.value?.build?.error ?? '').trim();
-        if (revisionError !== '') {
+        const sessionStatus = String(session.value?.status ?? '').trim().toLowerCase();
+
+        if (revisionError !== '' && revisionStatus === 'failed') {
             error.value = revisionError;
-        } else if (sessionError !== '') {
+        } else if (sessionStatus === 'failed' && sessionError !== '') {
             error.value = sessionError;
-        } else if (buildError !== '') {
+        } else if (sessionStatus === 'failed' && buildError !== '') {
             error.value = buildError;
+        } else {
+            const staleServerErrors = [revisionError, sessionError, buildError].filter((message) => message !== '');
+            if (staleServerErrors.includes(String(error.value ?? '').trim())) {
+                error.value = '';
+            }
         }
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load session.';
@@ -443,11 +518,51 @@ const disconnectProvider = async (driver = 'linear') => {
     try {
         await axios.delete(`/agent/api/v1/interrogation/sessions/${props.sessionId}/providers/${driver}`);
         notice.value = `${driver} disconnected.`;
+        linearTeams.value = [];
+        providerContextLoaded.value = false;
+        providerTeamId.value = '';
         await loadSession(false);
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to disconnect provider.';
     } finally {
         providerDisconnecting.value = false;
+    }
+};
+
+const saveLinearTeamSelection = async () => {
+    if (!linearProvider.value) {
+        return;
+    }
+
+    providerSettingsSaving.value = true;
+    error.value = '';
+
+    try {
+        const currentTeamId = String(linearProvider.value?.team_id ?? '').trim();
+        const nextTeamId = String(providerTeamId.value ?? '').trim();
+        const currentProjectMode = String(linearProvider.value?.project_mode ?? 'create_new').trim().toLowerCase() === 'existing'
+            ? 'existing'
+            : 'create_new';
+        const projectMode = currentProjectMode === 'existing' && nextTeamId !== '' && nextTeamId !== currentTeamId
+            ? 'create_new'
+            : currentProjectMode;
+
+        await axios.patch(`/agent/api/v1/interrogation/sessions/${props.sessionId}/providers/linear/settings`, {
+            team_id: nextTeamId || null,
+            project_mode: projectMode,
+            existing_project_id: projectMode === 'existing'
+                ? String(linearProvider.value?.selected_project_id ?? '').trim()
+                : null,
+        });
+
+        const teamLabel = selectedLinearTeam.value?.name || linearProvider.value?.team_name || 'selected team';
+        notice.value = `Linear team set to ${teamLabel}.`;
+        await loadSession(false);
+        await loadLinearProviderContext({ force: true });
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to update Linear team.';
+    } finally {
+        providerSettingsSaving.value = false;
     }
 };
 
@@ -1226,6 +1341,37 @@ onBeforeUnmount(() => {
                                                 {{ providerDisconnecting ? 'Disconnecting...' : 'Disconnect Linear' }}
                                             </button>
                                         </div>
+                                        <div v-if="linearProvider" class="mt-3 space-y-2">
+                                            <div class="flex items-center gap-2">
+                                                <select
+                                                    v-model="providerTeamId"
+                                                    class="w-full rounded border border-gray-300 px-2 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                                                >
+                                                    <option value="">Select a Linear team...</option>
+                                                    <option v-for="team in linearTeams" :key="team.id" :value="team.id">
+                                                        {{ team.name || team.id }}
+                                                    </option>
+                                                </select>
+                                                <button
+                                                    type="button"
+                                                    class="rounded border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
+                                                    :disabled="providerContextLoading"
+                                                    @click="loadLinearProviderContext({ force: true })"
+                                                >
+                                                    {{ providerContextLoading ? 'Loading...' : 'Refresh' }}
+                                                </button>
+                                            </div>
+                                            <div class="flex justify-end">
+                                                <button
+                                                    type="button"
+                                                    class="rounded bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                                                    :disabled="providerSettingsSaving || providerTeamId.trim() === ''"
+                                                    @click="saveLinearTeamSelection"
+                                                >
+                                                    {{ providerSettingsSaving ? 'Saving...' : 'Save Linear Team' }}
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div class="mt-4">
@@ -1306,7 +1452,7 @@ onBeforeUnmount(() => {
                                     Revising an earlier question ({{ selectedQuestion.question_id }}).
                                     <button type="button" class="ml-2 font-medium underline" @click="selectedQuestionId = ''">Return to latest question</button>
                                 </div>
-                                <QuestionRenderer :question="awaitingNextQuestion ? null : activeQuestion" />
+                                <QuestionRenderer v-if="!awaitingNextQuestion" :question="activeQuestion" />
                                 <div
                                     v-if="awaitingNextQuestion"
                                     class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
@@ -1317,7 +1463,8 @@ onBeforeUnmount(() => {
                                     </div>
                                 </div>
                                 <AnswerInput
-                                    :question="awaitingNextQuestion ? null : activeQuestion"
+                                    v-if="!awaitingNextQuestion"
+                                    :question="activeQuestion"
                                     :busy="busy"
                                     :waiting-for-next-question="awaitingNextQuestion"
                                     @submit="submitAnswer"

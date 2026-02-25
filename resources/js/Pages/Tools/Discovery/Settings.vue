@@ -100,11 +100,11 @@ onMounted(load);
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-4xl space-y-4 rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                <p v-if="error" class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
+                <p v-if="error" class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{{ error }}</p>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Default Runner</label>
-                    <select v-model="form.default_runner" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                    <select v-model="form.default_runner" class="mt-1 w-full rounded-md border border-gray-300 bg-white text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400">
                         <option value="claude">claude</option>
                         <option value="codex">codex</option>
                     </select>
@@ -112,8 +112,8 @@ onMounted(load);
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">System Prompt Override</label>
-                    <textarea v-model="form.system_prompt" rows="14" class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm dark:border-gray-700 dark:bg-gray-900" />
-                    <p class="mt-1 text-xs text-gray-500">Leave empty to use the built-in runtime-safe prompt.</p>
+                    <textarea v-model="form.system_prompt" rows="14" class="mt-1 w-full rounded-md border border-gray-300 bg-white font-mono text-sm text-gray-900 placeholder:text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" />
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use the built-in runtime-safe prompt.</p>
                 </div>
 
                 <div>
@@ -123,10 +123,10 @@ onMounted(load);
                         type="number"
                         min="1"
                         max="50"
-                        class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900"
+                        class="mt-1 w-full rounded-md border border-gray-300 bg-white text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
                     />
-                    <p class="mt-1 text-xs text-gray-500">Maximum concurrently active discovery sessions per user.</p>
-                    <p v-if="firstValidationError('value')" class="mt-1 text-sm text-red-600">{{ firstValidationError('value') }}</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Maximum concurrently active discovery sessions per user.</p>
+                    <p v-if="firstValidationError('value')" class="mt-1 text-sm text-red-600 dark:text-red-300">{{ firstValidationError('value') }}</p>
                 </div>
 
                 <div class="flex justify-end">

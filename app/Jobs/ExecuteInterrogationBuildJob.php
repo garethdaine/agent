@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\AgentJobRun;
 use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationSession;
+use App\Support\Interrogation\BuildExecutionBackupService;
 use App\Support\Interrogation\BuildTaskRunFactory;
 use App\Support\Interrogation\InterrogationEventWriter;
 use Carbon\CarbonImmutable;
@@ -25,8 +26,10 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $this->onQueue('interrogation');
     }
 
-    public function handle(BuildTaskRunFactory $runFactory): void
-    {
+    public function handle(
+        BuildTaskRunFactory $runFactory,
+        BuildExecutionBackupService $backupService,
+    ): void {
         $session = InterrogationSession::query()->find($this->sessionId);
 
         if ($session === null) {
@@ -37,6 +40,10 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $build = $this->buildMetadata($session);
 
         if (($build['status'] ?? null) !== 'running') {
+            return;
+        }
+
+        if (! $this->ensureBackupBeforeBuildStart($session, $writer, $backupService)) {
             return;
         }
 
@@ -71,15 +78,22 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             ->first();
 
         if ($nextTask !== null) {
+            $nextAttempt = (int) $nextTask->attempt_count + 1;
+
+            if (! $this->ensureBackupBeforeTaskStart($session, $nextTask, $nextAttempt, $writer, $backupService)) {
+                return;
+            }
+
             $run = $runFactory->create($session, $nextTask);
 
             $nextTask->status = InterrogationBuildTask::STATUS_IN_PROGRESS;
-            $nextTask->attempt_count = (int) $nextTask->attempt_count + 1;
+            $nextTask->attempt_count = $nextAttempt;
             $nextTask->agent_job_run_id = $run->id;
             $nextTask->last_error = null;
             $nextTask->started_at = $nextTask->started_at ?? CarbonImmutable::now('UTC');
             $nextTask->finished_at = null;
             $nextTask->save();
+            $this->queueTaskProviderStatusSync($session, $nextTask);
 
             $this->persistActivePointers($session, $nextTask, $run);
 
@@ -204,7 +218,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $permissionBlockerDetected = ($runMetadata['permission_blocker_detected'] ?? false) === true;
         $clarificationRequired = ($runMetadata['clarification_required'] ?? false) === true;
 
-        if (($runMetadata['rate_limit_detected'] ?? false) === true) {
+        if ($runStatus !== AgentJobRun::STATUS_SUCCEEDED && ($runMetadata['rate_limit_detected'] ?? false) === true) {
             $task->status = InterrogationBuildTask::STATUS_BLOCKED;
             $task->last_error = trim((string) ($run->error_summary ?? 'Rate limit detected while executing build task.'));
             $task->finished_at = CarbonImmutable::now('UTC');
@@ -429,5 +443,154 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
     private function queueTaskProviderStatusSync(InterrogationSession $session, InterrogationBuildTask $task): void
     {
         SyncInterrogationTaskStatusToTaskProviderJob::dispatch((int) $session->id, (int) $task->id);
+    }
+
+    private function ensureBackupBeforeBuildStart(
+        InterrogationSession $session,
+        InterrogationEventWriter $writer,
+        BuildExecutionBackupService $backupService,
+    ): bool {
+        $build = $this->buildMetadata($session);
+        $executionBackup = is_array($build['execution_backup'] ?? null) ? $build['execution_backup'] : [];
+        $buildStartBackup = is_array($executionBackup['build_start'] ?? null) ? $executionBackup['build_start'] : [];
+        $alreadyBackedUp = is_string($buildStartBackup['completed_at'] ?? null)
+            && trim((string) $buildStartBackup['completed_at']) !== '';
+
+        if ($alreadyBackedUp) {
+            return true;
+        }
+
+        $result = $backupService->backupBeforeBuildStart($session);
+        $attemptedAt = (string) ($result['attempted_at'] ?? CarbonImmutable::now('UTC')->toIso8601String());
+        $message = trim((string) ($result['message'] ?? ''));
+        $nowIso = CarbonImmutable::now('UTC')->toIso8601String();
+
+        $executionBackup['build_start'] = [
+            'status' => ($result['ok'] ?? false) ? 'succeeded' : 'failed',
+            'attempted_at' => $attemptedAt,
+            'completed_at' => ($result['ok'] ?? false) ? $attemptedAt : null,
+            'message' => $message !== '' ? $message : null,
+            'output' => is_string($result['output'] ?? null) && trim((string) $result['output']) !== ''
+                ? trim((string) $result['output'])
+                : null,
+            'skipped' => ($result['skipped'] ?? false) === true,
+        ];
+        $build['execution_backup'] = $executionBackup;
+        $build['updated_at'] = $nowIso;
+
+        if (($result['ok'] ?? false) !== true) {
+            $build['status'] = 'paused';
+            $build['pause_reason'] = 'backup_failed';
+            $build['error'] = mb_substr(
+                'Database backup failed before build execution started. '.($message !== '' ? $message : 'Run again after resolving backup issues.'),
+                0,
+                1000
+            );
+            $build['paused_at'] = $nowIso;
+            $build['active_task_id'] = null;
+            $build['active_run_id'] = null;
+            $this->saveBuildMetadata($session, $build);
+
+            $writer->appendError([
+                'code' => 'BUILD_BACKUP_FAILED',
+                'message' => $build['error'],
+                'scope' => 'build_start',
+                'at' => $nowIso,
+            ]);
+
+            return false;
+        }
+
+        $this->saveBuildMetadata($session, $build);
+
+        $writer->appendSystem([
+            'notice' => 'build_backup_completed',
+            'scope' => 'build_start',
+            'message' => $message !== '' ? $message : 'Database backup completed before build start.',
+            'skipped' => ($result['skipped'] ?? false) === true,
+            'at' => $nowIso,
+        ]);
+
+        return true;
+    }
+
+    private function ensureBackupBeforeTaskStart(
+        InterrogationSession $session,
+        InterrogationBuildTask $task,
+        int $attempt,
+        InterrogationEventWriter $writer,
+        BuildExecutionBackupService $backupService,
+    ): bool {
+        $result = $backupService->backupBeforeTaskStart($session, $task, $attempt);
+        $attemptedAt = (string) ($result['attempted_at'] ?? CarbonImmutable::now('UTC')->toIso8601String());
+        $message = trim((string) ($result['message'] ?? ''));
+        $nowIso = CarbonImmutable::now('UTC')->toIso8601String();
+
+        $build = $this->buildMetadata($session);
+        $executionBackup = is_array($build['execution_backup'] ?? null) ? $build['execution_backup'] : [];
+        $taskBackups = is_array($executionBackup['task_starts'] ?? null) ? array_values($executionBackup['task_starts']) : [];
+        $taskBackups[] = [
+            'task_id' => (int) $task->id,
+            'sequence' => (int) $task->sequence,
+            'attempt' => $attempt,
+            'status' => ($result['ok'] ?? false) ? 'succeeded' : 'failed',
+            'attempted_at' => $attemptedAt,
+            'message' => $message !== '' ? $message : null,
+            'output' => is_string($result['output'] ?? null) && trim((string) $result['output']) !== ''
+                ? trim((string) $result['output'])
+                : null,
+            'skipped' => ($result['skipped'] ?? false) === true,
+        ];
+
+        if (count($taskBackups) > 200) {
+            $taskBackups = array_slice($taskBackups, -200);
+        }
+
+        $executionBackup['task_starts'] = $taskBackups;
+        $build['execution_backup'] = $executionBackup;
+        $build['updated_at'] = $nowIso;
+
+        if (($result['ok'] ?? false) !== true) {
+            $build['status'] = 'paused';
+            $build['pause_reason'] = 'backup_failed';
+            $build['error'] = mb_substr(
+                sprintf(
+                    'Database backup failed before starting task %d. %s',
+                    (int) $task->sequence,
+                    $message !== '' ? $message : 'Resume build after backup health is restored.'
+                ),
+                0,
+                1000
+            );
+            $build['paused_at'] = $nowIso;
+            $build['active_task_id'] = null;
+            $build['active_run_id'] = null;
+            $this->saveBuildMetadata($session, $build);
+
+            $writer->appendError([
+                'code' => 'BUILD_TASK_BACKUP_FAILED',
+                'message' => $build['error'],
+                'task_id' => $task->id,
+                'sequence' => $task->sequence,
+                'attempt' => $attempt,
+                'at' => $nowIso,
+            ]);
+
+            return false;
+        }
+
+        $this->saveBuildMetadata($session, $build);
+
+        $writer->appendSystem([
+            'notice' => 'build_task_backup_completed',
+            'task_id' => $task->id,
+            'sequence' => $task->sequence,
+            'attempt' => $attempt,
+            'message' => $message !== '' ? $message : 'Database backup completed before task start.',
+            'skipped' => ($result['skipped'] ?? false) === true,
+            'at' => $nowIso,
+        ]);
+
+        return true;
     }
 }
