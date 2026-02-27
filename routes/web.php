@@ -70,9 +70,14 @@ Route::middleware([
         return Inertia::render('Tools/Discovery/Index');
     })->name('tools.discovery.index');
 
-    Route::get('/tools/discovery/new', function () {
+    Route::get('/tools/discovery/create', function () {
         return Inertia::render('Tools/Discovery/Create');
     })->name('tools.discovery.create');
+
+    // Backward compatibility for legacy links.
+    Route::get('/tools/discovery/new', function () {
+        return redirect()->route('tools.discovery.create');
+    });
 
     Route::get('/tools/discovery/settings', function () {
         return Inertia::render('Tools/Discovery/Settings');

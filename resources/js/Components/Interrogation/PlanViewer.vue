@@ -157,13 +157,13 @@ const renderItemMarkdown = (item) => {
 </script>
 
 <template>
-    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+    <div class="rounded-lg border border-border bg-card p-4  ">
         <div class="flex items-center justify-between gap-3">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Plan</h3>
+            <h3 class="text-base font-semibold text-foreground ">Plan</h3>
             <button
                 v-if="hasPlan"
                 type="button"
-                class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200"
+                class="rounded border border-input px-2 py-1 text-xs text-foreground hover:bg-muted/30  "
                 :disabled="busy || generating || revising"
                 @click="emit('export')"
             >
@@ -174,66 +174,66 @@ const renderItemMarkdown = (item) => {
         <div class="mt-3 space-y-4">
             <div
                 v-if="generating && !hasPlan"
-                class="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
+                class="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-primary"
             >
                 <div class="flex items-center gap-2">
-                    <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                    <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                     <span class="font-medium">Generating plan...</span>
                 </div>
-                <p class="mt-1 text-xs text-indigo-700/90 dark:text-indigo-200/90">Plan generation is running. This panel will update automatically when ready.</p>
+                <p class="mt-1 text-xs text-primary/90 ">Plan generation is running. This panel will update automatically when ready.</p>
             </div>
 
             <div
                 v-if="revising"
-                class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+                class="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning"
             >
                 <div class="flex items-center gap-2">
-                    <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+                    <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-warning border-t-transparent" />
                     <span class="font-medium">Revising plan...</span>
                 </div>
-                <p class="mt-1 text-xs text-amber-800/90 dark:text-amber-200/90">Revision has been submitted. The current plan remains visible until the new revision is ready.</p>
+                <p class="mt-1 text-xs text-warning/90">Revision has been submitted. The current plan remains visible until the new revision is ready.</p>
             </div>
 
             <MarkdownRenderer
                 v-if="hasMeaningfulPlanMarkdown"
                 :markdown="planMarkdown"
-                class="summary-markdown summary-markdown-scroll prose prose-sm max-w-none rounded-lg border border-gray-200 bg-gray-50 p-4 text-gray-800 dark:prose-invert dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-100 prose-headings:mb-2 prose-headings:mt-4 prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 dark:prose-code:bg-gray-700"
+                class="summary-markdown summary-markdown-scroll prose prose-sm max-w-none rounded-lg border border-border bg-muted/30 p-4 text-foreground    prose-headings:mb-2 prose-headings:mt-4 prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"
             />
-            <p v-else class="rounded bg-gray-50 p-3 text-sm text-gray-700 dark:bg-gray-900 dark:text-gray-200">Plan not generated yet.</p>
+            <p v-else class="rounded bg-muted/30 p-3 text-sm text-foreground  ">Plan not generated yet.</p>
 
             <div v-if="hasPlan" class="space-y-3">
                 <details
                     v-for="section in sectionEntries"
                     :key="section.key"
-                    class="group overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/30"
+                    class="group overflow-hidden rounded-lg border border-border bg-card  "
                 >
-                    <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-gray-800/40">
+                    <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted/30">
                         <span>{{ section.title }}</span>
-                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ section.items.length }}</span>
+                        <span class="text-xs font-medium text-muted-foreground ">{{ section.items.length }}</span>
                     </summary>
-                    <div class="border-t border-gray-200 px-3 py-3 dark:border-gray-700">
-                        <ul v-if="section.items.length > 0" class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                    <div class="border-t border-border px-3 py-3 ">
+                        <ul v-if="section.items.length > 0" class="space-y-2 text-sm text-foreground ">
                             <li
                                 v-for="(item, index) in section.items"
                                 :key="`${section.key}-${index}`"
-                                class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800/60"
+                                class="rounded-md border border-border bg-muted/30 px-3 py-2"
                             >
                                 <MarkdownRenderer
                                     :markdown="renderItemMarkdown(item)"
-                                    class="summary-markdown prose prose-sm max-w-none dark:prose-invert"
+                                    class="summary-markdown prose prose-sm max-w-none"
                                 />
                             </li>
                         </ul>
-                        <p v-else class="text-sm text-gray-500 dark:text-gray-400">No items provided.</p>
+                        <p v-else class="text-sm text-muted-foreground ">No items provided.</p>
                     </div>
                 </details>
             </div>
         </div>
 
-        <div v-if="hasPlan" class="mt-4 rounded-md border border-gray-200 p-3 dark:border-gray-700">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Request Revision</p>
+        <div v-if="hasPlan" class="mt-4 rounded-md border border-border p-3 ">
+            <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Request Revision</p>
             <div class="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
-                <select v-model="revision.action" class="rounded-md border-gray-300 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                <select v-model="revision.action" class="rounded-md border-input text-sm text-foreground   ">
                     <option value="expand">Expand</option>
                     <option value="simplify">Simplify</option>
                     <option value="add_examples">Add Examples</option>
@@ -242,32 +242,32 @@ const renderItemMarkdown = (item) => {
                     <option value="add_acceptance_criteria">Add Acceptance Criteria</option>
                 </select>
 
-                <details class="relative rounded-md border border-gray-300 bg-white dark:border-gray-700 dark:bg-gray-900">
-                    <summary class="cursor-pointer select-none px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200">
+                <details class="relative rounded-md border border-input bg-card  ">
+                    <summary class="cursor-pointer select-none px-3 py-2 text-left text-sm text-foreground ">
                         {{ selectedSectionsLabel }}
                     </summary>
-                    <div class="absolute z-20 mt-1 w-full rounded-md border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                    <div class="absolute z-20 mt-1 w-full rounded-md border border-border bg-card p-2 shadow-lg  ">
                         <div class="mb-2 flex items-center justify-between text-xs">
-                            <button type="button" class="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400" @click="selectAllSections">Select all</button>
-                            <button type="button" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" @click="clearSections">Clear</button>
+                            <button type="button" class="text-primary hover:opacity-80" @click="selectAllSections">Select all</button>
+                            <button type="button" class="text-muted-foreground hover:text-foreground" @click="clearSections">Clear</button>
                         </div>
 
                         <div v-if="availablePlanSections.length > 0" class="max-h-56 space-y-2 overflow-y-auto pr-1">
                             <label
                                 v-for="sectionName in availablePlanSections"
                                 :key="sectionName"
-                                class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
+                                class="flex items-center gap-2 text-sm text-foreground "
                             >
                                 <input
                                     type="checkbox"
-                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600"
+                                    class="rounded border-input text-primary focus:ring-primary "
                                     :checked="revision.sections.includes(sectionName)"
                                     @change="toggleSection(sectionName, $event.target.checked)"
                                 >
                                 <span>{{ sectionName }}</span>
                             </label>
                         </div>
-                        <p v-else class="text-xs text-gray-500 dark:text-gray-400">
+                        <p v-else class="text-xs text-muted-foreground ">
                             No generated sections are available yet.
                         </p>
                     </div>
@@ -275,7 +275,7 @@ const renderItemMarkdown = (item) => {
             </div>
 
             <div class="mt-3">
-                <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Revision Notes (Markdown)</label>
+                <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Revision Notes (Markdown)</label>
                 <MarkdownEditor
                     v-model="revision.notes"
                     placeholder="Describe what should change. Markdown supported."
@@ -284,7 +284,7 @@ const renderItemMarkdown = (item) => {
             <div class="mt-3 flex justify-end">
                 <button
                     type="button"
-                    class="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="rounded bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="busy || generating || revising || revisionSubmitting"
                     @click="requestRevision"
                 >

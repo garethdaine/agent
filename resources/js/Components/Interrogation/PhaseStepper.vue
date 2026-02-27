@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { Check } from 'lucide-vue-next';
 
 const props = defineProps({
     phase: {
@@ -22,7 +23,6 @@ const steps = [
 
 const normalizedPhase = computed(() => {
     const phase = Number(props.phase ?? 0);
-
     if (phase <= 1) {
         return 0;
     }
@@ -42,37 +42,57 @@ const stateFor = (stepIndex) => {
     return 'future';
 };
 
-const stepClass = (stepIndex) => {
+const circleClass = (stepIndex) => {
     const state = stateFor(stepIndex);
 
     if (state === 'done') {
-        return 'bg-green-600 text-white border-green-600';
+        return 'bg-success text-success-foreground border-success';
     }
 
     if (state === 'active') {
-        return 'bg-indigo-600 text-white border-indigo-600';
+        return 'bg-primary text-primary-foreground border-primary ring-4 ring-primary/20';
     }
 
-    return 'bg-white text-gray-600 border-gray-300 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-700';
+    return 'border-2 border-muted-foreground/30 bg-card text-muted-foreground';
 };
 
-const connectorClass = (stepIndex) => computed(() => (stepIndex < normalizedPhase.value ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'));
+const labelClass = (stepIndex) => {
+    const state = stateFor(stepIndex);
+
+    if (state === 'done') {
+        return 'text-success';
+    }
+
+    if (state === 'active') {
+        return 'text-primary';
+    }
+
+    return 'text-muted-foreground';
+};
+
+const connectorClass = (stepIndex) => {
+    return stepIndex < normalizedPhase.value ? 'bg-success' : 'bg-muted-foreground/25';
+};
 </script>
 
 <template>
-    <div class="flex flex-wrap items-center gap-2">
-        <template v-for="(step, index) in steps" :key="step.label">
-            <div class="flex items-center gap-2">
-                <div class="flex h-8 min-w-8 items-center justify-center rounded-full border px-2 text-xs font-semibold" :class="stepClass(index)">
-                    {{ index + 1 }}
+    <div class="overflow-x-auto">
+        <div class="flex min-w-[700px] items-start justify-between py-1">
+            <template v-for="(step, index) in steps" :key="step.label">
+                <div class="flex flex-1 items-start last:flex-none">
+                    <div class="flex flex-col items-center gap-1.5">
+                        <div class="flex h-7 w-7 items-center justify-center rounded-full border text-[12px] font-semibold transition-all" :class="circleClass(index)">
+                            <Check v-if="stateFor(index) === 'done'" class="h-3.5 w-3.5" />
+                            <span v-else>{{ index + 1 }}</span>
+                        </div>
+                        <span class="whitespace-nowrap text-[11px] font-medium" :class="labelClass(index)">
+                            {{ step.label }}
+                        </span>
+                    </div>
+
+                    <div v-if="index < steps.length - 1" class="mx-2 mt-[13px] h-0.5 flex-1 rounded-full" :class="connectorClass(index)" />
                 </div>
-                <span class="text-xs font-medium text-gray-700 dark:text-gray-200">{{ step.label }}</span>
-            </div>
-            <div
-                v-if="index < steps.length - 1"
-                class="h-1 w-8 rounded"
-                :class="connectorClass(index).value"
-            />
-        </template>
+            </template>
+        </div>
     </div>
 </template>

@@ -594,43 +594,43 @@ const submitTaskRegeneration = (task) => {
 </script>
 
 <template>
-    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+    <div class="rounded-lg border border-border bg-card p-4  ">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">
+            <h3 class="text-base font-semibold text-foreground ">
                 {{ isRulesMode ? 'Rules' : (isTasksMode ? 'Tasks' : 'Build') }}
             </h3>
-            <span class="rounded-full border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 capitalize dark:border-gray-600 dark:text-gray-200">
+            <span class="rounded-full border border-input px-2 py-1 text-xs font-medium text-foreground capitalize  ">
                 {{ statusLabel }}
             </span>
         </div>
 
-        <div v-if="isRulesMode" class="mt-4 rounded border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Optional Step: Project Rules</p>
-            <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
+        <div v-if="isRulesMode" class="mt-4 rounded border border-border bg-muted/30 p-3  ">
+            <p class="text-sm font-semibold text-foreground ">Optional Step: Project Rules</p>
+            <p class="mt-1 text-xs text-muted-foreground ">
                 Add markdown rules that must be respected for build task generation and build execution context.
             </p>
 
             <div class="mt-3">
-                <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Upload Rule Files</label>
+                <label class="block text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Upload Rule Files</label>
                 <input
                     type="file"
                     multiple
                     accept=".md,.markdown,.txt,text/markdown,text/plain"
-                    class="mt-1 block w-full cursor-pointer rounded border border-gray-300 bg-white px-3 py-2 text-xs text-gray-700 file:mr-3 file:rounded file:border-0 file:bg-indigo-600 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white hover:file:bg-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                    class="mt-1 block w-full cursor-pointer rounded border border-input bg-card px-3 py-2 text-xs text-foreground file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white hover:file:bg-primary/50   "
                     :disabled="disabled || actions.generateBuildTasks"
                     @change="handleProjectRuleFileSelection"
                 />
-                <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Multiple files supported. Accepted: .md, .markdown, .txt</p>
+                <p class="mt-1 text-[11px] text-muted-foreground ">Multiple files supported. Accepted: .md, .markdown, .txt</p>
                 <div v-if="projectRuleFiles.length > 0" class="mt-2 flex flex-wrap gap-2">
                     <span
                         v-for="(file, index) in projectRuleFiles"
                         :key="`${file.name}-${index}`"
-                        class="inline-flex items-center gap-2 rounded border border-indigo-300 bg-indigo-50 px-2 py-1 text-[11px] text-indigo-800 dark:border-indigo-800/70 dark:bg-indigo-950/30 dark:text-indigo-200"
+                        class="inline-flex items-center gap-2 rounded border border-primary/30 bg-primary/5 px-2 py-1 text-[11px] text-primary"
                     >
                         <span>{{ file.name }}</span>
                         <button
                             type="button"
-                            class="rounded px-1 text-[10px] font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                            class="rounded px-1 text-[10px] font-semibold hover:bg-primary/10"
                             :disabled="disabled || actions.generateBuildTasks"
                             @click="removeProjectRuleFile(index)"
                         >
@@ -642,10 +642,10 @@ const submitTaskRegeneration = (task) => {
 
             <div class="mt-4 space-y-4">
                 <div class="flex items-center justify-between">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Inline Rules</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Inline Rules</p>
                     <button
                         type="button"
-                        class="rounded border border-indigo-300 px-2 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800/70 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
+                        class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5"
                         :disabled="disabled || actions.generateBuildTasks"
                         @click="addProjectRule"
                     >
@@ -653,26 +653,26 @@ const submitTaskRegeneration = (task) => {
                     </button>
                 </div>
 
-                <div v-if="projectRulesDraft.length === 0" class="rounded border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-500 dark:border-gray-600 dark:text-gray-400">
+                <div v-if="projectRulesDraft.length === 0" class="rounded border border-dashed border-input px-3 py-2 text-xs text-muted-foreground  ">
                     No inline project rules added.
                 </div>
 
                 <div
                     v-for="(rule, index) in projectRulesDraft"
                     :key="rule.id"
-                    class="rounded border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
+                    class="rounded border border-border bg-card p-3  "
                 >
                     <div class="mb-2 flex items-center gap-2">
                         <input
                             :value="rule.title"
                             type="text"
-                            class="w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                            class="w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
                             :placeholder="`Rule ${index + 1} title`"
                             @input="updateProjectRuleTitle(index, $event.target.value)"
                         />
                         <button
                             type="button"
-                            class="rounded border border-red-300 px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50 dark:border-red-800/70 dark:text-red-300 dark:hover:bg-red-950/30"
+                            class="rounded border border-destructive/30 px-2 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/10"
                             :disabled="disabled || actions.generateBuildTasks"
                             @click="removeProjectRule(index)"
                         >
@@ -684,7 +684,7 @@ const submitTaskRegeneration = (task) => {
                         placeholder="Write this project rule in markdown..."
                         @update:model-value="updateProjectRuleMarkdown(index, $event)"
                     />
-                    <p class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+                    <p class="mt-2 text-[11px] text-muted-foreground ">
                         Source: {{ rule.source }}<span v-if="rule.filename"> · {{ rule.filename }}</span>
                     </p>
                 </div>
@@ -695,7 +695,7 @@ const submitTaskRegeneration = (task) => {
             <button
                 v-if="isRulesMode || isTasksMode"
                 type="button"
-                class="rounded bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                class="rounded bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 :disabled="!canGenerate"
                 @click="submitTaskGeneration"
             >
@@ -704,7 +704,7 @@ const submitTaskRegeneration = (task) => {
             <button
                 v-if="isTasksMode"
                 type="button"
-                class="rounded border border-indigo-400 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-800/70 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
+                class="rounded border border-primary/30 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
                 :disabled="!canApproveTasks"
                 @click="emit('approve-tasks')"
             >
@@ -713,7 +713,7 @@ const submitTaskRegeneration = (task) => {
             <button
                 v-if="isTasksMode"
                 type="button"
-                class="rounded border border-green-400 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-green-800/70 dark:text-green-300 dark:hover:bg-green-950/30"
+                class="rounded border border-success/30 px-3 py-2 text-xs font-semibold text-success hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-50"
                 :disabled="!canStart"
                 @click="emit('start')"
             >
@@ -723,7 +723,7 @@ const submitTaskRegeneration = (task) => {
             <button
                 v-if="isExecutionMode"
                 type="button"
-                class="rounded border border-amber-400 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-amber-800/70 dark:text-amber-300 dark:hover:bg-amber-950/30"
+                class="rounded border border-warning/30 px-3 py-2 text-xs font-semibold text-warning hover:bg-warning/10 disabled:cursor-not-allowed disabled:opacity-50"
                 :disabled="!canPause"
                 @click="emit('pause')"
             >
@@ -732,7 +732,7 @@ const submitTaskRegeneration = (task) => {
             <button
                 v-if="isExecutionMode"
                 type="button"
-                class="rounded border border-sky-400 px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-sky-800/70 dark:text-sky-300 dark:hover:bg-sky-950/30"
+                class="rounded border border-primary/30 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
                 :disabled="!canResume"
                 @click="emit('resume')"
             >
@@ -741,7 +741,7 @@ const submitTaskRegeneration = (task) => {
             <button
                 v-if="isExecutionMode"
                 type="button"
-                class="rounded border border-rose-400 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800/70 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                class="rounded border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
                 :disabled="!canRetry"
                 @click="emit('retry')"
             >
@@ -750,7 +750,7 @@ const submitTaskRegeneration = (task) => {
             <button
                 v-if="isExecutionMode"
                 type="button"
-                class="rounded border border-fuchsia-400 px-3 py-2 text-xs font-semibold text-fuchsia-700 hover:bg-fuchsia-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-fuchsia-800/70 dark:text-fuchsia-300 dark:hover:bg-fuchsia-950/30"
+                class="rounded border border-warning/30 px-3 py-2 text-xs font-semibold text-warning hover:bg-warning/10 disabled:cursor-not-allowed disabled:opacity-50"
                 :disabled="!canRerunAll"
                 @click="emit('rerun-all')"
             >
@@ -758,96 +758,96 @@ const submitTaskRegeneration = (task) => {
             </button>
         </div>
 
-        <div v-if="(isRulesMode || isTasksMode) && status === 'generating_tasks'" class="mt-4 rounded border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-800 dark:border-indigo-800/70 dark:bg-indigo-950/30 dark:text-indigo-200">
+        <div v-if="(isRulesMode || isTasksMode) && status === 'generating_tasks'" class="mt-4 rounded border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
             Generating build tasks from the approved plan...
         </div>
 
-        <div v-if="isTasksMode && tasksApprovedAt" class="mt-4 rounded border border-green-300 bg-green-50 p-3 text-xs text-green-800 dark:border-green-800/70 dark:bg-green-950/30 dark:text-green-200">
+        <div v-if="isTasksMode && tasksApprovedAt" class="mt-4 rounded border border-success/30 bg-success/10 p-3 text-xs text-success">
             <p class="font-semibold">Build tasks approved.</p>
             <p class="mt-1">Approved at {{ new Date(tasksApprovedAt).toLocaleString() }}.</p>
             <p v-if="taskProviderSyncStatus === 'queued' || taskProviderSyncStatus === 'syncing'" class="mt-1">Syncing approved tasks to task provider...</p>
             <p v-if="taskProviderSyncStatus === 'synced'" class="mt-1">Task provider sync completed.</p>
-            <p v-if="taskProviderSyncStatus === 'failed' && taskProviderSyncError.summary" class="mt-1 text-red-700 dark:text-red-300">Task provider sync failed: {{ taskProviderSyncError.summary }}</p>
+            <p v-if="taskProviderSyncStatus === 'failed' && taskProviderSyncError.summary" class="mt-1 text-destructive ">Task provider sync failed: {{ taskProviderSyncError.summary }}</p>
             <p v-if="taskProviderSync.project_url" class="mt-2">
                 <a :href="taskProviderSync.project_url" target="_blank" rel="noreferrer" class="font-semibold underline">Open synced provider project</a>
             </p>
         </div>
 
-        <div v-if="(isRulesMode || isTasksMode) && status === 'failed'" class="mt-4 rounded border border-red-300 bg-red-50 p-3 text-xs text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+        <div v-if="(isRulesMode || isTasksMode) && status === 'failed'" class="mt-4 rounded border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive   ">
             <p class="font-semibold">Build task generation failed.</p>
             <p v-if="buildError.summary" class="mt-1 whitespace-pre-wrap">{{ buildError.summary }}</p>
             <details v-if="buildError.details" class="mt-2">
                 <summary class="cursor-pointer font-medium">Show technical details</summary>
-                <pre class="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded border border-red-200 bg-white p-2 text-[11px] text-red-700 dark:border-red-800/60 dark:bg-gray-950 dark:text-red-200">{{ buildError.details }}</pre>
+                <pre class="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded border border-destructive/30 bg-card p-2 text-[11px] text-destructive">{{ buildError.details }}</pre>
             </details>
             <p class="mt-1">You can retry by clicking Generate Build Tasks.</p>
         </div>
 
-        <div v-if="isExecutionMode && flags.approval_required" class="mt-4 rounded border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200">
+        <div v-if="isExecutionMode && flags.approval_required" class="mt-4 rounded border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
             <p class="font-semibold">Approval likely required in active run output.</p>
             <p v-if="flags.approval_excerpt" class="mt-1 whitespace-pre-wrap">{{ flags.approval_excerpt }}</p>
         </div>
 
-        <div v-if="isExecutionMode && flags.permission_required" class="mt-4 rounded border border-red-300 bg-red-50 p-3 text-xs text-red-900 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+        <div v-if="isExecutionMode && flags.permission_required" class="mt-4 rounded border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
             <p class="font-semibold">Write permission blocker detected.</p>
             <p v-if="flags.permission_excerpt" class="mt-1 whitespace-pre-wrap">{{ flags.permission_excerpt }}</p>
         </div>
 
-        <div v-if="isExecutionMode && flags.clarification_required" class="mt-4 rounded border border-sky-300 bg-sky-50 p-3 text-xs text-sky-900 dark:border-sky-800/70 dark:bg-sky-950/30 dark:text-sky-200">
+        <div v-if="isExecutionMode && flags.clarification_required" class="mt-4 rounded border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
             <p class="font-semibold">Clarification requested by the AI.</p>
             <p v-if="flags.clarification_excerpt" class="mt-1 whitespace-pre-wrap">{{ flags.clarification_excerpt }}</p>
             <p class="mt-1">Submit clarification below, then click Resume Build.</p>
         </div>
 
-        <div v-if="isExecutionMode && flags.rate_limit_detected" class="mt-4 rounded border border-red-300 bg-red-50 p-3 text-xs text-red-900 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+        <div v-if="isExecutionMode && flags.rate_limit_detected" class="mt-4 rounded border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
             <p class="font-semibold">Rate limit detected.</p>
             <p v-if="flags.rate_limit_reset_at" class="mt-1">Reset at: {{ flags.rate_limit_reset_at }}</p>
             <p v-if="flags.rate_limit_excerpt" class="mt-1 whitespace-pre-wrap">{{ flags.rate_limit_excerpt }}</p>
         </div>
 
-        <div v-if="isExecutionMode && activeTask" class="mt-4 rounded border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Current Task</p>
-            <p class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">#{{ activeTask.sequence }} · {{ activeTask.title }}</p>
-            <p v-if="activeTask.description" class="mt-1 text-xs text-gray-600 dark:text-gray-300">{{ activeTask.description }}</p>
-            <p v-if="activeRun" class="mt-2 text-xs text-gray-600 dark:text-gray-300">Run #{{ activeRun.id }} · {{ activeRun.status }}</p>
+        <div v-if="isExecutionMode && activeTask" class="mt-4 rounded border border-border bg-muted/30 p-3  ">
+            <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Current Task</p>
+            <p class="mt-1 text-sm font-medium text-foreground ">#{{ activeTask.sequence }} · {{ activeTask.title }}</p>
+            <p v-if="activeTask.description" class="mt-1 text-xs text-muted-foreground ">{{ activeTask.description }}</p>
+            <p v-if="activeRun" class="mt-2 text-xs text-muted-foreground ">Run #{{ activeRun.id }} · {{ activeRun.status }}</p>
         </div>
 
         <div v-if="isExecutionMode && (hasActiveRunUnifiedLog || activeRunEventsLoading || activeRunEventsError)" class="mt-4">
             <div class="flex items-center justify-between gap-2">
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Active Run AI Log</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Active Run AI Log</p>
                 <span
                     v-if="activeRunEventsLoading"
-                    class="rounded border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:border-indigo-800/70 dark:bg-indigo-950/30 dark:text-indigo-300"
+                    class="rounded border border-primary/30 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary   "
                 >
                     Syncing full run output...
                 </span>
                 <span
                     v-else-if="activeRunEventsBootstrapComplete"
-                    class="rounded border border-green-300 bg-green-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700 dark:border-green-800/70 dark:bg-green-950/30 dark:text-green-300"
+                    class="rounded border border-success/30 bg-success/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success   "
                 >
                     Unified
                 </span>
             </div>
-            <p v-if="activeRunEventsError" class="mt-2 rounded border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+            <p v-if="activeRunEventsError" class="mt-2 rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-[11px] text-destructive">
                 {{ activeRunEventsError }}
             </p>
-            <div v-if="hasActiveRunUnifiedLog" class="mt-2 max-h-72 overflow-auto rounded border border-gray-200 bg-gray-950 p-3 text-xs text-gray-100 dark:border-gray-700">
+            <div v-if="hasActiveRunUnifiedLog" class="mt-2 max-h-72 overflow-auto rounded border border-border bg-gray-950 p-3 text-xs text-gray-100 ">
                 <pre class="whitespace-pre-wrap break-words font-mono leading-relaxed">{{ activeRunUnifiedLog }}</pre>
             </div>
         </div>
 
-        <div v-if="isExecutionMode" class="mt-4 rounded border border-gray-200 p-3 dark:border-gray-700">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Clarification</p>
+        <div v-if="isExecutionMode" class="mt-4 rounded border border-border p-3 ">
+            <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Clarification</p>
             <textarea
                 v-model="clarification"
                 rows="3"
-                class="mt-2 w-full rounded border border-gray-300 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400"
+                class="mt-2 w-full rounded border border-input text-sm text-foreground"
                 placeholder="Add clarification for the active task..."
             />
             <div class="mt-2 flex justify-end">
                 <button
                     type="button"
-                    class="rounded bg-gray-900 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+                    class="rounded bg-secondary px-3 py-2 text-xs font-semibold text-secondary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="disabled || actions.clarifyBuild || clarification.trim() === ''"
                     @click="submitClarification"
                 >
@@ -858,11 +858,11 @@ const submitTaskRegeneration = (task) => {
 
         <div v-if="!isRulesMode" class="mt-4">
             <div class="flex items-center justify-between gap-2">
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Tasks</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Tasks</p>
                 <button
                     v-if="isTasksMode"
                     type="button"
-                    class="rounded border border-indigo-300 px-2 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-800/70 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
+                    class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="!canManageTaskList || actions.createBuildTask"
                     @click="openCreateTaskForm"
                 >
@@ -871,31 +871,31 @@ const submitTaskRegeneration = (task) => {
             </div>
             <div
                 v-if="isTasksMode && showCreateTaskForm"
-                class="mt-2 rounded border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40"
+                class="mt-2 rounded border border-border bg-muted/30 p-3  "
             >
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">New Task</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">New Task</p>
                 <input
                     v-model="createTaskDraft.title"
                     type="text"
-                    class="mt-2 w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
                     placeholder="Task title"
                 />
                 <textarea
                     v-model="createTaskDraft.description"
                     rows="2"
-                    class="mt-2 w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
                     placeholder="Task description (optional)"
                 />
                 <textarea
                     v-model="createTaskDraft.instructions_markdown"
                     rows="4"
-                    class="mt-2 w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
                     placeholder="Task instructions in markdown (optional)"
                 />
                 <div class="mt-2 flex justify-end gap-2">
                     <button
                         type="button"
-                        class="rounded border border-gray-300 px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                        class="rounded border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
                         :disabled="actions.createBuildTask"
                         @click="cancelCreateTask"
                     >
@@ -903,7 +903,7 @@ const submitTaskRegeneration = (task) => {
                     </button>
                     <button
                         type="button"
-                        class="rounded bg-indigo-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="rounded bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="actions.createBuildTask || createTaskDraft.title.trim() === ''"
                         @click="submitCreateTask"
                     >
@@ -911,37 +911,37 @@ const submitTaskRegeneration = (task) => {
                     </button>
                 </div>
             </div>
-            <div v-if="tasks.length === 0" class="mt-2 rounded border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-500 dark:border-gray-600 dark:text-gray-400">
+            <div v-if="tasks.length === 0" class="mt-2 rounded border border-dashed border-input px-3 py-2 text-xs text-muted-foreground  ">
                 No build tasks generated yet.
             </div>
             <div v-else class="mt-2 overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 text-xs dark:divide-gray-700">
+                <table class="min-w-full divide-y divide-border text-xs">
                     <thead>
                         <tr>
-                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Task</th>
-                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
-                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Attempts</th>
-                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Error</th>
-                            <th v-if="isTasksMode" class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Actions</th>
+                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-muted-foreground ">Task</th>
+                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-muted-foreground ">Status</th>
+                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-muted-foreground ">Attempts</th>
+                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-muted-foreground ">Error</th>
+                            <th v-if="isTasksMode" class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-muted-foreground ">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    <tbody class="divide-y divide-border/60">
                         <template v-for="task in tasks" :key="task.id">
                             <tr>
                                 <td class="px-2 py-2">
-                                    <p class="text-gray-800 dark:text-gray-100">#{{ task.sequence }} {{ task.title }}</p>
-                                    <p v-if="task.description" class="mt-0.5 text-[11px] text-gray-600 dark:text-gray-300">{{ task.description }}</p>
-                                    <p v-if="task.metadata_json?.regeneration?.status === 'queued'" class="mt-1 text-[11px] text-indigo-700 dark:text-indigo-300">Regeneration queued...</p>
-                                    <p v-if="task.metadata_json?.regeneration?.status === 'failed'" class="mt-1 text-[11px] text-red-700 dark:text-red-300">Regeneration failed: {{ task.metadata_json?.regeneration?.error || 'Unknown error' }}</p>
+                                    <p class="text-foreground ">#{{ task.sequence }} {{ task.title }}</p>
+                                    <p v-if="task.description" class="mt-0.5 text-[11px] text-muted-foreground ">{{ task.description }}</p>
+                                    <p v-if="task.metadata_json?.regeneration?.status === 'queued'" class="mt-1 text-[11px] text-primary ">Regeneration queued...</p>
+                                    <p v-if="task.metadata_json?.regeneration?.status === 'failed'" class="mt-1 text-[11px] text-destructive ">Regeneration failed: {{ task.metadata_json?.regeneration?.error || 'Unknown error' }}</p>
                                 </td>
-                                <td class="px-2 py-2 text-gray-600 dark:text-gray-300">{{ task.status }}</td>
-                                <td class="px-2 py-2 text-gray-600 dark:text-gray-300">{{ task.attempt_count }}</td>
-                                <td class="px-2 py-2 text-gray-600 dark:text-gray-300">{{ task.last_error || '-' }}</td>
+                                <td class="px-2 py-2 text-muted-foreground ">{{ task.status }}</td>
+                                <td class="px-2 py-2 text-muted-foreground ">{{ task.attempt_count }}</td>
+                                <td class="px-2 py-2 text-muted-foreground ">{{ task.last_error || '-' }}</td>
                                 <td v-if="isTasksMode" class="px-2 py-2">
                                     <div class="flex flex-wrap gap-1">
                                         <button
                                             type="button"
-                                            class="rounded border border-blue-300 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-800/70 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                                            class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
                                             :disabled="!canManageTaskList || isTaskUpdating(task.id)"
                                             @click="startTaskEdit(task)"
                                         >
@@ -949,7 +949,7 @@ const submitTaskRegeneration = (task) => {
                                         </button>
                                         <button
                                             type="button"
-                                            class="rounded border border-rose-300 px-2 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800/70 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                                            class="rounded border border-destructive/30 px-2 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
                                             :disabled="!canManageTaskList || isTaskDeleting(task.id)"
                                             @click="confirmTaskDelete(task)"
                                         >
@@ -957,7 +957,7 @@ const submitTaskRegeneration = (task) => {
                                         </button>
                                         <button
                                             type="button"
-                                            class="rounded border border-indigo-300 px-2 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-indigo-800/70 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
+                                            class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
                                             :disabled="!canManageTaskList || isTaskRegenerating(task.id)"
                                             @click="startTaskRegeneration(task)"
                                         >
@@ -966,31 +966,31 @@ const submitTaskRegeneration = (task) => {
                                     </div>
                                 </td>
                             </tr>
-                            <tr v-if="isTasksMode && editingTaskId === task.id" :key="`edit-${task.id}`" class="bg-gray-50/80 dark:bg-gray-900/30">
+                            <tr v-if="isTasksMode && editingTaskId === task.id" :key="`edit-${task.id}`" class="bg-muted/30 ">
                                 <td :colspan="isTasksMode ? 5 : 4" class="px-2 py-2">
-                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Edit Task #{{ task.sequence }}</p>
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground ">Edit Task #{{ task.sequence }}</p>
                                     <input
                                         v-model="editTaskDraft.title"
                                         type="text"
-                                        class="mt-2 w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                                        class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
                                         placeholder="Task title"
                                     />
                                     <textarea
                                         v-model="editTaskDraft.description"
                                         rows="2"
-                                        class="mt-2 w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                                        class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
                                         placeholder="Task description"
                                     />
                                     <textarea
                                         v-model="editTaskDraft.instructions_markdown"
                                         rows="4"
-                                        class="mt-2 w-full rounded border border-gray-300 px-2 py-1 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                                        class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
                                         placeholder="Task instructions in markdown"
                                     />
                                     <div class="mt-2 flex justify-end gap-2">
                                         <button
                                             type="button"
-                                            class="rounded border border-gray-300 px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                                            class="rounded border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
                                             :disabled="isTaskUpdating(task.id)"
                                             @click="cancelTaskEdit"
                                         >
@@ -998,7 +998,7 @@ const submitTaskRegeneration = (task) => {
                                         </button>
                                         <button
                                             type="button"
-                                            class="rounded bg-blue-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                            class="rounded bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:bg-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
                                             :disabled="isTaskUpdating(task.id) || editTaskDraft.title.trim() === ''"
                                             @click="submitTaskEdit(task)"
                                         >
@@ -1007,19 +1007,19 @@ const submitTaskRegeneration = (task) => {
                                     </div>
                                 </td>
                             </tr>
-                            <tr v-if="isTasksMode && regeneratingTaskId === task.id" :key="`regen-${task.id}`" class="bg-indigo-50/60 dark:bg-indigo-950/20">
+                            <tr v-if="isTasksMode && regeneratingTaskId === task.id" :key="`regen-${task.id}`" class="bg-primary/5">
                                 <td :colspan="isTasksMode ? 5 : 4" class="px-2 py-2">
-                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Regenerate Task #{{ task.sequence }} With Amend Notes</p>
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-primary ">Regenerate Task #{{ task.sequence }} With Amend Notes</p>
                                     <textarea
                                         v-model="regenerateAmendNotes"
                                         rows="3"
-                                        class="mt-2 w-full rounded border border-indigo-300 px-2 py-1 text-xs text-gray-900 dark:border-indigo-800/70 dark:bg-gray-900 dark:text-gray-100"
+                                        class="mt-2 w-full rounded border border-primary/30 px-2 py-1 text-xs text-foreground   "
                                         placeholder="Describe exactly what should change for this task..."
                                     />
                                     <div class="mt-2 flex justify-end gap-2">
                                         <button
                                             type="button"
-                                            class="rounded border border-gray-300 px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                                            class="rounded border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
                                             :disabled="isTaskRegenerating(task.id)"
                                             @click="cancelTaskRegeneration"
                                         >
@@ -1027,7 +1027,7 @@ const submitTaskRegeneration = (task) => {
                                         </button>
                                         <button
                                             type="button"
-                                            class="rounded bg-indigo-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                            class="rounded bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                                             :disabled="isTaskRegenerating(task.id) || regenerateAmendNotes.trim() === ''"
                                             @click="submitTaskRegeneration(task)"
                                         >
@@ -1042,15 +1042,15 @@ const submitTaskRegeneration = (task) => {
             </div>
         </div>
 
-        <div v-if="isExecutionMode && build.completion_summary" class="mt-4 rounded border border-green-300 bg-green-50 p-3 text-xs text-green-800 dark:border-green-800/70 dark:bg-green-950/30 dark:text-green-300">
+        <div v-if="isExecutionMode && build.completion_summary" class="mt-4 rounded border border-success/30 bg-success/10 p-3 text-xs text-success   ">
             {{ build.completion_summary }}
         </div>
 
-        <div v-if="Array.isArray(activity) && activity.length > 0" class="mt-4 rounded border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">AI Activity</p>
+        <div v-if="Array.isArray(activity) && activity.length > 0" class="mt-4 rounded border border-border bg-muted/30 p-3  ">
+            <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">AI Activity</p>
             <div class="mt-2 space-y-1">
-                <p v-for="item in activity" :key="`${item.sequence}-${item.message}`" class="text-xs text-gray-700 dark:text-gray-300">
-                    <span class="font-medium text-gray-500 dark:text-gray-400">{{ item.at_label || item.at || 'now' }}</span>
+                <p v-for="item in activity" :key="`${item.sequence}-${item.message}`" class="text-xs text-foreground ">
+                    <span class="font-medium text-muted-foreground ">{{ item.at_label || item.at || 'now' }}</span>
                     <span class="ml-1">{{ item.message }}</span>
                 </p>
             </div>

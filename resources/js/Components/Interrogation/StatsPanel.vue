@@ -62,32 +62,75 @@ const elapsedLabel = computed(() => {
 
     return `${minutes}m`;
 });
+
+const statusClass = computed(() => {
+    const status = String(props.session?.status ?? '').toLowerCase();
+    const map = {
+        setup: 'bg-muted text-muted-foreground',
+        discovering: 'bg-primary/10 text-primary',
+        interrogating: 'bg-primary/10 text-primary',
+        summarizing: 'bg-warning/10 text-warning',
+        planning: 'bg-warning/10 text-warning',
+        build_rules: 'bg-warning/10 text-warning',
+        build_tasks: 'bg-primary/10 text-primary',
+        build_executing: 'bg-primary/10 text-primary',
+        paused: 'bg-muted text-muted-foreground',
+        completed: 'bg-success/10 text-success',
+        failed: 'bg-destructive/10 text-destructive',
+    };
+
+    return map[status] ?? 'bg-muted text-muted-foreground';
+});
+
+const categoryClass = (index) => {
+    const classes = [
+        'bg-primary/10 text-primary',
+        'bg-warning/10 text-warning',
+        'bg-success/10 text-success',
+        'bg-destructive/10 text-destructive',
+    ];
+
+    return classes[index % classes.length];
+};
 </script>
 
 <template>
-    <div class="space-y-3 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-        <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-200">Stats</h3>
+    <div class="space-y-3 rounded-lg border border-border bg-card p-4">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Stats</h3>
 
-        <dl class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
-            <div class="flex justify-between"><dt>Questions</dt><dd>{{ questionCount }}</dd></div>
-            <div class="flex justify-between"><dt>Answers</dt><dd>{{ answerCount }}</dd></div>
-            <div class="flex justify-between"><dt>Elapsed</dt><dd>{{ elapsedLabel }}</dd></div>
-            <div class="flex justify-between"><dt>Status</dt><dd>{{ session.status }}</dd></div>
+        <dl class="space-y-2 text-sm">
+            <div class="flex justify-between"><dt class="text-muted-foreground">Questions</dt><dd class="font-medium text-foreground">{{ questionCount }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted-foreground">Answers</dt><dd class="font-medium text-foreground">{{ answerCount }}</dd></div>
+            <div class="flex justify-between"><dt class="text-muted-foreground">Elapsed</dt><dd class="font-medium text-foreground">{{ elapsedLabel }}</dd></div>
+            <div class="flex justify-between items-center">
+                <dt class="text-muted-foreground">Status</dt>
+                <dd class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize" :class="statusClass">{{ session.status }}</dd>
+            </div>
         </dl>
 
         <div>
-            <div class="mb-1 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <div class="mb-1 flex items-center justify-between text-xs text-muted-foreground">
                 <span>Progress</span>
                 <span>{{ latestProgress }}%</span>
             </div>
-            <div class="h-2 rounded bg-gray-200 dark:bg-gray-700">
-                <div class="h-2 rounded bg-indigo-500" :style="{ width: `${Math.max(0, Math.min(100, latestProgress))}%` }" />
+            <div class="h-1.5 rounded bg-muted/80">
+                <div class="h-1.5 rounded bg-primary" :style="{ width: `${Math.max(0, Math.min(100, latestProgress))}%` }" />
             </div>
         </div>
 
-        <div>
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Categories</p>
-            <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">{{ categories.length > 0 ? categories.join(', ') : 'No categories yet' }}</p>
+        <div class="border-t border-border pt-3">
+            <p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Categories</p>
+            <div v-if="categories.length > 0" class="mt-2 flex flex-wrap gap-1.5">
+                <span
+                    v-for="(category, index) in categories"
+                    :key="category"
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                    :class="categoryClass(index)"
+                >
+                    {{ category }}
+                </span>
+            </div>
+            <p v-else class="mt-1 text-xs text-muted-foreground">No categories yet</p>
         </div>
     </div>
 </template>

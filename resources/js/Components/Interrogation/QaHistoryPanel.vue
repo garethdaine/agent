@@ -74,10 +74,10 @@ const answerPreview = (answerPayload) => {
 </script>
 
 <template>
-    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+    <div class="rounded-lg border border-border bg-card p-4">
         <div class="mb-3 flex items-center justify-between gap-2">
-            <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-200">Q&A History</h3>
-            <span class="text-xs text-gray-500 dark:text-gray-400">{{ unansweredCount }} unanswered</span>
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Q&A History</h3>
+            <span class="text-xs text-muted-foreground">{{ unansweredCount }} unanswered</span>
         </div>
 
         <div class="max-h-[32rem] space-y-3 overflow-auto pr-1">
@@ -86,18 +86,18 @@ const answerPreview = (answerPayload) => {
                 :key="pair.question.id"
                 class="rounded border p-3 transition-colors"
                 :class="String(pair.question.payload?.question_id ?? '') === selectedQuestionId
-                    ? 'border-indigo-300 bg-indigo-50/40 dark:border-indigo-600 dark:bg-indigo-900/20'
-                    : 'border-gray-200 dark:border-gray-700'"
+                    ? 'border-primary/40 bg-primary/10'
+                    : 'border-border bg-card'"
             >
-                <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Question</p>
-                <p class="mt-1 text-sm text-gray-800 dark:text-gray-100">{{ pair.questionPreview }}</p>
+                <p class="text-xs uppercase tracking-wide text-muted-foreground">Question</p>
+                <p class="mt-1 text-sm text-foreground">{{ pair.questionPreview }}</p>
 
-                <p class="mt-3 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Answer</p>
-                <p class="mt-1 text-sm text-gray-700 dark:text-gray-200">{{ answerPreview(pair.answer?.payload) }}</p>
+                <p class="mt-3 text-xs uppercase tracking-wide text-muted-foreground">Answer</p>
+                <p class="mt-1 text-sm text-muted-foreground">{{ answerPreview(pair.answer?.payload) }}</p>
 
                 <button
                     type="button"
-                    class="mt-3 text-xs font-medium text-indigo-600 hover:text-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="mt-3 text-xs font-medium text-primary hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="!(pair.question.payload?.question_id)"
                     @click="emit('select-question', pair.question.payload?.question_id || '')"
                 >
@@ -105,7 +105,7 @@ const answerPreview = (answerPayload) => {
                 </button>
             </div>
 
-            <p v-if="qaPairs.length === 0" class="text-sm text-gray-500 dark:text-gray-400">No Q&A history yet.</p>
+            <p v-if="qaPairs.length === 0" class="text-sm text-muted-foreground">No Q&A history yet.</p>
         </div>
     </div>
 </template>

@@ -164,38 +164,38 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-        <div v-if="!question" class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+    <div class="rounded-lg border border-border bg-card p-4">
+        <div v-if="!question" class="flex items-center gap-2 text-sm text-muted-foreground">
+            <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <span>Waiting for the next question...</span>
         </div>
 
         <template v-else>
             <div
                 v-if="waitingForNextQuestion"
-                class="mb-3 rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
+                class="mb-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary"
             >
                 <div class="flex items-center gap-2">
-                    <span class="inline-flex h-3.5 w-3.5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                    <span class="inline-flex h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                     <span>Answer submitted. Generating next question...</span>
                 </div>
             </div>
 
-            <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Your Answer</p>
+            <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your Answer</p>
 
-            <div v-if="form.mode === 'choice' && hasChoiceOptions" class="overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
+            <div v-if="form.mode === 'choice' && hasChoiceOptions" class="overflow-hidden rounded-lg border border-border bg-muted/30">
                 <button
                     v-for="(option, index) in options"
                     :key="option"
                     type="button"
-                    class="flex w-full items-center gap-3 border-t border-gray-200 px-4 py-3 text-left transition first:border-t-0 dark:border-gray-700"
+                    class="flex w-full items-center gap-3 border-t border-border px-4 py-3 text-left transition first:border-t-0"
                     :class="optionSelected(option)
-                        ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100'
-                        : 'text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/70'"
+                        ? 'bg-primary/10 text-foreground'
+                        : 'text-foreground hover:bg-muted'"
                     :disabled="busy || waitingForNextQuestion"
                     @click="toggleOption(option)"
                 >
-                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-semibold text-foreground">
                         {{ index + 1 }}
                     </span>
                     <span class="flex-1 text-base leading-7">
@@ -204,8 +204,8 @@ const submit = () => {
                     <span
                         class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm font-semibold"
                         :class="optionSelected(option)
-                            ? 'bg-indigo-600 text-white dark:bg-indigo-500'
-                            : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'"
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground'"
                     >
                         {{ allowsMultiple ? (optionSelected(option) ? 'x' : '+') : '>' }}
                     </span>
@@ -213,28 +213,28 @@ const submit = () => {
 
                 <button
                     type="button"
-                    class="flex w-full items-center gap-3 border-t border-gray-200 px-4 py-3 text-left text-gray-500 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/70"
+                    class="flex w-full items-center gap-3 border-t border-border px-4 py-3 text-left text-muted-foreground transition hover:bg-muted"
                     :disabled="busy || waitingForNextQuestion"
                     @click="form.mode = 'freetext'"
                 >
-                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-base dark:bg-gray-800">✎</span>
+                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-base">✎</span>
                     <span class="text-base leading-7">
                         Something else
                     </span>
                 </button>
             </div>
 
-            <div v-if="form.mode === 'freetext' || !hasChoiceOptions" class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+            <div v-if="form.mode === 'freetext' || !hasChoiceOptions" class="rounded-lg border border-border bg-muted/30 p-4">
                 <textarea
                     v-model="form.answer_text"
                     rows="6"
-                    class="w-full rounded-md border-gray-300 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400"
+                    class="w-full rounded-md border border-input bg-input-background text-sm text-foreground"
                     placeholder="Type your answer..."
                 />
                 <button
                     v-if="hasChoiceOptions"
                     type="button"
-                    class="mt-2 text-xs font-medium text-indigo-600 hover:text-indigo-500"
+                    class="mt-2 text-xs font-medium text-primary hover:opacity-80"
                     :disabled="busy || waitingForNextQuestion"
                     @click="form.mode = 'choice'"
                 >
@@ -244,11 +244,11 @@ const submit = () => {
 
             <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center gap-2">
-                    <label for="skip-reason" class="text-xs text-gray-500 dark:text-gray-400">Skip reason</label>
+                    <label for="skip-reason" class="text-xs text-muted-foreground">Skip reason</label>
                     <select
                         id="skip-reason"
                         v-model="form.skip_reason"
-                        class="rounded-md border-gray-300 py-1 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                        class="rounded-md border border-input bg-input-background py-1 text-xs text-foreground"
                     >
                         <option value="user_skipped">Skip for now</option>
                         <option value="unknown">I do not know yet</option>
@@ -256,13 +256,13 @@ const submit = () => {
                         <option value="not_applicable">Not applicable</option>
                     </select>
                 </div>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
+                <p class="text-xs text-muted-foreground">
                     {{ allowsMultiple && form.mode === 'choice' ? 'You can select multiple options.' : 'Select an option or provide a custom answer.' }}
                 </p>
                 <div class="flex items-center gap-2">
                     <button
                         type="button"
-                        class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
+                        class="rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="busy || waitingForNextQuestion || !form.skip_reason"
                         @click="submitSkip"
                     >
@@ -270,12 +270,12 @@ const submit = () => {
                     </button>
                     <button
                         type="button"
-                        class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="busy || waitingForNextQuestion || !canSubmit"
                         @click="submit"
                     >
                         <span v-if="busy" class="inline-flex items-center gap-2">
-                            <span class="inline-flex h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            <span class="inline-flex h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                             <span>Submitting answer...</span>
                         </span>
                         <span v-else>{{ submitLabel }}</span>

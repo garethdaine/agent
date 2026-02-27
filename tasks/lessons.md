@@ -113,3 +113,19 @@ Use this file to capture correction-driven lessons.
 - Pattern: Styling migrations that introduce tokenized colors and `dark:` classes can silently fail when Tailwind is left on media-mode and tokens are stored as hex strings (breaking `/alpha` utilities).
 - Prevention rule: For any token-based redesign, enforce `darkMode: 'class'`, bootstrap theme on first paint, provide an in-app theme control, and verify generated CSS includes key opacity classes (`bg-primary/10`, `bg-muted/50`, `bg-card/95`) before calling parity complete.
 - Applied in: `tailwind.config.js`, `resources/css/theme.css`, `resources/js/Support/theme.js`, `resources/js/Layouts/AppLayout.vue`, `resources/views/app.blade.php`
+
+## Entry
+- Date: 2026-02-27
+- Source (job run id / interrogation session id): Discovery sessions 7 and 8 (manual parity verification run)
+- Correction: User flagged that creating duplicate live discovery sessions and auto-submitting/skipping interrogation answers polluted app/session data.
+- Pattern: End-to-end UI verification on production-like data without explicit consent can create noisy duplicate sessions and corrupt business-state artifacts.
+- Prevention rule: For UI parity checks, never create or progress live discovery sessions unless user explicitly asks to mutate data; default to read-only inspection, screenshots, and local/dev fixtures. If mutation is required, confirm one target session, avoid auto-answer automation, and clean up immediately after verification.
+- Applied in: Agent execution workflow (no code file); cleanup action performed by permanently deleting sessions `7` and `8`.
+
+## Entry
+- Date: 2026-02-27
+- Source (job run id / interrogation session id): User correction on local runtime process management
+- Correction: User stated Horizon and supporting services were already running and should not be started by the agent.
+- Pattern: Starting background runtime services during UI/debug tasks can conflict with existing user-managed processes and waste time.
+- Prevention rule: Assume app services are already managed by the user unless explicitly asked to start/restart them; first verify state passively and continue with non-service actions.
+- Applied in: Agent execution workflow (no code file); Horizon session started by agent was stopped and policy updated.

@@ -104,16 +104,16 @@ watch(() => props.status, (nextStatus) => {
 </script>
 
 <template>
-    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Summary</h3>
+    <div class="rounded-lg border border-border bg-card p-4  ">
+        <h3 class="text-base font-semibold text-foreground ">Summary</h3>
 
-        <div v-if="!hasSummary" class="mt-2 text-sm text-gray-500">
-            <div v-if="status === 'summarizing'" class="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200">
+        <div v-if="!hasSummary" class="mt-2 text-sm text-muted-foreground">
+            <div v-if="status === 'summarizing'" class="rounded-lg border border-primary/30 bg-primary/5 p-3 text-primary">
                 <div class="flex items-center gap-2">
-                    <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                    <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                     <span class="font-medium">Generating summary...</span>
                 </div>
-                <p class="mt-1 text-xs text-indigo-700/90 dark:text-indigo-200/90">Interrogation is complete. Building the consolidated summary now.</p>
+                <p class="mt-1 text-xs text-primary/90 ">Interrogation is complete. Building the consolidated summary now.</p>
             </div>
             <p v-else>Summary not available yet.</p>
         </div>
@@ -122,63 +122,63 @@ watch(() => props.status, (nextStatus) => {
             <div class="mt-3 space-y-4">
                 <div
                     v-if="revisionPending"
-                    class="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
+                    class="rounded-lg border border-primary/30 bg-primary/5 p-3 text-primary"
                 >
                     <div class="flex items-center gap-2">
-                        <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                        <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                         <span class="font-medium">Amendments submitted. Regenerating summary...</span>
                     </div>
-                    <p class="mt-1 text-xs text-indigo-700/90 dark:text-indigo-200/90">Current summary remains visible until the refreshed version is ready.</p>
+                    <p class="mt-1 text-xs text-primary/90 ">Current summary remains visible until the refreshed version is ready.</p>
                 </div>
 
                 <MarkdownRenderer
                     :markdown="normalizedSummaryMarkdown"
-                    class="summary-markdown summary-markdown-scroll prose prose-sm max-w-none rounded-lg border border-gray-200 bg-gray-50 p-4 text-gray-800 dark:prose-invert dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-100 prose-headings:mb-2 prose-headings:mt-4 prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 dark:prose-code:bg-gray-700"
+                    class="summary-markdown summary-markdown-scroll prose prose-sm max-w-none rounded-lg border border-border bg-muted/30 p-4 text-foreground    prose-headings:mb-2 prose-headings:mt-4 prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"
                 />
 
                 <div class="space-y-3">
                     <details
                         v-for="section in sections"
                         :key="section.key"
-                        class="group overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/30"
+                        class="group overflow-hidden rounded-lg border border-border bg-card  "
                     >
-                        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-gray-800/40">
+                        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted/30">
                             <span>{{ section.title }}</span>
-                            <span class="text-xs font-medium text-gray-500">{{ section.items.length }}</span>
+                            <span class="text-xs font-medium text-muted-foreground">{{ section.items.length }}</span>
                         </summary>
-                        <div class="border-t border-gray-200 px-3 py-3 dark:border-gray-700">
-                            <ul v-if="section.items.length > 0" class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                        <div class="border-t border-border px-3 py-3 ">
+                            <ul v-if="section.items.length > 0" class="space-y-2 text-sm text-foreground ">
                                 <li
                                     v-for="item in section.items"
                                     :key="item"
-                                    class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800/60"
+                                    class="rounded-md border border-border bg-muted/30 px-3 py-2"
                                 >
                                     {{ item }}
                                 </li>
                             </ul>
-                            <p v-else class="text-sm text-gray-500">No items provided.</p>
+                            <p v-else class="text-sm text-muted-foreground">No items provided.</p>
                         </div>
                     </details>
                 </div>
 
-                <details class="group overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/30">
-                    <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-gray-800/40">
+                <details class="group overflow-hidden rounded-lg border border-border bg-card  ">
+                    <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted/30">
                         <span>Private Notes</span>
-                        <span class="text-xs font-medium text-gray-500">{{ privateNotes === '' ? 0 : 1 }}</span>
+                        <span class="text-xs font-medium text-muted-foreground">{{ privateNotes === '' ? 0 : 1 }}</span>
                     </summary>
-                    <div class="border-t border-gray-200 px-3 py-3 dark:border-gray-700">
+                    <div class="border-t border-border px-3 py-3 ">
                         <MarkdownRenderer
                             v-if="privateNotes !== ''"
                             :markdown="privateNotes"
-                            class="summary-markdown notes-markdown prose prose-sm max-w-none text-gray-700 dark:prose-invert dark:text-gray-200 prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 dark:prose-code:bg-gray-700"
+                            class="summary-markdown notes-markdown prose prose-sm max-w-none text-foreground  prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"
                         />
-                        <p v-else class="text-sm text-gray-500">No private notes.</p>
+                        <p v-else class="text-sm text-muted-foreground">No private notes.</p>
                     </div>
                 </details>
 
                 <div
                     v-if="hasOpenQuestions"
-                    class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200"
+                    class="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning"
                 >
                     Open questions remain ({{ openQuestions.length }}). Resolve them before confirming this summary.
                 </div>
@@ -188,7 +188,7 @@ watch(() => props.status, (nextStatus) => {
                 <div class="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
-                        class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
+                        class="rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="busy"
                         @click="showContinueForm = !showContinueForm"
                     >
@@ -196,7 +196,7 @@ watch(() => props.status, (nextStatus) => {
                     </button>
                     <button
                         type="button"
-                        class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-900"
+                        class="rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="busy"
                         @click="showReviseForm = !showReviseForm"
                     >
@@ -205,7 +205,7 @@ watch(() => props.status, (nextStatus) => {
                 </div>
                 <button
                     type="button"
-                    class="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    class="rounded bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="!canConfirm"
                     @click="emit('confirm')"
                 >
@@ -213,18 +213,18 @@ watch(() => props.status, (nextStatus) => {
                 </button>
             </div>
 
-            <div v-if="showContinueForm" class="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Interrogation Focus (optional)</p>
+            <div v-if="showContinueForm" class="mt-3 rounded-lg border border-border bg-muted/30 p-3  ">
+                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Interrogation Focus (optional)</p>
                 <textarea
                     v-model="continueForm.focus"
                     rows="3"
-                    class="mt-2 w-full rounded-md border-gray-300 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400"
+                    class="mt-2 w-full rounded-md border-input text-sm text-foreground"
                     placeholder="Add specific ambiguities you want the next interrogation round to resolve."
                 />
                 <div class="mt-2 flex justify-end">
                     <button
                         type="button"
-                        class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="busy"
                         @click="submitContinue"
                     >
@@ -233,18 +233,18 @@ watch(() => props.status, (nextStatus) => {
                 </div>
             </div>
 
-            <div v-if="showReviseForm" class="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Amendment Notes</p>
+            <div v-if="showReviseForm" class="mt-3 rounded-lg border border-border bg-muted/30 p-3  ">
+                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Amendment Notes</p>
                 <textarea
                     v-model="reviseForm.notes"
                     rows="4"
-                    class="mt-2 w-full rounded-md border-gray-300 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400"
+                    class="mt-2 w-full rounded-md border-input text-sm text-foreground"
                     placeholder="Describe what needs changing in the summary."
                 />
                 <div class="mt-2 flex justify-end">
                     <button
                         type="button"
-                        class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="busy"
                         @click="submitRevision"
                     >

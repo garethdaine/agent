@@ -373,3 +373,14 @@ The rollout must preserve existing run safety, queue stability, and auditability
   - Added regressions for Vue-template approval phrase and JavaScript rate-limit phrase snippets.
 - Verification evidence:
   - `php artisan test tests/Feature/AgentRunnerLifecycleTest.php` (21 passed)
+
+## 2026-02-27 - Full Natural Language Scheduling Discovery Run (Session 9)
+
+- [ ] Complete full browser walkthrough for `/tools/discovery/9` from setup to build phase completion without creating additional sessions.
+- [ ] Answer every interrogation question (no skips), verify question flow advances correctly, and capture any UI/control-surface mismatches.
+- [ ] Verify Summary stage content/surfaces and controls; revise only if required for completion fidelity.
+- [ ] Verify Planning stage content/surfaces and controls; generate/approve/regenerate/revise as needed to complete the stage.
+- [ ] Verify Build Rules + Build Tasks stages and controls; generate tasks, validate task list UI behavior, and approve tasks.
+- [ ] Verify Build Execution stage controls/surfaces and capture final session state evidence.
+- [ ] Patch any discovered UI parity mismatches against Figma design surfaces and rebuild frontend assets.
+- [ ] Document review evidence and outcomes in this file.
