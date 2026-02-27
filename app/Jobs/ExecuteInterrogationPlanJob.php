@@ -4,7 +4,9 @@ namespace App\Jobs;
 
 use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationSession;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Interrogation\AdapterFactory;
+use App\Support\Interrogation\AdversarialReviewerService;
 use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 use App\Support\Interrogation\ExportService;
 use App\Support\Interrogation\InterrogationEventWriter;
@@ -928,5 +930,142 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
             ."\n- `sections`, `risks`, and `assumptions` must be non-empty arrays."
             ."\n- Keep content implementation-ready and concrete."
             ."\n\nRejected output to replace:\n{$currentPlan}";
+    }
+
+    /**
+     * Run adversarial review with pass/revise verdict handling only.
+     *
+     * Plan review does NOT support needs_clarification; any such verdict
+     * is treated as revise. In shadow mode (review_warn_only=true), logs
+     * findings to metadata_json and emits events but does not gate artifacts.
+     *
+     * In gating mode (review_warn_only=false):
+     * - pass: returns null (success, continue with plan persistence)
+     * - revise: returns review payload for regeneration context
+     *
+     * Critical issues auto-escalate pass to revise. Max 2 retries (configurable)
+     * enforced before failure.
+     *
+     * @param  array<string, mixed>  $planCandidate
+     * @return array<string, mixed>|null Null on pass; review payload on revise
+     *
+     * @throws \RuntimeException when retry limit exhausted
+     */
+    private function runAdversarialReview(
+        InterrogationSession $session,
+        array $planCandidate,
+        InterrogationEventWriter $writer
+    ): ?array {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::ADVERSARIAL_REVIEW_ENABLED)) {
+            return null;
+        }
+
+        $warnOnly = (bool) config('agent.interrogation.review_warn_only', false);
+        $maxRetries = (int) config('agent.interrogation.plan_review_max_retries', 2);
+
+        try {
+            $reviewerService = app(AdversarialReviewerService::class);
+
+            // Get locked summary from metadata
+            $metadata = $session->metadata_json ?? [];
+            $lockedSummary = $metadata['summary'] ?? [];
+
+            $reviewPayload = $reviewerService->reviewPlan($session, $planCandidate, $lockedSummary);
+
+            // Store review findings in metadata
+            $metadata['plan'] = $metadata['plan'] ?? [];
+            $attempt = ($metadata['plan']['review_attempts'] ?? 0) + 1;
+            $metadata['plan']['review_attempts'] = $attempt;
+            $metadata['plan']['last_review'] = $reviewPayload;
+            $metadata['plan']['review_history'] = $metadata['plan']['review_history'] ?? [];
+            $metadata['plan']['review_history'][] = $reviewPayload;
+
+            $verdict = $reviewPayload['verdict'];
+            $confidence = (float) ($reviewPayload['confidence'] ?? 1.0);
+
+            // Check for critical issue auto-escalation
+            if ($verdict === 'pass' && $this->hasCriticalIssue($reviewPayload['issues'] ?? [])) {
+                $verdict = 'revise';
+            }
+
+            // needs_clarification is NOT allowed for plan review - treat as revise
+            if ($verdict === 'needs_clarification') {
+                $verdict = 'revise';
+            }
+
+            // Emit review event
+            $writer->appendPlanReview([
+                'status' => $warnOnly ? 'shadow_'.$verdict : $verdict,
+                'verdict' => $verdict,
+                'attempt' => $attempt,
+                'issue_count' => count($reviewPayload['issues'] ?? []),
+                'confidence' => $confidence,
+                'shadow_mode' => $warnOnly,
+            ]);
+
+            // Shadow mode: store but don't gate
+            if ($warnOnly) {
+                $metadata['plan']['review_status'] = 'shadow_'.$verdict;
+                $session->update(['metadata_json' => $metadata]);
+
+                return null;
+            }
+
+            // Handle verdict
+            if ($verdict === 'pass') {
+                $metadata['plan']['review_status'] = 'passed';
+                $session->update(['metadata_json' => $metadata]);
+
+                return null; // Success, continue with plan persistence
+            }
+
+            // Revise
+            if ($attempt >= $maxRetries) {
+                $metadata['plan']['review_status'] = 'failed';
+                $session->update(['metadata_json' => $metadata]);
+                throw new \RuntimeException('Plan review exhausted retries');
+            }
+
+            $metadata['plan']['review_status'] = 'revising';
+            $session->update(['metadata_json' => $metadata]);
+
+            // Return review payload for regeneration context
+            return $reviewPayload;
+
+        } catch (\Throwable $e) {
+            // In shadow mode, log error but don't fail the job
+            if ($warnOnly) {
+                report($e);
+
+                // Store error in metadata for debugging
+                $metadata = $session->metadata_json ?? [];
+                $metadata['plan'] = $metadata['plan'] ?? [];
+                $metadata['plan']['review_error'] = [
+                    'message' => $e->getMessage(),
+                    'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                ];
+                $session->update(['metadata_json' => $metadata]);
+
+                return null;
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Check if any issue has critical severity.
+     *
+     * @param  array<int, array<string, mixed>>  $issues
+     */
+    private function hasCriticalIssue(array $issues): bool
+    {
+        foreach ($issues as $issue) {
+            if (strtolower((string) ($issue['severity'] ?? '')) === 'critical') {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

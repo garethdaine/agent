@@ -6,6 +6,7 @@ use App\Events\DelegationAttemptCompleted;
 use App\Models\DelegationAttempt;
 use App\Models\DelegationTask;
 use App\Notifications\DelegationEscalationNotification;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Delegation\AttemptSpawner;
 use App\Support\Delegation\DelegateeAssigner;
 use App\Support\Delegation\TaskStateTransitionService;
@@ -26,6 +27,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 class DelegationRecoveryHandler
 {
     public function __construct(
+        private readonly FeatureFlagManager $featureFlags,
         private readonly DelegateeAssigner $assigner,
         private readonly AttemptSpawner $spawner,
         private readonly TaskStateTransitionService $taskTransition
@@ -44,6 +46,10 @@ class DelegationRecoveryHandler
      */
     public function handle(DelegationAttemptCompleted $event): void
     {
+        if (! $this->featureFlags->enabled(FeatureFlagManager::DELEGATION_ENABLED)) {
+            return;
+        }
+
         $attempt = $event->attempt->fresh(['task', 'task.graph', 'task.graph.user', 'profile']);
         if ($attempt === null) {
             return;
@@ -163,7 +169,7 @@ class DelegationRecoveryHandler
         }
 
         // Convert wildcard pattern to regex
-        $regex = '/^' . str_replace('*', '.*', preg_quote($pattern, '/')) . '$/i';
+        $regex = '/^'.str_replace('*', '.*', preg_quote($pattern, '/')).'$/i';
 
         return preg_match($regex, $errorCode) === 1;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Delegation\DelegateeMetricsRecomputer;
 use Illuminate\Console\Command;
 
@@ -35,9 +36,9 @@ class DelegationRecomputeMetricsCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(DelegateeMetricsRecomputer $recomputer): int
+    public function handle(DelegateeMetricsRecomputer $recomputer, FeatureFlagManager $featureFlags): int
     {
-        if (! config('delegation.enabled', false)) {
+        if (! $featureFlags->enabled(FeatureFlagManager::DELEGATION_ENABLED)) {
             $this->info('Delegation feature is disabled. Skipping metrics recomputation.');
 
             return self::SUCCESS;

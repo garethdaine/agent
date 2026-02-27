@@ -1,7 +1,7 @@
 # Consolidated Implementation Brief — Agent Platform v1
 
-**Date:** 2026-02-24
-**Status:** Discovery Complete — Ready for Implementation Planning
+**Date:** 2026-02-25 (updated)
+**Status:** Implementation In Progress — Delegation Engine & Messenger Control Plane built
 **Scope:** All unimplemented discovery plans + multi-agent coordination enhancements
 
 ---
@@ -10,33 +10,33 @@
 
 This brief consolidates all outstanding discovery plans for the Agent platform into a single implementation roadmap. It covers seven feature systems at varying stages of completion, plus multi-agent coordination enhancements informed by Claude Code Agent Teams and OpenAI Codex multi-agent patterns.
 
-### Current State
+### Current State (updated 2026-02-25)
 
 | System | Completion | Next Action |
 |--------|-----------|-------------|
 | Messenger Control Plane | ~60% | Local-first runtime gap + Phase B adapters |
-| Requirements Discovery | ~85% | Build lifecycle hardening |
-| Delegation Engine | ~20% | Models, services, controllers, UI |
+| Requirements Discovery | ~90% | Build lifecycle proven; minor hardening remaining |
+| **Delegation Engine** | **~95%** | **Built via discovery session 2 (2026-02-25). All models, services, controllers, Vue pages, events, listeners, tests created. Remaining: production validation, DAG visualisation (deferred)** |
 | NL Scheduling | ~50% | Parser service, UI tab, active-hours |
 | Adversarial Reviewer | 0% | Full build |
 | Memory Architecture | 0% | Full build |
-| Org Layer | 0% | Full build (depends on Delegation) |
+| Org Layer | 0% | Full build (Delegation dependency now satisfied) |
 | Multi-Agent Enhancements | 0% | New — integrates into Org Layer |
 
 ### Dependency Graph
 
 ```
-Requirements Discovery (existing)
-    └── Adversarial Reviewer (quality gates for summary/plan)
+Requirements Discovery (existing, ~90%)
+    └── Adversarial Reviewer (quality gates for summary/plan) ← NEXT PRIORITY
 
-Delegation Engine (foundation)
+Delegation Engine (foundation, ~95% BUILT)  ✅
     ├── Memory Architecture (Layer 4 deferred, but context injection needed)
     ├── NL Scheduling (ritual schedule authoring)
-    ├── Org Layer (composition over delegation)
+    ├── Org Layer (composition over delegation) ← NOW UNBLOCKED
     │   └── Multi-Agent Enhancements (council deliberation, ad-hoc teams)
     └── Messenger Control Plane Phase B adapters (org ritual controls)
 
-Messenger Control Plane (parallel track — no delegation dependency)
+Messenger Control Plane (parallel track — no delegation dependency, ~60%)
     ├── Local-First Gateway Runtime (critical gap — W1/W2)
     ├── Webhook Ingress Productization (W3)
     └── Phase B Adapters: Discord + WhatsApp (W4)
@@ -44,10 +44,20 @@ Messenger Control Plane (parallel track — no delegation dependency)
 
 ---
 
-## 2. Delegation Engine — Complete Remaining 80%
+## 2. Delegation Engine — ✅ BUILT (Discovery Session 2, 2026-02-25)
 
 **Source:** `reconstructed-intelligent-delegation-for-agent-v3.md` (Session 99)
-**Implemented:** 10 migrations, 1 model (DelegationCapability), config/delegation.php, DelegationFeatureGate middleware
+**Previously Implemented:** 10 migrations, 1 model (DelegationCapability), config/delegation.php, DelegationFeatureGate middleware
+**Session 2 Build (2026-02-25):** All remaining components built via 13 automated build tasks:
+- 10 Eloquent models with relationships, casts, scopes, and factories
+- 17 support services (state transitions, graph builder, contract validator/enforcer, delegatee assigner, attempt spawner, verification pipeline with 3 step types, recovery handler, reconciler, metrics recomputer, event writer, broadcast subscriber)
+- 3 API controllers with authorization policies and full route registration
+- 7 Vue pages for delegation management with feature flag gating
+- 6 broadcast events + 3 listeners (coordinator, recovery handler, broadcast subscriber)
+- Horizon supervisor-delegation queue, scheduler commands, capability seeder
+- Unit and feature tests across all components
+- Feature flags enabled: `DELEGATION_ENABLED=true`, `DELEGATION_UI_ENABLED=true`
+**Remaining:** Production validation, DAG visualisation (deferred to follow-up)
 **Remaining:** 9 models, 14 services, 3 verification steps, 3 controllers, 2 policies, 8 Vue pages, broadcast events, queue topology, seeder
 
 ### 2.1 Models (9 remaining)

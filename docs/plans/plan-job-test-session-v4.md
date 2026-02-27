@@ -1,6 +1,6 @@
 # Implementation Plan
 
-Derived from discovery session 14.
+Derived from discovery session 24.
 
 Detailed plan
 - Update app/Support/Interrogation/Adapters/CodexAdapter.php

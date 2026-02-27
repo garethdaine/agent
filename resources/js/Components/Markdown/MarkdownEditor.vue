@@ -5,6 +5,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Markdown } from '@tiptap/markdown';
+import { Bold, List, ListOrdered, Link2, Code } from 'lucide-vue-next';
 
 const props = defineProps({
     modelValue: {
@@ -108,10 +109,7 @@ const setLink = () => {
                 :disabled="!canEdit"
                 @click="editor?.chain().focus().toggleBold().run()"
             >
-                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path d="M7 5h7a4 4 0 0 1 0 8H7z" />
-                    <path d="M7 13h8a4 4 0 0 1 0 8H7z" />
-                </svg>
+                <Bold class="size-4" aria-hidden="true" />
             </button>
             <button
                 type="button"
@@ -122,12 +120,7 @@ const setLink = () => {
                 :disabled="!canEdit"
                 @click="editor?.chain().focus().toggleBulletList().run()"
             >
-                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <circle cx="5" cy="7" r="1.2" />
-                    <circle cx="5" cy="12" r="1.2" />
-                    <circle cx="5" cy="17" r="1.2" />
-                    <path d="M10 7h9M10 12h9M10 17h9" />
-                </svg>
+                <List class="size-4" aria-hidden="true" />
             </button>
             <button
                 type="button"
@@ -138,10 +131,7 @@ const setLink = () => {
                 :disabled="!canEdit"
                 @click="editor?.chain().focus().toggleOrderedList().run()"
             >
-                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path d="M4 7h1.5v4M10 7h10M10 12h10M10 17h10" />
-                    <path d="M4 16c0-1 1-1.5 2-1.5s2 .5 2 1.5-1 1.5-2 2.5h2.2" />
-                </svg>
+                <ListOrdered class="size-4" aria-hidden="true" />
             </button>
             <button
                 type="button"
@@ -152,10 +142,7 @@ const setLink = () => {
                 :disabled="!canEdit"
                 @click="setLink"
             >
-                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5.93" />
-                    <path d="M14 11a5 5 0 0 0-7.07 0l-1.41 1.41a5 5 0 0 0 7.07 7.07L14 18.07" />
-                </svg>
+                <Link2 class="size-4" aria-hidden="true" />
             </button>
             <button
                 type="button"
@@ -166,10 +153,7 @@ const setLink = () => {
                 :disabled="!canEdit"
                 @click="editor?.chain().focus().toggleCode().run()"
             >
-                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path d="m9 18-6-6 6-6" />
-                    <path d="m15 6 6 6-6 6" />
-                </svg>
+                <Code class="size-4" aria-hidden="true" />
             </button>
         </div>
 

@@ -3,6 +3,20 @@ import { ref, reactive, onMounted } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Table from '@/Components/ui/Table.vue';
+import TableHeader from '@/Components/ui/TableHeader.vue';
+import TableBody from '@/Components/ui/TableBody.vue';
+import TableRow from '@/Components/ui/TableRow.vue';
+import TableHead from '@/Components/ui/TableHead.vue';
+import TableCell from '@/Components/ui/TableCell.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Button from '@/Components/ui/Button.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
+import { GitBranch, Plus, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 const graphs = ref([]);
 const loading = ref(true);
@@ -34,18 +48,18 @@ const setPage = async (page) => {
     await load();
 };
 
-const statusBadgeClass = (status) => {
-    const classes = {
-        draft: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
-        validating: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200',
-        ready: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200',
-        running: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200',
-        succeeded: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200',
-        failed: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200',
-        partial: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200',
-        cancelled: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
+const statusBadgeVariant = (status) => {
+    const variants = {
+        draft: 'secondary',
+        validating: 'default',
+        ready: 'default',
+        running: 'secondary',
+        succeeded: 'default',
+        failed: 'destructive',
+        partial: 'secondary',
+        cancelled: 'outline',
     };
-    return classes[status] || 'bg-gray-100 text-gray-700';
+    return variants[status] || 'secondary';
 };
 
 onMounted(load);
@@ -57,93 +71,133 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Delegation Graphs</h2>
-                <Link :href="route('agent.delegation.create')" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                    Create Graph
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Delegation Graphs</h2>
+                <Link :href="route('agent.delegation.create')">
+                    <Button>
+                        <Plus class="mr-2 h-4 w-4" />
+                        Create Graph
+                    </Button>
                 </Link>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-7xl space-y-4">
+            <div class="mx-auto max-w-[1440px] space-y-4">
                 <div class="flex items-center gap-2">
-                    <button
-                        class="rounded border px-3 py-1 text-xs font-semibold"
-                        :class="filters.status === '' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/20 dark:text-indigo-200' : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700/50'"
+                    <Button
+                        :variant="filters.status === '' ? 'default' : 'outline'"
+                        size="sm"
                         @click="filters.status = ''; filters.page = 1; load()"
                     >
                         All
-                    </button>
-                    <button
-                        class="rounded border px-3 py-1 text-xs font-semibold"
-                        :class="filters.status === 'running' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/20 dark:text-indigo-200' : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700/50'"
+                    </Button>
+                    <Button
+                        :variant="filters.status === 'running' ? 'default' : 'outline'"
+                        size="sm"
                         @click="filters.status = 'running'; filters.page = 1; load()"
                     >
                         Active
-                    </button>
-                    <button
-                        class="rounded border px-3 py-1 text-xs font-semibold"
-                        :class="filters.status === 'succeeded' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/20 dark:text-indigo-200' : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700/50'"
+                    </Button>
+                    <Button
+                        :variant="filters.status === 'succeeded' ? 'default' : 'outline'"
+                        size="sm"
                         @click="filters.status = 'succeeded'; filters.page = 1; load()"
                     >
                         Completed
-                    </button>
-                    <button
-                        class="rounded border px-3 py-1 text-xs font-semibold"
-                        :class="filters.status === 'failed' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/20 dark:text-indigo-200' : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700/50'"
+                    </Button>
+                    <Button
+                        :variant="filters.status === 'failed' ? 'default' : 'outline'"
+                        size="sm"
                         @click="filters.status = 'failed'; filters.page = 1; load()"
                     >
                         Failed
-                    </button>
+                    </Button>
                 </div>
 
-                <p v-if="error" class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p v-if="error" class="rounded-md border border-destructive bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {{ error }}
                 </p>
 
-                <div class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-900">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Name</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Tasks</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Created</th>
-                                <th class="px-4 py-3" />
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            <tr v-if="loading">
-                                <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">Loading...</td>
-                            </tr>
-                            <tr v-for="graph in graphs" :key="graph.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" @click="$inertia.visit(route('agent.delegation.show', graph.id))">
-                                <td class="px-4 py-3 text-sm">
-                                    <div class="font-medium text-gray-900 dark:text-gray-100">{{ graph.name }}</div>
-                                    <div v-if="graph.description" class="text-xs text-gray-500 dark:text-gray-400">{{ graph.description }}</div>
-                                </td>
-                                <td class="px-4 py-3 text-sm">
-                                    <span :class="statusBadgeClass(graph.status)" class="rounded-full px-2 py-1 text-xs font-medium">{{ graph.status }}</span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">
-                                    {{ graph.tasks_completed ?? 0 }}/{{ graph.tasks_total ?? 0 }}
-                                </td>
-                                <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-200">{{ graph.created_at }}</td>
-                                <td class="px-4 py-3 text-right text-xs">
-                                    <Link :href="route('agent.delegation.show', graph.id)" class="rounded border border-gray-300 px-2 py-1 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" @click.stop>View</Link>
-                                </td>
-                            </tr>
-                            <tr v-if="!loading && graphs.length === 0">
-                                <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No delegation graphs found.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <Card>
+                    <CardContent class="p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Tasks</TableHead>
+                                    <TableHead>Created</TableHead>
+                                    <TableHead class="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow v-if="loading">
+                                    <TableCell colspan="5" class="py-8">
+                                        <div class="flex flex-col items-center justify-center gap-4">
+                                            <Skeleton class="h-4 w-48" />
+                                            <Skeleton class="h-4 w-32" />
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                                <TableRow
+                                    v-for="graph in graphs"
+                                    :key="graph.id"
+                                    class="cursor-pointer"
+                                    @click="$inertia.visit(route('agent.delegation.show', graph.id))"
+                                >
+                                    <TableCell>
+                                        <div class="flex items-center gap-2">
+                                            <GitBranch class="h-4 w-4 text-muted-foreground" />
+                                            <div>
+                                                <div class="font-medium text-foreground">{{ graph.name }}</div>
+                                                <div v-if="graph.description" class="text-xs text-muted-foreground">{{ graph.description }}</div>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge :variant="statusBadgeVariant(graph.status)">{{ graph.status }}</Badge>
+                                    </TableCell>
+                                    <TableCell class="text-muted-foreground">
+                                        {{ graph.tasks_completed ?? 0 }}/{{ graph.tasks_total ?? 0 }}
+                                    </TableCell>
+                                    <TableCell class="text-muted-foreground text-xs">{{ graph.created_at }}</TableCell>
+                                    <TableCell class="text-right">
+                                        <Link :href="route('agent.delegation.show', graph.id)" @click.stop>
+                                            <Button variant="outline" size="sm">View</Button>
+                                        </Link>
+                                    </TableCell>
+                                </TableRow>
+                                <TableRow v-if="!loading && graphs.length === 0">
+                                    <TableCell colspan="5" class="py-8 text-center text-muted-foreground">
+                                        No delegation graphs found.
+                                    </TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
 
-                <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                <div class="flex items-center justify-between text-sm text-muted-foreground">
                     <p>Showing page {{ meta.current_page }} of {{ meta.last_page }} ({{ meta.total }} total)</p>
                     <div class="flex gap-2">
-                        <button class="rounded border border-gray-300 px-3 py-1 text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100" :disabled="meta.current_page <= 1" @click="setPage(meta.current_page - 1)">Prev</button>
-                        <button class="rounded border border-gray-300 px-3 py-1 text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100" :disabled="meta.current_page >= meta.last_page" @click="setPage(meta.current_page + 1)">Next</button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            :disabled="meta.current_page <= 1"
+                            @click="setPage(meta.current_page - 1)"
+                        >
+                            <ChevronLeft class="mr-1 h-4 w-4" />
+                            Prev
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            :disabled="meta.current_page >= meta.last_page"
+                            @click="setPage(meta.current_page + 1)"
+                        >
+                            Next
+                            <ChevronRight class="ml-1 h-4 w-4" />
+                        </Button>
                     </div>
                 </div>
             </div>

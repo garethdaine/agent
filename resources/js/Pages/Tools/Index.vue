@@ -1,6 +1,42 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardDescription from '@/Components/ui/CardDescription.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { Search, Database, MessageSquare, Settings } from 'lucide-vue-next';
+
+const tools = [
+    {
+        route: 'tools.discovery.index',
+        category: 'Requirements Discovery',
+        title: 'Interactive discovery wizard',
+        description: 'Guide AI-led requirements interrogation and generate summaries/plans.',
+        icon: Search,
+    },
+    {
+        route: 'tools.backups.settings',
+        category: 'Operations',
+        title: 'Database backup settings',
+        description: 'Configure daily DB backups, retention window, timezone, and run immediate backups.',
+        icon: Database,
+    },
+    {
+        route: 'tools.messenger.index',
+        category: 'Messenger',
+        title: 'Control plane dashboard',
+        description: 'View connector health, chat sessions, recent actions, and control-plane metrics.',
+        icon: MessageSquare,
+    },
+    {
+        route: 'tools.features.settings',
+        category: 'Configuration',
+        title: 'Feature flag settings',
+        description: 'Enable or disable runtime feature flags without changing env/config files.',
+        icon: Settings,
+    },
+];
 </script>
 
 <template>
@@ -8,35 +44,31 @@ import { Head, Link } from '@inertiajs/vue3';
         <Head title="Tools" />
 
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Tools</h2>
+            <h2 class="text-xl font-semibold leading-tight text-foreground">Tools</h2>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-7xl">
+            <div class="mx-auto max-w-[1440px]">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <Link
-                        :href="route('tools.discovery.index')"
-                        class="rounded-lg border border-gray-200 bg-white p-5 transition hover:border-indigo-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                        v-for="tool in tools"
+                        :key="tool.route"
+                        :href="route(tool.route)"
                     >
-                        <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Requirements Discovery</p>
-                        <h3 class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">Interactive discovery wizard</h3>
-                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Guide AI-led requirements interrogation and generate summaries/plans.</p>
-                    </Link>
-                    <Link
-                        :href="route('tools.backups.settings')"
-                        class="rounded-lg border border-gray-200 bg-white p-5 transition hover:border-emerald-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800"
-                    >
-                        <p class="text-xs font-semibold uppercase tracking-wide text-emerald-600">Operations</p>
-                        <h3 class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">Database backup settings</h3>
-                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Configure daily DB backups, retention window, timezone, and run immediate backups.</p>
-                    </Link>
-                    <Link
-                        :href="route('tools.messenger.index')"
-                        class="rounded-lg border border-gray-200 bg-white p-5 transition hover:border-sky-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800"
-                    >
-                        <p class="text-xs font-semibold uppercase tracking-wide text-sky-600">Messenger</p>
-                        <h3 class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">Control plane dashboard</h3>
-                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">View connector health, chat sessions, recent actions, and control-plane metrics.</p>
+                        <Card class="h-full cursor-pointer transition-colors hover:border-primary/50">
+                            <CardHeader>
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                        <component :is="tool.icon" class="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-primary">{{ tool.category }}</p>
+                                        <CardTitle class="mt-1">{{ tool.title }}</CardTitle>
+                                        <CardDescription class="mt-1">{{ tool.description }}</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                        </Card>
                     </Link>
                 </div>
             </div>

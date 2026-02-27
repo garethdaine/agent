@@ -1,6 +1,22 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardDescription from '@/Components/ui/CardDescription.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Button from '@/Components/ui/Button.vue';
+import Input from '@/Components/ui/Input.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
+import Table from '@/Components/ui/Table.vue';
+import TableHeader from '@/Components/ui/TableHeader.vue';
+import TableBody from '@/Components/ui/TableBody.vue';
+import TableRow from '@/Components/ui/TableRow.vue';
+import TableHead from '@/Components/ui/TableHead.vue';
+import TableCell from '@/Components/ui/TableCell.vue';
 import { Head } from '@inertiajs/vue3';
+import { RefreshCw } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, ref, watch } from 'vue';
 
@@ -74,18 +90,11 @@ const providerDescriptions = computed(() => {
     }));
 });
 
-const healthBadgeClass = computed(() => {
+const healthBadgeVariant = computed(() => {
     const status = String(health.value?.status ?? '').toLowerCase();
-
-    if (status === 'healthy') {
-        return 'border-emerald-300 bg-emerald-50 text-emerald-800';
-    }
-
-    if (status === 'degraded') {
-        return 'border-amber-300 bg-amber-50 text-amber-800';
-    }
-
-    return 'border-gray-300 bg-gray-50 text-gray-700';
+    if (status === 'healthy') return 'default';
+    if (status === 'degraded') return 'secondary';
+    return 'outline';
 });
 
 const connectorCount = computed(() => connectors.value.length);
@@ -399,6 +408,12 @@ const selectSession = async (sessionId) => {
     await loadSessionDetails(sessionId);
 };
 
+const getConnectorStatusVariant = (status) => {
+    if (status === 'connected') return 'default';
+    if (status === 'error') return 'destructive';
+    return 'outline';
+};
+
 watch(
     () => connectForm.value.provider,
     (providerKey) => {
@@ -431,292 +446,301 @@ onMounted(async () => {
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Messenger Control Plane</h2>
-                <button
-                    type="button"
-                    class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700/50"
-                    :disabled="loading || refreshing"
-                    @click="refreshAll"
-                >
-                    {{ refreshing ? 'Refreshing…' : 'Refresh' }}
-                </button>
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Messenger Control Plane</h2>
+                <Button variant="outline" size="sm" :disabled="loading || refreshing" @click="refreshAll">
+                    <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': refreshing }" />
+                    {{ refreshing ? 'Refreshing' : 'Refresh' }}
+                </Button>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-7xl space-y-4">
-                <p v-if="loading" class="text-sm text-gray-500 dark:text-gray-400">Loading messenger control-plane data…</p>
-                <p v-if="error" class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800/70 dark:bg-red-950/30 dark:text-red-200">{{ error }}</p>
-                <p v-if="connectError" class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800/70 dark:bg-red-950/30 dark:text-red-200">{{ connectError }}</p>
-                <p v-if="connectSuccess" class="rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/30 dark:text-emerald-200">{{ connectSuccess }}</p>
+            <div class="mx-auto max-w-[1440px] space-y-4">
+                <Skeleton v-if="loading" class="h-8 w-64" />
+                <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ error }}</div>
+                <div v-if="connectError" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ connectError }}</div>
+                <div v-if="connectSuccess" class="rounded-md border border-success/50 bg-success/10 px-3 py-2 text-sm text-success">{{ connectSuccess }}</div>
 
-                <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                        <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Connect Messenger Service</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Credentials are encrypted at rest and never returned in API responses.</p>
-                    </div>
+                <Card>
+                    <CardHeader>
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <CardTitle>Connect Messenger Service</CardTitle>
+                            <CardDescription>Credentials are encrypted at rest and never returned in API responses.</CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton v-if="schemaLoading" class="h-6 w-48" />
+                        <div v-if="!schemaLoading && providerDescriptions.length > 0" class="mb-4 flex flex-wrap gap-2">
+                            <Badge v-for="provider in providerDescriptions" :key="provider.key" variant="secondary">
+                                {{ provider.label }}: {{ provider.description }}
+                            </Badge>
+                        </div>
 
-                    <p v-if="schemaLoading" class="mt-3 text-xs text-gray-500 dark:text-gray-400">Loading provider requirements…</p>
-                    <div v-if="!schemaLoading && providerDescriptions.length > 0" class="mt-3 flex flex-wrap gap-2">
-                        <span
-                            v-for="provider in providerDescriptions"
-                            :key="provider.key"
-                            class="rounded border border-gray-300 bg-gray-50 px-2 py-1 text-[11px] text-gray-700 dark:border-gray-600 dark:bg-gray-900/50 dark:text-gray-300"
-                        >
-                            {{ provider.label }}: {{ provider.description }}
-                        </span>
-                    </div>
-
-                    <form class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" @submit.prevent="submitConnector">
-                        <label class="text-xs text-gray-600 dark:text-gray-300">
-                            Provider
-                            <select
-                                v-model="connectForm.provider"
-                                class="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                                :disabled="schemaLoading || connectSubmitting"
-                            >
-                                <option value="" disabled>Select provider</option>
-                                <option v-for="provider in availableProviders" :key="provider.key" :value="provider.key">
-                                    {{ provider.label }}
-                                </option>
-                            </select>
-                        </label>
-
-                        <label class="text-xs text-gray-600 dark:text-gray-300">
-                            Connector Name
-                            <input
-                                v-model="connectForm.name"
-                                type="text"
-                                class="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                                :disabled="connectSubmitting"
-                                placeholder="My Workspace"
-                            />
-                        </label>
-
-                        <label class="text-xs text-gray-600 dark:text-gray-300">
-                            Connection Mode
-                            <select
-                                v-model="connectForm.connection_mode"
-                                class="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                                :disabled="connectSubmitting"
-                            >
-                                <option v-for="mode in selectedProviderModes" :key="mode" :value="mode">{{ mode }}</option>
-                            </select>
-                        </label>
-
-                        <label
-                            v-for="field in selectedProviderFields"
-                            :key="field.key"
-                            class="text-xs text-gray-600 dark:text-gray-300"
-                        >
-                            {{ field.label }}<span v-if="field.required" class="text-red-600 dark:text-red-400"> *</span>
-                            <input
-                                v-model="connectForm.credentials[field.key]"
-                                :type="field.type === 'password' ? 'password' : 'text'"
-                                class="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                                :disabled="connectSubmitting"
-                                :placeholder="field.placeholder || ''"
-                            />
-                            <p v-if="getFieldError(field.key)" class="mt-1 text-[11px] text-red-600 dark:text-red-300">
-                                {{ Array.isArray(getFieldError(field.key)) ? getFieldError(field.key)[0] : getFieldError(field.key) }}
-                            </p>
-                        </label>
-
-                        <div class="flex items-center gap-2">
-                            <label class="inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                                <input v-model="connectForm.confirmation_required" type="checkbox" class="rounded border-gray-300 dark:border-gray-600" :disabled="connectSubmitting" />
-                                Require confirmation
+                        <form class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" @submit.prevent="submitConnector">
+                            <label class="text-sm text-muted-foreground">
+                                Provider
+                                <select
+                                    v-model="connectForm.provider"
+                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="schemaLoading || connectSubmitting"
+                                >
+                                    <option value="" disabled>Select provider</option>
+                                    <option v-for="provider in availableProviders" :key="provider.key" :value="provider.key">
+                                        {{ provider.label }}
+                                    </option>
+                                </select>
                             </label>
-                        </div>
 
-                        <label class="text-xs text-gray-600 dark:text-gray-300">
-                            Verbosity
-                            <select
-                                v-model="connectForm.default_verbosity"
-                                class="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                                :disabled="connectSubmitting"
-                            >
-                                <option value="summary">summary</option>
-                                <option value="verbose">verbose</option>
-                            </select>
-                        </label>
+                            <label class="text-sm text-muted-foreground">
+                                Connector Name
+                                <Input
+                                    v-model="connectForm.name"
+                                    type="text"
+                                    class="mt-1"
+                                    :disabled="connectSubmitting"
+                                    placeholder="My Workspace"
+                                />
+                            </label>
 
-                        <div class="md:col-span-2 xl:col-span-3">
-                            <button
-                                type="submit"
-                                class="rounded border border-indigo-500 bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
-                                :disabled="connectSubmitting || schemaLoading || !connectForm.provider"
+                            <label class="text-sm text-muted-foreground">
+                                Connection Mode
+                                <select
+                                    v-model="connectForm.connection_mode"
+                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="connectSubmitting"
+                                >
+                                    <option v-for="mode in selectedProviderModes" :key="mode" :value="mode">{{ mode }}</option>
+                                </select>
+                            </label>
+
+                            <label
+                                v-for="field in selectedProviderFields"
+                                :key="field.key"
+                                class="text-sm text-muted-foreground"
                             >
-                                {{ connectSubmitting ? 'Saving…' : 'Save & Connect' }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                                {{ field.label }}<span v-if="field.required" class="text-destructive"> *</span>
+                                <Input
+                                    v-model="connectForm.credentials[field.key]"
+                                    :type="field.type === 'password' ? 'password' : 'text'"
+                                    class="mt-1"
+                                    :disabled="connectSubmitting"
+                                    :placeholder="field.placeholder || ''"
+                                    :error="!!getFieldError(field.key)"
+                                />
+                                <p v-if="getFieldError(field.key)" class="mt-1 text-xs text-destructive">
+                                    {{ Array.isArray(getFieldError(field.key)) ? getFieldError(field.key)[0] : getFieldError(field.key) }}
+                                </p>
+                            </label>
+
+                            <div class="flex items-center gap-2">
+                                <label class="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                                    <input v-model="connectForm.confirmation_required" type="checkbox" class="rounded border-input" :disabled="connectSubmitting" />
+                                    Require confirmation
+                                </label>
+                            </div>
+
+                            <label class="text-sm text-muted-foreground">
+                                Verbosity
+                                <select
+                                    v-model="connectForm.default_verbosity"
+                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="connectSubmitting"
+                                >
+                                    <option value="summary">summary</option>
+                                    <option value="verbose">verbose</option>
+                                </select>
+                            </label>
+
+                            <div class="md:col-span-2 xl:col-span-3">
+                                <Button type="submit" :disabled="connectSubmitting || schemaLoading || !connectForm.provider">
+                                    {{ connectSubmitting ? 'Saving...' : 'Save & Connect' }}
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
 
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Health</p>
-                        <p class="mt-2 inline-flex rounded border px-2 py-1 text-xs font-semibold uppercase" :class="healthBadgeClass">{{ health.status }}</p>
-                    </div>
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Connectors</p>
-                        <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ connectedCount }} / {{ connectorCount }} connected</p>
-                    </div>
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Queue Backlog</p>
-                        <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ queueBacklog }}</p>
-                    </div>
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Recent Error Rate</p>
-                        <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ recentErrorRate.toFixed(2) }}%</p>
-                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardDescription>Health</CardDescription>
+                            <Badge :variant="healthBadgeVariant" class="mt-2 w-fit uppercase">{{ health.status }}</Badge>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardDescription>Connectors</CardDescription>
+                            <p class="mt-2 text-lg font-semibold text-foreground">{{ connectedCount }} / {{ connectorCount }} connected</p>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardDescription>Queue Backlog</CardDescription>
+                            <p class="mt-2 text-lg font-semibold text-foreground">{{ queueBacklog }}</p>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardDescription>Recent Error Rate</CardDescription>
+                            <p class="mt-2 text-lg font-semibold text-foreground">{{ recentErrorRate.toFixed(2) }}%</p>
+                        </CardHeader>
+                    </Card>
                 </div>
 
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Connectors</h3>
-                        <div class="mt-3 overflow-auto">
-                            <table class="min-w-full divide-y divide-gray-200 text-xs dark:divide-gray-700">
-                                <thead>
-                                    <tr>
-                                        <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Name</th>
-                                        <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Provider</th>
-                                        <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Mode</th>
-                                        <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
-                                        <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Sessions</th>
-                                        <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                    <tr v-for="connector in connectors" :key="connector.id">
-                                        <td class="px-2 py-2 text-gray-900 dark:text-gray-100">
-                                            <p>{{ connector.name }}</p>
-                                            <p v-if="connector.setup?.webhook_url" class="mt-0.5 break-all text-[11px] text-gray-500 dark:text-gray-400">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Connectors</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Provider</TableHead>
+                                        <TableHead>Mode</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Sessions</TableHead>
+                                        <TableHead>Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    <TableRow v-for="connector in connectors" :key="connector.id">
+                                        <TableCell>
+                                            <p class="font-medium">{{ connector.name }}</p>
+                                            <p v-if="connector.setup?.webhook_url" class="mt-0.5 break-all text-xs text-muted-foreground">
                                                 {{ connector.setup.webhook_url }}
                                             </p>
-                                        </td>
-                                        <td class="px-2 py-2 text-gray-600 dark:text-gray-300">{{ connector.provider }}</td>
-                                        <td class="px-2 py-2 text-gray-600 dark:text-gray-300">{{ connector.connection_mode }}</td>
-                                        <td class="px-2 py-2">
-                                            <span class="rounded border px-2 py-0.5 text-[11px] font-semibold uppercase" :class="connector.status === 'connected'
-                                                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                                                : connector.status === 'error'
-                                                    ? 'border-red-300 bg-red-50 text-red-800'
-                                                    : 'border-gray-300 bg-gray-50 text-gray-700'">
+                                        </TableCell>
+                                        <TableCell class="text-muted-foreground">{{ connector.provider }}</TableCell>
+                                        <TableCell class="text-muted-foreground">{{ connector.connection_mode }}</TableCell>
+                                        <TableCell>
+                                            <Badge :variant="getConnectorStatusVariant(connector.status)" class="uppercase">
                                                 {{ connector.status }}
-                                            </span>
-                                        </td>
-                                        <td class="px-2 py-2 text-gray-600 dark:text-gray-300">{{ connector.sessions_count ?? 0 }}</td>
-                                        <td class="px-2 py-2">
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell class="text-muted-foreground">{{ connector.sessions_count ?? 0 }}</TableCell>
+                                        <TableCell>
                                             <div class="flex flex-wrap gap-2">
-                                                <button
-                                                    type="button"
-                                                    class="rounded border border-gray-300 px-2 py-0.5 text-[11px] text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700/50"
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
                                                     :disabled="isConnectorActionBusy(connector.id)"
                                                     @click="retestConnector(connector)"
                                                 >
                                                     Retest
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    class="rounded border border-red-300 px-2 py-0.5 text-[11px] text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-950/40"
+                                                </Button>
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
                                                     :disabled="isConnectorActionBusy(connector.id)"
                                                     @click="disconnectConnector(connector)"
                                                 >
                                                     Disconnect
-                                                </button>
+                                                </Button>
                                             </div>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="connectors.length === 0">
-                                        <td colspan="6" class="px-2 py-3 text-center text-gray-500 dark:text-gray-400">No connectors found.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                                        </TableCell>
+                                    </TableRow>
+                                    <TableRow v-if="connectors.length === 0">
+                                        <TableCell colspan="6" class="text-center text-muted-foreground">No connectors found.</TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
 
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Metric Totals (cached)</h3>
-                        <div class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-                            <div class="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-xs dark:border-gray-700 dark:bg-gray-900/50">
-                                <p class="font-semibold text-gray-700 dark:text-gray-200">Inbound messages</p>
-                                <p class="mt-1 text-gray-900 dark:text-gray-100">{{ inboundRows.reduce((sum, row) => sum + Number(row[1] || 0), 0) }}</p>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Metric Totals (cached)</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                <div class="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+                                    <p class="font-medium">Inbound messages</p>
+                                    <p class="mt-1 text-foreground">{{ inboundRows.reduce((sum, row) => sum + Number(row[1] || 0), 0) }}</p>
+                                </div>
+                                <div class="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+                                    <p class="font-medium">Webhook verification failures</p>
+                                    <p class="mt-1 text-foreground">{{ webhookFailureRows.reduce((sum, row) => sum + Number(row[1] || 0), 0) }}</p>
+                                </div>
+                                <div class="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+                                    <p class="font-medium">Action success</p>
+                                    <p class="mt-1 text-foreground">{{ totalActionSuccess }}</p>
+                                </div>
+                                <div class="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+                                    <p class="font-medium">Action failure</p>
+                                    <p class="mt-1 text-foreground">{{ totalActionFailure }}</p>
+                                </div>
                             </div>
-                            <div class="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-xs dark:border-gray-700 dark:bg-gray-900/50">
-                                <p class="font-semibold text-gray-700 dark:text-gray-200">Webhook verification failures</p>
-                                <p class="mt-1 text-gray-900 dark:text-gray-100">{{ webhookFailureRows.reduce((sum, row) => sum + Number(row[1] || 0), 0) }}</p>
-                            </div>
-                            <div class="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-xs dark:border-gray-700 dark:bg-gray-900/50">
-                                <p class="font-semibold text-gray-700 dark:text-gray-200">Action success</p>
-                                <p class="mt-1 text-gray-900 dark:text-gray-100">{{ totalActionSuccess }}</p>
-                            </div>
-                            <div class="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-xs dark:border-gray-700 dark:bg-gray-900/50">
-                                <p class="font-semibold text-gray-700 dark:text-gray-200">Action failure</p>
-                                <p class="mt-1 text-gray-900 dark:text-gray-100">{{ totalActionFailure }}</p>
-                            </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Recent Sessions</h3>
-                        <div class="mt-3 space-y-2">
-                            <button
-                                v-for="session in sessions"
-                                :key="session.id"
-                                type="button"
-                                class="w-full rounded border px-3 py-2 text-left text-xs transition"
-                                :class="selectedSessionId === session.id
-                                    ? 'border-indigo-400 bg-indigo-50 text-indigo-900 dark:border-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-200'
-                                    : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-900/60'"
-                                @click="selectSession(session.id)"
-                            >
-                                <p class="font-semibold">{{ session.provider }} · {{ session.channel_id }}</p>
-                                <p class="mt-0.5 text-[11px] opacity-80">Status: {{ session.status }} · Messages: {{ session.messages_count ?? 0 }}</p>
-                            </button>
-                            <p v-if="sessions.length === 0" class="text-xs text-gray-500 dark:text-gray-400">No chat sessions found.</p>
-                        </div>
-                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Recent Sessions</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="space-y-2">
+                                <button
+                                    v-for="session in sessions"
+                                    :key="session.id"
+                                    type="button"
+                                    class="w-full rounded-md border px-3 py-2 text-left text-sm transition"
+                                    :class="selectedSessionId === session.id
+                                        ? 'border-primary bg-primary/10 text-primary'
+                                        : 'border-border bg-card text-foreground hover:bg-muted'"
+                                    @click="selectSession(session.id)"
+                                >
+                                    <p class="font-medium">{{ session.provider }} · {{ session.channel_id }}</p>
+                                    <p class="mt-0.5 text-xs text-muted-foreground">Status: {{ session.status }} · Messages: {{ session.messages_count ?? 0 }}</p>
+                                </button>
+                                <p v-if="sessions.length === 0" class="text-sm text-muted-foreground">No chat sessions found.</p>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 lg:col-span-2 dark:border-gray-700 dark:bg-gray-800">
-                        <div class="flex items-center justify-between gap-3">
-                            <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Session Detail</h3>
-                            <p v-if="selectedSession" class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ selectedSession.provider }} · {{ selectedSession.channel_id }} · {{ selectedSession.thread_id || 'no-thread' }}
-                            </p>
-                        </div>
+                    <Card class="lg:col-span-2">
+                        <CardHeader>
+                            <div class="flex items-center justify-between gap-3">
+                                <CardTitle>Session Detail</CardTitle>
+                                <CardDescription v-if="selectedSession">
+                                    {{ selectedSession.provider }} · {{ selectedSession.channel_id }} · {{ selectedSession.thread_id || 'no-thread' }}
+                                </CardDescription>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton v-if="detailsLoading" class="h-32 w-full" />
+                            <div v-if="detailsError" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ detailsError }}</div>
 
-                        <p v-if="detailsLoading" class="mt-3 text-xs text-gray-500 dark:text-gray-400">Loading session details…</p>
-                        <p v-if="detailsError" class="mt-3 rounded border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800/70 dark:bg-red-950/30 dark:text-red-200">{{ detailsError }}</p>
-
-                        <div v-if="!detailsLoading && selectedSession" class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Messages</p>
-                                <div class="mt-2 max-h-64 space-y-2 overflow-auto rounded border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-900/40">
-                                    <div v-for="message in sessionMessages" :key="message.id" class="rounded border border-gray-200 bg-white px-2 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-900">
-                                        <p class="font-semibold text-gray-800 dark:text-gray-100">{{ message.direction }} · {{ message.created_at }}</p>
-                                        <p class="mt-1 whitespace-pre-wrap break-words text-gray-700 dark:text-gray-300">{{ message.content }}</p>
+                            <div v-if="!detailsLoading && selectedSession" class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                    <p class="mb-2 text-sm font-medium text-muted-foreground">Messages</p>
+                                    <div class="max-h-64 space-y-2 overflow-auto rounded-md border border-border bg-muted/30 p-2">
+                                        <div v-for="message in sessionMessages" :key="message.id" class="rounded-md border border-border bg-card px-2 py-1.5 text-sm">
+                                            <p class="font-medium">{{ message.direction }} · {{ message.created_at }}</p>
+                                            <p class="mt-1 whitespace-pre-wrap break-words text-muted-foreground">{{ message.content }}</p>
+                                        </div>
+                                        <p v-if="sessionMessages.length === 0" class="text-sm text-muted-foreground">No messages found for this session.</p>
                                     </div>
-                                    <p v-if="sessionMessages.length === 0" class="text-xs text-gray-500 dark:text-gray-400">No messages found for this session.</p>
+                                </div>
+                                <div>
+                                    <p class="mb-2 text-sm font-medium text-muted-foreground">Actions</p>
+                                    <div class="max-h-64 space-y-2 overflow-auto rounded-md border border-border bg-muted/30 p-2">
+                                        <div v-for="action in sessionActions" :key="action.id" class="rounded-md border border-border bg-card px-2 py-1.5 text-sm">
+                                            <p class="font-medium">{{ action.action_type }}</p>
+                                            <p class="mt-0.5 text-muted-foreground">Status: {{ action.status }} · {{ action.created_at }}</p>
+                                            <p v-if="action.error" class="mt-1 text-destructive">{{ action.error }}</p>
+                                        </div>
+                                        <p v-if="sessionActions.length === 0" class="text-sm text-muted-foreground">No actions found for this session.</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Actions</p>
-                                <div class="mt-2 max-h-64 space-y-2 overflow-auto rounded border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-900/40">
-                                    <div v-for="action in sessionActions" :key="action.id" class="rounded border border-gray-200 bg-white px-2 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-900">
-                                        <p class="font-semibold text-gray-800 dark:text-gray-100">{{ action.action_type }}</p>
-                                        <p class="mt-0.5 text-gray-600 dark:text-gray-300">Status: {{ action.status }} · {{ action.created_at }}</p>
-                                        <p v-if="action.error" class="mt-1 text-red-700 dark:text-red-300">{{ action.error }}</p>
-                                    </div>
-                                    <p v-if="sessionActions.length === 0" class="text-xs text-gray-500 dark:text-gray-400">No actions found for this session.</p>
-                                </div>
-                            </div>
-                        </div>
 
-                        <p v-if="!detailsLoading && !selectedSession" class="mt-3 text-xs text-gray-500 dark:text-gray-400">Select a session to inspect messages and actions.</p>
-                    </div>
+                            <p v-if="!detailsLoading && !selectedSession" class="text-sm text-muted-foreground">Select a session to inspect messages and actions.</p>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>

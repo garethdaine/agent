@@ -26,7 +26,7 @@ class ProcessManager
     public function findByCommand(string $command): ?int
     {
         $result = Process::run(sprintf(
-            "pgrep -f %s 2>/dev/null | head -1",
+            'pgrep -f %s 2>/dev/null | head -1',
             escapeshellarg($command)
         ));
 
@@ -47,7 +47,7 @@ class ProcessManager
     public function findAllByCommand(string $command): array
     {
         $result = Process::run(sprintf(
-            "pgrep -f %s 2>/dev/null",
+            'pgrep -f %s 2>/dev/null',
             escapeshellarg($command)
         ));
 

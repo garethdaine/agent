@@ -1,6 +1,9 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import JobForm from './Partials/JobForm.vue';
+import Card from '@/Components/ui/Card.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Head, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { reactive, ref, onMounted } from 'vue';
@@ -122,20 +125,29 @@ onMounted(load);
         <Head title="Edit Job" />
 
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Edit Agent Job</h2>
+            <h2 class="text-xl font-semibold leading-tight text-foreground">Edit Agent Job</h2>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-5xl rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                <p v-if="loading" class="text-sm text-gray-500">Loading job...</p>
-                <JobForm
-                    v-else
-                    v-model="model"
-                    :errors="errors"
-                    :is-submitting="isSubmitting"
-                    submit-label="Update Job"
-                    @submit="onSubmit"
-                />
+            <div class="mx-auto max-w-[1440px]">
+                <Card>
+                    <CardContent class="pt-6">
+                        <div v-if="loading" class="space-y-4">
+                            <Skeleton class="h-10 w-full" />
+                            <Skeleton class="h-10 w-full" />
+                            <Skeleton class="h-10 w-3/4" />
+                            <Skeleton class="h-32 w-full" />
+                        </div>
+                        <JobForm
+                            v-else
+                            v-model="model"
+                            :errors="errors"
+                            :is-submitting="isSubmitting"
+                            submit-label="Update Job"
+                            @submit="onSubmit"
+                        />
+                    </CardContent>
+                </Card>
             </div>
         </div>
     </AppLayout>

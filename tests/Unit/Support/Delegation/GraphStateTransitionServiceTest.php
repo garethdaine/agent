@@ -14,7 +14,7 @@ class GraphStateTransitionServiceTest extends TestCase
     public function test_transition_succeeds_from_valid_status(): void
     {
         $graph = DelegationGraph::factory()->create(['status' => 'draft']);
-        $service = new GraphStateTransitionService();
+        $service = new GraphStateTransitionService;
 
         $result = $service->transition($graph->id, ['draft'], 'validating');
 
@@ -25,7 +25,7 @@ class GraphStateTransitionServiceTest extends TestCase
     public function test_transition_fails_from_invalid_status(): void
     {
         $graph = DelegationGraph::factory()->create(['status' => 'running']);
-        $service = new GraphStateTransitionService();
+        $service = new GraphStateTransitionService;
 
         $result = $service->transition($graph->id, ['draft'], 'validating');
 
@@ -36,7 +36,7 @@ class GraphStateTransitionServiceTest extends TestCase
     public function test_transition_sets_additional_attributes(): void
     {
         $graph = DelegationGraph::factory()->create(['status' => 'ready']);
-        $service = new GraphStateTransitionService();
+        $service = new GraphStateTransitionService;
 
         $result = $service->transition($graph->id, ['ready'], 'running', ['started_at' => now()]);
 
@@ -46,7 +46,7 @@ class GraphStateTransitionServiceTest extends TestCase
 
     public function test_transition_fails_for_nonexistent_graph(): void
     {
-        $service = new GraphStateTransitionService();
+        $service = new GraphStateTransitionService;
 
         $result = $service->transition(99999, ['draft'], 'validating');
 
@@ -56,7 +56,7 @@ class GraphStateTransitionServiceTest extends TestCase
     public function test_transition_fails_with_empty_from_statuses(): void
     {
         $graph = DelegationGraph::factory()->create(['status' => 'draft']);
-        $service = new GraphStateTransitionService();
+        $service = new GraphStateTransitionService;
 
         $result = $service->transition($graph->id, [], 'validating');
 
@@ -67,7 +67,7 @@ class GraphStateTransitionServiceTest extends TestCase
     public function test_transition_accepts_multiple_from_statuses(): void
     {
         $graph = DelegationGraph::factory()->create(['status' => 'ready']);
-        $service = new GraphStateTransitionService();
+        $service = new GraphStateTransitionService;
 
         $result = $service->transition($graph->id, ['draft', 'ready'], 'running');
 
@@ -79,7 +79,7 @@ class GraphStateTransitionServiceTest extends TestCase
     {
         $graph = DelegationGraph::factory()->create(['status' => 'draft']);
         $graph->delete();
-        $service = new GraphStateTransitionService();
+        $service = new GraphStateTransitionService;
 
         $result = $service->transition($graph->id, ['draft'], 'validating');
 
@@ -90,7 +90,7 @@ class GraphStateTransitionServiceTest extends TestCase
     public function test_concurrent_update_only_one_succeeds(): void
     {
         $graph = DelegationGraph::factory()->create(['status' => 'draft']);
-        $service = new GraphStateTransitionService();
+        $service = new GraphStateTransitionService;
 
         // First transition succeeds
         $result1 = $service->transition($graph->id, ['draft'], 'validating');
@@ -112,7 +112,7 @@ class GraphStateTransitionServiceTest extends TestCase
         // Travel forward in time to ensure timestamp difference
         $this->travel(5)->seconds();
 
-        $service = new GraphStateTransitionService();
+        $service = new GraphStateTransitionService;
         $result = $service->transition($graph->id, ['draft'], 'validating');
 
         $this->assertTrue($result);
@@ -122,7 +122,7 @@ class GraphStateTransitionServiceTest extends TestCase
     public function test_transition_with_error_attributes(): void
     {
         $graph = DelegationGraph::factory()->running()->create();
-        $service = new GraphStateTransitionService();
+        $service = new GraphStateTransitionService;
 
         $result = $service->transition(
             $graph->id,

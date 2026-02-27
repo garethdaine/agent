@@ -2,6 +2,7 @@
 
 namespace App\Support\Interrogation;
 
+use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Jobs\ExecuteAgentRunJob;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
@@ -13,7 +14,10 @@ use RuntimeException;
 
 class BuildTaskRunFactory
 {
-    public function __construct(private readonly TaskMarkdownStorage $taskMarkdownStorage) {}
+    public function __construct(
+        private readonly TaskMarkdownStorage $taskMarkdownStorage,
+        private readonly OrchestrationPolicyServiceContract $policyService
+    ) {}
 
     public function create(InterrogationSession $session, InterrogationBuildTask $task): AgentJobRun
     {
@@ -21,6 +25,19 @@ class BuildTaskRunFactory
 
         if ($commandTemplate === '') {
             throw new RuntimeException(sprintf('No default command template configured for runner [%s].', $session->runner_type));
+        }
+
+        // Pre-run policy evaluation: evaluate complexity and requirements
+        $complianceMetadata = [];
+        if ($this->policyService->isEnabled()) {
+            $preRunResult = $this->policyService->evaluatePreRun($task, [
+                'task_category' => $task->task_category?->value ?? 'custom',
+            ]);
+            $complianceMetadata = $preRunResult->metadataPatch;
+
+            // Store compliance metadata in the task
+            $task->setComplianceMetadata($complianceMetadata);
+            $task->save();
         }
 
         $markdownPath = $this->taskMarkdownStorage->persistInlineContent(
@@ -31,7 +48,7 @@ class BuildTaskRunFactory
         $jobName = $this->buildJobName($session, $task);
 
         /** @var AgentJobRun $run */
-        $run = DB::transaction(function () use ($session, $task, $markdownPath, $commandTemplate, $jobName): AgentJobRun {
+        $run = DB::transaction(function () use ($session, $task, $markdownPath, $commandTemplate, $jobName, $complianceMetadata): AgentJobRun {
             $job = $this->resolveReusableJob($session, $task, $jobName) ?? new AgentJob([
                 'user_id' => $session->user_id,
             ]);
@@ -52,17 +69,23 @@ class BuildTaskRunFactory
             $job->env_json = $this->buildIsolatedRunEnvironment($session, $task);
             $job->save();
 
+            // Merge compliance metadata into run metadata
+            $runMetadata = array_merge(
+                [
+                    'source' => 'interrogation_build',
+                    'interrogation_session_id' => (int) $session->id,
+                    'interrogation_build_task_id' => (int) $task->id,
+                ],
+                $complianceMetadata
+            );
+
             return AgentJobRun::query()->create([
                 'agent_job_id' => $job->id,
                 'user_id' => $session->user_id,
                 'initiated_by_user_id' => $session->user_id,
                 'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
                 'status' => AgentJobRun::STATUS_QUEUED,
-                'metadata_json' => [
-                    'source' => 'interrogation_build',
-                    'interrogation_session_id' => (int) $session->id,
-                    'interrogation_build_task_id' => (int) $task->id,
-                ],
+                'metadata_json' => $runMetadata,
             ]);
         });
 
@@ -247,7 +270,7 @@ class BuildTaskRunFactory
         $content[] = '';
         $content[] = '- Make concrete changes in the repository that satisfy this task.';
         $content[] = '- Run relevant tests or validation commands when possible.';
-        $content[] = '- For this repository, tests are runnable with `php artisan test`; PHPUnit configuration already forces `DB_CONNECTION=pgsql_testing`.';
+        $content[] = '- For this repository, run tests with `php artisan test` (or `composer test` when full preflight is needed). Build runs already pin `APP_ENV=testing` and `DB_CONNECTION=pgsql_testing` to an isolated test database.';
         $content[] = '- Do not emit generic PostgreSQL disclaimers unless you actually ran a test command and captured a failing output that proves the issue.';
         $content[] = '- Include assumptions, conditions for correctness, and explicit non-goals in the final report.';
         $content[] = '- If blocked, report precise blockers and impacted files.';
@@ -315,6 +338,16 @@ class BuildTaskRunFactory
             @touch($sandboxDatabasePath);
         }
 
+        $testingConnection = (array) config('database.connections.pgsql_testing', []);
+        $testHost = trim((string) ($testingConnection['host'] ?? '127.0.0.1'));
+        $testPort = trim((string) ($testingConnection['port'] ?? '5432'));
+        $testDatabase = trim((string) ($testingConnection['database'] ?? 'agent_test'));
+        $testUsername = trim((string) ($testingConnection['username'] ?? 'root'));
+        $testPassword = (string) ($testingConnection['password'] ?? '');
+        $testCharset = trim((string) ($testingConnection['charset'] ?? 'utf8'));
+        $testSearchPath = trim((string) ($testingConnection['search_path'] ?? 'public'));
+        $testSslMode = trim((string) ($testingConnection['sslmode'] ?? 'prefer'));
+
         return [
             'AGENT_JOB_SOURCE' => 'interrogation_build',
             'INTERROGATION_SESSION_ID' => (string) $session->id,
@@ -322,17 +355,16 @@ class BuildTaskRunFactory
             'INTERROGATION_DB_ISOLATED' => '1',
             'INTERROGATION_BUILD_DB_PATH' => $sandboxDatabasePath,
             'APP_ENV' => 'testing',
-            'DB_CONNECTION' => 'sqlite',
+            'DB_CONNECTION' => 'pgsql_testing',
             'DB_DATABASE' => $sandboxDatabasePath,
-            'DB_FOREIGN_KEYS' => '1',
-            'DB_URL' => '',
-            'DB_HOST' => '127.0.0.254',
-            'DB_PORT' => '0',
-            'DB_USERNAME' => 'interrogation_runner',
-            'PGHOST' => '127.0.0.254',
-            'PGPORT' => '0',
-            'PGDATABASE' => 'interrogation_runner',
-            'PGUSER' => 'interrogation_runner',
+            'TEST_DB_HOST' => $testHost,
+            'TEST_DB_PORT' => $testPort,
+            'TEST_DB_DATABASE' => $testDatabase,
+            'TEST_DB_USERNAME' => $testUsername,
+            'TEST_DB_PASSWORD' => $testPassword,
+            'TEST_DB_CHARSET' => $testCharset,
+            'TEST_DB_SEARCH_PATH' => $testSearchPath,
+            'TEST_DB_SSLMODE' => $testSslMode,
             'CACHE_STORE' => 'array',
             'SESSION_DRIVER' => 'array',
             'QUEUE_CONNECTION' => 'sync',

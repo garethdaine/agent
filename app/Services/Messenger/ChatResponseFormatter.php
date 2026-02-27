@@ -170,7 +170,7 @@ class ChatResponseFormatter
             return "No jobs found.\n";
         }
 
-        $output = "";
+        $output = '';
         foreach ($jobs as $job) {
             $enabled = ($job['enabled'] ?? false) ? '✓' : '✗';
             $output .= "**{$job['name']}** (ID: `{$job['id']}`)\n";
@@ -197,7 +197,7 @@ class ChatResponseFormatter
             return "No jobs found.\n";
         }
 
-        $output = "";
+        $output = '';
         foreach ($jobs as $job) {
             $enabled = ($job['enabled'] ?? false) ? '' : ' (disabled)';
             $output .= "• **{$job['name']}**{$enabled} - `{$job['id']}`\n";
@@ -218,7 +218,7 @@ class ChatResponseFormatter
             return "No active runs.\n";
         }
 
-        $output = "";
+        $output = '';
         foreach ($runs as $run) {
             $progress = isset($run['progress']) ? " ({$run['progress']}%)" : '';
             $output .= "**{$run['job_name']}** (Run ID: `{$run['id']}`)\n";
@@ -241,7 +241,7 @@ class ChatResponseFormatter
             return "No active runs.\n";
         }
 
-        $output = "";
+        $output = '';
         foreach ($runs as $run) {
             $progress = isset($run['progress']) ? " - {$run['progress']}%" : '';
             $output .= "• **{$run['job_name']}**{$progress} - `{$run['id']}`\n";
@@ -352,7 +352,7 @@ class ChatResponseFormatter
      */
     private function formatGenericData(array $data): string
     {
-        $output = "";
+        $output = '';
         foreach ($data as $key => $value) {
             if (is_array($value)) {
                 $value = json_encode($value, JSON_PRETTY_PRINT);

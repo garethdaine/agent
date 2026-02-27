@@ -2,7 +2,6 @@
 
 namespace App\Services\Messenger;
 
-use App\Contracts\Messenger\ConnectorAdapterInterface;
 use App\DTOs\Messenger\OutboundPayload;
 use App\Enums\Messenger\ChatActionType;
 use App\Models\ChatAction;
@@ -269,7 +268,7 @@ class ConfirmationManager
         }
 
         $message .= "\nThis action requires confirmation. Reply with **yes** to proceed or **no** to cancel.";
-        $message .= "\n\n_This confirmation will expire in ".self::CONFIRMATION_TTL_MINUTES." minutes._";
+        $message .= "\n\n_This confirmation will expire in ".self::CONFIRMATION_TTL_MINUTES.' minutes._';
 
         return $message;
     }

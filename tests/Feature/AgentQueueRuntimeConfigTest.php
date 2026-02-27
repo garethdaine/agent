@@ -18,4 +18,3 @@ class AgentQueueRuntimeConfigTest extends TestCase
         ));
     }
 }
-

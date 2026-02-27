@@ -30,6 +30,10 @@ class InterrogationEvent extends Model
 
     public const TYPE_SYSTEM = 'system';
 
+    public const TYPE_SUMMARY_REVIEW = 'summary_review';
+
+    public const TYPE_PLAN_REVIEW = 'plan_review';
+
     protected function casts(): array
     {
         return [

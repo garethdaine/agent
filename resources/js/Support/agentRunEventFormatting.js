@@ -1,5 +1,9 @@
 const OUTPUT_EVENT_TYPES = new Set(['stdout', 'stderr']);
 const STREAM_ENVELOPE_TYPES = new Set(['stream_event', 'assistant', 'user', 'result']);
+const STRUCTURED_ENVELOPE_MARKER_PATTERN = /"type"\s*:\s*"(?:stream_event|assistant|user|result)"|"session_id"\s*:|"parent_tool_use_id"\s*:|\[\d+\s+(?:stdout|stderr|lifecycle)\]/;
+const ENVELOPE_CARRY_LIMIT = 32_768;
+const DEDUPE_WINDOW_EVENTS = 80;
+const DEDUPE_MIN_CHARS = 24;
 
 const stringifyPayload = (payload) => {
     if (typeof payload === 'string') {
@@ -44,6 +48,141 @@ const parseJson = (raw) => {
 };
 
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const isStructuredEnvelopeObject = (value) => isRecord(value) && STREAM_ENVELOPE_TYPES.has(String(value.type ?? '').trim());
+
+const hasStructuredEnvelopeMarkers = (value) => {
+    if (typeof value !== 'string') {
+        return false;
+    }
+
+    return STRUCTURED_ENVELOPE_MARKER_PATTERN.test(value);
+};
+
+const readJsonValueWindow = (text, startIndex) => {
+    const opening = text[startIndex];
+    if (opening !== '{' && opening !== '[') {
+        return { status: 'invalid', end: startIndex + 1 };
+    }
+
+    const stack = [opening];
+    let inString = false;
+    let escaped = false;
+
+    for (let index = startIndex + 1; index < text.length; index += 1) {
+        const character = text[index];
+
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+
+            if (character === '\\') {
+                escaped = true;
+                continue;
+            }
+
+            if (character === '"') {
+                inString = false;
+            }
+
+            continue;
+        }
+
+        if (character === '"') {
+            inString = true;
+            continue;
+        }
+
+        if (character === '{' || character === '[') {
+            stack.push(character);
+            continue;
+        }
+
+        if (character === '}' || character === ']') {
+            const current = stack[stack.length - 1];
+            const isMatch = (character === '}' && current === '{')
+                || (character === ']' && current === '[');
+
+            if (!isMatch) {
+                return { status: 'invalid', end: startIndex + 1 };
+            }
+
+            stack.pop();
+
+            if (stack.length === 0) {
+                return { status: 'complete', end: index + 1 };
+            }
+        }
+    }
+
+    return { status: 'incomplete', end: text.length };
+};
+
+const extractJsonObjects = (text) => {
+    if (typeof text !== 'string' || text === '') {
+        return {
+            parsedValues: [],
+            remainder: '',
+            hasIncompleteJson: false,
+        };
+    }
+
+    const parsedValues = [];
+    let cursor = 0;
+    let remainder = '';
+    let hasIncompleteJson = false;
+
+    while (cursor < text.length) {
+        const relativeStart = text.slice(cursor).search(/[{\[]/);
+        if (relativeStart === -1) {
+            break;
+        }
+
+        const startIndex = cursor + relativeStart;
+        const window = readJsonValueWindow(text, startIndex);
+
+        if (window.status === 'incomplete') {
+            remainder = text.slice(startIndex);
+            hasIncompleteJson = true;
+            break;
+        }
+
+        if (window.status === 'invalid') {
+            cursor = startIndex + 1;
+            continue;
+        }
+
+        const candidate = text.slice(startIndex, window.end);
+
+        try {
+            parsedValues.push(JSON.parse(candidate));
+            cursor = window.end;
+        } catch {
+            cursor = startIndex + 1;
+        }
+    }
+
+    return {
+        parsedValues,
+        remainder,
+        hasIncompleteJson,
+    };
+};
+
+const writeEnvelopeCarry = (state, eventType, value) => {
+    if (!(state.envelopeCarryByType instanceof Map)) {
+        return;
+    }
+
+    const normalized = String(value ?? '');
+    if (normalized.trim() === '') {
+        state.envelopeCarryByType.delete(eventType);
+        return;
+    }
+
+    state.envelopeCarryByType.set(eventType, normalized.slice(-ENVELOPE_CARRY_LIMIT));
+};
 
 const buildPrefix = (sequence, eventType) => {
     if (Number.isFinite(sequence) && sequence > 0) {
@@ -182,6 +321,64 @@ const makeFormattedEntry = ({
     tone,
     format,
 });
+
+const normalizeTextForDeduping = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
+
+const isDedupableEntry = (entry) => {
+    if (!isRecord(entry)) {
+        return false;
+    }
+
+    const tone = String(entry.tone ?? '').trim();
+    if (!['plain', 'markdown'].includes(tone)) {
+        return false;
+    }
+
+    const normalized = normalizeTextForDeduping(entry.payload);
+    if (normalized.length < DEDUPE_MIN_CHARS) {
+        return false;
+    }
+
+    if (normalized.startsWith('Tool call:')) {
+        return false;
+    }
+
+    return true;
+};
+
+const dedupeFormattedEntries = (entries) => {
+    if (!Array.isArray(entries) || entries.length === 0) {
+        return [];
+    }
+
+    const lastSeenIndexBySignature = new Map();
+
+    return entries.filter((entry, index) => {
+        if (!isDedupableEntry(entry)) {
+            return true;
+        }
+
+        const normalized = normalizeTextForDeduping(entry.payload);
+        const signature = `${String(entry.tone ?? 'plain').trim()}::${normalized}`;
+        const previousIndex = lastSeenIndexBySignature.get(signature);
+
+        if (typeof previousIndex === 'number' && (index - previousIndex) <= DEDUPE_WINDOW_EVENTS) {
+            return false;
+        }
+
+        lastSeenIndexBySignature.set(signature, index);
+
+        if (lastSeenIndexBySignature.size > 1024) {
+            Array.from(lastSeenIndexBySignature.entries()).forEach(([key, seenIndex]) => {
+                if ((index - seenIndex) > DEDUPE_WINDOW_EVENTS) {
+                    lastSeenIndexBySignature.delete(key);
+                }
+            });
+        }
+
+        return true;
+    });
+};
 
 const summarizeToolUseResult = (toolUseResult) => {
     if (!isRecord(toolUseResult)) {
@@ -509,6 +706,48 @@ const handleStructuredEnvelope = (context, payloadObject, formattedEntries, stat
     return false;
 };
 
+const handleStructuredEnvelopeFragments = (context, normalizedPayload, formattedEntries, state) => {
+    if (!OUTPUT_EVENT_TYPES.has(context.eventType)) {
+        return false;
+    }
+
+    const eventType = context.eventType;
+    const existingCarry = String(state.envelopeCarryByType.get(eventType) ?? '');
+    const rawPayload = typeof normalizedPayload === 'string' ? normalizedPayload : String(normalizedPayload ?? '');
+    const shouldInspect = existingCarry !== '' || hasStructuredEnvelopeMarkers(rawPayload);
+
+    if (!shouldInspect) {
+        return false;
+    }
+
+    const combined = `${existingCarry}${rawPayload}`;
+    const { parsedValues, remainder, hasIncompleteJson } = extractJsonObjects(combined);
+
+    let handled = false;
+
+    parsedValues.forEach((parsedValue, index) => {
+        if (!isStructuredEnvelopeObject(parsedValue)) {
+            return;
+        }
+
+        const fragmentContext = {
+            ...context,
+            key: `${context.key}:fragment:${index}`,
+        };
+
+        const handledEnvelope = handleStructuredEnvelope(fragmentContext, parsedValue, formattedEntries, state);
+        handled = handled || handledEnvelope;
+    });
+
+    if (hasIncompleteJson) {
+        writeEnvelopeCarry(state, eventType, remainder);
+    } else {
+        writeEnvelopeCarry(state, eventType, '');
+    }
+
+    return handled || hasIncompleteJson || existingCarry !== '' || hasStructuredEnvelopeMarkers(rawPayload);
+};
+
 export const formatAgentRunEventEntry = (entry) => {
     const context = buildEntryContext(entry);
 
@@ -578,6 +817,7 @@ export const formatAgentRunEventEntries = (entries) => {
     const state = {
         streamTextBuffers: new Map(),
         lastTextBySession: new Map(),
+        envelopeCarryByType: new Map(),
     };
 
     entries.forEach((entry) => {
@@ -601,6 +841,10 @@ export const formatAgentRunEventEntries = (entries) => {
             }
         }
 
+        if (handleStructuredEnvelopeFragments(context, normalizedPayload, formattedEntries, state)) {
+            return;
+        }
+
         const formatted = formatAgentRunEventEntry(entry);
         if (String(formatted?.payload ?? '').trim() !== '') {
             formattedEntries.push(formatted);
@@ -614,5 +858,7 @@ export const formatAgentRunEventEntries = (entries) => {
         });
     });
 
-    return formattedEntries.filter((entry) => String(entry?.payload ?? '').trim() !== '');
+    const nonEmptyEntries = formattedEntries.filter((entry) => String(entry?.payload ?? '').trim() !== '');
+
+    return dedupeFormattedEntries(nonEmptyEntries);
 };

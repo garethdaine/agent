@@ -36,9 +36,9 @@ class VerificationPipeline
         ?AiCriticStep $aiCriticStep = null,
         ?HumanApprovalStep $humanApprovalStep = null
     ) {
-        $this->automatedCheckStep = $automatedCheckStep ?? new AutomatedCheckStep();
-        $this->aiCriticStep = $aiCriticStep ?? new AiCriticStep();
-        $this->humanApprovalStep = $humanApprovalStep ?? new HumanApprovalStep();
+        $this->automatedCheckStep = $automatedCheckStep ?? new AutomatedCheckStep;
+        $this->aiCriticStep = $aiCriticStep ?? new AiCriticStep;
+        $this->humanApprovalStep = $humanApprovalStep ?? new HumanApprovalStep;
     }
 
     /**

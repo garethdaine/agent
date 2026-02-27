@@ -175,7 +175,7 @@ class MockHttpClient
 
         // If recording is enabled, we need to wrap the fake to capture requests
         if ($this->recording) {
-            Http::fake(function ($request) use ($fakeResponses) {
+            Http::fake(function ($request) {
                 $this->recordedRequests[] = [
                     'method' => $request->method(),
                     'url' => $request->url(),

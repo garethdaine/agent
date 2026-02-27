@@ -72,8 +72,7 @@ class VerifyWebhookSignature
         string $provider,
         Request $request,
         ConnectorAdapterInterface $adapter
-    ): ?ConnectorAccount
-    {
+    ): ?ConnectorAccount {
         // For providers with account key in route (e.g., Telegram)
         $accountKey = $request->route('accountKey');
         if ($accountKey) {

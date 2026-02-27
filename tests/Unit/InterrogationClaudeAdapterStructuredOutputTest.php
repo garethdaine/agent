@@ -49,4 +49,3 @@ class InterrogationClaudeAdapterStructuredOutputTest extends TestCase
         $this->assertSame(['Goal 1'], $parsed['goals']);
     }
 }
-

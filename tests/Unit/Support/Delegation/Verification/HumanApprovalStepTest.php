@@ -51,7 +51,7 @@ class HumanApprovalStepTest extends TestCase
 
     public function test_creates_pending_verification_result(): void
     {
-        $step = new HumanApprovalStep();
+        $step = new HumanApprovalStep;
         $stepConfig = [
             'type' => 'human_approval',
             'step_order' => 2,
@@ -72,7 +72,7 @@ class HumanApprovalStepTest extends TestCase
     {
         Carbon::setTestNow('2026-02-25 10:00:00');
 
-        $step = new HumanApprovalStep();
+        $step = new HumanApprovalStep;
         $stepConfig = [
             'type' => 'human_approval',
             'step_order' => 2,
@@ -94,7 +94,7 @@ class HumanApprovalStepTest extends TestCase
 
     public function test_returns_pending_immediately(): void
     {
-        $step = new HumanApprovalStep();
+        $step = new HumanApprovalStep;
         $stepConfig = [
             'type' => 'human_approval',
             'step_order' => 2,
@@ -110,7 +110,7 @@ class HumanApprovalStepTest extends TestCase
     {
         Carbon::setTestNow('2026-02-25 10:00:00');
 
-        $step = new HumanApprovalStep();
+        $step = new HumanApprovalStep;
         $stepConfig = [
             'type' => 'human_approval',
             'step_order' => 2,
@@ -132,7 +132,7 @@ class HumanApprovalStepTest extends TestCase
 
     public function test_stores_context_for_reviewer(): void
     {
-        $step = new HumanApprovalStep();
+        $step = new HumanApprovalStep;
         $stepConfig = [
             'type' => 'human_approval',
             'step_order' => 2,
@@ -156,7 +156,7 @@ class HumanApprovalStepTest extends TestCase
 
     public function test_records_task_and_attempt_context(): void
     {
-        $step = new HumanApprovalStep();
+        $step = new HumanApprovalStep;
         $stepConfig = [
             'type' => 'human_approval',
             'step_order' => 2,

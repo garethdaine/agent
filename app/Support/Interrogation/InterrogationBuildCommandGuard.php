@@ -60,12 +60,25 @@ class InterrogationBuildCommandGuard
         $connection = strtolower($this->resolveEnv('DB_CONNECTION', $environment));
         $database = $this->resolveEnv('DB_DATABASE', $environment);
 
-        if ($connection !== 'sqlite') {
-            throw new RuntimeException(
-                'Interrogation build safety violation: DB_CONNECTION must be sqlite during build execution.'
-            );
+        if ($connection === 'sqlite') {
+            $this->assertIsolatedSqliteDatabase($database);
+
+            return;
         }
 
+        if ($connection === 'pgsql_testing') {
+            $this->assertIsolatedPgsqlTestingDatabase($environment);
+
+            return;
+        }
+
+        throw new RuntimeException(
+            'Interrogation build safety violation: DB_CONNECTION must be sqlite or pgsql_testing during build execution.'
+        );
+    }
+
+    private function assertIsolatedSqliteDatabase(string $database): void
+    {
         $sandboxBase = storage_path('framework/interrogation-build');
         if (! is_dir($sandboxBase)) {
             @mkdir($sandboxBase, 0777, true);
@@ -80,6 +93,26 @@ class InterrogationBuildCommandGuard
                 'Interrogation build safety violation: DB_DATABASE must be inside [%s].',
                 $resolvedBase
             ));
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $environment
+     */
+    private function assertIsolatedPgsqlTestingDatabase(array $environment): void
+    {
+        $testDatabase = strtolower($this->resolveEnv('TEST_DB_DATABASE', $environment));
+        $primaryDatabase = strtolower($this->resolveEnv('DB_DATABASE', $environment));
+
+        if ($testDatabase === '' || ! preg_match('/(?:^|[_-])(test|testing)(?:$|[_-])|test|testing/', $testDatabase)) {
+            throw new RuntimeException(sprintf(
+                'Interrogation build safety violation: TEST_DB_DATABASE must be an isolated test database (received "%s").',
+                $testDatabase !== '' ? $testDatabase : 'empty'
+            ));
+        }
+
+        if ($primaryDatabase !== '' && $primaryDatabase === $testDatabase) {
+            throw new RuntimeException('Interrogation build safety violation: TEST_DB_DATABASE must differ from DB_DATABASE.');
         }
     }
 

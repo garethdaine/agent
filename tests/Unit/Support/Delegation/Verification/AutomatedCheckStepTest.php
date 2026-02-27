@@ -62,7 +62,7 @@ class AutomatedCheckStepTest extends TestCase
             'php artisan test' => Process::result(output: 'All tests passed.', exitCode: 0),
         ]);
 
-        $step = new AutomatedCheckStep();
+        $step = new AutomatedCheckStep;
         $stepConfig = [
             'type' => 'automated_check',
             'step_order' => 0,
@@ -85,7 +85,7 @@ class AutomatedCheckStepTest extends TestCase
             ),
         ]);
 
-        $step = new AutomatedCheckStep();
+        $step = new AutomatedCheckStep;
         $stepConfig = [
             'type' => 'automated_check',
             'step_order' => 0,
@@ -110,7 +110,7 @@ class AutomatedCheckStepTest extends TestCase
             ),
         ]);
 
-        $step = new AutomatedCheckStep();
+        $step = new AutomatedCheckStep;
         $stepConfig = [
             'type' => 'automated_check',
             'step_order' => 0,
@@ -130,7 +130,7 @@ class AutomatedCheckStepTest extends TestCase
             './vendor/bin/pint --test' => Process::result(output: 'All files passed.', exitCode: 0),
         ]);
 
-        $step = new AutomatedCheckStep();
+        $step = new AutomatedCheckStep;
         $stepConfig = [
             'type' => 'automated_check',
             'step_order' => 0,
@@ -149,7 +149,7 @@ class AutomatedCheckStepTest extends TestCase
             'php artisan test' => Process::result(output: 'OK', exitCode: 0),
         ]);
 
-        $step = new AutomatedCheckStep();
+        $step = new AutomatedCheckStep;
         $stepConfig = [
             'type' => 'automated_check',
             'step_order' => 0,
@@ -169,7 +169,7 @@ class AutomatedCheckStepTest extends TestCase
 
     public function test_returns_failed_for_unknown_check_profile(): void
     {
-        $step = new AutomatedCheckStep();
+        $step = new AutomatedCheckStep;
         $stepConfig = [
             'type' => 'automated_check',
             'step_order' => 0,
@@ -189,7 +189,7 @@ class AutomatedCheckStepTest extends TestCase
             './vendor/bin/pint --test' => Process::result(output: 'Passed', exitCode: 0),
         ]);
 
-        $step = new AutomatedCheckStep();
+        $step = new AutomatedCheckStep;
         $stepConfig = [
             'type' => 'automated_check',
             'step_order' => 0,
@@ -214,7 +214,7 @@ class AutomatedCheckStepTest extends TestCase
             '*' => Process::result(output: 'OK', exitCode: 0),
         ]);
 
-        $step = new AutomatedCheckStep();
+        $step = new AutomatedCheckStep;
         $stepConfig = [
             'type' => 'automated_check',
             'step_order' => 0,

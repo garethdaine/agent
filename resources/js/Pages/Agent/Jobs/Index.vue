@@ -1,6 +1,18 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import Card from '@/Components/ui/Card.vue';
+import Table from '@/Components/ui/Table.vue';
+import TableHeader from '@/Components/ui/TableHeader.vue';
+import TableBody from '@/Components/ui/TableBody.vue';
+import TableRow from '@/Components/ui/TableRow.vue';
+import TableHead from '@/Components/ui/TableHead.vue';
+import TableCell from '@/Components/ui/TableCell.vue';
+import Button from '@/Components/ui/Button.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Input from '@/Components/ui/Input.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
+import { Plus, Play, Pencil, Trash2, RotateCcw, ToggleLeft, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import axios from 'axios';
 import { onMounted, reactive, ref } from 'vue';
 
@@ -17,6 +29,31 @@ const filters = reactive({
     deleted: '',
     page: 1,
 });
+
+const statusOptions = [
+    { value: '', label: 'All statuses' },
+    { value: 'true', label: 'Enabled' },
+    { value: 'false', label: 'Disabled' },
+];
+
+const runnerOptions = [
+    { value: '', label: 'All runners' },
+    { value: 'claude', label: 'claude' },
+    { value: 'codex', label: 'codex' },
+    { value: 'custom', label: 'custom' },
+];
+
+const sourceOptions = [
+    { value: '', label: 'All job sources' },
+    { value: 'user', label: 'User jobs' },
+    { value: 'build', label: 'Build jobs' },
+];
+
+const deletedOptions = [
+    { value: '', label: 'Active only' },
+    { value: 'all', label: 'All' },
+    { value: 'true', label: 'Deleted only' },
+];
 
 const load = async () => {
     loading.value = true;
@@ -62,6 +99,12 @@ const setPage = async (page) => {
     await load();
 };
 
+const setSource = (source) => {
+    filters.source = source;
+    filters.page = 1;
+    load();
+};
+
 onMounted(load);
 </script>
 
@@ -71,142 +114,188 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Agent Jobs</h2>
-                <Link :href="route('agent.jobs.create')" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                    New Job
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Agent Jobs</h2>
+                <Link :href="route('agent.jobs.create')">
+                    <Button>
+                        <Plus class="h-4 w-4 mr-2" />
+                        New Job
+                    </Button>
                 </Link>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-7xl space-y-4">
-                <div class="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-4 md:grid-cols-5 dark:border-gray-700 dark:bg-gray-800">
-                    <input v-model="filters.q" placeholder="Search name / description" class="rounded-md border-gray-300 text-sm text-gray-900 placeholder:text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400" @change="load" />
-                    <select v-model="filters.is_enabled" class="rounded-md border-gray-300 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" @change="load">
-                        <option value="">All statuses</option>
-                        <option value="true">Enabled</option>
-                        <option value="false">Disabled</option>
-                    </select>
-                    <select v-model="filters.runner_type" class="rounded-md border-gray-300 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" @change="load">
-                        <option value="">All runners</option>
-                        <option value="claude">claude</option>
-                        <option value="codex">codex</option>
-                        <option value="custom">custom</option>
-                    </select>
-                    <select v-model="filters.source" class="rounded-md border-gray-300 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" @change="load">
-                        <option value="">All job sources</option>
-                        <option value="user">User jobs</option>
-                        <option value="build">Build jobs</option>
-                    </select>
-                    <select v-model="filters.deleted" class="rounded-md border-gray-300 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" @change="load">
-                        <option value="">Active only</option>
-                        <option value="all">All</option>
-                        <option value="true">Deleted only</option>
-                    </select>
-                </div>
+            <div class="mx-auto max-w-[1440px] space-y-4">
+                <Card class="p-4">
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
+                        <Input v-model="filters.q" placeholder="Search name / description" @change="load" />
+                        <select
+                            v-model="filters.is_enabled"
+                            class="h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            @change="load"
+                        >
+                            <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                        </select>
+                        <select
+                            v-model="filters.runner_type"
+                            class="h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            @change="load"
+                        >
+                            <option v-for="opt in runnerOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                        </select>
+                        <select
+                            v-model="filters.source"
+                            class="h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            @change="load"
+                        >
+                            <option v-for="opt in sourceOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                        </select>
+                        <select
+                            v-model="filters.deleted"
+                            class="h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            @change="load"
+                        >
+                            <option v-for="opt in deletedOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                        </select>
+                    </div>
+                </Card>
 
                 <div class="flex items-center gap-2">
-                    <button
-                        class="rounded border px-3 py-1 text-xs font-semibold"
-                        :class="filters.source === '' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/20 dark:text-indigo-200' : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700/50'"
-                        @click="filters.source = ''; filters.page = 1; load()"
+                    <Button
+                        :variant="filters.source === '' ? 'default' : 'outline'"
+                        size="sm"
+                        @click="setSource('')"
                     >
                         All Jobs
-                    </button>
-                    <button
-                        class="rounded border px-3 py-1 text-xs font-semibold"
-                        :class="filters.source === 'user' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/20 dark:text-indigo-200' : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700/50'"
-                        @click="filters.source = 'user'; filters.page = 1; load()"
+                    </Button>
+                    <Button
+                        :variant="filters.source === 'user' ? 'default' : 'outline'"
+                        size="sm"
+                        @click="setSource('user')"
                     >
                         User Jobs
-                    </button>
-                    <button
-                        class="rounded border px-3 py-1 text-xs font-semibold"
-                        :class="filters.source === 'build' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-500/20 dark:text-indigo-200' : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700/50'"
-                        @click="filters.source = 'build'; filters.page = 1; load()"
+                    </Button>
+                    <Button
+                        :variant="filters.source === 'build' ? 'default' : 'outline'"
+                        size="sm"
+                        @click="setSource('build')"
                     >
                         Build Jobs
-                    </button>
+                    </Button>
                 </div>
 
-                <p v-if="error" class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {{ error }}
                 </p>
 
-                <div class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-900">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Name</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Enabled</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Runner</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Cron / TZ</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Next Run (UTC)</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Last Run</th>
-                                <th class="px-4 py-3" />
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            <tr v-if="loading">
-                                <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">Loading...</td>
-                            </tr>
-                            <tr v-for="job in jobs" :key="job.id">
-                                <td class="px-4 py-3 text-sm">
-                                    <div class="flex items-center gap-2">
-                                        <div class="font-medium text-gray-900 dark:text-gray-100">{{ job.name }}</div>
-                                        <span
-                                            v-if="job.is_build_job"
-                                            class="rounded border border-purple-300 bg-purple-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-700"
-                                        >
-                                            Build
-                                        </span>
+                <Card>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Enabled</TableHead>
+                                <TableHead>Runner</TableHead>
+                                <TableHead>Cron / TZ</TableHead>
+                                <TableHead>Next Run (UTC)</TableHead>
+                                <TableHead>Last Run</TableHead>
+                                <TableHead class="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow v-if="loading">
+                                <TableCell colspan="7" class="text-center py-8">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <Skeleton class="h-4 w-48" />
+                                        <Skeleton class="h-4 w-32" />
                                     </div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ job.description }}</div>
-                                </td>
-                                <td class="px-4 py-3 text-sm">
-                                    <span :class="job.is_enabled ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'">{{ job.is_enabled ? 'Yes' : 'No' }}</span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ job.runner_type }}</td>
-                                <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-200">{{ job.cron_expression }}<br>{{ job.timezone }}</td>
-                                <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-200">{{ job.next_run_utc ?? '—' }}</td>
-                                <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-200">
+                                </TableCell>
+                            </TableRow>
+                            <TableRow v-for="job in jobs" :key="job.id">
+                                <TableCell>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-medium text-foreground">{{ job.name }}</span>
+                                        <Badge v-if="job.is_build_job" variant="secondary">Build</Badge>
+                                    </div>
+                                    <div class="text-xs text-muted-foreground">{{ job.description }}</div>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge :variant="job.is_enabled ? 'default' : 'secondary'">
+                                        {{ job.is_enabled ? 'Enabled' : 'Disabled' }}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell class="text-muted-foreground">{{ job.runner_type }}</TableCell>
+                                <TableCell class="text-xs text-muted-foreground">
+                                    {{ job.cron_expression }}<br>{{ job.timezone }}
+                                </TableCell>
+                                <TableCell class="text-xs text-muted-foreground">{{ job.next_run_utc ?? '—' }}</TableCell>
+                                <TableCell class="text-xs text-muted-foreground">
                                     {{ job.last_run_status ?? 'none' }}<br>
                                     {{ job.last_run_finished_at ?? '—' }}
-                                </td>
-                                <td class="px-4 py-3 text-right text-xs">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <button class="rounded border border-gray-300 px-2 py-1 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" @click="runNow(job.id)">Run now</button>
-                                        <button class="rounded border border-gray-300 px-2 py-1 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" @click="toggle(job.id)">Toggle</button>
-                                        <button
+                                </TableCell>
+                                <TableCell class="text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <Button variant="ghost" size="icon" @click="runNow(job.id)" title="Run now">
+                                            <Play class="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" @click="toggle(job.id)" title="Toggle enabled">
+                                            <ToggleLeft class="h-4 w-4" />
+                                        </Button>
+                                        <Button
                                             v-if="!job.deleted_at"
-                                            class="rounded border border-gray-300 px-2 py-1 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
+                                            variant="ghost"
+                                            size="icon"
                                             @click="removeJob(job.id)"
+                                            title="Delete"
                                         >
-                                            Delete
-                                        </button>
-                                        <button
+                                            <Trash2 class="h-4 w-4" />
+                                        </Button>
+                                        <Button
                                             v-else
-                                            class="rounded border border-gray-300 px-2 py-1 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
+                                            variant="ghost"
+                                            size="icon"
                                             @click="restoreJob(job.id)"
+                                            title="Restore"
                                         >
-                                            Restore
-                                        </button>
-                                        <Link :href="route('agent.jobs.edit', job.id)" class="rounded border border-gray-300 px-2 py-1 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50">Edit</Link>
+                                            <RotateCcw class="h-4 w-4" />
+                                        </Button>
+                                        <Link :href="route('agent.jobs.edit', job.id)">
+                                            <Button variant="ghost" size="icon" title="Edit">
+                                                <Pencil class="h-4 w-4" />
+                                            </Button>
+                                        </Link>
                                     </div>
-                                </td>
-                            </tr>
-                            <tr v-if="!loading && jobs.length === 0">
-                                <td colspan="7" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No jobs found.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                                </TableCell>
+                            </TableRow>
+                            <TableRow v-if="!loading && jobs.length === 0">
+                                <TableCell colspan="7" class="text-center py-8 text-muted-foreground">
+                                    No jobs found.
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </Card>
 
-                <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                <div class="flex items-center justify-between text-sm text-muted-foreground">
                     <p>Showing page {{ meta.current_page }} of {{ meta.last_page }} ({{ meta.total }} total)</p>
                     <div class="flex gap-2">
-                        <button class="rounded border border-gray-300 px-3 py-1 text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100" :disabled="meta.current_page <= 1" @click="setPage(meta.current_page - 1)">Prev</button>
-                        <button class="rounded border border-gray-300 px-3 py-1 text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100" :disabled="meta.current_page >= meta.last_page" @click="setPage(meta.current_page + 1)">Next</button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            :disabled="meta.current_page <= 1"
+                            @click="setPage(meta.current_page - 1)"
+                        >
+                            <ChevronLeft class="h-4 w-4 mr-1" />
+                            Prev
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            :disabled="meta.current_page >= meta.last_page"
+                            @click="setPage(meta.current_page + 1)"
+                        >
+                            Next
+                            <ChevronRight class="h-4 w-4 ml-1" />
+                        </Button>
                     </div>
                 </div>
             </div>

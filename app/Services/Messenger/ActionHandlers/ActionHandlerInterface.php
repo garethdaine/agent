@@ -18,7 +18,7 @@ interface ActionHandlerInterface
      * Validate the parameters for this action.
      *
      * @param  array<string, mixed>  $parameters
-     * @return array<string, string>  Validation errors (empty if valid)
+     * @return array<string, string> Validation errors (empty if valid)
      */
     public function validate(array $parameters): array;
 }

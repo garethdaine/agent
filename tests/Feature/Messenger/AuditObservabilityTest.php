@@ -3,7 +3,6 @@
 namespace Tests\Feature\Messenger;
 
 use App\Http\Middleware\Messenger\CorrelationId;
-use App\Models\AgentAuditLog;
 use App\Models\ChatAction;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;

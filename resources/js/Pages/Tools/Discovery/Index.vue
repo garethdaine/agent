@@ -1,7 +1,19 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SessionStatusBadge from '@/Components/Interrogation/SessionStatusBadge.vue';
+import Card from '@/Components/ui/Card.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Button from '@/Components/ui/Button.vue';
+import Input from '@/Components/ui/Input.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
+import Table from '@/Components/ui/Table.vue';
+import TableHeader from '@/Components/ui/TableHeader.vue';
+import TableBody from '@/Components/ui/TableBody.vue';
+import TableRow from '@/Components/ui/TableRow.vue';
+import TableHead from '@/Components/ui/TableHead.vue';
+import TableCell from '@/Components/ui/TableCell.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { Plus, Settings, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import axios from 'axios';
 import { onMounted, reactive, ref } from 'vue';
 
@@ -109,144 +121,181 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Requirements Discovery</h2>
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Requirements Discovery</h2>
                 <div class="flex items-center gap-2">
-                    <Link :href="route('tools.discovery.settings')" class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200">Settings</Link>
-                    <Link :href="route('tools.discovery.create')" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">New Session</Link>
+                    <Link :href="route('tools.discovery.settings')">
+                        <Button variant="outline" size="sm">
+                            <Settings class="h-4 w-4" />
+                            Settings
+                        </Button>
+                    </Link>
+                    <Link :href="route('tools.discovery.create')">
+                        <Button size="sm">
+                            <Plus class="h-4 w-4" />
+                            New Session
+                        </Button>
+                    </Link>
                 </div>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-7xl space-y-4">
-                <div class="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-4 md:grid-cols-5 dark:border-gray-700 dark:bg-gray-800">
-                    <input v-model="filters.q" placeholder="Search sessions" class="rounded-md border border-gray-300 bg-white text-sm text-gray-800 placeholder:text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" @change="load" />
-                    <select v-model="filters.status" class="rounded-md border border-gray-300 bg-white text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" @change="load">
-                        <option value="">All statuses</option>
-                        <option value="setup">setup</option>
-                        <option value="discovering">discovering</option>
-                        <option value="interrogating">interrogating</option>
-                        <option value="summarizing">summarizing</option>
-                        <option value="planning">planning</option>
-                        <option value="build_tasks">build_tasks</option>
-                        <option value="build_executing">build_executing</option>
-                        <option value="paused">paused</option>
-                        <option value="completed">completed</option>
-                        <option value="failed">failed</option>
-                    </select>
-                    <select v-model="filters.type" class="rounded-md border border-gray-300 bg-white text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" @change="load">
-                        <option value="">All types</option>
-                        <option value="feature">feature</option>
-                        <option value="general">general</option>
-                    </select>
-                    <select v-model="filters.runner" class="rounded-md border border-gray-300 bg-white text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" @change="load">
-                        <option value="">All runners</option>
-                        <option value="claude">claude</option>
-                        <option value="codex">codex</option>
-                    </select>
-                    <select v-model="filters.deleted" class="rounded-md border border-gray-300 bg-white text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" @change="load">
-                        <option value="">Active only</option>
-                        <option value="all">All</option>
-                        <option value="true">Deleted only</option>
-                    </select>
-                </div>
+            <div class="mx-auto max-w-[1440px] space-y-4">
+                <Card>
+                    <CardContent class="pt-6">
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
+                            <Input v-model="filters.q" placeholder="Search sessions" @change="load" />
+                            <select
+                                v-model="filters.status"
+                                class="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                @change="load"
+                            >
+                                <option value="">All statuses</option>
+                                <option value="setup">setup</option>
+                                <option value="discovering">discovering</option>
+                                <option value="interrogating">interrogating</option>
+                                <option value="summarizing">summarizing</option>
+                                <option value="planning">planning</option>
+                                <option value="build_tasks">build_tasks</option>
+                                <option value="build_executing">build_executing</option>
+                                <option value="paused">paused</option>
+                                <option value="completed">completed</option>
+                                <option value="failed">failed</option>
+                            </select>
+                            <select
+                                v-model="filters.type"
+                                class="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                @change="load"
+                            >
+                                <option value="">All types</option>
+                                <option value="feature">feature</option>
+                                <option value="general">general</option>
+                            </select>
+                            <select
+                                v-model="filters.runner"
+                                class="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                @change="load"
+                            >
+                                <option value="">All runners</option>
+                                <option value="claude">claude</option>
+                                <option value="codex">codex</option>
+                            </select>
+                            <select
+                                v-model="filters.deleted"
+                                class="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                @change="load"
+                            >
+                                <option value="">Active only</option>
+                                <option value="all">All</option>
+                                <option value="true">Deleted only</option>
+                            </select>
+                        </div>
+                    </CardContent>
+                </Card>
 
-                <p v-if="error" class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{{ error }}</p>
+                <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ error }}</div>
 
-                <div class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-900">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Session</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Runner</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Type</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Updated</th>
-                                <th class="px-4 py-3" />
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            <tr v-if="loading">
-                                <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500">Loading...</td>
-                            </tr>
-                            <tr v-for="session in sessions" :key="session.id">
-                                <td class="px-4 py-3 text-sm">
-                                    <p class="font-medium text-gray-900 dark:text-gray-100">{{ session.name || `Session #${session.id}` }}</p>
-                                    <p class="text-xs text-gray-500">{{ session.project_directory }}</p>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ session.runner_type }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ session.interrogation_type }}</td>
-                                <td class="px-4 py-3 text-sm"><SessionStatusBadge :status="session.status" /></td>
-                                <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-200">{{ session.updated_at || '—' }}</td>
-                                <td class="px-4 py-3 text-right">
+                <Card>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Session</TableHead>
+                                <TableHead>Runner</TableHead>
+                                <TableHead>Type</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Updated</TableHead>
+                                <TableHead />
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow v-if="loading">
+                                <TableCell colspan="6" class="text-center">
+                                    <Skeleton class="mx-auto h-6 w-32" />
+                                </TableCell>
+                            </TableRow>
+                            <TableRow v-for="session in sessions" :key="session.id">
+                                <TableCell>
+                                    <p class="font-medium">{{ session.name || `Session #${session.id}` }}</p>
+                                    <p class="text-xs text-muted-foreground">{{ session.project_directory }}</p>
+                                </TableCell>
+                                <TableCell class="text-muted-foreground">{{ session.runner_type }}</TableCell>
+                                <TableCell class="text-muted-foreground">{{ session.interrogation_type }}</TableCell>
+                                <TableCell><SessionStatusBadge :status="session.status" /></TableCell>
+                                <TableCell class="text-xs text-muted-foreground">{{ session.updated_at || '—' }}</TableCell>
+                                <TableCell class="text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <button
+                                        <Button
                                             v-if="!session.deleted_at
                                                 && (['failed', 'paused', 'setup'].includes(session.status)
                                                     || (session.status === 'interrogating' && session.phase === 4))"
-                                            type="button"
-                                            class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50 dark:border-amber-700/70 dark:text-amber-300 dark:hover:bg-amber-950/30"
+                                            variant="outline"
+                                            size="sm"
                                             @click="retrySession(session.id)"
                                         >
                                             Retry
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             v-if="!session.deleted_at"
-                                            type="button"
-                                            class="rounded border border-orange-300 px-2 py-1 text-xs text-orange-700 hover:bg-orange-50 dark:border-orange-700/70 dark:text-orange-300 dark:hover:bg-orange-950/30"
+                                            variant="outline"
+                                            size="sm"
                                             @click="restartSession(session.id)"
                                         >
                                             Restart
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             v-if="!session.deleted_at"
-                                            type="button"
-                                            class="rounded border border-blue-300 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50 dark:border-blue-700/70 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                                            variant="outline"
+                                            size="sm"
                                             @click="renameSession(session.id, session.name || '')"
                                         >
                                             Rename
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             v-if="!session.deleted_at"
-                                            type="button"
-                                            class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:border-red-800/70 dark:text-red-300 dark:hover:bg-red-950/30"
+                                            variant="destructive"
+                                            size="sm"
                                             @click="deleteSession(session.id)"
                                         >
                                             Delete
-                                        </button>
+                                        </Button>
                                         <Link
                                             v-if="!session.deleted_at"
                                             :href="route('tools.discovery.session.settings', session.id)"
-                                            class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
                                         >
-                                            Settings
+                                            <Button variant="outline" size="sm">Settings</Button>
                                         </Link>
-                                        <button
+                                        <Button
                                             v-else
-                                            type="button"
-                                            class="rounded border border-green-300 px-2 py-1 text-xs text-green-700 hover:bg-green-50 dark:border-green-800/70 dark:text-green-300 dark:hover:bg-green-950/30"
+                                            variant="outline"
+                                            size="sm"
                                             @click="restoreSession(session.id)"
                                         >
                                             Restore
-                                        </button>
-                                        <Link :href="route('tools.discovery.wizard', session.id)" class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50">
-                                            Open
+                                        </Button>
+                                        <Link :href="route('tools.discovery.wizard', session.id)">
+                                            <Button variant="secondary" size="sm">Open</Button>
                                         </Link>
                                     </div>
-                                </td>
-                            </tr>
-                            <tr v-if="!loading && sessions.length === 0">
-                                <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500">No sessions found.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                                </TableCell>
+                            </TableRow>
+                            <TableRow v-if="!loading && sessions.length === 0">
+                                <TableCell colspan="6" class="text-center text-muted-foreground">No sessions found.</TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                </Card>
 
-                <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                <div class="flex items-center justify-between text-sm text-muted-foreground">
                     <p>Showing page {{ meta.current_page }} of {{ meta.last_page }} ({{ meta.total }} total)</p>
                     <div class="flex gap-2">
-                        <button class="rounded border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" :disabled="meta.current_page <= 1" @click="setPage(meta.current_page - 1)">Prev</button>
-                        <button class="rounded border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" :disabled="meta.current_page >= meta.last_page" @click="setPage(meta.current_page + 1)">Next</button>
+                        <Button variant="outline" size="sm" :disabled="meta.current_page <= 1" @click="setPage(meta.current_page - 1)">
+                            <ChevronLeft class="h-4 w-4" />
+                            Prev
+                        </Button>
+                        <Button variant="outline" size="sm" :disabled="meta.current_page >= meta.last_page" @click="setPage(meta.current_page + 1)">
+                            Next
+                            <ChevronRight class="h-4 w-4" />
+                        </Button>
                     </div>
                 </div>
             </div>

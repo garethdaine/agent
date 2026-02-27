@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V1;
 use App\Events\DelegationTaskVerified;
 use App\Http\Controllers\Controller;
 use App\Models\DelegationAttempt;
-use App\Models\DelegationGraph;
 use App\Models\DelegationTask;
 use App\Models\DelegationVerificationResult;
 use App\Support\Agent\AuditLogger;

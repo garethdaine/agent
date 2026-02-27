@@ -3,6 +3,19 @@ import { ref, onMounted, computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardDescription from '@/Components/ui/CardDescription.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Input from '@/Components/ui/Input.vue';
+import Select from '@/Components/ui/Select.vue';
+import Textarea from '@/Components/ui/Textarea.vue';
+import Button from '@/Components/ui/Button.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
+import Spinner from '@/Components/ui/Spinner.vue';
+import { ArrowLeft, Save } from 'lucide-vue-next';
 
 const props = defineProps({
     profileId: {
@@ -30,6 +43,12 @@ const form = ref({
     is_active: true,
     capability_ids: [],
 });
+
+const runnerTypeOptions = [
+    { value: 'claude', label: 'claude' },
+    { value: 'codex', label: 'codex' },
+    { value: 'custom', label: 'custom' },
+];
 
 const loadCapabilities = async () => {
     try {
@@ -121,110 +140,144 @@ onMounted(async () => {
         <Head :title="isEdit ? 'Edit Profile' : 'Create Profile'" />
 
         <template #header>
-            <div>
-                <div class="flex items-center gap-2">
-                    <Link :href="route('agent.delegation.profiles.index')" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                        Back to Profiles
-                    </Link>
-                    <span class="text-gray-400">/</span>
+            <div class="flex items-center gap-4">
+                <Link :href="route('agent.delegation.profiles.index')">
+                    <Button variant="ghost" size="icon">
+                        <ArrowLeft class="h-4 w-4" />
+                    </Button>
+                </Link>
+                <div>
+                    <div class="text-sm text-muted-foreground mb-1">
+                        <Link :href="route('agent.delegation.profiles.index')" class="hover:text-foreground transition-colors">
+                            Back to Profiles
+                        </Link>
+                    </div>
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">
+                        {{ isEdit ? 'Edit Delegatee Profile' : 'Create Delegatee Profile' }}
+                    </h2>
                 </div>
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    {{ isEdit ? 'Edit Delegatee Profile' : 'Create Delegatee Profile' }}
-                </h2>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-4xl space-y-6">
-                <p v-if="error" class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p v-if="error" class="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {{ error }}
                 </p>
 
-                <div v-if="loading" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                    Loading...
+                <div v-if="loading" class="flex flex-col items-center justify-center py-12 gap-4">
+                    <Skeleton class="h-4 w-48" />
+                    <Skeleton class="h-4 w-32" />
                 </div>
 
                 <template v-else>
-                    <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                                <input v-model="form.name" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" placeholder="My Delegatee Profile" />
-                                <p v-if="validationErrors.name" class="mt-1 text-xs text-red-600">{{ validationErrors.name[0] }}</p>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Profile Details</CardTitle>
+                            <CardDescription>Configure the delegatee profile settings</CardDescription>
+                        </CardHeader>
+                        <CardContent class="space-y-6">
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-foreground">Name</label>
+                                <Input v-model="form.name" type="text" placeholder="My Delegatee Profile" :error="!!validationErrors.name" />
+                                <p v-if="validationErrors.name" class="text-xs text-destructive">{{ validationErrors.name[0] }}</p>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Runner Type</label>
-                                <select v-model="form.runner_type" class="mt-1 block w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
-                                    <option value="claude">claude</option>
-                                    <option value="codex">codex</option>
-                                    <option value="custom">custom</option>
-                                </select>
-                                <p v-if="validationErrors.runner_type" class="mt-1 text-xs text-red-600">{{ validationErrors.runner_type[0] }}</p>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-foreground">Runner Type</label>
+                                <Select v-model="form.runner_type" :options="runnerTypeOptions" />
+                                <p v-if="validationErrors.runner_type" class="text-xs text-destructive">{{ validationErrors.runner_type[0] }}</p>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Command Template</label>
-                                <input v-model="form.command_template" type="text" class="mt-1 block w-full rounded-md border-gray-300 font-mono text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" placeholder="claude -p {{task_markdown_path}}" />
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Available placeholders: {{task_markdown_path}}, {{working_directory}}</p>
-                                <p v-if="validationErrors.command_template" class="mt-1 text-xs text-red-600">{{ validationErrors.command_template[0] }}</p>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-foreground">Command Template</label>
+                                <Input
+                                    v-model="form.command_template"
+                                    type="text"
+                                    class="font-mono"
+                                    placeholder="claude -p {{task_markdown_path}}"
+                                    :error="!!validationErrors.command_template"
+                                />
+                                <p class="text-xs text-muted-foreground">Available placeholders: {{task_markdown_path}}, {{working_directory}}</p>
+                                <p v-if="validationErrors.command_template" class="text-xs text-destructive">{{ validationErrors.command_template[0] }}</p>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Working Directory</label>
-                                <input v-model="form.working_directory" type="text" class="mt-1 block w-full rounded-md border-gray-300 font-mono text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" placeholder="/path/to/working/directory" />
-                                <p v-if="validationErrors.working_directory" class="mt-1 text-xs text-red-600">{{ validationErrors.working_directory[0] }}</p>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-foreground">Working Directory</label>
+                                <Input
+                                    v-model="form.working_directory"
+                                    type="text"
+                                    class="font-mono"
+                                    placeholder="/path/to/working/directory"
+                                    :error="!!validationErrors.working_directory"
+                                />
+                                <p v-if="validationErrors.working_directory" class="text-xs text-destructive">{{ validationErrors.working_directory[0] }}</p>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Environment Variables (JSON)</label>
-                                <textarea v-model="form.env_json" rows="4" class="mt-1 block w-full rounded-md border-gray-300 font-mono text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
-                                <p v-if="validationErrors.env_json" class="mt-1 text-xs text-red-600">{{ validationErrors.env_json[0] }}</p>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-foreground">Environment Variables (JSON)</label>
+                                <textarea
+                                    v-model="form.env_json"
+                                    rows="4"
+                                    class="block w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+                                    :class="{ 'border-destructive': validationErrors.env_json }"
+                                />
+                                <p v-if="validationErrors.env_json" class="text-xs text-destructive">{{ validationErrors.env_json[0] }}</p>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Config (JSON)</label>
-                                <textarea v-model="form.config_json" rows="4" class="mt-1 block w-full rounded-md border-gray-300 font-mono text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
-                                <p v-if="validationErrors.config_json" class="mt-1 text-xs text-red-600">{{ validationErrors.config_json[0] }}</p>
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-foreground">Config (JSON)</label>
+                                <textarea
+                                    v-model="form.config_json"
+                                    rows="4"
+                                    class="block w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+                                    :class="{ 'border-destructive': validationErrors.config_json }"
+                                />
+                                <p v-if="validationErrors.config_json" class="text-xs text-destructive">{{ validationErrors.config_json[0] }}</p>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Capabilities</label>
+                            <div class="space-y-3">
+                                <label class="block text-sm font-medium text-foreground">Capabilities</label>
                                 <div class="flex flex-wrap gap-2">
                                     <button
                                         v-for="cap in capabilities"
                                         :key="cap.id"
                                         type="button"
-                                        :class="form.capability_ids.includes(cap.id) ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'"
                                         class="rounded-full px-3 py-1 text-sm font-medium transition-colors"
+                                        :class="form.capability_ids.includes(cap.id) ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'"
                                         @click="toggleCapability(cap.id)"
                                     >
                                         {{ cap.slug }}
                                     </button>
-                                    <span v-if="capabilities.length === 0" class="text-sm text-gray-500 dark:text-gray-400">No capabilities available.</span>
+                                    <span v-if="capabilities.length === 0" class="text-sm text-muted-foreground">No capabilities available.</span>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input v-model="form.is_active" type="checkbox" class="rounded text-indigo-600" />
-                                    <span class="text-sm text-gray-700 dark:text-gray-300">Active</span>
+                                <label class="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        v-model="form.is_active"
+                                        type="checkbox"
+                                        class="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                                    />
+                                    <span class="text-sm text-foreground">Active</span>
                                 </label>
                             </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
 
                     <div class="flex items-center justify-end gap-3">
-                        <Link :href="route('agent.delegation.profiles.index')" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
-                            Cancel
+                        <Link :href="route('agent.delegation.profiles.index')">
+                            <Button variant="outline">Cancel</Button>
                         </Link>
-                        <button
-                            class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                        <Button
                             :disabled="submitting || !form.name"
                             @click="submit"
                         >
+                            <Spinner v-if="submitting" size="sm" class="mr-2" />
+                            <Save v-else class="mr-2 h-4 w-4" />
                             {{ submitting ? 'Saving...' : 'Save Profile' }}
-                        </button>
+                        </Button>
                     </div>
                 </template>
             </div>

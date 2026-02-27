@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class AgentJobRun extends Model
 {
     use HasFactory;
+
     public const STATUS_QUEUED = 'queued';
 
     public const STATUS_STARTING = 'starting';

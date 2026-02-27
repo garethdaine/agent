@@ -1,10 +1,15 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AgentBackupSettingsController;
+use App\Http\Controllers\Api\V1\AgentFeatureSettingsController;
 use App\Http\Controllers\Api\V1\AgentJobController;
 use App\Http\Controllers\Api\V1\AgentRunController;
 use App\Http\Controllers\Api\V1\ChatActionController;
 use App\Http\Controllers\Api\V1\ChatSessionController;
+use App\Http\Controllers\Api\V1\ComplianceController;
+use App\Http\Controllers\Api\V1\DelegateeProfileController;
+use App\Http\Controllers\Api\V1\DelegationGraphController;
+use App\Http\Controllers\Api\V1\DelegationTaskController;
 use App\Http\Controllers\Api\V1\InterrogationSessionController;
 use App\Http\Controllers\Api\V1\InterrogationSettingsController;
 use App\Http\Controllers\Api\V1\InterrogationTaskProviderController;
@@ -12,9 +17,6 @@ use App\Http\Controllers\Api\V1\InterrogationTechStackController;
 use App\Http\Controllers\Api\V1\Messenger\MessengerHealthController;
 use App\Http\Controllers\Api\V1\Messenger\MessengerMetricsController;
 use App\Http\Controllers\Api\V1\Messenger\WebhookController;
-use App\Http\Controllers\Api\V1\DelegateeProfileController;
-use App\Http\Controllers\Api\V1\DelegationGraphController;
-use App\Http\Controllers\Api\V1\DelegationTaskController;
 use App\Http\Controllers\Api\V1\MessengerConnectorController;
 use App\Http\Middleware\AgentApiVersionHeader;
 use App\Http\Middleware\Messenger\CorrelationId;
@@ -58,6 +60,13 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/backups/settings', [AgentBackupSettingsController::class, 'show']);
             Route::put('/backups/settings', [AgentBackupSettingsController::class, 'update'])->middleware('throttle:agent-mutations');
             Route::post('/backups/run-now', [AgentBackupSettingsController::class, 'runNow'])->middleware('throttle:agent-mutations');
+            Route::get('/features/settings', [AgentFeatureSettingsController::class, 'index']);
+            Route::put('/features/settings', [AgentFeatureSettingsController::class, 'update'])->middleware('throttle:agent-mutations');
+
+            Route::prefix('compliance')->group(function (): void {
+                Route::get('/status', [ComplianceController::class, 'status']);
+                Route::get('/metrics', [ComplianceController::class, 'metrics']);
+            });
 
             Route::get('/interrogation/sessions', [InterrogationSessionController::class, 'index']);
             Route::post('/interrogation/sessions', [InterrogationSessionController::class, 'store'])->middleware('throttle:interrogation');

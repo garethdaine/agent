@@ -1,6 +1,16 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardDescription from '@/Components/ui/CardDescription.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Button from '@/Components/ui/Button.vue';
+import Input from '@/Components/ui/Input.vue';
+import Textarea from '@/Components/ui/Textarea.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { ArrowLeft, ExternalLink, RefreshCw, Trash2, Plus } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 
@@ -340,225 +350,231 @@ watch(() => providerTeamForm.team_id, (nextTeamId) => {
         <template #header>
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Session Settings</h2>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ session?.name || `Session #${sessionId}` }}</p>
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Session Settings</h2>
+                    <p class="mt-1 text-xs text-muted-foreground">{{ session?.name || `Session #${sessionId}` }}</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <Link :href="route('tools.discovery.wizard', sessionId)" class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200">Open Wizard</Link>
-                    <Link :href="route('tools.discovery.index')" class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200">Back</Link>
+                    <Link :href="route('tools.discovery.wizard', sessionId)">
+                        <Button variant="outline" size="sm">
+                            <ExternalLink class="h-4 w-4" />
+                            Open Wizard
+                        </Button>
+                    </Link>
+                    <Link :href="route('tools.discovery.index')">
+                        <Button variant="outline" size="sm">
+                            <ArrowLeft class="h-4 w-4" />
+                            Back
+                        </Button>
+                    </Link>
                 </div>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-5xl space-y-4">
-                <p v-if="error" class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{{ error }}</p>
-                <p v-if="notice" class="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-900/60 dark:bg-green-950/40 dark:text-green-300">{{ notice }}</p>
+                <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ error }}</div>
+                <div v-if="notice" class="rounded-md border border-success/50 bg-success/10 px-3 py-2 text-sm text-success">{{ notice }}</div>
 
-                <div v-if="loading" class="rounded-lg border border-gray-200 bg-white p-8 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                    Loading session settings...
-                </div>
+                <Card v-if="loading">
+                    <CardContent class="pt-6">
+                        <Skeleton class="h-32 w-full" />
+                    </CardContent>
+                </Card>
 
                 <template v-else>
-                    <div class="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Session Details</h3>
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Update initial brief and naming for this discovery session.</p>
-
-                        <div class="mt-4 space-y-3">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Session Details</CardTitle>
+                            <CardDescription>Update initial brief and naming for this discovery session.</CardDescription>
+                        </CardHeader>
+                        <CardContent class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Session Name</label>
-                                <input
+                                <label class="block text-sm font-medium">Session Name</label>
+                                <Input
                                     v-model="form.name"
                                     type="text"
-                                    class="mt-1 w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                                    class="mt-1"
                                     placeholder="Session name"
+                                    :error="!!firstValidationError('name')"
                                 />
-                                <p v-if="firstValidationError('name')" class="mt-1 text-xs text-red-600">{{ firstValidationError('name') }}</p>
+                                <p v-if="firstValidationError('name')" class="mt-1 text-xs text-destructive">{{ firstValidationError('name') }}</p>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Initial Brief</label>
-                                <textarea
+                                <label class="block text-sm font-medium">Initial Brief</label>
+                                <Textarea
                                     v-model="form.feature_brief"
-                                    rows="8"
-                                    class="mt-1 w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                                    :rows="8"
+                                    class="mt-1"
                                     placeholder="Feature brief or initial context for this session"
+                                    :error="!!firstValidationError('feature_brief')"
                                 />
-                                <p v-if="firstValidationError('feature_brief')" class="mt-1 text-xs text-red-600">{{ firstValidationError('feature_brief') }}</p>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 flex justify-end">
-                            <button
-                                type="button"
-                                class="rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-                                :disabled="saving"
-                                @click="saveSession"
-                            >
-                                {{ saving ? 'Saving...' : 'Save Session Settings' }}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Task Provider (Optional)</h3>
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Connect Linear to sync approved build tasks for this session.</p>
-
-                        <div class="mt-3 rounded border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-                            <p v-if="linearProvider" class="text-sm text-gray-800 dark:text-gray-100">
-                                Connected to Linear
-                                <span v-if="linearProvider.provider_workspace_name">({{ linearProvider.provider_workspace_name }})</span>
-                                <span v-if="linearProvider.team_name">· Team: {{ linearProvider.team_name }}</span>
-                            </p>
-                            <p v-else class="text-sm text-gray-700 dark:text-gray-200">Linear is not connected for this session.</p>
-                            <div class="mt-3 flex flex-wrap gap-2">
-                                <button
-                                    v-if="!linearProvider"
-                                    type="button"
-                                    class="rounded bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-                                    :disabled="providerConnecting"
-                                    @click="startProviderOAuth('linear')"
-                                >
-                                    {{ providerConnecting ? 'Redirecting...' : 'Connect Linear' }}
-                                </button>
-                                <button
-                                    v-else
-                                    type="button"
-                                    class="rounded border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
-                                    :disabled="providerDisconnecting"
-                                    @click="disconnectProvider('linear')"
-                                >
-                                    {{ providerDisconnecting ? 'Disconnecting...' : 'Disconnect Linear' }}
-                                </button>
+                                <p v-if="firstValidationError('feature_brief')" class="mt-1 text-xs text-destructive">{{ firstValidationError('feature_brief') }}</p>
                             </div>
 
-                            <div v-if="linearProvider" class="mt-4 space-y-3 rounded border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900/50">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Team</p>
-                                <div class="space-y-2">
-                                    <div class="flex items-center gap-2">
-                                        <select
-                                            v-model="providerTeamForm.team_id"
-                                            class="w-full rounded border border-gray-300 px-2 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                                        >
-                                            <option value="">Select a Linear team...</option>
-                                            <option v-for="team in linearTeams" :key="team.id" :value="team.id">
-                                                {{ team.name || team.id }}
-                                            </option>
-                                        </select>
-                                        <button
-                                            type="button"
-                                            class="rounded border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
-                                            :disabled="providerProjectsLoading"
-                                            @click="loadLinearProjects({ force: true })"
-                                        >
-                                            {{ providerProjectsLoading ? 'Loading...' : 'Refresh' }}
-                                        </button>
-                                    </div>
-                                    <p v-if="firstValidationError('team_id')" class="text-xs text-red-600">{{ firstValidationError('team_id') }}</p>
-                                    <p v-if="selectedLinearTeam" class="text-xs text-gray-500 dark:text-gray-400">
-                                        Selected team: {{ selectedLinearTeam.name || selectedLinearTeam.id }}
-                                    </p>
-                                </div>
+                            <div class="flex justify-end">
+                                <Button :disabled="saving" @click="saveSession">
+                                    {{ saving ? 'Saving...' : 'Save Session Settings' }}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Project Sync Target</p>
-                                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                                    <input v-model="providerProjectForm.project_mode" type="radio" value="create_new" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                                    Create a new Linear project for this session
-                                </label>
-                                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-                                    <input v-model="providerProjectForm.project_mode" type="radio" value="existing" class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-                                    Use an existing Linear project
-                                </label>
-
-                                <div v-if="providerProjectForm.project_mode === 'existing'" class="space-y-2">
-                                    <div class="flex items-center gap-2">
-                                        <select
-                                            v-model="providerProjectForm.existing_project_id"
-                                            class="w-full rounded border border-gray-300 px-2 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                                        >
-                                            <option value="">Select a Linear project...</option>
-                                            <option v-for="project in linearProjects" :key="project.id" :value="project.id">
-                                                {{ project.name || project.id }}
-                                            </option>
-                                        </select>
-                                        <button
-                                            type="button"
-                                            class="rounded border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
-                                            :disabled="providerProjectsLoading"
-                                            @click="loadLinearProjects({ force: true })"
-                                        >
-                                            {{ providerProjectsLoading ? 'Loading...' : 'Refresh' }}
-                                        </button>
-                                    </div>
-                                    <p v-if="firstValidationError('existing_project_id')" class="text-xs text-red-600">{{ firstValidationError('existing_project_id') }}</p>
-                                    <p v-if="selectedLinearProject?.url" class="text-xs text-gray-500 dark:text-gray-400">
-                                        Selected project:
-                                        <a :href="selectedLinearProject.url" target="_blank" rel="noreferrer" class="text-indigo-700 underline dark:text-indigo-300">{{ selectedLinearProject.name || selectedLinearProject.id }}</a>
-                                    </p>
-                                </div>
-
-                                <div class="flex justify-end">
-                                    <button
-                                        type="button"
-                                        class="rounded bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-                                        :disabled="providerSettingsSaving || providerTeamForm.team_id.trim() === '' || (providerProjectForm.project_mode === 'existing' && providerProjectForm.existing_project_id.trim() === '')"
-                                        @click="saveProviderProjectSettings"
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Task Provider (Optional)</CardTitle>
+                            <CardDescription>Connect Linear to sync approved build tasks for this session.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="rounded-md border border-border bg-muted/50 p-3">
+                                <p v-if="linearProvider" class="text-sm">
+                                    Connected to Linear
+                                    <span v-if="linearProvider.provider_workspace_name">({{ linearProvider.provider_workspace_name }})</span>
+                                    <span v-if="linearProvider.team_name">· Team: {{ linearProvider.team_name }}</span>
+                                </p>
+                                <p v-else class="text-sm text-muted-foreground">Linear is not connected for this session.</p>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <Button
+                                        v-if="!linearProvider"
+                                        size="sm"
+                                        :disabled="providerConnecting"
+                                        @click="startProviderOAuth('linear')"
                                     >
-                                        {{ providerSettingsSaving ? 'Saving...' : 'Save Provider Settings' }}
-                                    </button>
+                                        {{ providerConnecting ? 'Redirecting...' : 'Connect Linear' }}
+                                    </Button>
+                                    <Button
+                                        v-else
+                                        variant="outline"
+                                        size="sm"
+                                        :disabled="providerDisconnecting"
+                                        @click="disconnectProvider('linear')"
+                                    >
+                                        {{ providerDisconnecting ? 'Disconnecting...' : 'Disconnect Linear' }}
+                                    </Button>
+                                </div>
+
+                                <div v-if="linearProvider" class="mt-4 space-y-3 rounded-md border border-border bg-card p-3">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Team</p>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center gap-2">
+                                            <select
+                                                v-model="providerTeamForm.team_id"
+                                                class="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            >
+                                                <option value="">Select a Linear team...</option>
+                                                <option v-for="team in linearTeams" :key="team.id" :value="team.id">
+                                                    {{ team.name || team.id }}
+                                                </option>
+                                            </select>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                :disabled="providerProjectsLoading"
+                                                @click="loadLinearProjects({ force: true })"
+                                            >
+                                                <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': providerProjectsLoading }" />
+                                            </Button>
+                                        </div>
+                                        <p v-if="firstValidationError('team_id')" class="text-xs text-destructive">{{ firstValidationError('team_id') }}</p>
+                                        <p v-if="selectedLinearTeam" class="text-xs text-muted-foreground">
+                                            Selected team: {{ selectedLinearTeam.name || selectedLinearTeam.id }}
+                                        </p>
+                                    </div>
+
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Project Sync Target</p>
+                                    <label class="flex items-center gap-2 text-sm">
+                                        <input v-model="providerProjectForm.project_mode" type="radio" value="create_new" class="h-4 w-4 border-input text-primary focus:ring-primary" />
+                                        Create a new Linear project for this session
+                                    </label>
+                                    <label class="flex items-center gap-2 text-sm">
+                                        <input v-model="providerProjectForm.project_mode" type="radio" value="existing" class="h-4 w-4 border-input text-primary focus:ring-primary" />
+                                        Use an existing Linear project
+                                    </label>
+
+                                    <div v-if="providerProjectForm.project_mode === 'existing'" class="space-y-2">
+                                        <div class="flex items-center gap-2">
+                                            <select
+                                                v-model="providerProjectForm.existing_project_id"
+                                                class="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            >
+                                                <option value="">Select a Linear project...</option>
+                                                <option v-for="project in linearProjects" :key="project.id" :value="project.id">
+                                                    {{ project.name || project.id }}
+                                                </option>
+                                            </select>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                :disabled="providerProjectsLoading"
+                                                @click="loadLinearProjects({ force: true })"
+                                            >
+                                                <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': providerProjectsLoading }" />
+                                            </Button>
+                                        </div>
+                                        <p v-if="firstValidationError('existing_project_id')" class="text-xs text-destructive">{{ firstValidationError('existing_project_id') }}</p>
+                                        <p v-if="selectedLinearProject?.url" class="text-xs text-muted-foreground">
+                                            Selected project:
+                                            <a :href="selectedLinearProject.url" target="_blank" rel="noreferrer" class="text-primary underline">{{ selectedLinearProject.name || selectedLinearProject.id }}</a>
+                                        </p>
+                                    </div>
+
+                                    <div class="flex justify-end">
+                                        <Button
+                                            size="sm"
+                                            :disabled="providerSettingsSaving || providerTeamForm.team_id.trim() === '' || (providerProjectForm.project_mode === 'existing' && providerProjectForm.existing_project_id.trim() === '')"
+                                            @click="saveProviderProjectSettings"
+                                        >
+                                            {{ providerSettingsSaving ? 'Saving...' : 'Save Provider Settings' }}
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
 
-                    <div class="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Tech Stack</h3>
-                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">Manage tech stack entries used as context throughout this session.</p>
-
-                        <div class="mt-3 space-y-2">
-                            <div v-for="stack in techStacks" :key="stack.id" class="flex flex-wrap items-center justify-between gap-2 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900/40">
-                                <div>
-                                    <p class="font-medium text-gray-900 dark:text-gray-100">{{ stack.name }}</p>
-                                    <a :href="stack.documentation_url" target="_blank" rel="noreferrer" class="text-xs text-indigo-700 underline dark:text-indigo-300">{{ stack.documentation_url }}</a>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Tech Stack</CardTitle>
+                            <CardDescription>Manage tech stack entries used as context throughout this session.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="space-y-2">
+                                <div v-for="stack in techStacks" :key="stack.id" class="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+                                    <div>
+                                        <p class="font-medium">{{ stack.name }}</p>
+                                        <a :href="stack.documentation_url" target="_blank" rel="noreferrer" class="text-xs text-primary underline">{{ stack.documentation_url }}</a>
+                                    </div>
+                                    <Button variant="destructive" size="sm" @click="removeTechStack(stack.id)">
+                                        <Trash2 class="h-4 w-4" />
+                                        Remove
+                                    </Button>
                                 </div>
-                                <button
-                                    type="button"
-                                    class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:border-red-800/70 dark:text-red-300 dark:hover:bg-red-950/30"
-                                    @click="removeTechStack(stack.id)"
-                                >
-                                    Remove
-                                </button>
+                                <div v-if="techStacks.length === 0" class="rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
+                                    No tech stack entries added yet.
+                                </div>
                             </div>
-                            <div v-if="techStacks.length === 0" class="rounded border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-500 dark:border-gray-600 dark:text-gray-400">
-                                No tech stack entries added yet.
-                            </div>
-                        </div>
 
-                        <div class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
-                            <input
-                                v-model="techStackDraft.name"
-                                type="text"
-                                class="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                                placeholder="Stack name (e.g. Laravel 12)"
-                            />
-                            <input
-                                v-model="techStackDraft.documentation_url"
-                                type="url"
-                                class="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 md:col-span-2"
-                                placeholder="Documentation URL"
-                            />
-                        </div>
-                        <div class="mt-2 flex justify-end">
-                            <button
-                                type="button"
-                                class="rounded border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-800/70 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
-                                :disabled="techStackSubmitting"
-                                @click="addTechStack"
-                            >
-                                {{ techStackSubmitting ? 'Adding...' : 'Add Tech Stack' }}
-                            </button>
-                        </div>
-                    </div>
+                            <div class="mt-4 grid grid-cols-1 gap-2 md:grid-cols-3">
+                                <Input
+                                    v-model="techStackDraft.name"
+                                    type="text"
+                                    placeholder="Stack name (e.g. Laravel 12)"
+                                />
+                                <Input
+                                    v-model="techStackDraft.documentation_url"
+                                    type="url"
+                                    class="md:col-span-2"
+                                    placeholder="Documentation URL"
+                                />
+                            </div>
+                            <div class="mt-2 flex justify-end">
+                                <Button variant="outline" :disabled="techStackSubmitting" @click="addTechStack">
+                                    <Plus class="h-4 w-4" />
+                                    {{ techStackSubmitting ? 'Adding...' : 'Add Tech Stack' }}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </template>
             </div>
         </div>

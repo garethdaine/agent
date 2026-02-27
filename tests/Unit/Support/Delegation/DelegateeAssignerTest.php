@@ -44,7 +44,7 @@ class DelegateeAssignerTest extends TestCase
             'contract_json' => ['required_capability' => 'code_execution'],
         ]);
 
-        $result = (new DelegateeAssigner())->assign($task);
+        $result = (new DelegateeAssigner)->assign($task);
 
         $this->assertNotNull($result);
         $this->assertEquals($profile->id, $result->profile->id);
@@ -67,7 +67,7 @@ class DelegateeAssignerTest extends TestCase
             'contract_json' => ['required_capability' => 'deployment'],
         ]);
 
-        $result = (new DelegateeAssigner())->assign($task);
+        $result = (new DelegateeAssigner)->assign($task);
 
         $this->assertNull($result);
     }
@@ -80,7 +80,7 @@ class DelegateeAssignerTest extends TestCase
             'contract_json' => ['prompt' => 'Do something'],
         ]);
 
-        $result = (new DelegateeAssigner())->assign($task);
+        $result = (new DelegateeAssigner)->assign($task);
 
         $this->assertNull($result);
     }
@@ -119,7 +119,7 @@ class DelegateeAssignerTest extends TestCase
             'contract_json' => ['required_capability' => 'testing'],
         ]);
 
-        $result = (new DelegateeAssigner())->assign($task);
+        $result = (new DelegateeAssigner)->assign($task);
 
         $this->assertNotNull($result);
         $this->assertEquals($profileHigh->id, $result->profile->id);
@@ -170,7 +170,7 @@ class DelegateeAssignerTest extends TestCase
             'contract_json' => ['required_capability' => 'review'],
         ]);
 
-        $result = (new DelegateeAssigner())->assign($task);
+        $result = (new DelegateeAssigner)->assign($task);
 
         $this->assertNotNull($result);
         $this->assertEquals($profileIdle->id, $result->profile->id);
@@ -193,7 +193,7 @@ class DelegateeAssignerTest extends TestCase
             'contract_json' => ['required_capability' => 'documentation'],
         ]);
 
-        $result = (new DelegateeAssigner())->assign($task);
+        $result = (new DelegateeAssigner)->assign($task);
 
         $this->assertNull($result);
     }
@@ -215,7 +215,7 @@ class DelegateeAssignerTest extends TestCase
             'contract_json' => ['required_capability' => 'monitoring'],
         ]);
 
-        $result = (new DelegateeAssigner())->assign($task);
+        $result = (new DelegateeAssigner)->assign($task);
 
         $this->assertNull($result);
     }
@@ -242,7 +242,7 @@ class DelegateeAssignerTest extends TestCase
             'contract_json' => ['required_capability' => 'code_execution'],
         ]);
 
-        $result = (new DelegateeAssigner())->assign($task);
+        $result = (new DelegateeAssigner)->assign($task);
 
         $this->assertNull($result);
     }
@@ -264,7 +264,7 @@ class DelegateeAssignerTest extends TestCase
             'contract_json' => ['required_capability' => 'code_execution'],
         ]);
 
-        $result = (new DelegateeAssigner())->assign($task);
+        $result = (new DelegateeAssigner)->assign($task);
 
         $this->assertNotNull($result);
         $this->assertEquals($profile->id, $result->profile->id);
@@ -291,7 +291,7 @@ class DelegateeAssignerTest extends TestCase
             'contract_json' => ['required_capability' => 'code_execution'],
         ]);
 
-        $result = (new DelegateeAssigner())->assign($task);
+        $result = (new DelegateeAssigner)->assign($task);
 
         $this->assertNotNull($result);
         $this->assertEquals(0, $result->reasoning['success_rate_24h']);

@@ -23,7 +23,7 @@ class DelegationGraphBuilderTest extends TestCase
             ['name' => 'task3', 'contract' => ['prompt' => 'Do C']],
         ];
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $this->assertEquals(3, $graph->tasks()->count());
         $task2 = $graph->tasks()->where('name', 'task2')->first();
@@ -43,7 +43,7 @@ class DelegationGraphBuilderTest extends TestCase
             ],
         ];
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $this->assertEquals(4, $graph->tasks()->count());
         $merge = $graph->tasks()->where('name', 'merge')->first();
@@ -63,7 +63,7 @@ class DelegationGraphBuilderTest extends TestCase
             ],
         ];
 
-        (new DelegationGraphBuilder())->build($user, $input);
+        (new DelegationGraphBuilder)->build($user, $input);
     }
 
     public function test_throws_exception_exceeding_max_tasks(): void
@@ -73,7 +73,7 @@ class DelegationGraphBuilderTest extends TestCase
         $user = User::factory()->create();
         $input = array_map(fn ($i) => ['name' => "task{$i}", 'contract' => []], range(1, 26));
 
-        (new DelegationGraphBuilder())->build($user, $input);
+        (new DelegationGraphBuilder)->build($user, $input);
     }
 
     public function test_assigns_sequence_order_from_topological_depth(): void
@@ -87,7 +87,7 @@ class DelegationGraphBuilderTest extends TestCase
             ],
         ];
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $this->assertEquals(0, $graph->tasks()->where('name', 'root')->first()->sequence_order);
         $this->assertEquals(1, $graph->tasks()->where('name', 'level1')->first()->sequence_order);
@@ -99,7 +99,7 @@ class DelegationGraphBuilderTest extends TestCase
         $user = User::factory()->create();
         $input = [['name' => 'root', 'contract' => []]];
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $this->assertEquals(DelegationTask::STATUS_READY, $graph->tasks()->first()->status);
     }
@@ -114,7 +114,7 @@ class DelegationGraphBuilderTest extends TestCase
             ],
         ];
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $this->assertEquals(DelegationTask::STATUS_READY, $graph->tasks()->where('name', 'root')->first()->status);
         $this->assertEquals(DelegationTask::STATUS_PENDING, $graph->tasks()->where('name', 'child')->first()->status);
@@ -133,7 +133,7 @@ class DelegationGraphBuilderTest extends TestCase
             ],
         ];
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $this->assertEquals(4, $graph->tasks()->count());
 
@@ -149,7 +149,7 @@ class DelegationGraphBuilderTest extends TestCase
         $user = User::factory()->create();
         $input = [['name' => 'only_task', 'contract' => ['prompt' => 'Do something']]];
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $this->assertEquals(1, $graph->tasks()->count());
         $this->assertEquals(0, $graph->tasks()->first()->sequence_order);
@@ -167,7 +167,7 @@ class DelegationGraphBuilderTest extends TestCase
             ],
         ];
 
-        (new DelegationGraphBuilder())->build($user, $input);
+        (new DelegationGraphBuilder)->build($user, $input);
     }
 
     public function test_exactly_max_tasks_allowed(): void
@@ -176,7 +176,7 @@ class DelegationGraphBuilderTest extends TestCase
         $maxTasks = config('delegation.max_tasks_per_graph', 25);
         $input = array_map(fn ($i) => ['name' => "task{$i}", 'contract' => []], range(1, $maxTasks));
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $this->assertEquals($maxTasks, $graph->tasks()->count());
     }
@@ -186,7 +186,7 @@ class DelegationGraphBuilderTest extends TestCase
         $user = User::factory()->create();
         $input = [['name' => 'task1', 'contract' => []]];
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $this->assertEquals('draft', $graph->status);
     }
@@ -196,7 +196,7 @@ class DelegationGraphBuilderTest extends TestCase
         $user = User::factory()->create();
         $input = [['name' => 'task1', 'contract' => []]];
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $this->assertEquals($user->id, $graph->user_id);
     }
@@ -207,7 +207,7 @@ class DelegationGraphBuilderTest extends TestCase
         $contract = ['prompt' => 'Do something', 'required_capability' => 'code_execution'];
         $input = [['name' => 'task1', 'contract' => $contract]];
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $this->assertEquals($contract, $graph->tasks()->first()->contract_json);
     }
@@ -223,7 +223,7 @@ class DelegationGraphBuilderTest extends TestCase
             ],
         ];
 
-        $graph = (new DelegationGraphBuilder())->build($user, $input);
+        $graph = (new DelegationGraphBuilder)->build($user, $input);
 
         $root1 = $graph->tasks()->where('name', 'root1')->first();
         $root2 = $graph->tasks()->where('name', 'root2')->first();

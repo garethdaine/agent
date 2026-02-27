@@ -18,7 +18,7 @@ class ContractEnforcerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->enforcer = new ContractEnforcer();
+        $this->enforcer = new ContractEnforcer;
     }
 
     public function test_narrows_paths_to_policy_intersection(): void

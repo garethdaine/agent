@@ -64,6 +64,14 @@ return [
         'codex_plan_quality_retries' => (int) env('AGENT_INTERROGATION_CODEX_PLAN_QUALITY_RETRIES', 1),
         'plan_payload_retry_attempts' => (int) env('AGENT_INTERROGATION_PLAN_PAYLOAD_RETRY_ATTEMPTS', 2),
         'plan_guard_min_markdown_chars' => (int) env('AGENT_INTERROGATION_PLAN_GUARD_MIN_MARKDOWN_CHARS', 220),
+        'adversarial_review_enabled' => (bool) env('AGENT_ADVERSARIAL_REVIEW_ENABLED', false),
+        'summary_review_max_retries' => (int) env('AGENT_SUMMARY_REVIEW_MAX_RETRIES', 3),
+        'plan_review_max_retries' => (int) env('AGENT_PLAN_REVIEW_MAX_RETRIES', 2),
+        'review_warn_only' => (bool) env('AGENT_REVIEW_WARN_ONLY', false),
+        'review_severity_threshold' => env('AGENT_REVIEW_SEVERITY_THRESHOLD', 'high'),
+        'review_low_confidence_threshold' => 0.6,
+        'review_max_clarification_questions' => 3,
+        'reviewer_model_override' => env('AGENT_REVIEWER_MODEL_OVERRIDE', null),
     ],
 
     'allowed_placeholders' => [
@@ -92,4 +100,19 @@ return [
     'rate_limit_default_hold_minutes' => (int) env('AGENT_RATE_LIMIT_DEFAULT_HOLD_MINUTES', 15),
 
     'run_output_heartbeat_seconds' => (int) env('AGENT_RUN_OUTPUT_HEARTBEAT_SECONDS', 5),
+
+    'compliance' => [
+        'enabled' => (bool) env('AGENT_COMPLIANCE_ENABLED', false),
+        'enforcement_mode' => env('AGENT_COMPLIANCE_ENFORCEMENT_MODE', 'advisory'),
+        'plan_gate_enabled' => (bool) env('AGENT_COMPLIANCE_PLAN_GATE_ENABLED', true),
+        'verification_gate_enabled' => (bool) env('AGENT_COMPLIANCE_VERIFICATION_GATE_ENABLED', true),
+        'elegance_gate_enabled' => (bool) env('AGENT_COMPLIANCE_ELEGANCE_GATE_ENABLED', false),
+        'lessons_enabled' => (bool) env('AGENT_COMPLIANCE_LESSONS_ENABLED', true),
+        'lessons_token_budget' => (int) env('AGENT_COMPLIANCE_LESSONS_TOKEN_BUDGET', 2000),
+        'complexity_thresholds' => [
+            'file_count' => (int) env('AGENT_COMPLIANCE_FILE_COUNT_THRESHOLD', 3),
+            'loc_count' => (int) env('AGENT_COMPLIANCE_LOC_THRESHOLD', 50),
+            'directory_count' => (int) env('AGENT_COMPLIANCE_DIRECTORY_THRESHOLD', 2),
+        ],
+    ],
 ];

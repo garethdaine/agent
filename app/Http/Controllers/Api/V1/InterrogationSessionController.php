@@ -8,6 +8,7 @@ use App\Http\Requests\Interrogation\StoreInterrogationSessionRequest;
 use App\Http\Requests\Interrogation\SubmitAnswerRequest;
 use App\Http\Requests\Interrogation\UpdateAnnotationRequest;
 use App\Http\Requests\Interrogation\UpdateInterrogationSessionRequest;
+use App\Http\Resources\ComplianceSummaryResource;
 use App\Jobs\ExecuteInterrogationBuildJob;
 use App\Jobs\ExecuteInterrogationDiscoveryJob;
 use App\Jobs\ExecuteInterrogationPlanJob;
@@ -2601,7 +2602,7 @@ class InterrogationSessionController extends Controller
      */
     private function transformSession(InterrogationSession $session, bool $includeLargePayloads): array
     {
-        return [
+        $data = [
             'id' => $session->id,
             'user_id' => $session->user_id,
             'name' => $session->name,
@@ -2629,6 +2630,38 @@ class InterrogationSessionController extends Controller
             'updated_at' => $this->toRfc3339Millis($session->updated_at),
             'deleted_at' => $this->toRfc3339Millis($session->deleted_at),
         ];
+
+        $complianceData = $this->extractComplianceData($session->metadata_json ?? []);
+        if (! empty($complianceData)) {
+            $data['compliance_summary'] = (new ComplianceSummaryResource($complianceData))->toArray(request());
+        }
+
+        return $data;
+    }
+
+    /**
+     * Extract compliance-related data from metadata.
+     *
+     * @param  array<string, mixed>  $metadata
+     * @return array<string, mixed>
+     */
+    private function extractComplianceData(array $metadata): array
+    {
+        $complianceKeys = [
+            'workflow_policy_version',
+            'complexity_classification',
+            'task_category',
+            'plan_required',
+            'plan_completed',
+            'verification_required',
+            'verification_completed',
+            'compliance_block_reason',
+            'compliance_remediation',
+            'compliance_gates',
+            'compliance_status',
+        ];
+
+        return array_intersect_key($metadata, array_flip($complianceKeys));
     }
 
     /**

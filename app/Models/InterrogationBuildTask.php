@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TaskCategory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -40,6 +41,7 @@ class InterrogationBuildTask extends Model
             'metadata_json' => 'array',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
+            'task_category' => TaskCategory::class,
         ];
     }
 
@@ -56,5 +58,57 @@ class InterrogationBuildTask extends Model
     public function scopeOrdered(Builder $query): void
     {
         $query->orderBy('sequence')->orderBy('id');
+    }
+
+    /**
+     * Get compliance-related metadata fields only.
+     *
+     * Returns only the fields relevant to workflow compliance from metadata_json,
+     * excluding any other application-specific metadata.
+     *
+     * @return array<string, mixed>
+     */
+    public function getComplianceMetadata(): array
+    {
+        $metadata = $this->metadata_json ?? [];
+
+        return array_intersect_key($metadata, array_flip([
+            'workflow_policy_version',
+            'complexity_classification',
+            'plan_required',
+            'plan_completed',
+            'plan_evidence',
+            'verification_required',
+            'verification_completed',
+            'verification_evidence',
+            'compliance_block_reason',
+        ]));
+    }
+
+    /**
+     * Merge compliance-related data into metadata_json.
+     *
+     * Existing non-compliance fields in metadata_json are preserved.
+     * Compliance fields are merged/overwritten.
+     *
+     * @param  array<string, mixed>  $complianceData
+     */
+    public function setComplianceMetadata(array $complianceData): void
+    {
+        $metadata = $this->metadata_json ?? [];
+        $this->metadata_json = array_merge($metadata, $complianceData);
+    }
+
+    /**
+     * Check if the task is blocked due to compliance reasons.
+     *
+     * Returns true only when both conditions are met:
+     * 1. Task status is STATUS_BLOCKED
+     * 2. metadata_json contains a compliance_block_reason
+     */
+    public function isComplianceBlocked(): bool
+    {
+        return $this->status === self::STATUS_BLOCKED
+            && isset($this->metadata_json['compliance_block_reason']);
     }
 }

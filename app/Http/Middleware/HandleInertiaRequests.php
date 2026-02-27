@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
@@ -36,7 +37,7 @@ class HandleInertiaRequests extends Middleware
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
-            'delegationEnabled' => config('delegation.ui_enabled', false),
+            'delegationEnabled' => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::DELEGATION_UI_ENABLED),
         ];
     }
 }

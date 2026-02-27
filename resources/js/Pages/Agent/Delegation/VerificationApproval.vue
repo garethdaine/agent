@@ -3,6 +3,15 @@ import { ref, onMounted } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Textarea from '@/Components/ui/Textarea.vue';
+import Button from '@/Components/ui/Button.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
+import Spinner from '@/Components/ui/Spinner.vue';
+import { ArrowLeft, Check, X } from 'lucide-vue-next';
 
 const props = defineProps({
     graphId: {
@@ -70,92 +79,115 @@ onMounted(load);
         <Head title="Verification Approval" />
 
         <template #header>
-            <div>
-                <div class="flex items-center gap-2">
-                    <Link :href="route('agent.delegation.task', { graphId: graphId, taskId: taskId })" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                        Back to Task
-                    </Link>
-                    <span class="text-gray-400">/</span>
+            <div class="flex items-center gap-4">
+                <Link :href="route('agent.delegation.task', { graphId: graphId, taskId: taskId })">
+                    <Button variant="ghost" size="icon">
+                        <ArrowLeft class="h-4 w-4" />
+                    </Button>
+                </Link>
+                <div>
+                    <div class="text-sm text-muted-foreground mb-1">
+                        <Link :href="route('agent.delegation.task', { graphId: graphId, taskId: taskId })" class="hover:text-foreground transition-colors">
+                            Back to Task
+                        </Link>
+                    </div>
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Human Verification Approval</h2>
                 </div>
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Human Verification Approval</h2>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-4xl space-y-6">
-                <p v-if="error" class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p v-if="error" class="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {{ error }}
                 </p>
 
-                <div v-if="loading" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                    Loading...
+                <div v-if="loading" class="flex flex-col items-center justify-center py-12 gap-4">
+                    <Skeleton class="h-4 w-48" />
+                    <Skeleton class="h-4 w-32" />
                 </div>
 
                 <template v-else-if="task">
-                    <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Task Context</h3>
-                        <div class="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Task Context</CardTitle>
+                        </CardHeader>
+                        <CardContent class="space-y-4">
                             <div>
-                                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Task Name</span>
-                                <p class="text-gray-900 dark:text-gray-100">{{ task.name }}</p>
+                                <span class="text-sm font-medium text-muted-foreground">Task Name</span>
+                                <p class="mt-1 text-foreground">{{ task.name }}</p>
                             </div>
                             <div>
-                                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Contract</span>
-                                <pre class="mt-1 overflow-x-auto rounded bg-gray-50 p-4 text-xs text-gray-800 dark:bg-gray-900 dark:text-gray-200">{{ JSON.stringify(task.contract_json, null, 2) }}</pre>
+                                <span class="text-sm font-medium text-muted-foreground">Contract</span>
+                                <pre class="mt-2 overflow-x-auto rounded-lg bg-muted p-4 text-xs text-foreground font-mono">{{ JSON.stringify(task.contract_json, null, 2) }}</pre>
                             </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
 
-                    <div v-if="latestAttempt()" class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Latest Attempt Output</h3>
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-4 text-sm">
-                                <span class="text-gray-500 dark:text-gray-400">Attempt #{{ latestAttempt().attempt_number }}</span>
-                                <span class="text-gray-500 dark:text-gray-400">Status: {{ latestAttempt().status }}</span>
-                                <span v-if="latestAttempt().duration_ms" class="text-gray-500 dark:text-gray-400">Duration: {{ latestAttempt().duration_ms }}ms</span>
+                    <Card v-if="latestAttempt()">
+                        <CardHeader>
+                            <CardTitle>Latest Attempt Output</CardTitle>
+                        </CardHeader>
+                        <CardContent class="space-y-3">
+                            <div class="flex items-center gap-4 text-sm text-muted-foreground">
+                                <span>Attempt #{{ latestAttempt().attempt_number }}</span>
+                                <span>Status: {{ latestAttempt().status }}</span>
+                                <span v-if="latestAttempt().duration_ms">Duration: {{ latestAttempt().duration_ms }}ms</span>
                             </div>
                             <div v-if="latestAttempt().metadata_json" class="mt-2">
-                                <pre class="overflow-x-auto rounded bg-gray-50 p-4 text-xs text-gray-800 dark:bg-gray-900 dark:text-gray-200">{{ JSON.stringify(latestAttempt().metadata_json, null, 2) }}</pre>
+                                <pre class="overflow-x-auto rounded-lg bg-muted p-4 text-xs text-foreground font-mono">{{ JSON.stringify(latestAttempt().metadata_json, null, 2) }}</pre>
                             </div>
-                            <p v-else class="text-sm text-gray-500 dark:text-gray-400">No output metadata available.</p>
-                        </div>
-                    </div>
+                            <p v-else class="text-sm text-muted-foreground">No output metadata available.</p>
+                        </CardContent>
+                    </Card>
 
-                    <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Your Decision</h3>
-                        <div class="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Your Decision</CardTitle>
+                        </CardHeader>
+                        <CardContent class="space-y-6">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Verdict</label>
+                                <label class="block text-sm font-medium text-foreground mb-3">Verdict</label>
                                 <div class="flex gap-4">
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input v-model="verdict" type="radio" value="passed" class="text-green-600" />
-                                        <span class="text-sm text-gray-900 dark:text-gray-100">Approve</span>
+                                    <label
+                                        class="flex items-center gap-2 cursor-pointer rounded-lg border px-4 py-3 transition-colors"
+                                        :class="verdict === 'passed' ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted'"
+                                    >
+                                        <input v-model="verdict" type="radio" value="passed" class="sr-only" />
+                                        <Check class="h-4 w-4" />
+                                        <span class="text-sm font-medium">Approve</span>
                                     </label>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input v-model="verdict" type="radio" value="failed" class="text-red-600" />
-                                        <span class="text-sm text-gray-900 dark:text-gray-100">Reject</span>
+                                    <label
+                                        class="flex items-center gap-2 cursor-pointer rounded-lg border px-4 py-3 transition-colors"
+                                        :class="verdict === 'failed' ? 'border-destructive bg-destructive/10 text-destructive' : 'border-border text-muted-foreground hover:bg-muted'"
+                                    >
+                                        <input v-model="verdict" type="radio" value="failed" class="sr-only" />
+                                        <X class="h-4 w-4" />
+                                        <span class="text-sm font-medium">Reject</span>
                                     </label>
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes (optional)</label>
-                                <textarea v-model="notes" rows="4" class="block w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" placeholder="Add any notes about your decision..." />
+                                <label class="block text-sm font-medium text-foreground mb-2">Notes (optional)</label>
+                                <Textarea v-model="notes" rows="4" placeholder="Add any notes about your decision..." />
                             </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
 
                     <div class="flex items-center justify-end gap-3">
-                        <Link :href="route('agent.delegation.task', { graphId: graphId, taskId: taskId })" class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700">
-                            Cancel
+                        <Link :href="route('agent.delegation.task', { graphId: graphId, taskId: taskId })">
+                            <Button variant="outline">Cancel</Button>
                         </Link>
-                        <button
-                            class="rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                            :class="verdict === 'passed' ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'"
+                        <Button
+                            :variant="verdict === 'passed' ? 'default' : 'destructive'"
                             :disabled="submitting"
                             @click="submit"
                         >
+                            <Spinner v-if="submitting" size="sm" class="mr-2" />
+                            <Check v-else-if="verdict === 'passed'" class="mr-2 h-4 w-4" />
+                            <X v-else class="mr-2 h-4 w-4" />
                             {{ submitting ? 'Submitting...' : (verdict === 'passed' ? 'Approve' : 'Reject') }}
-                        </button>
+                        </Button>
                     </div>
                 </template>
             </div>

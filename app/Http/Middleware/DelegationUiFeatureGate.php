@@ -2,14 +2,17 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Agent\FeatureFlagManager;
 use Closure;
 use Illuminate\Http\Request;
 
 class DelegationUiFeatureGate
 {
+    public function __construct(private readonly FeatureFlagManager $featureFlags) {}
+
     public function handle(Request $request, Closure $next)
     {
-        if (! config('delegation.ui_enabled', false)) {
+        if (! $this->featureFlags->enabled(FeatureFlagManager::DELEGATION_UI_ENABLED)) {
             abort(403, 'Delegation UI is not enabled');
         }
 

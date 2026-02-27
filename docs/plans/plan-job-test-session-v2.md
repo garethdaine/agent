@@ -1,6 +1,6 @@
 # Implementation Plan
 
-Derived from discovery session 11.
+Derived from discovery session 21.
 
 Codex detailed plan
 - Update app/Http/Controllers/Api/V1/InterrogationSessionController.php

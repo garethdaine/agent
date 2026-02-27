@@ -20,6 +20,7 @@ class DelegationReconcilerTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private DelegateeProfile $profile;
 
     protected function setUp(): void
@@ -61,7 +62,7 @@ class DelegationReconcilerTest extends TestCase
                 'expires_at' => now()->subHour(),
             ]);
 
-        (new DelegationReconciler())->reconcile();
+        (new DelegationReconciler)->reconcile();
 
         $this->assertEquals(
             DelegationVerificationResult::VERDICT_FAILED,
@@ -101,7 +102,7 @@ class DelegationReconcilerTest extends TestCase
                 'expires_at' => now()->addHours(2), // Not expired
             ]);
 
-        (new DelegationReconciler())->reconcile();
+        (new DelegationReconciler)->reconcile();
 
         $this->assertEquals(
             DelegationVerificationResult::VERDICT_PENDING,
@@ -128,7 +129,7 @@ class DelegationReconcilerTest extends TestCase
 
         // Run reconciler - it should attempt to re-assign blocked tasks
         // Note: full assignment depends on DelegateeAssigner integration
-        (new DelegationReconciler())->reconcile();
+        (new DelegationReconciler)->reconcile();
 
         // Verify the reconciler processed the blocked task
         // The actual assignment depends on available delegatees with matching capabilities
@@ -149,7 +150,7 @@ class DelegationReconcilerTest extends TestCase
         ]);
 
         // Run reconciler
-        (new DelegationReconciler())->reconcile();
+        (new DelegationReconciler)->reconcile();
 
         // Graph should still exist (reconciler logs but doesn't auto-complete without proper events)
         $this->assertNotNull($graph->fresh());
@@ -176,7 +177,7 @@ class DelegationReconcilerTest extends TestCase
             'agent_job_run_id' => $run->id,
         ]);
 
-        (new DelegationReconciler())->reconcile();
+        (new DelegationReconciler)->reconcile();
 
         // Verify attempt was marked as failed
         $this->assertEquals(
@@ -211,7 +212,7 @@ class DelegationReconcilerTest extends TestCase
             'agent_job_run_id' => $run->id,
         ]);
 
-        (new DelegationReconciler())->reconcile();
+        (new DelegationReconciler)->reconcile();
 
         // Verify AgentJobRun was marked as cancelled
         $this->assertEquals(
@@ -241,7 +242,7 @@ class DelegationReconcilerTest extends TestCase
             'agent_job_run_id' => $run->id,
         ]);
 
-        (new DelegationReconciler())->reconcile();
+        (new DelegationReconciler)->reconcile();
 
         // Attempt should still be running
         $this->assertEquals(
@@ -287,7 +288,7 @@ class DelegationReconcilerTest extends TestCase
                 ]);
         }
 
-        (new DelegationReconciler())->reconcile();
+        (new DelegationReconciler)->reconcile();
 
         foreach ($results as $result) {
             $this->assertEquals(

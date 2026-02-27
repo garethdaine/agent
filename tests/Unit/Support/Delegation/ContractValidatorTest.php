@@ -17,7 +17,7 @@ class ContractValidatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->validator = new ContractValidator();
+        $this->validator = new ContractValidator;
     }
 
     public function test_validates_required_capability_exists(): void

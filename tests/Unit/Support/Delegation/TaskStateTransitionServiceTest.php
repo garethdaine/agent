@@ -15,7 +15,7 @@ class TaskStateTransitionServiceTest extends TestCase
     public function test_transition_succeeds_from_valid_status(): void
     {
         $task = DelegationTask::factory()->create(['status' => 'pending']);
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
 
         $result = $service->transition($task->id, ['pending'], 'ready');
 
@@ -26,7 +26,7 @@ class TaskStateTransitionServiceTest extends TestCase
     public function test_transition_fails_from_invalid_status(): void
     {
         $task = DelegationTask::factory()->create(['status' => 'running']);
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
 
         $result = $service->transition($task->id, ['pending'], 'ready');
 
@@ -37,7 +37,7 @@ class TaskStateTransitionServiceTest extends TestCase
     public function test_transition_sets_additional_attributes(): void
     {
         $task = DelegationTask::factory()->create(['status' => 'ready']);
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
 
         $result = $service->transition($task->id, ['ready'], 'running', ['started_at' => now()]);
 
@@ -47,7 +47,7 @@ class TaskStateTransitionServiceTest extends TestCase
 
     public function test_transition_fails_for_nonexistent_task(): void
     {
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
 
         $result = $service->transition(99999, ['pending'], 'ready');
 
@@ -57,7 +57,7 @@ class TaskStateTransitionServiceTest extends TestCase
     public function test_transition_fails_with_empty_from_statuses(): void
     {
         $task = DelegationTask::factory()->create(['status' => 'pending']);
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
 
         $result = $service->transition($task->id, [], 'ready');
 
@@ -68,7 +68,7 @@ class TaskStateTransitionServiceTest extends TestCase
     public function test_transition_accepts_multiple_from_statuses(): void
     {
         $task = DelegationTask::factory()->create(['status' => 'blocked']);
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
 
         $result = $service->transition($task->id, ['pending', 'blocked'], 'ready');
 
@@ -79,7 +79,7 @@ class TaskStateTransitionServiceTest extends TestCase
     public function test_concurrent_update_only_one_succeeds(): void
     {
         $task = DelegationTask::factory()->create(['status' => 'pending']);
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
 
         // First transition succeeds
         $result1 = $service->transition($task->id, ['pending'], 'ready');
@@ -101,7 +101,7 @@ class TaskStateTransitionServiceTest extends TestCase
         // Travel forward in time to ensure timestamp difference
         $this->travel(5)->seconds();
 
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
         $result = $service->transition($task->id, ['pending'], 'ready');
 
         $this->assertTrue($result);
@@ -111,7 +111,7 @@ class TaskStateTransitionServiceTest extends TestCase
     public function test_transition_with_error_attributes(): void
     {
         $task = DelegationTask::factory()->running()->create();
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
 
         $result = $service->transition(
             $task->id,
@@ -135,7 +135,7 @@ class TaskStateTransitionServiceTest extends TestCase
     public function test_transition_through_full_lifecycle(): void
     {
         $task = DelegationTask::factory()->create(['status' => DelegationTask::STATUS_PENDING]);
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
 
         // pending -> ready
         $this->assertTrue($service->transition($task->id, [DelegationTask::STATUS_PENDING], DelegationTask::STATUS_READY));
@@ -160,7 +160,7 @@ class TaskStateTransitionServiceTest extends TestCase
 
     public function test_transition_to_cancelled_from_multiple_states(): void
     {
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
 
         // Can cancel from pending
         $task1 = DelegationTask::factory()->create(['status' => DelegationTask::STATUS_PENDING]);
@@ -189,7 +189,7 @@ class TaskStateTransitionServiceTest extends TestCase
             'contract_json' => ['key' => 'value'],
             'metadata_json' => ['custom' => 'data'],
         ]);
-        $service = new TaskStateTransitionService();
+        $service = new TaskStateTransitionService;
 
         $service->transition($task->id, ['pending'], 'ready');
 

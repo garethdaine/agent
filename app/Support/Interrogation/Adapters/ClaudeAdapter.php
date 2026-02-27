@@ -793,6 +793,143 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
     }
 
     /**
+     * Returns the JSON schema for adversarial reviewer responses.
+     *
+     * @return array<string, mixed>
+     */
+    public function reviewerSchema(): array
+    {
+        return [
+            'type' => 'object',
+            'properties' => [
+                'verdict' => [
+                    'type' => 'string',
+                    'enum' => ['pass', 'revise', 'needs_clarification'],
+                    'description' => 'Review verdict',
+                ],
+                'issues' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'type' => [
+                                'type' => 'string',
+                                'enum' => ['missing_requirement', 'contradiction', 'ambiguity', 'weak_acceptance_criteria', 'scope_drift', 'unresolved_dependency'],
+                            ],
+                            'severity' => [
+                                'type' => 'string',
+                                'enum' => ['low', 'medium', 'high', 'critical'],
+                            ],
+                            'message' => ['type' => 'string'],
+                            'evidence' => ['type' => 'string'],
+                        ],
+                        'required' => ['type', 'severity', 'message'],
+                    ],
+                ],
+                'required_changes' => [
+                    'type' => 'array',
+                    'items' => ['type' => 'string'],
+                ],
+                'clarification_questions' => [
+                    'type' => 'array',
+                    'items' => ['type' => 'string'],
+                    'maxItems' => 3,
+                ],
+                'confidence' => [
+                    'type' => 'number',
+                    'minimum' => 0,
+                    'maximum' => 1,
+                ],
+                'review_notes' => ['type' => 'string'],
+            ],
+            'required' => ['verdict', 'issues', 'confidence'],
+        ];
+    }
+
+    /**
+     * Builds the CLI command array for running an adversarial review.
+     *
+     * @return array<int, string>
+     */
+    public function buildReviewerCommand(string $projectDirectory, string $prompt): array
+    {
+        $schemaJson = json_encode($this->reviewerSchema(), JSON_UNESCAPED_SLASHES);
+
+        return [
+            $this->executable(),
+            '-p',
+            '--output-format',
+            'json',
+            '--json-schema',
+            $schemaJson !== false ? $schemaJson : '{}',
+            '--tools=Read,Glob,Grep',
+            $prompt,
+        ];
+    }
+
+    /**
+     * Parses the raw output from an adversarial review subprocess.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws \RuntimeException if the response cannot be parsed or lacks a verdict
+     */
+    public function parseReviewerResponse(string $rawOutput): array
+    {
+        $rawOutput = trim($rawOutput);
+
+        if ($rawOutput === '') {
+            throw new \RuntimeException('Failed to parse reviewer response: empty output');
+        }
+
+        // Handle stream-json format: look for verdict in multiline output
+        $lines = explode("\n", $rawOutput);
+
+        foreach (array_reverse($lines) as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+
+            $decoded = json_decode($line, true);
+            if (! is_array($decoded)) {
+                continue;
+            }
+
+            // Direct verdict payload
+            if (isset($decoded['verdict']) && is_string($decoded['verdict'])) {
+                return $decoded;
+            }
+
+            // Wrapped in result key
+            if (isset($decoded['result']) && is_array($decoded['result']) && isset($decoded['result']['verdict'])) {
+                return $decoded['result'];
+            }
+
+            // Wrapped in structured_output key
+            if (isset($decoded['structured_output']) && is_array($decoded['structured_output']) && isset($decoded['structured_output']['verdict'])) {
+                return $decoded['structured_output'];
+            }
+        }
+
+        // Try parsing entire output as single JSON object
+        $decoded = json_decode($rawOutput, true);
+        if (is_array($decoded)) {
+            if (isset($decoded['verdict']) && is_string($decoded['verdict'])) {
+                return $decoded;
+            }
+            if (isset($decoded['result']) && is_array($decoded['result']) && isset($decoded['result']['verdict'])) {
+                return $decoded['result'];
+            }
+            if (isset($decoded['structured_output']) && is_array($decoded['structured_output']) && isset($decoded['structured_output']['verdict'])) {
+                return $decoded['structured_output'];
+            }
+        }
+
+        throw new \RuntimeException('Failed to parse reviewer response: '.json_last_error_msg());
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     private function decodeBestEffortJson(string $output): ?array

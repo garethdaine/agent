@@ -1,0 +1,189 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Support\Interrogation;
+
+use App\Models\InterrogationSession;
+use App\Support\Interrogation\Adapters\ClaudeAdapter;
+use RuntimeException;
+use Symfony\Component\Process\Process;
+
+/**
+ * Orchestrates adversarial review of summary and plan artifacts.
+ *
+ * Invokes a Claude subprocess to validate generated artifacts against
+ * discovery context, then validates and normalizes the reviewer's response.
+ *
+ * @see ReviewerPayloadGuard for validation rules
+ * @see ReviewerPayloadNormalizer for normalization behavior
+ * @see ReviewerContextBuilder for context assembly
+ */
+final class AdversarialReviewerService
+{
+    private bool $testMode = false;
+
+    public function __construct(
+        private readonly ClaudeAdapter $adapter,
+        private readonly ReviewerPayloadGuard $guard,
+        private readonly ReviewerPayloadNormalizer $normalizer,
+        private readonly ReviewerContextBuilder $contextBuilder,
+    ) {}
+
+    /**
+     * Enable test mode to skip subprocess execution.
+     *
+     * When test mode is enabled, the service skips actual CLI subprocess
+     * invocation and relies on the mocked adapter's parseReviewerResponse()
+     * to return test data.
+     */
+    public function setTestMode(bool $enabled): void
+    {
+        $this->testMode = $enabled;
+    }
+
+    /**
+     * Review a summary candidate against discovery context.
+     *
+     * @param  InterrogationSession  $session  The session containing discovery context
+     * @param  array<string, mixed>  $summaryCandidate  The summary artifact to review
+     * @return array<string, mixed> Validated and normalized reviewer payload
+     *
+     * @throws \InvalidArgumentException if the reviewer payload is invalid
+     * @throws RuntimeException if subprocess execution fails
+     */
+    public function reviewSummary(
+        InterrogationSession $session,
+        array $summaryCandidate
+    ): array {
+        $context = $this->contextBuilder->buildForSummaryReview($session, $summaryCandidate);
+        $prompt = $this->buildSummaryReviewPrompt($context);
+
+        $rawOutput = $this->executeReviewer($session, $prompt);
+        $payload = $this->adapter->parseReviewerResponse($rawOutput);
+
+        $this->guard->validate($payload, 'summary');
+
+        return $this->normalizer->normalize($payload);
+    }
+
+    /**
+     * Review a plan candidate against locked summary and discovery context.
+     *
+     * @param  InterrogationSession  $session  The session containing discovery context
+     * @param  array<string, mixed>  $planCandidate  The plan artifact to review
+     * @param  array<string, mixed>  $lockedSummary  The approved summary that plan must align with
+     * @return array<string, mixed> Validated and normalized reviewer payload
+     *
+     * @throws \InvalidArgumentException if the reviewer payload is invalid (including needs_clarification verdict)
+     * @throws RuntimeException if subprocess execution fails
+     */
+    public function reviewPlan(
+        InterrogationSession $session,
+        array $planCandidate,
+        array $lockedSummary
+    ): array {
+        $context = $this->contextBuilder->buildForPlanReview($session, $planCandidate, $lockedSummary);
+        $prompt = $this->buildPlanReviewPrompt($context);
+
+        $rawOutput = $this->executeReviewer($session, $prompt);
+        $payload = $this->adapter->parseReviewerResponse($rawOutput);
+
+        // Guard will reject needs_clarification for plan reviews
+        $this->guard->validate($payload, 'plan');
+
+        return $this->normalizer->normalize($payload);
+    }
+
+    /**
+     * Execute the reviewer subprocess or return mock output in test mode.
+     *
+     * @throws RuntimeException if subprocess fails
+     */
+    private function executeReviewer(InterrogationSession $session, string $prompt): string
+    {
+        // Always call buildReviewerCommand so mocks can capture the prompt
+        $command = $this->adapter->buildReviewerCommand(
+            $session->project_directory ?? '',
+            $prompt
+        );
+
+        if ($this->testMode) {
+            // In test mode, we skip actual subprocess execution.
+            // The mock adapter's parseReviewerResponse handles response simulation.
+            // Return valid JSON structure that parseReviewerResponse can process.
+            return json_encode([
+                'verdict' => 'pass',
+                'issues' => [],
+                'confidence' => 1.0,
+            ]) ?: '{}';
+        }
+
+        $process = new Process($command);
+        $process->setWorkingDirectory($session->project_directory ?? sys_get_temp_dir());
+        $process->setTimeout((float) config('agent.interrogation.build_task_generation_timeout_seconds', 300));
+        $process->run();
+
+        if (! $process->isSuccessful()) {
+            throw new RuntimeException(
+                'Reviewer subprocess failed: '.$process->getErrorOutput()
+            );
+        }
+
+        return $process->getOutput();
+    }
+
+    /**
+     * Build the prompt for summary review.
+     *
+     * @param  array<string, mixed>  $context  Context package from ReviewerContextBuilder
+     */
+    private function buildSummaryReviewPrompt(array $context): string
+    {
+        return sprintf(
+            "You are an adversarial reviewer validating a requirements summary.\n\n".
+            "## Context\n\n".
+            "### Feature Brief\n%s\n\n".
+            "### Q&A Transcript\n%s\n\n".
+            "### Discovery Findings\n%s\n\n".
+            "### Summary Candidate\n%s\n\n".
+            "## Instructions\n\n".
+            "Review the summary candidate against the brief, Q&A, and findings.\n".
+            "Identify: missing requirements, contradictions, ambiguities, weak acceptance criteria.\n".
+            "Return verdict: pass (if acceptable), revise (if needs changes), or needs_clarification (if user input needed).\n".
+            "For needs_clarification, provide max 3 focused questions.\n".
+            'Include confidence score 0-1 and cite evidence for issues.',
+            $context['brief'] ?? '',
+            is_array($context['qa_transcript'] ?? null) ? json_encode($context['qa_transcript'], JSON_PRETTY_PRINT) : ($context['qa_transcript'] ?? ''),
+            json_encode($context['discovery_findings'] ?? [], JSON_PRETTY_PRINT),
+            json_encode($context['candidate'] ?? [], JSON_PRETTY_PRINT)
+        );
+    }
+
+    /**
+     * Build the prompt for plan review.
+     *
+     * @param  array<string, mixed>  $context  Context package from ReviewerContextBuilder
+     */
+    private function buildPlanReviewPrompt(array $context): string
+    {
+        return sprintf(
+            "You are an adversarial reviewer validating an implementation plan.\n\n".
+            "## Context\n\n".
+            "### Feature Brief\n%s\n\n".
+            "### Locked Summary\n%s\n\n".
+            "### Q&A Transcript\n%s\n\n".
+            "### Plan Candidate\n%s\n\n".
+            "## Instructions\n\n".
+            "Review the plan against the locked summary and context.\n".
+            "Identify: missing scope, contradictions with summary, weak tasks, unresolved dependencies.\n".
+            "Return verdict: pass (if acceptable) or revise (if needs changes).\n".
+            "Do NOT return needs_clarification for plan review.\n".
+            'Include confidence score 0-1 and cite evidence for issues.',
+            $context['brief'] ?? '',
+            json_encode($context['locked_summary'] ?? [], JSON_PRETTY_PRINT),
+            is_array($context['qa_transcript'] ?? null) ? json_encode($context['qa_transcript'], JSON_PRETTY_PRINT) : ($context['qa_transcript'] ?? ''),
+            json_encode($context['candidate'] ?? [], JSON_PRETTY_PRINT)
+        );
+    }
+}

@@ -3,10 +3,13 @@
 namespace App\Jobs;
 
 use App\Models\InterrogationSession;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Interrogation\AdapterFactory;
+use App\Support\Interrogation\AdversarialReviewerService;
 use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 use App\Support\Interrogation\ConversationReconstructor;
 use App\Support\Interrogation\InterrogationEventWriter;
+use App\Support\Interrogation\SessionStateTransitionService;
 use App\Support\Interrogation\SummaryPayloadNormalizer;
 use App\Support\Interrogation\SystemPromptResolver;
 use Carbon\CarbonImmutable;
@@ -33,6 +36,8 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
         ConversationReconstructor $reconstructor,
         SummaryPayloadNormalizer $summaryPayloadNormalizer,
         SystemPromptResolver $promptResolver,
+        SessionStateTransitionService $transitions,
+        FeatureFlagManager $featureFlags,
     ): void {
         $session = InterrogationSession::query()->find($this->sessionId);
 
@@ -188,6 +193,12 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
             $session->save();
 
             $writer->appendSummary($summary);
+
+            // Run adversarial review in shadow mode (logs findings but does not gate)
+            if ($featureFlags->enabled(FeatureFlagManager::ADVERSARIAL_REVIEW_ENABLED)) {
+                $this->runAdversarialReview($session, $summary, $writer);
+            }
+
             $writer->appendSystem([
                 'notice' => 'summary_ready',
                 'message' => 'Summary generated. Awaiting user confirmation.',
@@ -377,5 +388,161 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
         $process->run();
 
         return $process;
+    }
+
+    /**
+     * Run adversarial review with full verdict handling.
+     *
+     * In shadow mode (review_warn_only=true), logs findings to metadata_json
+     * and emits events but does not gate artifacts.
+     *
+     * In gating mode (review_warn_only=false):
+     * - pass: returns null (success, continue with summary persistence)
+     * - revise: returns review payload for regeneration context
+     * - needs_clarification: populates queue and returns halt signal
+     *
+     * Critical issues auto-escalate pass to revise. Low confidence pass logs
+     * warning but does not block. Max retries enforced before failure.
+     *
+     * @param  array<string, mixed>  $summaryCandidate
+     * @return array<string, mixed>|null Null on pass; review payload on revise; halt signal on clarification
+     *
+     * @throws \RuntimeException when retry limit exhausted
+     */
+    private function runAdversarialReview(
+        InterrogationSession $session,
+        array $summaryCandidate,
+        InterrogationEventWriter $writer
+    ): ?array {
+        $warnOnly = (bool) config('agent.interrogation.review_warn_only', false);
+        $maxRetries = (int) config('agent.interrogation.summary_review_max_retries', 3);
+        $lowConfidenceThreshold = (float) config('agent.interrogation.review_low_confidence_threshold', 0.6);
+
+        try {
+            $reviewerService = app(AdversarialReviewerService::class);
+            $reviewPayload = $reviewerService->reviewSummary($session, $summaryCandidate);
+
+            // Store review findings in metadata
+            $metadata = $session->metadata_json ?? [];
+            $metadata['summary'] = $metadata['summary'] ?? [];
+            $attempt = ($metadata['summary']['review_attempts'] ?? 0) + 1;
+            $metadata['summary']['review_attempts'] = $attempt;
+            $metadata['summary']['last_review'] = $reviewPayload;
+            $metadata['summary']['review_history'] = $metadata['summary']['review_history'] ?? [];
+            $metadata['summary']['review_history'][] = $reviewPayload;
+
+            $verdict = $reviewPayload['verdict'];
+            $confidence = (float) ($reviewPayload['confidence'] ?? 1.0);
+
+            // Check for critical issue auto-escalation
+            if ($verdict === 'pass' && $this->hasCriticalIssue($reviewPayload['issues'] ?? [])) {
+                $verdict = 'revise';
+            }
+
+            // Check low confidence warning (only for pass verdict after escalation check)
+            if ($verdict === 'pass' && $confidence < $lowConfidenceThreshold) {
+                $metadata['summary']['low_confidence_warning'] = true;
+            }
+
+            // Emit review event
+            $writer->appendSummaryReview([
+                'status' => $warnOnly ? 'shadow_'.$verdict : $verdict,
+                'verdict' => $verdict,
+                'attempt' => $attempt,
+                'issue_count' => count($reviewPayload['issues'] ?? []),
+                'confidence' => $confidence,
+                'shadow_mode' => $warnOnly,
+            ]);
+
+            // Shadow mode: store but don't gate
+            if ($warnOnly) {
+                $metadata['summary']['review_status'] = 'shadow_'.$verdict;
+                $session->update(['metadata_json' => $metadata]);
+
+                return null;
+            }
+
+            // Handle verdict
+            switch ($verdict) {
+                case 'pass':
+                    $metadata['summary']['review_status'] = 'passed';
+                    $session->update(['metadata_json' => $metadata]);
+
+                    return null; // Success, continue with summary persistence
+
+                case 'revise':
+                    if ($attempt >= $maxRetries) {
+                        $metadata['summary']['review_status'] = 'failed';
+                        $session->update(['metadata_json' => $metadata]);
+                        throw new \RuntimeException('Summary review exhausted retries');
+                    }
+                    $metadata['summary']['review_status'] = 'revising';
+                    $session->update(['metadata_json' => $metadata]);
+
+                    // Return required_changes for regeneration
+                    return $reviewPayload;
+
+                case 'needs_clarification':
+                    $questions = array_slice($reviewPayload['clarification_questions'] ?? [], 0, 3);
+                    $this->insertClarificationQuestions($session, $questions, $metadata);
+                    $metadata['summary']['review_status'] = 'clarification_needed';
+                    $session->update(['metadata_json' => $metadata]);
+
+                    return ['halt' => true, 'reason' => 'clarification_needed'];
+            }
+
+        } catch (\Throwable $e) {
+            // In shadow mode, log error but don't fail the job
+            if ($warnOnly) {
+                report($e);
+
+                // Store error in metadata for debugging
+                $metadata = $session->metadata_json ?? [];
+                $metadata['summary'] = $metadata['summary'] ?? [];
+                $metadata['summary']['review_error'] = [
+                    'message' => $e->getMessage(),
+                    'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                ];
+                $session->update(['metadata_json' => $metadata]);
+
+                return null;
+            }
+
+            throw $e;
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if any issue has critical severity.
+     *
+     * @param  array<int, array<string, mixed>>  $issues
+     */
+    private function hasCriticalIssue(array $issues): bool
+    {
+        foreach ($issues as $issue) {
+            if (strtolower((string) ($issue['severity'] ?? '')) === 'critical') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Insert clarification questions at front of summary open question queue.
+     *
+     * @param  array<int, string>  $questions
+     * @param  array<string, mixed>  &$metadata
+     */
+    private function insertClarificationQuestions(InterrogationSession $session, array $questions, array &$metadata): void
+    {
+        // Insert at front of queue (high priority)
+        $queue = $metadata['summary_open_question_queue'] ?? ['questions' => [], 'active' => false];
+        $newQuestions = array_map(fn ($q) => ['text' => $q, 'source' => 'reviewer'], $questions);
+        $queue['questions'] = array_merge($newQuestions, $queue['questions'] ?? []);
+        $queue['active'] = true;
+        $metadata['summary_open_question_queue'] = $queue;
     }
 }

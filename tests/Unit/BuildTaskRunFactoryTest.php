@@ -58,9 +58,14 @@ class BuildTaskRunFactoryTest extends TestCase
         $this->assertSame((string) $session->id, data_get($job->env_json, 'INTERROGATION_SESSION_ID'));
         $this->assertSame((string) $task->id, data_get($job->env_json, 'INTERROGATION_BUILD_TASK_ID'));
         $this->assertSame('1', data_get($job->env_json, 'INTERROGATION_DB_ISOLATED'));
-        $this->assertSame('sqlite', data_get($job->env_json, 'DB_CONNECTION'));
+        $this->assertSame('pgsql_testing', data_get($job->env_json, 'DB_CONNECTION'));
         $this->assertStringContainsString('/storage/framework/interrogation-build/session-'.$session->id.'.sqlite', (string) data_get($job->env_json, 'DB_DATABASE'));
         $this->assertFileExists((string) data_get($job->env_json, 'DB_DATABASE'));
+        $this->assertNotSame(
+            (string) data_get($job->env_json, 'DB_DATABASE'),
+            (string) data_get($job->env_json, 'TEST_DB_DATABASE'),
+        );
+        $this->assertStringContainsString('test', strtolower((string) data_get($job->env_json, 'TEST_DB_DATABASE')));
 
         $markdown = @file_get_contents((string) $job->task_markdown_path);
         $this->assertIsString($markdown);
@@ -136,7 +141,8 @@ class BuildTaskRunFactoryTest extends TestCase
         $this->assertIsString($markdown);
         $this->assertStringContainsString('## Mandatory Workflow', $markdown);
         $this->assertStringContainsString('Write or update tests first', $markdown);
-        $this->assertStringContainsString('tests are runnable with `php artisan test`', $markdown);
+        $this->assertStringContainsString('run tests with `php artisan test` (or `composer test` when full preflight is needed)', $markdown);
+        $this->assertStringContainsString('DB_CONNECTION=pgsql_testing', $markdown);
         $this->assertStringContainsString('Do not emit generic PostgreSQL disclaimers', $markdown);
         $this->assertStringContainsString('## Code Field Rules', $markdown);
         $this->assertStringContainsString('Do not write code before stating assumptions', $markdown);

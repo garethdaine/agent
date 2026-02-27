@@ -3,6 +3,18 @@ import { ref, onMounted } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
+import Card from '@/Components/ui/Card.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Table from '@/Components/ui/Table.vue';
+import TableHeader from '@/Components/ui/TableHeader.vue';
+import TableBody from '@/Components/ui/TableBody.vue';
+import TableRow from '@/Components/ui/TableRow.vue';
+import TableHead from '@/Components/ui/TableHead.vue';
+import TableCell from '@/Components/ui/TableCell.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Button from '@/Components/ui/Button.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
+import { Plus, Pencil, Trash2, Power, ChevronLeft, ChevronRight, User } from 'lucide-vue-next';
 
 const profiles = ref([]);
 const loading = ref(true);
@@ -60,79 +72,121 @@ onMounted(() => load());
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Delegatee Profiles</h2>
-                <Link :href="route('agent.delegation.profiles.create')" class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                    Create Profile
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Delegatee Profiles</h2>
+                <Link :href="route('agent.delegation.profiles.create')">
+                    <Button>
+                        <Plus class="mr-2 h-4 w-4" />
+                        Create Profile
+                    </Button>
                 </Link>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-7xl space-y-4">
-                <p v-if="error" class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div class="mx-auto max-w-[1440px] space-y-4">
+                <p v-if="error" class="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {{ error }}
                 </p>
 
-                <div class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-900">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Name</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Runner Type</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Capabilities</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Active</th>
-                                <th class="px-4 py-3" />
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            <tr v-if="loading">
-                                <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">Loading...</td>
-                            </tr>
-                            <tr v-for="profile in profiles" :key="profile.id">
-                                <td class="px-4 py-3 text-sm">
-                                    <div class="font-medium text-gray-900 dark:text-gray-100">{{ profile.name }}</div>
-                                    <div v-if="profile.description" class="text-xs text-gray-500 dark:text-gray-400">{{ profile.description }}</div>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ profile.runner_type }}</td>
-                                <td class="px-4 py-3 text-sm">
-                                    <div class="flex flex-wrap gap-1">
-                                        <span
-                                            v-for="cap in profile.capabilities"
-                                            :key="cap.id"
-                                            class="rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700 dark:bg-blue-900 dark:text-blue-200"
-                                        >
-                                            {{ cap.slug }}
-                                        </span>
-                                        <span v-if="!profile.capabilities || profile.capabilities.length === 0" class="text-gray-500 dark:text-gray-400">-</span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 text-sm">
-                                    <span :class="profile.is_active ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'">
-                                        {{ profile.is_active ? 'Yes' : 'No' }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-right text-xs">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <button class="rounded border border-gray-300 px-2 py-1 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" @click="toggleActive(profile.id)">
-                                            {{ profile.is_active ? 'Deactivate' : 'Activate' }}
-                                        </button>
-                                        <Link :href="route('agent.delegation.profiles.edit', profile.id)" class="rounded border border-gray-300 px-2 py-1 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50">Edit</Link>
-                                        <button class="rounded border border-red-300 px-2 py-1 text-red-700 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20" @click="deleteProfile(profile.id)">Delete</button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr v-if="!loading && profiles.length === 0">
-                                <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No profiles found.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <Card>
+                    <CardContent class="p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Runner Type</TableHead>
+                                    <TableHead>Capabilities</TableHead>
+                                    <TableHead>Active</TableHead>
+                                    <TableHead class="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow v-if="loading">
+                                    <TableCell colspan="5" class="py-8">
+                                        <div class="flex flex-col items-center justify-center gap-4">
+                                            <Skeleton class="h-4 w-48" />
+                                            <Skeleton class="h-4 w-32" />
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                                <TableRow v-for="profile in profiles" :key="profile.id">
+                                    <TableCell>
+                                        <div class="flex items-center gap-2">
+                                            <User class="h-4 w-4 text-muted-foreground" />
+                                            <div>
+                                                <div class="font-medium text-foreground">{{ profile.name }}</div>
+                                                <div v-if="profile.description" class="text-xs text-muted-foreground">{{ profile.description }}</div>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell class="text-muted-foreground">{{ profile.runner_type }}</TableCell>
+                                    <TableCell>
+                                        <div class="flex flex-wrap gap-1">
+                                            <Badge
+                                                v-for="cap in profile.capabilities"
+                                                :key="cap.id"
+                                                variant="secondary"
+                                            >
+                                                {{ cap.slug }}
+                                            </Badge>
+                                            <span v-if="!profile.capabilities || profile.capabilities.length === 0" class="text-muted-foreground">-</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge :variant="profile.is_active ? 'default' : 'outline'">
+                                            {{ profile.is_active ? 'Yes' : 'No' }}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell class="text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <Button variant="outline" size="sm" @click="toggleActive(profile.id)">
+                                                <Power class="mr-1 h-3 w-3" />
+                                                {{ profile.is_active ? 'Deactivate' : 'Activate' }}
+                                            </Button>
+                                            <Link :href="route('agent.delegation.profiles.edit', profile.id)">
+                                                <Button variant="outline" size="sm">
+                                                    <Pencil class="mr-1 h-3 w-3" />
+                                                    Edit
+                                                </Button>
+                                            </Link>
+                                            <Button variant="outline" size="sm" class="text-destructive hover:text-destructive" @click="deleteProfile(profile.id)">
+                                                <Trash2 class="mr-1 h-3 w-3" />
+                                                Delete
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                                <TableRow v-if="!loading && profiles.length === 0">
+                                    <TableCell colspan="5" class="py-8 text-center text-muted-foreground">
+                                        No profiles found.
+                                    </TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
 
-                <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                <div class="flex items-center justify-between text-sm text-muted-foreground">
                     <p>Showing page {{ meta.current_page }} of {{ meta.last_page }} ({{ meta.total }} total)</p>
                     <div class="flex gap-2">
-                        <button class="rounded border border-gray-300 px-3 py-1 text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100" :disabled="meta.current_page <= 1" @click="setPage(meta.current_page - 1)">Prev</button>
-                        <button class="rounded border border-gray-300 px-3 py-1 text-gray-700 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100" :disabled="meta.current_page >= meta.last_page" @click="setPage(meta.current_page + 1)">Next</button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            :disabled="meta.current_page <= 1"
+                            @click="setPage(meta.current_page - 1)"
+                        >
+                            <ChevronLeft class="mr-1 h-4 w-4" />
+                            Prev
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            :disabled="meta.current_page >= meta.last_page"
+                            @click="setPage(meta.current_page + 1)"
+                        >
+                            Next
+                            <ChevronRight class="ml-1 h-4 w-4" />
+                        </Button>
                     </div>
                 </div>
             </div>

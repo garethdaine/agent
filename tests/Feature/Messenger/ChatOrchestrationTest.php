@@ -3,8 +3,6 @@
 namespace Tests\Feature\Messenger;
 
 use App\DTOs\Messenger\ActionResult;
-use App\DTOs\Messenger\ParsedAction;
-use App\DTOs\Messenger\PolicyValidationResult;
 use App\Enums\Messenger\ChatActionType;
 use App\Jobs\Messenger\ProcessChatIntent;
 use App\Models\ChatAction;
@@ -14,8 +12,6 @@ use App\Models\ConnectorAccount;
 use App\Models\MessengerIdentityLink;
 use App\Models\PendingConfirmation;
 use App\Models\User;
-use App\Services\Messenger\ActionHandlers\JobsListHandler;
-use App\Services\Messenger\ActionHandlers\RunsStopHandler;
 use App\Services\Messenger\ChatActionExecutor;
 use App\Services\Messenger\ChatActionPolicyValidator;
 use App\Services\Messenger\ChatIntentParser;
@@ -23,7 +19,6 @@ use App\Services\Messenger\ChatResponseFormatter;
 use App\Services\Messenger\ConfirmationManager;
 use App\Support\Messenger\ConnectorManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class ChatOrchestrationTest extends TestCase
@@ -511,7 +506,8 @@ class ChatOrchestrationTest extends TestCase
         );
 
         // Create a mock ConnectorManager that will be passed directly
-        $connectorManagerMock = new class($adapterMock) extends ConnectorManager {
+        $connectorManagerMock = new class($adapterMock) extends ConnectorManager
+        {
             private $adapter;
 
             public function __construct($adapter)

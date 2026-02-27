@@ -69,7 +69,7 @@ class AiCriticCompletedJob implements ShouldQueue
         $output = $this->getRunOutput($run);
 
         // Parse evidence using hybrid format
-        $aiCriticStep = new AiCriticStep();
+        $aiCriticStep = new AiCriticStep;
         $evidence = $aiCriticStep->parseEvidence($output);
 
         // Determine verdict from evidence
@@ -107,7 +107,7 @@ class AiCriticCompletedJob implements ShouldQueue
         }
 
         // If passed, check if there are more steps and resume pipeline
-        $pipeline = new VerificationPipeline();
+        $pipeline = new VerificationPipeline;
         $nextStep = $verificationResult->step_order + 1;
 
         // Update current step to continue from next

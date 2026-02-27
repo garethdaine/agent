@@ -192,6 +192,12 @@ Full coverage from the initial build:
 
 ## Build Lifecycle (Phases 5–6)
 
+> **Status (2026-02-25):** Build lifecycle fully proven. Discovery session 2 (Delegation Engine)
+> successfully generated 12 build tasks, 1 additional task was added manually via API, and all 13
+> tasks executed to completion. The full wizard flow (Setup → Discovery → Interrogation → Summary →
+> Planning → Rules → Tasks → Build) has been validated end-to-end. Minor hardening remaining
+> around edge cases and error recovery UX.
+
 After plan approval, build execution runs on top of persisted `interrogation_build_tasks`.
 
 ### Build API Endpoints

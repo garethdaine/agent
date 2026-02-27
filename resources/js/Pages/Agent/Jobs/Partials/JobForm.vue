@@ -1,5 +1,7 @@
 <script setup>
 import { computed, reactive, watch } from 'vue';
+import Button from '@/Components/ui/Button.vue';
+import Card from '@/Components/ui/Card.vue';
 
 const props = defineProps({
     modelValue: {
@@ -496,43 +498,43 @@ const submit = () => {
 </script>
 
 <template>
-    <form class="space-y-6 text-gray-900 dark:text-gray-100" @submit.prevent="submit">
-        <div v-if="errors._form" class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+    <form class="space-y-6 text-foreground" @submit.prevent="submit">
+        <div v-if="errors._form" class="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {{ Array.isArray(errors._form) ? errors._form[0] : errors._form }}
         </div>
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Name</label>
-                <input v-model="form.name" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">A human-friendly label for this job in the UI.</p>
-                <p v-if="errors.name" class="mt-1 text-sm text-red-600">{{ errors.name[0] }}</p>
+                <label class="block text-sm font-medium text-foreground">Name</label>
+                <input v-model="form.name" type="text" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring" />
+                <p class="mt-1 text-xs text-muted-foreground">A human-friendly label for this job in the UI.</p>
+                <p v-if="errors.name" class="mt-1 text-sm text-destructive">{{ errors.name[0] }}</p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Runner Type</label>
-                <select v-model="form.runner_type" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                <label class="block text-sm font-medium text-foreground">Runner Type</label>
+                <select v-model="form.runner_type" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring">
                     <option value="claude">claude</option>
                     <option value="codex">codex</option>
                     <option value="custom">custom</option>
                 </select>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Chooses the executable policy and default command template.</p>
-                <p v-if="errors.runner_type" class="mt-1 text-sm text-red-600">{{ errors.runner_type[0] }}</p>
+                <p class="mt-1 text-xs text-muted-foreground">Chooses the executable policy and default command template.</p>
+                <p v-if="errors.runner_type" class="mt-1 text-sm text-destructive">{{ errors.runner_type[0] }}</p>
             </div>
 
-            <div class="lg:col-span-2 rounded-md border border-gray-200 p-4 dark:border-gray-700">
+            <div class="lg:col-span-2 rounded-md border border-border p-4">
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <div>
-                        <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Schedule</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Use Basic mode for guided scheduling or Advanced mode to type a cron expression.</p>
+                        <p class="text-sm font-medium text-foreground">Schedule</p>
+                        <p class="text-xs text-muted-foreground">Use Basic mode for guided scheduling or Advanced mode to type a cron expression.</p>
                     </div>
                     <div class="flex items-center gap-4 text-sm">
                         <label class="inline-flex items-center gap-2">
-                            <input v-model="schedule.mode" type="radio" value="basic" class="border-gray-300" />
+                            <input v-model="schedule.mode" type="radio" value="basic" class="border-input" />
                             Basic
                         </label>
                         <label class="inline-flex items-center gap-2">
-                            <input v-model="schedule.mode" type="radio" value="advanced" class="border-gray-300" />
+                            <input v-model="schedule.mode" type="radio" value="advanced" class="border-input" />
                             Advanced
                         </label>
                     </div>
@@ -540,8 +542,8 @@ const submit = () => {
 
                 <div v-if="schedule.mode === 'basic'" class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Frequency</label>
-                        <select v-model="schedule.frequency" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <label class="block text-sm font-medium text-foreground">Frequency</label>
+                        <select v-model="schedule.frequency" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring">
                             <option value="minute_interval">Every N Minutes</option>
                             <option value="hourly">Every N Hours</option>
                             <option value="daily">Daily</option>
@@ -551,162 +553,162 @@ const submit = () => {
                     </div>
 
                     <div v-if="schedule.frequency === 'minute_interval'">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Every</label>
-                        <select v-model="schedule.everyMinutes" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <label class="block text-sm font-medium text-foreground">Every</label>
+                        <select v-model="schedule.everyMinutes" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring">
                             <option v-for="n in minuteIntervals" :key="`min-${n}`" :value="n">{{ n }} minute<span v-if="n !== 1">s</span></option>
                         </select>
                     </div>
 
                     <div v-if="schedule.frequency === 'hourly'">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Every</label>
-                        <select v-model="schedule.everyHours" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <label class="block text-sm font-medium text-foreground">Every</label>
+                        <select v-model="schedule.everyHours" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring">
                             <option v-for="n in hourIntervals" :key="n" :value="n">{{ n }} hour<span v-if="n !== 1">s</span></option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Hour (24h)</label>
+                        <label class="block text-sm font-medium text-foreground">Hour (24h)</label>
                         <select
                             v-model="schedule.hour"
                             :disabled="schedule.frequency === 'hourly' || schedule.frequency === 'minute_interval'"
-                            class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 disabled:opacity-60"
+                            class="mt-1 w-full rounded-md border border-input bg-input-background disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-ring"
                         >
                             <option v-for="h in hours" :key="`h-${h}`" :value="h">{{ String(h).padStart(2, '0') }}</option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Minute</label>
+                        <label class="block text-sm font-medium text-foreground">Minute</label>
                         <select
                             v-model="schedule.minute"
                             :disabled="schedule.frequency === 'minute_interval'"
-                            class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 disabled:opacity-60"
+                            class="mt-1 w-full rounded-md border border-input bg-input-background disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-ring"
                         >
                             <option v-for="m in minutes" :key="`m-${m}`" :value="m">{{ String(m).padStart(2, '0') }}</option>
                         </select>
                     </div>
 
                     <div v-if="schedule.frequency === 'weekly'">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Day of Week</label>
-                        <select v-model="schedule.weekday" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <label class="block text-sm font-medium text-foreground">Day of Week</label>
+                        <select v-model="schedule.weekday" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring">
                             <option v-for="day in weekdays" :key="day.value" :value="day.value">{{ day.label }}</option>
                         </select>
                     </div>
 
                     <div v-if="schedule.frequency === 'monthly'">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Day of Month</label>
-                        <select v-model="schedule.monthDay" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <label class="block text-sm font-medium text-foreground">Day of Month</label>
+                        <select v-model="schedule.monthDay" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring">
                             <option v-for="day in monthDays" :key="`dom-${day}`" :value="day">{{ day }}</option>
                         </select>
                     </div>
 
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Generated Cron Expression</label>
-                        <input :value="form.cron_expression" type="text" readonly class="mt-1 w-full rounded-md border-gray-300 bg-gray-50 font-mono text-sm dark:border-gray-700 dark:bg-gray-900" />
+                        <label class="block text-sm font-medium text-foreground">Generated Cron Expression</label>
+                        <input :value="form.cron_expression" type="text" readonly class="mt-1 w-full rounded-md border border-input bg-muted font-mono text-sm" />
                     </div>
                 </div>
 
                 <div v-else>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Cron Expression</label>
-                    <input v-model="form.cron_expression" type="text" class="mt-1 w-full rounded-md border-gray-300 font-mono dark:border-gray-700 dark:bg-gray-900" />
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">5-part numeric cron. Supports numbers, <code>*</code>, ranges, lists, and step values.</p>
+                    <label class="block text-sm font-medium text-foreground">Cron Expression</label>
+                    <input v-model="form.cron_expression" type="text" class="mt-1 w-full rounded-md border border-input bg-input-background font-mono focus-visible:ring-2 focus-visible:ring-ring" />
+                    <p class="mt-1 text-xs text-muted-foreground">5-part numeric cron. Supports numbers, <code>*</code>, ranges, lists, and step values.</p>
                 </div>
 
-                <p v-if="errors.cron_expression" class="mt-2 text-sm text-red-600">{{ errors.cron_expression[0] }}</p>
+                <p v-if="errors.cron_expression" class="mt-2 text-sm text-destructive">{{ errors.cron_expression[0] }}</p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Timezone</label>
-                <input v-model="form.timezone" type="text" list="timezone-suggestions" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
+                <label class="block text-sm font-medium text-foreground">Timezone</label>
+                <input v-model="form.timezone" type="text" list="timezone-suggestions" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring" />
                 <datalist id="timezone-suggestions">
                     <option v-for="tz in timezoneSuggestions" :key="tz" :value="tz" />
                 </datalist>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">IANA timezone used to evaluate the schedule (for example, <code>America/New_York</code>).</p>
-                <p v-if="errors.timezone" class="mt-1 text-sm text-red-600">{{ errors.timezone[0] }}</p>
+                <p class="mt-1 text-xs text-muted-foreground">IANA timezone used to evaluate the schedule (for example, <code>America/New_York</code>).</p>
+                <p v-if="errors.timezone" class="mt-1 text-sm text-destructive">{{ errors.timezone[0] }}</p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Max Runtime Seconds</label>
-                <input v-model="form.max_runtime_seconds" type="number" min="10" max="86400" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Hard timeout for a single run. The runner will terminate the process after this limit.</p>
-                <p v-if="errors.max_runtime_seconds" class="mt-1 text-sm text-red-600">{{ errors.max_runtime_seconds[0] }}</p>
+                <label class="block text-sm font-medium text-foreground">Max Runtime Seconds</label>
+                <input v-model="form.max_runtime_seconds" type="number" min="10" max="86400" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring" />
+                <p class="mt-1 text-xs text-muted-foreground">Hard timeout for a single run. The runner will terminate the process after this limit.</p>
+                <p v-if="errors.max_runtime_seconds" class="mt-1 text-sm text-destructive">{{ errors.max_runtime_seconds[0] }}</p>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Cooldown Seconds</label>
-                <input v-model="form.cooldown_seconds" type="number" min="0" max="86400" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Minimum wait after the last finished non-skipped run before a scheduled run can start.</p>
-                <p v-if="errors.cooldown_seconds" class="mt-1 text-sm text-red-600">{{ errors.cooldown_seconds[0] }}</p>
+                <label class="block text-sm font-medium text-foreground">Cooldown Seconds</label>
+                <input v-model="form.cooldown_seconds" type="number" min="0" max="86400" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring" />
+                <p class="mt-1 text-xs text-muted-foreground">Minimum wait after the last finished non-skipped run before a scheduled run can start.</p>
+                <p v-if="errors.cooldown_seconds" class="mt-1 text-sm text-destructive">{{ errors.cooldown_seconds[0] }}</p>
             </div>
 
-            <div class="lg:col-span-2 rounded-md border border-gray-200 p-4 dark:border-gray-700">
+            <div class="lg:col-span-2 rounded-md border border-border p-4">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <p class="text-sm font-medium text-gray-700 dark:text-gray-200">Task Prompt Source</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Choose a markdown file path or write markdown directly.</p>
+                        <p class="text-sm font-medium text-foreground">Task Prompt Source</p>
+                        <p class="text-xs text-muted-foreground">Choose a markdown file path or write markdown directly.</p>
                     </div>
                     <div class="flex items-center gap-4 text-sm">
                         <label class="inline-flex items-center gap-2">
-                            <input v-model="taskSource.mode" type="radio" value="path" class="border-gray-300" />
+                            <input v-model="taskSource.mode" type="radio" value="path" class="border-input" />
                             File Path
                         </label>
                         <label class="inline-flex items-center gap-2">
-                            <input v-model="taskSource.mode" type="radio" value="inline" class="border-gray-300" />
+                            <input v-model="taskSource.mode" type="radio" value="inline" class="border-input" />
                             Inline Markdown
                         </label>
                     </div>
                 </div>
 
                 <div v-if="taskSource.mode === 'path'" class="mt-3">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Task Markdown Path</label>
-                    <input v-model="form.task_markdown_path" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Absolute path to an existing markdown task/prompt file.</p>
-                    <p v-if="errors.task_markdown_path" class="mt-1 text-sm text-red-600">{{ errors.task_markdown_path[0] }}</p>
+                    <label class="block text-sm font-medium text-foreground">Task Markdown Path</label>
+                    <input v-model="form.task_markdown_path" type="text" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring" />
+                    <p class="mt-1 text-xs text-muted-foreground">Absolute path to an existing markdown task/prompt file.</p>
+                    <p v-if="errors.task_markdown_path" class="mt-1 text-sm text-destructive">{{ errors.task_markdown_path[0] }}</p>
                 </div>
 
                 <div v-else class="mt-3">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Task Markdown Editor</label>
+                    <label class="block text-sm font-medium text-foreground">Task Markdown Editor</label>
                     <textarea
                         v-model="form.task_markdown_content"
                         rows="12"
-                        class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm dark:border-gray-700 dark:bg-gray-900"
+                        class="mt-1 w-full rounded-md border border-input bg-input-background font-mono text-sm focus-visible:ring-2 focus-visible:ring-ring"
                         placeholder="# Task title&#10;&#10;Describe exactly what the agent should do."
                     />
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Markdown text is persisted into a managed file path automatically.</p>
-                    <p v-if="errors.task_markdown_content" class="mt-1 text-sm text-red-600">{{ errors.task_markdown_content[0] }}</p>
+                    <p class="mt-1 text-xs text-muted-foreground">Markdown text is persisted into a managed file path automatically.</p>
+                    <p v-if="errors.task_markdown_content" class="mt-1 text-sm text-destructive">{{ errors.task_markdown_content[0] }}</p>
                 </div>
             </div>
 
             <div class="lg:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Working Directory</label>
-                <input v-model="form.working_directory" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <label class="block text-sm font-medium text-foreground">Working Directory</label>
+                <input v-model="form.working_directory" type="text" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring" />
+                <p class="mt-1 text-xs text-muted-foreground">
                     Absolute directory where the command will execute. Paths with spaces are supported. If this path is outside allowed bases, add its parent via <code>AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES</code> in <code>.env</code>.
                 </p>
-                <p v-if="errors.working_directory" class="mt-1 text-sm text-red-600">{{ errors.working_directory[0] }}</p>
+                <p v-if="errors.working_directory" class="mt-1 text-sm text-destructive">{{ errors.working_directory[0] }}</p>
             </div>
 
-            <div class="lg:col-span-2 rounded-md border border-gray-200 p-4 dark:border-gray-700">
+            <div class="lg:col-span-2 rounded-md border border-border p-4">
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Command Builder Preset</label>
-                        <select v-model="templateBuilder.preset" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900">
+                        <label class="block text-sm font-medium text-foreground">Command Builder Preset</label>
+                        <select v-model="templateBuilder.preset" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring">
                             <option v-for="option in presetOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                         </select>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Generate a safe command template from runner-aware options.</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        <p class="mt-1 text-xs text-muted-foreground">Generate a safe command template from runner-aware options.</p>
+                        <p class="mt-1 text-xs text-muted-foreground">
                             Base format: <code>{{ runnerCommandHint }}</code>
                         </p>
                     </div>
 
-                    <div class="rounded-md border border-gray-200 p-3 dark:border-gray-700">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Permission Profile</p>
+                    <div class="rounded-md border border-border p-3">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Permission Profile</p>
                         <div v-if="permissionProfileOptions.length > 0" class="mt-2 space-y-2">
-                            <select v-model="templateBuilder.permissionProfile" class="w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900">
+                            <select v-model="templateBuilder.permissionProfile" class="w-full rounded-md border border-input bg-input-background text-sm focus-visible:ring-2 focus-visible:ring-ring">
                                 <option v-for="option in permissionProfileOptions" :key="`perm-${option.value}`" :value="option.value">{{ option.label }}</option>
                             </select>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ selectedPermissionProfile?.description }}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <p class="text-xs text-muted-foreground">{{ selectedPermissionProfile?.description }}</p>
+                            <p class="text-xs text-muted-foreground">
                                 Active flags:
                                 <span v-if="(selectedPermissionProfile?.tokens?.length ?? 0) === 0">none</span>
                                 <span v-else class="font-mono">{{ selectedPermissionProfile.tokens.join(' ') }}</span>
@@ -717,19 +719,19 @@ const submit = () => {
                         <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Optional Placeholder Tokens</p>
                         <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
                             <label class="inline-flex items-center gap-2">
-                                <input v-model="templateBuilder.includeWorkingDirectory" type="checkbox" class="rounded border-gray-300" />
+                                <input v-model="templateBuilder.includeWorkingDirectory" type="checkbox" class="rounded border-input" />
                                 <span>&#123;&#123;working_directory&#125;&#125;</span>
                             </label>
                             <label class="inline-flex items-center gap-2">
-                                <input v-model="templateBuilder.includeRunId" type="checkbox" class="rounded border-gray-300" />
+                                <input v-model="templateBuilder.includeRunId" type="checkbox" class="rounded border-input" />
                                 <span>&#123;&#123;run_id&#125;&#125;</span>
                             </label>
                             <label class="inline-flex items-center gap-2">
-                                <input v-model="templateBuilder.includeJobId" type="checkbox" class="rounded border-gray-300" />
+                                <input v-model="templateBuilder.includeJobId" type="checkbox" class="rounded border-input" />
                                 <span>&#123;&#123;job_id&#125;&#125;</span>
                             </label>
                             <label class="inline-flex items-center gap-2">
-                                <input v-model="templateBuilder.includeJobName" type="checkbox" class="rounded border-gray-300" />
+                                <input v-model="templateBuilder.includeJobName" type="checkbox" class="rounded border-input" />
                                 <span>&#123;&#123;job_name&#125;&#125;</span>
                             </label>
                         </div>
@@ -737,17 +739,17 @@ const submit = () => {
                 </div>
 
                 <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Generated Template Preview</label>
-                    <input :value="generatedTemplate" type="text" readonly class="mt-1 w-full rounded-md border-gray-300 bg-gray-50 font-mono text-sm dark:border-gray-700 dark:bg-gray-900" />
+                    <label class="block text-sm font-medium text-foreground">Generated Template Preview</label>
+                    <input :value="generatedTemplate" type="text" readonly class="mt-1 w-full rounded-md border border-input bg-muted font-mono text-sm" />
                     <div class="mt-2 flex flex-wrap items-center gap-2">
-                        <button type="button" class="rounded border border-indigo-600 px-2 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300" @click="applyGeneratedTemplate">
+                        <button type="button" class="rounded border border-primary px-2 py-1 text-xs font-semibold text-primary" @click="applyGeneratedTemplate">
                             Apply Generated Template
                         </button>
                         <button
                             v-for="token in permissionTokenOptions"
                             :key="`token-${token}`"
                             type="button"
-                            class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300"
+                            class="rounded border border-warning px-2 py-1 text-xs text-warning hover:bg-warning/10"
                             @click="appendTokenToTemplate(token)"
                         >
                             Insert {{ token }}
@@ -756,7 +758,7 @@ const submit = () => {
                             v-for="placeholder in PLACEHOLDER_OPTIONS"
                             :key="placeholder"
                             type="button"
-                            class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200"
+                            class="rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
                             @click="appendPlaceholderToTemplate(placeholder)"
                         >
                             Insert {{ placeholder }}
@@ -766,42 +768,38 @@ const submit = () => {
             </div>
 
             <div class="lg:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Command Template (optional for claude/codex)</label>
-                <input v-model="form.command_template" type="text" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <label class="block text-sm font-medium text-foreground">Command Template (optional for claude/codex)</label>
+                <input v-model="form.command_template" type="text" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring" />
+                <p class="mt-1 text-xs text-muted-foreground">
                     Optional command override. Leave empty to use runner defaults. For paths containing spaces, prefer placeholders like <code>&#123;&#123;task_markdown_path&#125;&#125;</code> and <code>&#123;&#123;working_directory&#125;&#125;</code> so the backend applies safe tokenization.
                 </p>
-                <p v-if="errors.command_template" class="mt-1 text-sm text-red-600">{{ errors.command_template[0] }}</p>
+                <p v-if="errors.command_template" class="mt-1 text-sm text-destructive">{{ errors.command_template[0] }}</p>
             </div>
 
             <div class="lg:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Description</label>
-                <textarea v-model="form.description" rows="3" class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional free-text notes about what this job does.</p>
-                <p v-if="errors.description" class="mt-1 text-sm text-red-600">{{ errors.description[0] }}</p>
+                <label class="block text-sm font-medium text-foreground">Description</label>
+                <textarea v-model="form.description" rows="3" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring" />
+                <p class="mt-1 text-xs text-muted-foreground">Optional free-text notes about what this job does.</p>
+                <p v-if="errors.description" class="mt-1 text-sm text-destructive">{{ errors.description[0] }}</p>
             </div>
 
             <div class="lg:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">env_json</label>
-                <textarea v-model="form.env_json_text" rows="8" class="mt-1 w-full rounded-md border-gray-300 font-mono text-sm dark:border-gray-700 dark:bg-gray-900" />
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional environment variable overrides as JSON object. Restricted by security policy.</p>
-                <p v-if="errors.env_json" class="mt-1 text-sm text-red-600">{{ errors.env_json[0] }}</p>
+                <label class="block text-sm font-medium text-foreground">env_json</label>
+                <textarea v-model="form.env_json_text" rows="8" class="mt-1 w-full rounded-md border border-input bg-input-background font-mono text-sm focus-visible:ring-2 focus-visible:ring-ring" />
+                <p class="mt-1 text-xs text-muted-foreground">Optional environment variable overrides as JSON object. Restricted by security policy.</p>
+                <p v-if="errors.env_json" class="mt-1 text-sm text-destructive">{{ errors.env_json[0] }}</p>
             </div>
 
             <div class="flex items-center gap-2">
-                <input id="is_enabled" v-model="form.is_enabled" type="checkbox" class="rounded border-gray-300" />
-                <label for="is_enabled" class="text-sm text-gray-700 dark:text-gray-200">Enabled</label>
+                <input id="is_enabled" v-model="form.is_enabled" type="checkbox" class="rounded border-input" />
+                <label for="is_enabled" class="text-sm text-foreground">Enabled</label>
             </div>
         </div>
 
         <div class="flex items-center justify-end gap-3">
-            <button
-                type="submit"
-                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="isSubmitting"
-            >
+            <Button type="submit" :disabled="isSubmitting">
                 {{ submitLabel }}
-            </button>
+            </Button>
         </div>
     </form>
 </template>

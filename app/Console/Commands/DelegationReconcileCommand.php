@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Delegation\DelegationReconciler;
 use Illuminate\Console\Command;
 
@@ -33,9 +34,9 @@ class DelegationReconcileCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(DelegationReconciler $reconciler): int
+    public function handle(DelegationReconciler $reconciler, FeatureFlagManager $featureFlags): int
     {
-        if (! config('delegation.enabled', false)) {
+        if (! $featureFlags->enabled(FeatureFlagManager::DELEGATION_ENABLED)) {
             $this->info('Delegation feature is disabled. Skipping reconciliation.');
 
             return self::SUCCESS;

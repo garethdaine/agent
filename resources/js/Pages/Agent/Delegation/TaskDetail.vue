@@ -3,6 +3,20 @@ import { ref, onMounted } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Table from '@/Components/ui/Table.vue';
+import TableHeader from '@/Components/ui/TableHeader.vue';
+import TableBody from '@/Components/ui/TableBody.vue';
+import TableRow from '@/Components/ui/TableRow.vue';
+import TableHead from '@/Components/ui/TableHead.vue';
+import TableCell from '@/Components/ui/TableCell.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Button from '@/Components/ui/Button.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
+import { ArrowLeft, ClipboardCheck } from 'lucide-vue-next';
 
 const props = defineProps({
     graphId: {
@@ -33,21 +47,21 @@ const load = async () => {
     }
 };
 
-const statusBadgeClass = (status) => {
-    const classes = {
-        pending: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
-        blocked: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200',
-        ready: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200',
-        assigned: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200',
-        running: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200',
-        verifying: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200',
-        succeeded: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200',
-        failed: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200',
-        cancelled: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
-        passed: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200',
-        skipped: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
+const statusBadgeVariant = (status) => {
+    const variants = {
+        pending: 'outline',
+        blocked: 'secondary',
+        ready: 'default',
+        assigned: 'default',
+        running: 'secondary',
+        verifying: 'default',
+        succeeded: 'default',
+        failed: 'destructive',
+        cancelled: 'outline',
+        passed: 'default',
+        skipped: 'outline',
     };
-    return classes[status] || 'bg-gray-100 text-gray-700';
+    return variants[status] || 'secondary';
 };
 
 const hasPendingApproval = () => {
@@ -64,124 +78,139 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between">
-                <div>
-                    <div class="flex items-center gap-2">
-                        <Link :href="route('agent.delegation.show', graphId)" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-                            Back to Graph
-                        </Link>
-                        <span class="text-gray-400">/</span>
+                <div class="flex items-center gap-4">
+                    <Link :href="route('agent.delegation.show', graphId)">
+                        <Button variant="ghost" size="icon">
+                            <ArrowLeft class="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <div>
+                        <div class="text-sm text-muted-foreground mb-1">
+                            <Link :href="route('agent.delegation.show', graphId)" class="hover:text-foreground transition-colors">
+                                Back to Graph
+                            </Link>
+                        </div>
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">{{ task?.name ?? 'Loading...' }}</h2>
                     </div>
-                    <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ task?.name ?? 'Loading...' }}</h2>
                 </div>
                 <Link
                     v-if="hasPendingApproval()"
                     :href="route('agent.delegation.task.approve', { graphId: graphId, taskId: taskId })"
-                    class="rounded-md bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-500"
                 >
-                    Review & Approve
+                    <Button>
+                        <ClipboardCheck class="mr-2 h-4 w-4" />
+                        Review & Approve
+                    </Button>
                 </Link>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-7xl space-y-6">
-                <p v-if="error" class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div class="mx-auto max-w-[1440px] space-y-6">
+                <p v-if="error" class="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {{ error }}
                 </p>
 
-                <div v-if="loading" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                    Loading...
+                <div v-if="loading" class="flex flex-col items-center justify-center py-12 gap-4">
+                    <Skeleton class="h-4 w-48" />
+                    <Skeleton class="h-4 w-32" />
                 </div>
 
                 <template v-else-if="task">
-                    <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                        <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
-                            <div>
-                                <span class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Status</span>
-                                <div class="mt-1">
-                                    <span :class="statusBadgeClass(task.status)" class="rounded-full px-2 py-1 text-xs font-medium">{{ task.status }}</span>
-                                </div>
-                            </div>
-                            <div>
-                                <span class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Assigned Profile</span>
-                                <div class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ task.assigned_profile?.name ?? '-' }}</div>
-                            </div>
-                            <div>
-                                <span class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Started</span>
-                                <div class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ task.started_at ?? '-' }}</div>
-                            </div>
-                            <div>
-                                <span class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Finished</span>
-                                <div class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ task.finished_at ?? '-' }}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                        <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Contract</h3>
-                        </div>
-                        <div class="p-6">
-                            <pre class="overflow-x-auto rounded bg-gray-50 p-4 text-xs text-gray-800 dark:bg-gray-900 dark:text-gray-200">{{ JSON.stringify(task.contract_json, null, 2) }}</pre>
-                        </div>
-                    </div>
-
-                    <div class="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                        <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Attempts</h3>
-                        </div>
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead class="bg-gray-50 dark:bg-gray-900">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">#</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Profile</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Duration</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Started</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Finished</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                <tr v-for="attempt in task.attempts" :key="attempt.id">
-                                    <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{{ attempt.attempt_number }}</td>
-                                    <td class="px-4 py-3 text-sm">
-                                        <span :class="statusBadgeClass(attempt.status)" class="rounded-full px-2 py-1 text-xs font-medium">{{ attempt.status }}</span>
-                                    </td>
-                                    <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ attempt.profile?.name ?? '-' }}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">{{ attempt.duration_ms ? `${attempt.duration_ms}ms` : '-' }}</td>
-                                    <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-200">{{ attempt.started_at ?? '-' }}</td>
-                                    <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-200">{{ attempt.finished_at ?? '-' }}</td>
-                                </tr>
-                                <tr v-if="!task.attempts || task.attempts.length === 0">
-                                    <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No attempts yet.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                        <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">Verification History</h3>
-                        </div>
-                        <div class="p-6 space-y-4">
-                            <div v-for="result in task.verification_results" :key="result.id" class="rounded border border-gray-200 p-4 dark:border-gray-700">
-                                <div class="flex items-center justify-between mb-2">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ result.step_type }}</span>
-                                        <span class="text-xs text-gray-500 dark:text-gray-400">(Step {{ result.step_order }})</span>
+                    <Card>
+                        <CardContent class="pt-6">
+                            <div class="grid grid-cols-2 gap-6 md:grid-cols-4">
+                                <div>
+                                    <span class="text-xs font-medium uppercase text-muted-foreground">Status</span>
+                                    <div class="mt-2">
+                                        <Badge :variant="statusBadgeVariant(task.status)">{{ task.status }}</Badge>
                                     </div>
-                                    <span :class="statusBadgeClass(result.verdict)" class="rounded-full px-2 py-1 text-xs font-medium">{{ result.verdict }}</span>
                                 </div>
-                                <div v-if="result.evidence_json" class="mt-2">
-                                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Evidence:</span>
-                                    <pre class="mt-1 overflow-x-auto rounded bg-gray-50 p-2 text-xs text-gray-800 dark:bg-gray-900 dark:text-gray-200">{{ JSON.stringify(result.evidence_json, null, 2) }}</pre>
+                                <div>
+                                    <span class="text-xs font-medium uppercase text-muted-foreground">Assigned Profile</span>
+                                    <div class="mt-2 text-sm text-foreground">{{ task.assigned_profile?.name ?? '-' }}</div>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-medium uppercase text-muted-foreground">Started</span>
+                                    <div class="mt-2 text-sm text-foreground">{{ task.started_at ?? '-' }}</div>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-medium uppercase text-muted-foreground">Finished</span>
+                                    <div class="mt-2 text-sm text-foreground">{{ task.finished_at ?? '-' }}</div>
                                 </div>
                             </div>
-                            <div v-if="!task.verification_results || task.verification_results.length === 0" class="text-sm text-gray-500 dark:text-gray-400">
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Contract</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <pre class="overflow-x-auto rounded-lg bg-muted p-4 text-xs text-foreground font-mono">{{ JSON.stringify(task.contract_json, null, 2) }}</pre>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Attempts</CardTitle>
+                        </CardHeader>
+                        <CardContent class="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>#</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Profile</TableHead>
+                                        <TableHead>Duration</TableHead>
+                                        <TableHead>Started</TableHead>
+                                        <TableHead>Finished</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    <TableRow v-for="attempt in task.attempts" :key="attempt.id">
+                                        <TableCell class="font-medium text-foreground">{{ attempt.attempt_number }}</TableCell>
+                                        <TableCell>
+                                            <Badge :variant="statusBadgeVariant(attempt.status)">{{ attempt.status }}</Badge>
+                                        </TableCell>
+                                        <TableCell class="text-muted-foreground">{{ attempt.profile?.name ?? '-' }}</TableCell>
+                                        <TableCell class="text-muted-foreground">{{ attempt.duration_ms ? `${attempt.duration_ms}ms` : '-' }}</TableCell>
+                                        <TableCell class="text-xs text-muted-foreground">{{ attempt.started_at ?? '-' }}</TableCell>
+                                        <TableCell class="text-xs text-muted-foreground">{{ attempt.finished_at ?? '-' }}</TableCell>
+                                    </TableRow>
+                                    <TableRow v-if="!task.attempts || task.attempts.length === 0">
+                                        <TableCell colspan="6" class="py-8 text-center text-muted-foreground">
+                                            No attempts yet.
+                                        </TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Verification History</CardTitle>
+                        </CardHeader>
+                        <CardContent class="space-y-4">
+                            <div v-for="result in task.verification_results" :key="result.id" class="rounded-lg border border-border p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-medium text-foreground">{{ result.step_type }}</span>
+                                        <span class="text-xs text-muted-foreground">(Step {{ result.step_order }})</span>
+                                    </div>
+                                    <Badge :variant="statusBadgeVariant(result.verdict)">{{ result.verdict }}</Badge>
+                                </div>
+                                <div v-if="result.evidence_json" class="mt-3">
+                                    <span class="text-xs font-medium text-muted-foreground">Evidence:</span>
+                                    <pre class="mt-2 overflow-x-auto rounded-lg bg-muted p-3 text-xs text-muted-foreground font-mono">{{ JSON.stringify(result.evidence_json, null, 2) }}</pre>
+                                </div>
+                            </div>
+                            <div v-if="!task.verification_results || task.verification_results.length === 0" class="text-sm text-muted-foreground">
                                 No verification results yet.
                             </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
                 </template>
             </div>
         </div>

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Models\AgentJobRun;
 use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationSession;
@@ -29,6 +30,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
     public function handle(
         BuildTaskRunFactory $runFactory,
         BuildExecutionBackupService $backupService,
+        OrchestrationPolicyServiceContract $policyService,
     ): void {
         $session = InterrogationSession::query()->find($this->sessionId);
 
@@ -58,16 +60,29 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
 
             if ($run !== null && in_array((string) $run->status, AgentJobRun::ACTIVE_STATUSES, true)) {
                 $this->persistActivePointers($session, $activeTask, $run);
-                self::dispatch((int) $session->id)->delay(now()->addSeconds(2));
+                $this->dispatchFollowUpBuildTick((int) $session->id, 2, $writer);
 
                 return;
             }
 
-            $finalized = $this->finalizeTaskFromRun($session, $activeTask, $run, $writer);
+            $finalized = $this->finalizeTaskFromRun($session, $activeTask, $run, $writer, $policyService);
 
             if ($finalized) {
-                self::dispatch((int) $session->id)->delay(now()->addSecond());
+                $this->dispatchFollowUpBuildTick((int) $session->id, 1, $writer);
             }
+
+            return;
+        }
+
+        $hasTerminalBlockingTask = $session->buildTasks()
+            ->whereIn('status', [
+                InterrogationBuildTask::STATUS_FAILED,
+                InterrogationBuildTask::STATUS_BLOCKED,
+            ])
+            ->exists();
+
+        if ($hasTerminalBlockingTask) {
+            $this->finalizeBuildLifecycle($session, $writer);
 
             return;
         }
@@ -106,7 +121,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 'at' => CarbonImmutable::now('UTC')->toIso8601String(),
             ]);
 
-            self::dispatch((int) $session->id)->delay(now()->addSeconds(2));
+            $this->dispatchFollowUpBuildTick((int) $session->id, 2, $writer);
 
             return;
         }
@@ -190,6 +205,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         InterrogationBuildTask $task,
         ?AgentJobRun $run,
         InterrogationEventWriter $writer,
+        OrchestrationPolicyServiceContract $policyService,
     ): bool {
         $build = $this->buildMetadata($session);
         $build['active_task_id'] = null;
@@ -200,7 +216,6 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $task->last_error = 'Run record not found for active build task.';
             $task->finished_at = CarbonImmutable::now('UTC');
             $task->save();
-            $this->queueTaskProviderStatusSync($session, $task);
 
             $this->saveBuildMetadata($session, $build);
 
@@ -209,6 +224,8 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 'message' => 'Active build task run record is missing.',
                 'task_id' => $task->id,
             ]);
+
+            $this->queueTaskProviderStatusSync($session, $task, $writer);
 
             return true;
         }
@@ -223,7 +240,6 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $task->last_error = trim((string) ($run->error_summary ?? 'Rate limit detected while executing build task.'));
             $task->finished_at = CarbonImmutable::now('UTC');
             $task->save();
-            $this->queueTaskProviderStatusSync($session, $task);
 
             $build['status'] = 'paused';
             $build['pause_reason'] = 'rate_limit';
@@ -246,6 +262,8 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 'at' => CarbonImmutable::now('UTC')->toIso8601String(),
             ]);
 
+            $this->queueTaskProviderStatusSync($session, $task, $writer);
+
             return false;
         }
 
@@ -254,7 +272,6 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $task->last_error = trim((string) ($run->error_summary ?? 'Clarification required before continuing this task.'));
             $task->finished_at = CarbonImmutable::now('UTC');
             $task->save();
-            $this->queueTaskProviderStatusSync($session, $task);
 
             $build['status'] = 'paused';
             $build['pause_reason'] = 'clarification';
@@ -280,15 +297,43 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 'at' => CarbonImmutable::now('UTC')->toIso8601String(),
             ]);
 
+            $this->queueTaskProviderStatusSync($session, $task, $writer);
+
             return false;
         }
 
         if ($runStatus === AgentJobRun::STATUS_SUCCEEDED) {
+            // Check compliance gates before allowing completion
+            if ($policyService->isEnabled()) {
+                $completionResult = $policyService->evaluateCompletion($task);
+
+                if (! $completionResult->canComplete) {
+                    $task->status = InterrogationBuildTask::STATUS_BLOCKED;
+                    $task->setComplianceMetadata([
+                        'compliance_block_reason' => $completionResult->blockReason,
+                        'compliance_remediation' => $completionResult->remediation,
+                        'compliance_gates' => array_map(fn ($g) => [
+                            'gate' => $g->gate,
+                            'status' => $g->status,
+                            'reason' => $g->reasonCode,
+                        ], $completionResult->gates),
+                    ]);
+                    $task->finished_at = CarbonImmutable::now('UTC');
+                    $task->save();
+
+                    // Pause the build for compliance
+                    $this->pauseBuildForCompliance($session, $task, $writer);
+
+                    $this->queueTaskProviderStatusSync($session, $task, $writer);
+
+                    return false;
+                }
+            }
+
             $task->status = InterrogationBuildTask::STATUS_COMPLETED;
             $task->last_error = null;
             $task->finished_at = CarbonImmutable::now('UTC');
             $task->save();
-            $this->queueTaskProviderStatusSync($session, $task);
 
             $build['permission_required'] = false;
             $build['permission_excerpt'] = null;
@@ -308,6 +353,8 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 'at' => CarbonImmutable::now('UTC')->toIso8601String(),
             ]);
 
+            $this->queueTaskProviderStatusSync($session, $task, $writer);
+
             return true;
         }
 
@@ -319,11 +366,12 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $task->last_error = 'Execution paused before completion.';
             $task->finished_at = CarbonImmutable::now('UTC');
             $task->save();
-            $this->queueTaskProviderStatusSync($session, $task);
 
             $build['active_task_id'] = (int) $task->id;
             $build['active_run_id'] = (int) $run->id;
             $this->saveBuildMetadata($session, $build);
+
+            $this->queueTaskProviderStatusSync($session, $task, $writer);
 
             return false;
         }
@@ -332,7 +380,6 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $task->last_error = trim((string) ($run->error_summary ?? 'Build task execution failed.'));
         $task->finished_at = CarbonImmutable::now('UTC');
         $task->save();
-        $this->queueTaskProviderStatusSync($session, $task);
 
         $build['status'] = 'failed';
         $build['error'] = substr(trim((string) ($run->error_summary ?? 'Build task execution failed.')), 0, 1000);
@@ -356,6 +403,8 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             'run_id' => $run->id,
             'run_status' => $runStatus,
         ]);
+
+        $this->queueTaskProviderStatusSync($session, $task, $writer);
 
         return false;
     }
@@ -440,9 +489,74 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $session->save();
     }
 
-    private function queueTaskProviderStatusSync(InterrogationSession $session, InterrogationBuildTask $task): void
-    {
-        SyncInterrogationTaskStatusToTaskProviderJob::dispatch((int) $session->id, (int) $task->id);
+    private function pauseBuildForCompliance(
+        InterrogationSession $session,
+        InterrogationBuildTask $task,
+        InterrogationEventWriter $writer
+    ): void {
+        $build = $this->buildMetadata($session);
+        $build['status'] = 'paused';
+        $build['pause_reason'] = 'compliance_blocked';
+        $build['blocked_task_id'] = (int) $task->id;
+        $build['paused_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+        $build['active_task_id'] = (int) $task->id;
+        $build['active_run_id'] = $task->agent_job_run_id;
+
+        $this->saveBuildMetadata($session, $build);
+
+        $taskMetadata = is_array($task->metadata_json) ? $task->metadata_json : [];
+
+        $writer->appendSystem([
+            'notice' => 'build_paused_compliance',
+            'task_id' => $task->id,
+            'sequence' => $task->sequence,
+            'block_reason' => $taskMetadata['compliance_block_reason'] ?? 'verification_incomplete',
+            'remediation' => $taskMetadata['compliance_remediation'] ?? null,
+            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+        ]);
+    }
+
+    private function queueTaskProviderStatusSync(
+        InterrogationSession $session,
+        InterrogationBuildTask $task,
+        ?InterrogationEventWriter $writer = null
+    ): void {
+        try {
+            SyncInterrogationTaskStatusToTaskProviderJob::dispatch((int) $session->id, (int) $task->id);
+        } catch (\Throwable $throwable) {
+            report($throwable);
+
+            if ($writer !== null) {
+                $writer->appendSystem([
+                    'notice' => 'build_task_provider_sync_queue_failed',
+                    'task_id' => (int) $task->id,
+                    'sequence' => (int) $task->sequence,
+                    'error' => mb_substr(trim((string) $throwable->getMessage()), 0, 300),
+                    'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                ]);
+            }
+        }
+    }
+
+    private function dispatchFollowUpBuildTick(
+        int $sessionId,
+        int $delaySeconds,
+        ?InterrogationEventWriter $writer = null
+    ): void {
+        try {
+            self::dispatch($sessionId)->delay(now()->addSeconds(max(0, $delaySeconds)));
+        } catch (\Throwable $throwable) {
+            report($throwable);
+
+            if ($writer !== null) {
+                $writer->appendSystem([
+                    'notice' => 'build_follow_up_dispatch_failed',
+                    'delay_seconds' => max(0, $delaySeconds),
+                    'error' => mb_substr(trim((string) $throwable->getMessage()), 0, 300),
+                    'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                ]);
+            }
+        }
     }
 
     private function ensureBackupBeforeBuildStart(

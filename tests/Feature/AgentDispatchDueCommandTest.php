@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Jobs\ExecuteAgentRunJob;
+use App\Jobs\ExecuteInterrogationBuildJob;
 use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentSystemState;
+use App\Models\InterrogationBuildTask;
+use App\Models\InterrogationSession;
 use App\Models\SchedulerHeartbeat;
 use App\Models\User;
 use App\Support\Agent\DispatchDueService;
@@ -226,6 +229,88 @@ class AgentDispatchDueCommandTest extends TestCase
         $run->refresh();
         $this->assertSame(AgentJobRun::STATUS_FAILED, $run->status);
         $this->assertSame('process_not_found', $run->metadata_json['reconcile_reason'] ?? null);
+    }
+
+    public function test_reconcile_dispatches_build_orchestration_for_interrogation_build_runs(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/interrogation-build.md';
+        file_put_contents($taskFile, "# Interrogation Build\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Interrogation Build Reconcile',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 120,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build reconcile session',
+            'runner_type' => 'claude',
+            'project_directory' => $this->sandboxBase.'/work',
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_BUILD_EXECUTING,
+            'phase' => InterrogationSession::PHASE_BUILD_EXECUTION,
+            'summary_json' => [],
+            'plan_json' => [],
+            'metadata_json' => [
+                'build' => [
+                    'status' => 'running',
+                ],
+            ],
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 8,
+            'title' => 'Shadow reviewer integration',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_RUNNING,
+            'pid' => 999_999,
+            'started_at' => now('UTC')->subMinute(),
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'source' => 'interrogation_build',
+                'interrogation_session_id' => (int) $session->id,
+                'interrogation_build_task_id' => (int) $task->id,
+            ],
+        ]);
+
+        $task->agent_job_run_id = $run->id;
+        $task->save();
+
+        app(ReconcileActiveRunsService::class)->reconcile('boot');
+
+        $run->refresh();
+        $this->assertSame(AgentJobRun::STATUS_FAILED, $run->status);
+        $this->assertSame('process_not_found', $run->metadata_json['reconcile_reason'] ?? null);
+
+        Queue::assertPushed(ExecuteInterrogationBuildJob::class, function (ExecuteInterrogationBuildJob $job) use ($session): bool {
+            return (int) $job->sessionId === (int) $session->id;
+        });
     }
 
     public function test_reconcile_uses_launch_fingerprint_when_job_changes(): void

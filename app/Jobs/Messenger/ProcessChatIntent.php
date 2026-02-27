@@ -101,7 +101,7 @@ class ProcessChatIntent implements ShouldQueue
                 "- \"list my jobs\"\n".
                 "- \"show active runs\"\n".
                 "- \"stop run [run-id]\"\n".
-                "- \"run job [job-id] now\"",
+                '- "run job [job-id] now"',
                 $session,
                 $account,
                 $connectorManager
@@ -179,7 +179,7 @@ class ProcessChatIntent implements ShouldQueue
 
         // For mutation actions, send ack and execute
         $this->sendResponse(
-            "Processing your request...",
+            'Processing your request...',
             $session,
             $account,
             $connectorManager

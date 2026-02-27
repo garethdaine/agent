@@ -18,7 +18,9 @@ class DelegateeMetricsRecomputerTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private DelegateeProfile $profile;
+
     private DelegationGraph $graph;
 
     protected function setUp(): void
@@ -59,7 +61,7 @@ class DelegateeMetricsRecomputerTest extends TestCase
             ]);
         }
 
-        $recomputer = new DelegateeMetricsRecomputer();
+        $recomputer = new DelegateeMetricsRecomputer;
         $recomputer->recompute($this->profile);
 
         $metric = DelegateeMetric::where('delegatee_profile_id', $this->profile->id)->first();
@@ -102,7 +104,7 @@ class DelegateeMetricsRecomputerTest extends TestCase
             'finished_at' => now()->subDays(10),
         ]);
 
-        $recomputer = new DelegateeMetricsRecomputer();
+        $recomputer = new DelegateeMetricsRecomputer;
         $recomputer->recompute($this->profile);
 
         $metric = DelegateeMetric::where('delegatee_profile_id', $this->profile->id)->first();
@@ -125,7 +127,7 @@ class DelegateeMetricsRecomputerTest extends TestCase
             'delegatee_profile_id' => $this->profile->id,
         ]);
 
-        $recomputer = new DelegateeMetricsRecomputer();
+        $recomputer = new DelegateeMetricsRecomputer;
 
         // First call should work
         $result1 = $recomputer->recomputeIfNotThrottled($this->profile);
@@ -153,7 +155,7 @@ class DelegateeMetricsRecomputerTest extends TestCase
             'delegatee_profile_id' => $this->profile->id,
         ]);
 
-        $recomputer = new DelegateeMetricsRecomputer();
+        $recomputer = new DelegateeMetricsRecomputer;
         $recomputer->recompute($this->profile);
 
         $this->assertDatabaseCount('delegatee_metrics', 1);
@@ -198,7 +200,7 @@ class DelegateeMetricsRecomputerTest extends TestCase
             'finished_at' => now()->subHours(2),
         ]);
 
-        $recomputer = new DelegateeMetricsRecomputer();
+        $recomputer = new DelegateeMetricsRecomputer;
         $recomputer->recompute($this->profile);
 
         $metric = DelegateeMetric::where('delegatee_profile_id', $this->profile->id)->first();
@@ -208,7 +210,7 @@ class DelegateeMetricsRecomputerTest extends TestCase
 
     public function test_handles_no_attempts(): void
     {
-        $recomputer = new DelegateeMetricsRecomputer();
+        $recomputer = new DelegateeMetricsRecomputer;
         $recomputer->recompute($this->profile);
 
         $metric = DelegateeMetric::where('delegatee_profile_id', $this->profile->id)->first();
@@ -242,7 +244,7 @@ class DelegateeMetricsRecomputerTest extends TestCase
             'delegatee_profile_id' => $profile2->id,
         ]);
 
-        $recomputer = new DelegateeMetricsRecomputer();
+        $recomputer = new DelegateeMetricsRecomputer;
         $recomputer->recomputeAll();
 
         $this->assertDatabaseCount('delegatee_metrics', 2);
@@ -256,7 +258,7 @@ class DelegateeMetricsRecomputerTest extends TestCase
 
     public function test_updates_last_recomputed_at(): void
     {
-        $recomputer = new DelegateeMetricsRecomputer();
+        $recomputer = new DelegateeMetricsRecomputer;
         $recomputer->recompute($this->profile);
 
         $metric = DelegateeMetric::where('delegatee_profile_id', $this->profile->id)->first();

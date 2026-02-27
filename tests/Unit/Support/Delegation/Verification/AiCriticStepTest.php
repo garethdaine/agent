@@ -56,7 +56,7 @@ class AiCriticStepTest extends TestCase
     {
         Bus::fake();
 
-        $step = new AiCriticStep();
+        $step = new AiCriticStep;
         $stepConfig = [
             'type' => 'ai_critic',
             'step_order' => 1,
@@ -77,7 +77,7 @@ class AiCriticStepTest extends TestCase
     {
         Bus::fake();
 
-        $step = new AiCriticStep();
+        $step = new AiCriticStep;
         $stepConfig = [
             'type' => 'ai_critic',
             'step_order' => 1,
@@ -95,7 +95,7 @@ class AiCriticStepTest extends TestCase
     {
         Bus::fake();
 
-        $step = new AiCriticStep();
+        $step = new AiCriticStep;
         $stepConfig = [
             'type' => 'ai_critic',
             'step_order' => 1,
@@ -111,7 +111,7 @@ class AiCriticStepTest extends TestCase
     {
         Bus::fake();
 
-        $step = new AiCriticStep();
+        $step = new AiCriticStep;
         $stepConfig = [
             'type' => 'ai_critic',
             'step_order' => 1,
@@ -165,7 +165,7 @@ class AiCriticStepTest extends TestCase
             'reasoning' => 'Code meets all requirements.',
         ]);
 
-        $step = new AiCriticStep();
+        $step = new AiCriticStep;
         $parsedEvidence = $step->parseEvidence($jsonOutput);
 
         $this->assertArrayHasKey('verdict', $parsedEvidence);
@@ -176,7 +176,7 @@ class AiCriticStepTest extends TestCase
 
     public function test_callback_falls_back_to_raw_text(): void
     {
-        $step = new AiCriticStep();
+        $step = new AiCriticStep;
 
         // Non-JSON output
         $rawOutput = 'The code looks good. VERDICT: PASS. No issues found.';
@@ -188,7 +188,7 @@ class AiCriticStepTest extends TestCase
 
     public function test_callback_falls_back_when_json_missing_required_fields(): void
     {
-        $step = new AiCriticStep();
+        $step = new AiCriticStep;
 
         // JSON that doesn't have expected verdict/issues fields
         $jsonOutput = json_encode(['status' => 'ok', 'message' => 'Done']);
@@ -201,7 +201,7 @@ class AiCriticStepTest extends TestCase
     {
         Bus::fake();
 
-        $step = new AiCriticStep();
+        $step = new AiCriticStep;
         $stepConfig = [
             'type' => 'ai_critic',
             'step_order' => 1,
@@ -222,7 +222,7 @@ class AiCriticStepTest extends TestCase
     {
         Bus::fake();
 
-        $step = new AiCriticStep();
+        $step = new AiCriticStep;
         $stepConfig = [
             'type' => 'ai_critic',
             'step_order' => 1,

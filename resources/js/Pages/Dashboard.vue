@@ -1,6 +1,14 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head } from '@inertiajs/vue3';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Button from '@/Components/ui/Button.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
+import { RefreshCw } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
 
@@ -46,6 +54,21 @@ const loadMetrics = async () => {
     }
 };
 
+const windowOptions = [
+    { value: '1h', label: 'Last 1h' },
+    { value: '6h', label: 'Last 6h' },
+    { value: '24h', label: 'Last 24h' },
+    { value: '7d', label: 'Last 7 days' },
+];
+
+const schedulerVariant = computed(() => {
+    const status = scheduler.value.status;
+    if (status === 'healthy') return 'default';
+    if (status === 'degraded') return 'secondary';
+    if (status === 'down') return 'destructive';
+    return 'outline';
+});
+
 onMounted(loadMetrics);
 </script>
 
@@ -55,82 +78,100 @@ onMounted(loadMetrics);
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">Dashboard</h2>
+                <h2 class="font-semibold text-xl text-foreground leading-tight">Dashboard</h2>
                 <div class="flex items-center gap-2">
                     <select
                         v-model="windowKey"
-                        class="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
+                        class="h-9 rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         @change="loadMetrics"
                     >
-                        <option value="24h">Last 24h</option>
-                        <option value="7d">Last 7 days</option>
+                        <option v-for="opt in windowOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                     </select>
-                    <button class="rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800" @click="loadMetrics">
+                    <Button variant="outline" size="sm" @click="loadMetrics">
+                        <RefreshCw class="h-4 w-4 mr-1" />
                         Refresh
-                    </button>
+                    </Button>
                 </div>
             </div>
         </template>
 
         <div class="py-8">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <p v-if="errorMessage" class="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div class="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
+                <p v-if="errorMessage" class="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {{ errorMessage }}
                 </p>
 
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-xs uppercase tracking-wide text-gray-500">Runs Today</p>
-                        <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                            {{ loading ? '…' : metrics.runs_today }}
-                        </p>
-                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle class="text-xs uppercase tracking-wide text-muted-foreground font-medium">Runs Today</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton v-if="loading" class="h-8 w-24" />
+                            <p v-else class="text-2xl font-semibold text-foreground">{{ metrics.runs_today }}</p>
+                        </CardContent>
+                    </Card>
 
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-xs uppercase tracking-wide text-gray-500">Success Rate ({{ windowKey }})</p>
-                        <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                            {{ loading ? '…' : `${metrics.success_rate_percent}%` }}
-                        </p>
-                        <p class="mt-1 text-xs text-gray-500">Skipped runs excluded.</p>
-                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle class="text-xs uppercase tracking-wide text-muted-foreground font-medium">Success Rate ({{ windowKey }})</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton v-if="loading" class="h-8 w-24" />
+                            <template v-else>
+                                <p class="text-2xl font-semibold text-foreground">{{ metrics.success_rate_percent }}%</p>
+                                <p class="mt-1 text-xs text-muted-foreground">Skipped runs excluded.</p>
+                            </template>
+                        </CardContent>
+                    </Card>
 
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-xs uppercase tracking-wide text-gray-500">Avg Duration ({{ windowKey }})</p>
-                        <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                            {{ loading ? '…' : formatDuration(metrics.average_duration_ms) }}
-                        </p>
-                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle class="text-xs uppercase tracking-wide text-muted-foreground font-medium">Avg Duration ({{ windowKey }})</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton v-if="loading" class="h-8 w-24" />
+                            <p v-else class="text-2xl font-semibold text-foreground">{{ formatDuration(metrics.average_duration_ms) }}</p>
+                        </CardContent>
+                    </Card>
 
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-xs uppercase tracking-wide text-gray-500">Backlog Count</p>
-                        <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                            {{ loading ? '…' : metrics.backlog_count }}
-                        </p>
-                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle class="text-xs uppercase tracking-wide text-muted-foreground font-medium">Backlog Count</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton v-if="loading" class="h-8 w-24" />
+                            <p v-else class="text-2xl font-semibold text-foreground">{{ metrics.backlog_count }}</p>
+                        </CardContent>
+                    </Card>
 
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-xs uppercase tracking-wide text-gray-500">Oldest Queued Age</p>
-                        <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                            {{ loading ? '…' : formatDuration(metrics.oldest_queued_age_seconds * 1000) }}
-                        </p>
-                        <p class="mt-1 text-xs text-gray-500">Computed globally across queued runs.</p>
-                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle class="text-xs uppercase tracking-wide text-muted-foreground font-medium">Oldest Queued Age</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton v-if="loading" class="h-8 w-24" />
+                            <template v-else>
+                                <p class="text-2xl font-semibold text-foreground">{{ formatDuration(metrics.oldest_queued_age_seconds * 1000) }}</p>
+                                <p class="mt-1 text-xs text-muted-foreground">Computed globally across queued runs.</p>
+                            </template>
+                        </CardContent>
+                    </Card>
 
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-xs uppercase tracking-wide text-gray-500">Scheduler Health</p>
-                        <p
-                            class="mt-2 text-2xl font-semibold"
-                            :class="{
-                                'text-green-600': scheduler.status === 'healthy',
-                                'text-yellow-600': scheduler.status === 'degraded',
-                                'text-red-600': scheduler.status === 'down',
-                                'text-gray-500': scheduler.status === 'unknown',
-                            }"
-                        >
-                            {{ loading ? '…' : scheduler.status }}
-                        </p>
-                        <p class="mt-1 text-xs text-gray-500">Age: {{ loading ? '…' : (scheduler.age_seconds ?? 'n/a') }}s</p>
-                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle class="text-xs uppercase tracking-wide text-muted-foreground font-medium">Scheduler Health</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton v-if="loading" class="h-8 w-24" />
+                            <template v-else>
+                                <div class="flex items-center gap-2">
+                                    <Badge :variant="schedulerVariant">{{ scheduler.status }}</Badge>
+                                </div>
+                                <p class="mt-2 text-xs text-muted-foreground">Age: {{ scheduler.age_seconds ?? 'n/a' }}s</p>
+                            </template>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>

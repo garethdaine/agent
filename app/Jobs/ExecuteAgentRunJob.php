@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Models\AgentJobRun;
 use App\Support\Agent\CommandTemplateRenderer;
 use App\Support\Agent\Duration;
@@ -9,9 +10,11 @@ use App\Support\Agent\RunEventWriter;
 use App\Support\Agent\RunStateTransitionService;
 use App\Support\Agent\RuntimeValidation;
 use App\Support\Agent\UsageLimitState;
+use App\Support\Compliance\DTOs\PolicyEvaluationResult;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
 class ExecuteAgentRunJob implements ShouldQueue
@@ -37,6 +40,7 @@ class ExecuteAgentRunJob implements ShouldQueue
         CommandTemplateRenderer $renderer,
         RunStateTransitionService $transitions,
         UsageLimitState $usageLimitState,
+        OrchestrationPolicyServiceContract $policyService,
     ): void {
         $this->usageLimitState = $usageLimitState;
 
@@ -66,6 +70,41 @@ class ExecuteAgentRunJob implements ShouldQueue
                 'to' => AgentJobRun::STATUS_STARTING,
                 'at' => CarbonImmutable::now('UTC')->toIso8601String(),
             ]);
+
+            // Policy evaluation after state transition, before runtime validation
+            if ($policyService->isEnabled()) {
+                $preRunResult = $policyService->evaluatePreRun($run, $this->extractRunContext($run));
+                $this->recordComplianceMetadata($run, $preRunResult);
+
+                if ($preRunResult->isBlocked()) {
+                    $this->finalizeTerminal(
+                        $run,
+                        $transitions,
+                        AgentJobRun::STATUS_FAILED,
+                        [
+                            'error_code' => 'COMPLIANCE_BLOCKED',
+                            'error_summary' => 'Pre-run compliance check failed: '.($preRunResult->gates[0]?->remediation ?? 'Unknown'),
+                            'metadata_json' => [
+                                ...((array) ($run->metadata_json ?? [])),
+                                'compliance_block_reason' => $preRunResult->gates[0]?->reasonCode,
+                            ],
+                        ]
+                    );
+
+                    return;
+                }
+
+                if ($preRunResult->status === 'advisory') {
+                    Log::info('ExecuteAgentRunJob: Advisory compliance warning', [
+                        'run_id' => $run->id,
+                        'gates' => array_map(fn ($g) => [
+                            'gate' => $g->gate,
+                            'status' => $g->status,
+                            'reason' => $g->reasonCode,
+                        ], $preRunResult->gates),
+                    ]);
+                }
+            }
 
             $runtimeCheck = $runtimeValidation->validate($run->job);
 
@@ -278,6 +317,26 @@ class ExecuteAgentRunJob implements ShouldQueue
                 $finalStatus = AgentJobRun::STATUS_KILLED;
             } elseif ($exitCode === 0 && ! $permissionBlockerDetected) {
                 $finalStatus = AgentJobRun::STATUS_SUCCEEDED;
+            }
+
+            // Completion gate evaluation before finalizing as successful
+            if ($finalStatus === AgentJobRun::STATUS_SUCCEEDED && $policyService->isEnabled()) {
+                $completionResult = $policyService->evaluateCompletion($run);
+                if (! $completionResult->canComplete) {
+                    $this->finalizeTerminal($run, $transitions, AgentJobRun::STATUS_FAILED, [
+                        'exit_code' => $exitCode,
+                        'signal' => $process->getTermSignal(),
+                        'error_code' => 'COMPLIANCE_BLOCKED',
+                        'error_summary' => $completionResult->remediation ?? 'Completion gate failed',
+                        'metadata_json' => [
+                            ...$metadata,
+                            'compliance_block_reason' => $completionResult->blockReason,
+                        ],
+                        'resolved_executable_path' => $run->resolved_executable_path,
+                    ]);
+
+                    return;
+                }
             }
 
             if ($finalStatus === AgentJobRun::STATUS_FAILED && $permissionBlockerDetected) {
@@ -592,5 +651,32 @@ class ExecuteAgentRunJob implements ShouldQueue
         }
 
         return 'Runner reported missing write permissions and could not proceed.';
+    }
+
+    /**
+     * Extract context for complexity classification.
+     *
+     * @return array<string, mixed>
+     */
+    private function extractRunContext(AgentJobRun $run): array
+    {
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        return [
+            'task_category' => $metadata['task_category'] ?? 'custom',
+            'file_count' => $metadata['estimated_file_count'] ?? 0,
+            'loc_count' => $metadata['estimated_loc_count'] ?? 0,
+            'directory_count' => $metadata['estimated_directory_count'] ?? 0,
+        ];
+    }
+
+    /**
+     * Record compliance metadata in run's metadata_json.
+     */
+    private function recordComplianceMetadata(AgentJobRun $run, PolicyEvaluationResult $result): void
+    {
+        $metadata = (array) ($run->metadata_json ?? []);
+        $run->metadata_json = array_merge($metadata, $result->metadataPatch);
+        $run->save();
     }
 }

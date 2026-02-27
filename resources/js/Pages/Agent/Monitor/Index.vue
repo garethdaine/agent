@@ -1,10 +1,22 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
+import Card from '@/Components/ui/Card.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Table from '@/Components/ui/Table.vue';
+import TableHeader from '@/Components/ui/TableHeader.vue';
+import TableBody from '@/Components/ui/TableBody.vue';
+import TableRow from '@/Components/ui/TableRow.vue';
+import TableHead from '@/Components/ui/TableHead.vue';
+import TableCell from '@/Components/ui/TableCell.vue';
+import Button from '@/Components/ui/Button.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
 import { formatAgentRunEventEntries } from '@/Support/agentRunEventFormatting';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { Heart, Gauge, Radio, RefreshCw, AlertTriangle, ShieldCheck, HelpCircle, Square, X } from 'lucide-vue-next';
 
 const runs = ref([]);
 const events = ref([]);
@@ -501,261 +513,317 @@ onBeforeUnmount(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Run Monitor</h2>
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Run Monitor</h2>
                 <div class="flex items-center gap-2">
-                    <Link :href="route('agent.jobs.index')" class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50">Jobs</Link>
-                    <button class="rounded border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" @click="autoFollow = !autoFollow">
+                    <Link :href="route('agent.jobs.index')">
+                        <Button variant="outline" size="sm">Jobs</Button>
+                    </Link>
+                    <Button variant="outline" size="sm" @click="autoFollow = !autoFollow">
                         {{ autoFollow ? 'Auto-follow on' : 'Auto-follow off' }}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-3">
-                <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Scheduler Health</h3>
-                    <p class="mt-2 text-lg font-semibold" :class="{
-                        'text-green-600': scheduler.status === 'healthy',
-                        'text-yellow-600': scheduler.status === 'degraded',
-                        'text-red-600': scheduler.status === 'down',
-                        'text-gray-500 dark:text-gray-400': scheduler.status === 'unknown',
-                    }">
-                        {{ scheduler.status }}
-                    </p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Last seen: {{ scheduler.last_seen_at ?? 'never' }}</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Age: {{ scheduler.age_seconds ?? 'n/a' }}s</p>
-                </div>
+            <div class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 lg:grid-cols-3">
+                <Card>
+                    <CardContent class="p-5">
+                        <div class="flex items-center gap-2 mb-3">
+                            <Heart class="w-4 h-4 text-success" />
+                            <span class="text-muted-foreground uppercase tracking-wider text-[11px] font-semibold">Scheduler Health</span>
+                        </div>
+                        <div :class="[
+                            'text-[22px] font-bold',
+                            scheduler.status === 'healthy' ? 'text-success' : '',
+                            scheduler.status === 'degraded' ? 'text-warning' : '',
+                            scheduler.status === 'down' ? 'text-destructive' : '',
+                            scheduler.status === 'unknown' ? 'text-muted-foreground' : '',
+                        ]">
+                            {{ scheduler.status }}
+                        </div>
+                        <p class="mt-2 text-xs text-muted-foreground">Last seen: {{ scheduler.last_seen_at ?? 'never' }}</p>
+                        <p class="mt-1 text-xs text-muted-foreground">Age: {{ scheduler.age_seconds ?? 'n/a' }}s</p>
+                    </CardContent>
+                </Card>
 
-                <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Queue Lag</h3>
-                    <p class="mt-2 text-lg font-semibold" :class="queueLag.warning ? 'text-yellow-600' : 'text-gray-900 dark:text-gray-100'">
-                        {{ queueLag.count }} queued / oldest {{ queueLag.oldestSeconds }}s
-                    </p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Warning threshold: oldest &gt; 60s or queued &gt; 10</p>
-                </div>
+                <Card>
+                    <CardContent class="p-5">
+                        <div class="flex items-center gap-2 mb-3">
+                            <Gauge class="w-4 h-4 text-primary" />
+                            <span class="text-muted-foreground uppercase tracking-wider text-[11px] font-semibold">Queue Lag</span>
+                        </div>
+                        <div :class="['text-[22px] font-bold', queueLag.warning ? 'text-warning' : 'text-foreground']">
+                            {{ queueLag.count }} queued / oldest {{ queueLag.oldestSeconds }}s
+                        </div>
+                        <p class="mt-2 text-xs text-muted-foreground">Warning threshold: oldest &gt; 60s or queued &gt; 10</p>
+                    </CardContent>
+                </Card>
 
-                <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Poll Status</h3>
-                    <p class="mt-2 text-sm text-gray-700 dark:text-gray-200">Consecutive failures: {{ failureCount }}</p>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Intervals: active 2s, inactive 10s, hidden 15s with backoff.</p>
-                </div>
+                <Card>
+                    <CardContent class="p-5">
+                        <div class="flex items-center gap-2 mb-3">
+                            <Radio class="w-4 h-4 text-primary" />
+                            <span class="text-muted-foreground uppercase tracking-wider text-[11px] font-semibold">Poll Status</span>
+                        </div>
+                        <div class="text-sm text-foreground">Consecutive failures: {{ failureCount }}</div>
+                        <p class="mt-2 text-xs text-muted-foreground">Intervals: active 2s, inactive 10s, hidden 15s with backoff.</p>
+                    </CardContent>
+                </Card>
             </div>
 
-            <p v-if="consecutiveFailureWarning" class="mx-auto mt-4 max-w-7xl rounded-md border border-yellow-400 bg-yellow-50 px-3 py-2 text-sm text-yellow-700 dark:border-yellow-800/70 dark:bg-yellow-950/40 dark:text-yellow-300">
-                Monitor polling is failing repeatedly. Retries continue automatically. {{ errorMessage }}
-            </p>
+            <div v-if="consecutiveFailureWarning" class="mx-auto mt-4 max-w-[1440px] flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+                <AlertTriangle class="w-4 h-4 shrink-0" />
+                <span>Monitor polling is failing repeatedly. Retries continue automatically. {{ errorMessage }}</span>
+            </div>
 
-            <div class="mx-auto mt-6 grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-2">
-                <div class="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                    <div class="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-                        <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Latest Runs (24h, max 50)</h3>
+            <div class="mx-auto mt-6 grid max-w-[1440px] grid-cols-1 gap-6 lg:grid-cols-2">
+                <Card>
+                    <div class="px-5 py-4 border-b border-border">
+                        <h3 class="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">Latest Runs (24h, max 50)</h3>
                     </div>
                     <div class="max-h-[30rem] overflow-auto">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead class="bg-gray-50 dark:bg-gray-900">
-                                <tr>
-                                    <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Run</th>
-                                    <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</th>
-                                    <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Alerts</th>
-                                    <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Created</th>
-                                    <th class="px-4 py-2" />
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                <tr v-if="loading">
-                                    <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">Loading...</td>
-                                </tr>
-                                <tr
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead class="text-xs uppercase tracking-wide">Run</TableHead>
+                                    <TableHead class="text-xs uppercase tracking-wide">Status</TableHead>
+                                    <TableHead class="text-xs uppercase tracking-wide">Alerts</TableHead>
+                                    <TableHead class="text-xs uppercase tracking-wide">Created</TableHead>
+                                    <TableHead />
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <TableRow v-if="loading">
+                                    <TableCell colspan="5" class="text-center py-6">
+                                        <div class="flex items-center justify-center gap-2 text-muted-foreground">
+                                            <Skeleton class="h-4 w-4 rounded-full" />
+                                            <span class="text-sm">Loading...</span>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                                <TableRow
                                     v-for="run in runs"
                                     :key="run.id"
                                     class="cursor-pointer"
-                                    :class="selectedRunId === run.id ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''"
+                                    :data-state="selectedRunId === run.id ? 'selected' : undefined"
                                     @click="selectRun(run.id)"
                                 >
-                                    <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-200">#{{ run.id }} (job {{ run.agent_job_id }})</td>
-                                    <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-200">{{ run.status }}</td>
-                                    <td class="px-4 py-2 text-xs">
+                                    <TableCell class="text-xs text-foreground">#{{ run.id }} (job {{ run.agent_job_id }})</TableCell>
+                                    <TableCell class="text-xs">
+                                        <Badge :variant="run.status === 'succeeded' ? 'default' : run.status === 'failed' ? 'destructive' : 'secondary'">
+                                            {{ run.status }}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell class="text-xs">
                                         <div class="flex items-center gap-1">
                                             <button
                                                 v-if="runHasApproval(run)"
-                                                class="rounded border border-amber-500 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100"
+                                                class="inline-flex items-center gap-1 rounded-md border border-warning/50 bg-warning/10 px-2 py-1 text-[11px] font-semibold text-warning hover:bg-warning/20 transition-colors"
                                                 @click.stop="openApprovalModal(run)"
                                             >
+                                                <ShieldCheck class="w-3 h-3" />
                                                 {{ approvalStateForRun(run)?.kind === 'permission_blocker' ? 'Permission' : 'Approval' }}
                                             </button>
                                             <button
                                                 v-if="runHasClarification(run)"
-                                                class="rounded border border-sky-500 bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-700 hover:bg-sky-100"
+                                                class="inline-flex items-center gap-1 rounded-md border border-primary/50 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/20 transition-colors"
                                                 @click.stop="openClarificationModal(run)"
                                             >
+                                                <HelpCircle class="w-3 h-3" />
                                                 Clarification
                                             </button>
                                             <button
                                                 v-if="runHasRateLimit(run)"
-                                                class="rounded border border-red-500 bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100"
+                                                class="inline-flex items-center gap-1 rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/20 transition-colors"
                                                 @click.stop="openRateLimitModal(run)"
                                             >
+                                                <AlertTriangle class="w-3 h-3" />
                                                 Rate limit
                                             </button>
-                                            <span v-if="!runHasApproval(run) && !runHasClarification(run) && !runHasRateLimit(run)" class="text-gray-400">-</span>
+                                            <span v-if="!runHasApproval(run) && !runHasClarification(run) && !runHasRateLimit(run)" class="text-muted-foreground">-</span>
                                         </div>
-                                    </td>
-                                    <td class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{{ run.created_at }}</td>
-                                    <td class="px-4 py-2 text-right text-xs">
-                                        <button
+                                    </TableCell>
+                                    <TableCell class="text-xs text-muted-foreground">{{ run.created_at }}</TableCell>
+                                    <TableCell class="text-right">
+                                        <Button
                                             v-if="activeRuns.find((item) => item.id === run.id)"
-                                            class="rounded border border-gray-300 px-2 py-1 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
+                                            variant="outline"
+                                            size="sm"
                                             @click.stop="stopRun(run.id)"
                                         >
+                                            <Square class="w-3 h-3" />
                                             Stop
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr v-if="!loading && runs.length === 0">
-                                    <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">No runs in range.</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                                <TableRow v-if="!loading && runs.length === 0">
+                                    <TableCell colspan="5" class="text-center py-6 text-muted-foreground">No runs in range.</TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
                     </div>
-                </div>
+                </Card>
 
-                <div class="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                    <div class="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-                        <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Event Tail</h3>
+                <Card>
+                    <div class="px-5 py-4 border-b border-border">
+                        <h3 class="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">Event Tail</h3>
                     </div>
-                    <div id="event-tail" class="h-[30rem] overflow-auto bg-gray-950 p-3 font-mono text-xs text-gray-100">
+                    <div id="event-tail" class="h-[30rem] overflow-auto bg-[#0c1222] p-4 font-mono text-sm text-foreground">
                         <div v-for="entry in formattedEvents" :key="entry.key" class="mb-2 whitespace-pre-wrap break-words">
-                            <div class="text-[11px] text-gray-400">{{ entry.prefix }}</div>
+                            <div class="text-[11px] text-muted-foreground">{{ entry.prefix }}</div>
                             <MarkdownRenderer
                                 v-if="entry.format === 'markdown'"
                                 :markdown="entry.payload"
                                 :normalize="false"
-                                class="tail-markdown prose prose-sm mt-1 max-w-none rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 font-sans text-emerald-100 dark:prose-invert prose-headings:mb-2 prose-headings:mt-3 prose-p:my-1.5 prose-li:my-0.5 prose-code:rounded prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5"
+                                class="tail-markdown prose prose-sm mt-1 max-w-none rounded border border-success/20 bg-success/5 px-2 py-1 font-sans text-success dark:prose-invert prose-headings:mb-2 prose-headings:mt-3 prose-p:my-1.5 prose-li:my-0.5 prose-code:rounded prose-code:bg-accent prose-code:px-1 prose-code:py-0.5"
                             />
                             <pre v-else class="mt-0.5 whitespace-pre-wrap break-words" :class="{
-                                'text-rose-300': entry.tone === 'stderr',
-                                'text-sky-200': entry.tone === 'lifecycle',
-                                'text-emerald-200': entry.tone === 'structured',
+                                'text-destructive': entry.tone === 'stderr',
+                                'text-primary': entry.tone === 'lifecycle',
+                                'text-success': entry.tone === 'structured',
                             }">{{ entry.payload }}</pre>
                         </div>
-                        <p
+                        <div
                             v-if="selectedRunLikelySilent && selectedRunNoOutputSeconds !== null"
-                            class="mb-2 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200"
+                            class="mb-2 flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-2 py-1 text-[11px] text-warning"
                         >
-                            Run is active but has not emitted stdout/stderr for {{ selectedRunNoOutputSeconds }}s.
+                            <AlertTriangle class="w-3 h-3 shrink-0" />
+                            <span>Run is active but has not emitted stdout/stderr for {{ selectedRunNoOutputSeconds }}s.</span>
+                        </div>
+                        <p v-if="events.length === 0" class="text-muted-foreground">No events yet for selected run.</p>
+                    </div>
+                </Card>
+            </div>
+
+            <div v-if="approvalModalState && approvalModalRun" class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+                <Card class="w-full max-w-2xl border-warning/40 shadow-xl">
+                    <CardContent class="p-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <ShieldCheck class="w-5 h-5 text-warning" />
+                                    <h3 class="text-lg font-semibold text-warning">
+                                        {{ approvalModalState?.kind === 'permission_blocker' ? 'Write Permission Blocker' : 'Approval Required' }}
+                                    </h3>
+                                </div>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    Run #{{ approvalModalRun.id }} (job {{ approvalModalRun.agent_job_id }}) {{
+                                        approvalModalState?.kind === 'permission_blocker'
+                                            ? 'reported a write-permission blocker.'
+                                            : 'needs approval before it can continue.'
+                                    }}
+                                </p>
+                            </div>
+                            <Button variant="ghost" size="sm" @click="closeApprovalModal">
+                                <X class="w-4 h-4" />
+                            </Button>
+                        </div>
+
+                        <div class="mt-4 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+                            <p class="whitespace-pre-wrap break-words">{{ approvalModalState.excerpt }}</p>
+                        </div>
+
+                        <p class="mt-3 text-xs text-muted-foreground">
+                            Apply updates this job to a non-interactive command template (Codex/Claude aware), stops the current run if needed, then re-runs it.
                         </p>
-                        <p v-if="events.length === 0" class="text-gray-400">No events yet for selected run.</p>
-                    </div>
-                </div>
+                        <p v-if="approvalError" class="mt-2 text-xs text-destructive">{{ approvalError }}</p>
+
+                        <div class="mt-4 flex items-center gap-2">
+                            <Button
+                                :disabled="approvalBusy"
+                                @click="approveAndRerun"
+                            >
+                                <RefreshCw v-if="approvalBusy" class="w-4 h-4 animate-spin" />
+                                {{ approvalBusy ? 'Processing…' : 'Apply & Re-run' }}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                :disabled="approvalBusy"
+                                @click="denyApprovalRun"
+                            >
+                                Deny (Stop Run)
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
-            <div v-if="approvalModalState && approvalModalRun" class="fixed inset-0 z-40 flex items-center justify-center bg-gray-900/50 p-4">
-                <div class="w-full max-w-2xl rounded-lg border border-amber-300 bg-white p-5 shadow-xl dark:border-amber-900/70 dark:bg-gray-900">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <h3 class="text-lg font-semibold text-amber-800 dark:text-amber-300">
-                                {{ approvalModalState?.kind === 'permission_blocker' ? 'Write Permission Blocker' : 'Approval Required' }}
-                            </h3>
-                            <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                                Run #{{ approvalModalRun.id }} (job {{ approvalModalRun.agent_job_id }}) {{
-                                    approvalModalState?.kind === 'permission_blocker'
-                                        ? 'reported a write-permission blocker.'
-                                        : 'needs approval before it can continue.'
-                                }}
-                            </p>
+            <div v-if="rateLimitModalState && rateLimitModalRun" class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+                <Card class="w-full max-w-2xl border-destructive/40 shadow-xl">
+                    <CardContent class="p-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <AlertTriangle class="w-5 h-5 text-destructive" />
+                                    <h3 class="text-lg font-semibold text-destructive">Rate Limit Detected</h3>
+                                </div>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    Run #{{ rateLimitModalRun.id }} (job {{ rateLimitModalRun.agent_job_id }}) hit an upstream usage/rate limit.
+                                </p>
+                            </div>
+                            <Button variant="ghost" size="sm" @click="closeRateLimitModal">
+                                <X class="w-4 h-4" />
+                            </Button>
                         </div>
-                        <button class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" @click="closeApprovalModal">Close</button>
-                    </div>
 
-                    <div class="mt-4 rounded-md border border-gray-200 bg-amber-50/50 p-3 text-sm text-amber-900 dark:border-gray-700 dark:bg-amber-950/30 dark:text-amber-200">
-                        <p class="whitespace-pre-wrap break-words">{{ approvalModalState.excerpt }}</p>
-                    </div>
+                        <div class="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                            <p class="whitespace-pre-wrap break-words">{{ rateLimitModalState.excerpt }}</p>
+                        </div>
 
-                    <p class="mt-3 text-xs text-gray-600 dark:text-gray-300">
-                        Apply updates this job to a non-interactive command template (Codex/Claude aware), stops the current run if needed, then re-runs it.
-                    </p>
-                    <p v-if="approvalError" class="mt-2 text-xs text-red-700 dark:text-red-300">{{ approvalError }}</p>
+                        <p v-if="rateLimitModalState.holdUntil" class="mt-3 text-xs text-muted-foreground">
+                            Hold until: <span class="font-semibold text-foreground">{{ rateLimitModalState.holdUntil }}</span>
+                            <Badge v-if="rateLimitModalState.holdActive" variant="destructive" class="ml-2">active</Badge>
+                        </p>
+                        <p v-else class="mt-3 text-xs text-muted-foreground">
+                            No reset time was parsed from output. Default hold policy applies.
+                        </p>
+                        <p v-if="rateLimitError" class="mt-2 text-xs text-destructive">{{ rateLimitError }}</p>
 
-                    <div class="mt-4 flex items-center gap-2">
-                        <button
-                            class="rounded bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="approvalBusy"
-                            @click="approveAndRerun"
-                        >
-                            {{ approvalBusy ? 'Processing…' : 'Apply & Re-run' }}
-                        </button>
-                        <button
-                            class="rounded border border-amber-600 px-3 py-1.5 text-xs font-semibold text-amber-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-amber-300"
-                            :disabled="approvalBusy"
-                            @click="denyApprovalRun"
-                        >
-                            Deny (Stop Run)
-                        </button>
-                    </div>
-                </div>
+                        <div class="mt-4 flex items-center gap-2">
+                            <Button
+                                variant="destructive"
+                                :disabled="rateLimitBusy"
+                                @click="runAnywayAfterRateLimit"
+                            >
+                                <RefreshCw v-if="rateLimitBusy" class="w-4 h-4 animate-spin" />
+                                {{ rateLimitBusy ? 'Dispatching…' : 'Run Anyway Now' }}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                :disabled="rateLimitBusy"
+                                @click="closeRateLimitModal"
+                            >
+                                Wait Until Reset
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
-            <div v-if="rateLimitModalState && rateLimitModalRun" class="fixed inset-0 z-40 flex items-center justify-center bg-gray-900/50 p-4">
-                <div class="w-full max-w-2xl rounded-lg border border-red-300 bg-white p-5 shadow-xl dark:border-red-900/70 dark:bg-gray-900">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <h3 class="text-lg font-semibold text-red-800 dark:text-red-300">Rate Limit Detected</h3>
-                            <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                                Run #{{ rateLimitModalRun.id }} (job {{ rateLimitModalRun.agent_job_id }}) hit an upstream usage/rate limit.
-                            </p>
+            <div v-if="clarificationModalState && clarificationModalRun" class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+                <Card class="w-full max-w-2xl border-primary/40 shadow-xl">
+                    <CardContent class="p-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <HelpCircle class="w-5 h-5 text-primary" />
+                                    <h3 class="text-lg font-semibold text-primary">Clarification Requested</h3>
+                                </div>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    Run #{{ clarificationModalRun.id }} (job {{ clarificationModalRun.agent_job_id }}) asked a question and needs clarification.
+                                </p>
+                            </div>
+                            <Button variant="ghost" size="sm" @click="closeClarificationModal">
+                                <X class="w-4 h-4" />
+                            </Button>
                         </div>
-                        <button class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" @click="closeRateLimitModal">Close</button>
-                    </div>
 
-                    <div class="mt-4 rounded-md border border-gray-200 bg-red-50/50 p-3 text-sm text-red-900 dark:border-gray-700 dark:bg-red-950/30 dark:text-red-200">
-                        <p class="whitespace-pre-wrap break-words">{{ rateLimitModalState.excerpt }}</p>
-                    </div>
-
-                    <p v-if="rateLimitModalState.holdUntil" class="mt-3 text-xs text-gray-700 dark:text-gray-300">
-                        Hold until: <span class="font-semibold">{{ rateLimitModalState.holdUntil }}</span>
-                        <span v-if="rateLimitModalState.holdActive"> (active)</span>
-                    </p>
-                    <p v-else class="mt-3 text-xs text-gray-700 dark:text-gray-300">
-                        No reset time was parsed from output. Default hold policy applies.
-                    </p>
-                    <p v-if="rateLimitError" class="mt-2 text-xs text-red-700 dark:text-red-300">{{ rateLimitError }}</p>
-
-                    <div class="mt-4 flex items-center gap-2">
-                        <button
-                            class="rounded bg-red-600 px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="rateLimitBusy"
-                            @click="runAnywayAfterRateLimit"
-                        >
-                            {{ rateLimitBusy ? 'Dispatching…' : 'Run Anyway Now' }}
-                        </button>
-                        <button
-                            class="rounded border border-red-600 px-3 py-1.5 text-xs font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-300"
-                            :disabled="rateLimitBusy"
-                            @click="closeRateLimitModal"
-                        >
-                            Wait Until Reset
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="clarificationModalState && clarificationModalRun" class="fixed inset-0 z-40 flex items-center justify-center bg-gray-900/50 p-4">
-                <div class="w-full max-w-2xl rounded-lg border border-sky-300 bg-white p-5 shadow-xl dark:border-sky-900/70 dark:bg-gray-900">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <h3 class="text-lg font-semibold text-sky-800 dark:text-sky-300">Clarification Requested</h3>
-                            <p class="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                                Run #{{ clarificationModalRun.id }} (job {{ clarificationModalRun.agent_job_id }}) asked a question and needs clarification.
-                            </p>
+                        <div class="mt-4 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm text-primary">
+                            <p class="whitespace-pre-wrap break-words">{{ clarificationModalState.excerpt }}</p>
                         </div>
-                        <button class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50" @click="closeClarificationModal">Close</button>
-                    </div>
-
-                    <div class="mt-4 rounded-md border border-gray-200 bg-sky-50/50 p-3 text-sm text-sky-900 dark:border-gray-700 dark:bg-sky-950/30 dark:text-sky-200">
-                        <p class="whitespace-pre-wrap break-words">{{ clarificationModalState.excerpt }}</p>
-                    </div>
-                </div>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     </AppLayout>

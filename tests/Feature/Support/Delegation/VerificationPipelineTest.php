@@ -61,7 +61,7 @@ class VerificationPipelineTest extends TestCase
             'delegatee_profile_id' => $this->profile->id,
         ]);
 
-        $pipeline = new VerificationPipeline();
+        $pipeline = new VerificationPipeline;
         $pipeline->execute($task, $attempt);
 
         Event::assertDispatched(DelegationTaskVerified::class, function ($event) use ($task) {
@@ -98,7 +98,7 @@ class VerificationPipelineTest extends TestCase
             'delegatee_profile_id' => $this->profile->id,
         ]);
 
-        $pipeline = new VerificationPipeline();
+        $pipeline = new VerificationPipeline;
         $pipeline->execute($task, $attempt);
 
         // First step should have run
@@ -148,7 +148,7 @@ class VerificationPipelineTest extends TestCase
             'delegatee_profile_id' => $this->profile->id,
         ]);
 
-        $pipeline = new VerificationPipeline();
+        $pipeline = new VerificationPipeline;
         $pipeline->execute($task, $attempt);
 
         // First step should fail
@@ -199,7 +199,7 @@ class VerificationPipelineTest extends TestCase
             'delegatee_profile_id' => $this->profile->id,
         ]);
 
-        $pipeline = new VerificationPipeline();
+        $pipeline = new VerificationPipeline;
         $pipeline->execute($task, $attempt);
 
         Event::assertDispatched(DelegationTaskVerified::class, function ($event) use ($task, $attempt) {
@@ -238,7 +238,7 @@ class VerificationPipelineTest extends TestCase
             'delegatee_profile_id' => $this->profile->id,
         ]);
 
-        $pipeline = new VerificationPipeline();
+        $pipeline = new VerificationPipeline;
         $pipeline->execute($task, $attempt);
 
         Event::assertDispatched(DelegationTaskVerified::class, function ($event) use ($task) {
@@ -289,7 +289,7 @@ class VerificationPipelineTest extends TestCase
             'step_order' => 0,
         ]);
 
-        $pipeline = new VerificationPipeline();
+        $pipeline = new VerificationPipeline;
         $pipeline->resume($task, $attempt);
 
         // Only the second step should run
@@ -341,7 +341,7 @@ class VerificationPipelineTest extends TestCase
             'delegatee_profile_id' => $this->profile->id,
         ]);
 
-        $pipeline = new VerificationPipeline();
+        $pipeline = new VerificationPipeline;
         $pipeline->execute($task, $attempt);
 
         // Automated check should pass
@@ -396,7 +396,7 @@ class VerificationPipelineTest extends TestCase
             'delegatee_profile_id' => $this->profile->id,
         ]);
 
-        $pipeline = new VerificationPipeline();
+        $pipeline = new VerificationPipeline;
         $pipeline->execute($task, $attempt);
 
         Process::assertRan('php artisan test');

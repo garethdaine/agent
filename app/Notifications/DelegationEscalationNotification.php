@@ -46,10 +46,10 @@ class DelegationEscalationNotification extends Notification implements ShouldQue
 
         return (new MailMessage)
             ->subject("Delegation Task Escalation: {$taskName}")
-            ->line("A delegation task has exhausted all recovery options and requires manual intervention.")
+            ->line('A delegation task has exhausted all recovery options and requires manual intervention.')
             ->line("Graph: {$graphName}")
             ->line("Task: {$taskName}")
-            ->line("Reason: Recovery chain exhausted after retries and re-delegation attempts.")
+            ->line('Reason: Recovery chain exhausted after retries and re-delegation attempts.')
             ->action('View Task', url("/agent/delegation/{$this->task->graph->id}/tasks/{$this->task->id}"))
             ->line('Please review the task and take appropriate action.');
     }

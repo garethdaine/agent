@@ -4,7 +4,6 @@ namespace Tests\Feature\Support\Delegation;
 
 use App\Jobs\DelegationAttemptCompletedJob;
 use App\Jobs\ExecuteAgentRunJob;
-use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\DelegateeProfile;
 use App\Models\DelegationAttempt;
@@ -24,9 +23,13 @@ class AttemptSpawnerTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private DelegateeProfile $profile;
+
     private DelegationGraph $graph;
+
     private DelegationTask $task;
+
     private ContractEnforcer $enforcer;
 
     protected function setUp(): void

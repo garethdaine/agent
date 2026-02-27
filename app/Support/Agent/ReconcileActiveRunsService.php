@@ -2,6 +2,7 @@
 
 namespace App\Support\Agent;
 
+use App\Jobs\ExecuteInterrogationBuildJob;
 use App\Models\AgentJobRun;
 use Carbon\CarbonImmutable;
 
@@ -113,6 +114,7 @@ class ReconcileActiveRunsService
                 'to' => $targetStatus,
                 'at' => $finishedAt->toIso8601String(),
             ]);
+            $this->dispatchInterrogationBuildFollowUp($run, $phase, $reconcileReason);
 
             $summary['reconciled']++;
 
@@ -126,6 +128,40 @@ class ReconcileActiveRunsService
         }
 
         return $summary;
+    }
+
+    private function dispatchInterrogationBuildFollowUp(
+        AgentJobRun $run,
+        string $phase,
+        string $reconcileReason,
+    ): void {
+        $metadata = is_array($run->metadata_json) ? $run->metadata_json : [];
+
+        if (($metadata['source'] ?? null) !== 'interrogation_build') {
+            return;
+        }
+
+        $sessionId = (int) ($metadata['interrogation_session_id'] ?? 0);
+        if ($sessionId <= 0) {
+            return;
+        }
+
+        try {
+            ExecuteInterrogationBuildJob::dispatch($sessionId);
+        } catch (\Throwable $throwable) {
+            report($throwable);
+
+            $writer = new RunEventWriter($run);
+            $writer->appendLifecycle([
+                'type' => 'system_notice',
+                'notice' => 'build_reconcile_dispatch_failed',
+                'phase' => $phase,
+                'reason' => $reconcileReason,
+                'session_id' => $sessionId,
+                'error' => mb_substr(trim((string) $throwable->getMessage()), 0, 300),
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ]);
+        }
     }
 
     private function processExists(int $pid): bool

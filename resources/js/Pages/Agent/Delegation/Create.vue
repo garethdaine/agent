@@ -1,8 +1,19 @@
 <script setup>
 import { ref, computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, Link } from '@inertiajs/vue3';
 import axios from 'axios';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardDescription from '@/Components/ui/CardDescription.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import CardFooter from '@/Components/ui/CardFooter.vue';
+import Input from '@/Components/ui/Input.vue';
+import Textarea from '@/Components/ui/Textarea.vue';
+import Button from '@/Components/ui/Button.vue';
+import Spinner from '@/Components/ui/Spinner.vue';
+import { Plus, Trash2, AlertCircle, AlertTriangle, ArrowLeft } from 'lucide-vue-next';
 
 const mode = ref('linear');
 const name = ref('');
@@ -101,34 +112,45 @@ const create = async () => {
         <Head title="Create Delegation Graph" />
 
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Create Delegation Graph</h2>
+            <div class="flex items-center gap-4">
+                <Link :href="route('agent.delegation.index')">
+                    <Button variant="ghost" size="icon">
+                        <ArrowLeft class="h-4 w-4" />
+                    </Button>
+                </Link>
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Create Delegation Graph</h2>
+            </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-4xl space-y-6">
-                <div class="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                            <input v-model="name" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" placeholder="My Delegation Graph" />
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Graph Details</CardTitle>
+                        <CardDescription>Define your delegation graph name and tasks</CardDescription>
+                    </CardHeader>
+                    <CardContent class="space-y-6">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-foreground">Name</label>
+                            <Input v-model="name" type="text" placeholder="My Delegation Graph" />
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Description (optional)</label>
-                            <textarea v-model="description" rows="2" class="mt-1 block w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" placeholder="Description of what this graph does..." />
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-foreground">Description (optional)</label>
+                            <Textarea v-model="description" rows="2" placeholder="Description of what this graph does..." />
                         </div>
 
-                        <div class="flex gap-4 border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex gap-4 border-b border-border">
                             <button
-                                :class="mode === 'linear' ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'"
-                                class="px-4 py-2 text-sm font-medium"
+                                :class="mode === 'linear' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'"
+                                class="px-4 py-2 text-sm font-medium transition-colors"
                                 @click="mode = 'linear'"
                             >
                                 Linear Chain
                             </button>
                             <button
-                                :class="mode === 'dag' ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'"
-                                class="px-4 py-2 text-sm font-medium"
+                                :class="mode === 'dag' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground hover:text-foreground'"
+                                class="px-4 py-2 text-sm font-medium transition-colors"
                                 @click="mode = 'dag'"
                             >
                                 DAG JSON
@@ -136,62 +158,89 @@ const create = async () => {
                         </div>
 
                         <div v-if="mode === 'linear'" class="space-y-4">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Tasks will be executed sequentially in the order below.</p>
+                            <p class="text-sm text-muted-foreground">Tasks will be executed sequentially in the order below.</p>
 
-                            <div v-for="(task, index) in linearTasks" :key="index" class="rounded-md border border-gray-200 p-4 dark:border-gray-700">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Task {{ index + 1 }}</span>
-                                    <button v-if="linearTasks.length > 1" class="text-sm text-red-600 hover:text-red-800 dark:text-red-400" @click="removeLinearTask(index)">Remove</button>
+                            <div v-for="(task, index) in linearTasks" :key="index" class="rounded-lg border border-border p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-sm font-medium text-foreground">Task {{ index + 1 }}</span>
+                                    <Button
+                                        v-if="linearTasks.length > 1"
+                                        variant="ghost"
+                                        size="sm"
+                                        class="text-destructive hover:text-destructive"
+                                        @click="removeLinearTask(index)"
+                                    >
+                                        <Trash2 class="mr-1 h-3 w-3" />
+                                        Remove
+                                    </Button>
                                 </div>
-                                <div class="space-y-2">
-                                    <input v-model="task.name" type="text" class="block w-full rounded-md border-gray-300 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" :placeholder="`task_${index + 1}`" />
-                                    <textarea v-model="task.contract" rows="6" class="block w-full rounded-md border-gray-300 font-mono text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                                <div class="space-y-3">
+                                    <Input v-model="task.name" type="text" :placeholder="`task_${index + 1}`" />
+                                    <textarea
+                                        v-model="task.contract"
+                                        rows="6"
+                                        class="block w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+                                    />
                                 </div>
                             </div>
 
-                            <button class="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400" @click="addLinearTask">+ Add Task</button>
+                            <Button variant="ghost" size="sm" @click="addLinearTask">
+                                <Plus class="mr-1 h-4 w-4" />
+                                Add Task
+                            </Button>
                         </div>
 
                         <div v-else class="space-y-2">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">Define tasks as a directed acyclic graph in JSON format.</p>
-                            <textarea v-model="dagJson" rows="20" class="block w-full rounded-md border-gray-300 font-mono text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                            <p class="text-sm text-muted-foreground">Define tasks as a directed acyclic graph in JSON format.</p>
+                            <textarea
+                                v-model="dagJson"
+                                rows="20"
+                                class="block w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+                            />
                         </div>
-                    </div>
-                </div>
+                    </CardContent>
+                </Card>
 
-                <div v-if="validationErrors.length > 0" class="rounded-md border border-red-300 bg-red-50 p-4 dark:border-red-700 dark:bg-red-900/20">
-                    <h4 class="text-sm font-medium text-red-800 dark:text-red-300">Validation Errors</h4>
-                    <ul class="mt-2 list-disc list-inside text-sm text-red-700 dark:text-red-400">
+                <div v-if="validationErrors.length > 0" class="rounded-lg border border-destructive bg-destructive/10 p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <AlertCircle class="h-4 w-4 text-destructive" />
+                        <h4 class="text-sm font-medium text-destructive">Validation Errors</h4>
+                    </div>
+                    <ul class="mt-2 list-disc list-inside text-sm text-destructive/80">
                         <li v-for="(err, i) in validationErrors" :key="i">{{ err }}</li>
                     </ul>
                 </div>
 
-                <div v-if="validationWarnings.length > 0" class="rounded-md border border-yellow-300 bg-yellow-50 p-4 dark:border-yellow-700 dark:bg-yellow-900/20">
-                    <h4 class="text-sm font-medium text-yellow-800 dark:text-yellow-300">Warnings</h4>
-                    <ul class="mt-2 list-disc list-inside text-sm text-yellow-700 dark:text-yellow-400">
+                <div v-if="validationWarnings.length > 0" class="rounded-lg border border-warning bg-warning/10 p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <AlertTriangle class="h-4 w-4 text-warning" />
+                        <h4 class="text-sm font-medium text-warning">Warnings</h4>
+                    </div>
+                    <ul class="mt-2 list-disc list-inside text-sm text-warning/80">
                         <li v-for="(warn, i) in validationWarnings" :key="i">{{ warn }}</li>
                     </ul>
                 </div>
 
-                <p v-if="error" class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <p v-if="error" class="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {{ error }}
                 </p>
 
                 <div class="flex items-center justify-end gap-3">
-                    <button
-                        class="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                    <Button
+                        variant="outline"
                         :disabled="validating"
                         @click="validate"
                     >
+                        <Spinner v-if="validating" size="sm" class="mr-2" />
                         {{ validating ? 'Validating...' : 'Validate' }}
-                    </button>
-                    <button
-                        class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                    </Button>
+                    <Button
                         :disabled="loading || !name"
                         @click="create"
                     >
+                        <Spinner v-if="loading" size="sm" class="mr-2" />
                         {{ loading ? 'Creating...' : 'Create Graph' }}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

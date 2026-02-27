@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ComplianceSummaryResource;
 use App\Models\AgentJobRun;
 use App\Models\SchedulerHeartbeat;
 use App\Support\Agent\AuditLogger;
@@ -130,38 +131,70 @@ class AgentRunController extends Controller
             return ErrorEnvelope::make('NOT_FOUND', 'Resource not found.', 404);
         }
 
-        return response()->json([
-            'data' => [
-                'id' => $run->id,
-                'agent_job_id' => $run->agent_job_id,
-                'user_id' => $run->user_id,
-                'initiated_by_user_id' => $run->initiated_by_user_id,
-                'trigger_type' => $run->trigger_type,
-                'due_window_utc_minute' => $this->toRfc3339Millis($run->due_window_utc_minute),
-                'status' => $run->status,
-                'pid' => $run->pid,
-                'resolved_executable_path' => $run->resolved_executable_path,
-                'started_at' => $this->toRfc3339Millis($run->started_at),
-                'finished_at' => $this->toRfc3339Millis($run->finished_at),
-                'exit_code' => $run->exit_code,
-                'signal' => $run->signal,
-                'duration_ms' => $run->duration_ms,
-                'error_summary' => $run->error_summary,
-                'error_code' => $run->error_code,
-                'metadata_json' => $run->metadata_json,
-                'output_stats' => [
-                    'stdout_bytes_pre' => $run->stdout_bytes_pre,
-                    'stdout_bytes_post' => $run->stdout_bytes_post,
-                    'stderr_bytes_pre' => $run->stderr_bytes_pre,
-                    'stderr_bytes_post' => $run->stderr_bytes_post,
-                    'redaction_count' => (int) (($run->metadata_json ?? [])['redaction_count'] ?? 0),
-                    'output_truncated' => (bool) (($run->metadata_json ?? [])['output_truncated'] ?? false),
-                ],
-                'links' => [
-                    'events' => '/agent/api/v1/runs/'.$run->id.'/events',
-                ],
+        $response = [
+            'id' => $run->id,
+            'agent_job_id' => $run->agent_job_id,
+            'user_id' => $run->user_id,
+            'initiated_by_user_id' => $run->initiated_by_user_id,
+            'trigger_type' => $run->trigger_type,
+            'due_window_utc_minute' => $this->toRfc3339Millis($run->due_window_utc_minute),
+            'status' => $run->status,
+            'pid' => $run->pid,
+            'resolved_executable_path' => $run->resolved_executable_path,
+            'started_at' => $this->toRfc3339Millis($run->started_at),
+            'finished_at' => $this->toRfc3339Millis($run->finished_at),
+            'exit_code' => $run->exit_code,
+            'signal' => $run->signal,
+            'duration_ms' => $run->duration_ms,
+            'error_summary' => $run->error_summary,
+            'error_code' => $run->error_code,
+            'metadata_json' => $run->metadata_json,
+            'output_stats' => [
+                'stdout_bytes_pre' => $run->stdout_bytes_pre,
+                'stdout_bytes_post' => $run->stdout_bytes_post,
+                'stderr_bytes_pre' => $run->stderr_bytes_pre,
+                'stderr_bytes_post' => $run->stderr_bytes_post,
+                'redaction_count' => (int) (($run->metadata_json ?? [])['redaction_count'] ?? 0),
+                'output_truncated' => (bool) (($run->metadata_json ?? [])['output_truncated'] ?? false),
             ],
+            'links' => [
+                'events' => '/agent/api/v1/runs/'.$run->id.'/events',
+            ],
+        ];
+
+        $complianceData = $this->extractComplianceData($run->metadata_json ?? []);
+        if (! empty($complianceData)) {
+            $response['compliance_summary'] = (new ComplianceSummaryResource($complianceData))->toArray($request);
+        }
+
+        return response()->json([
+            'data' => $response,
         ]);
+    }
+
+    /**
+     * Extract compliance-related data from metadata.
+     *
+     * @param  array<string, mixed>  $metadata
+     * @return array<string, mixed>
+     */
+    private function extractComplianceData(array $metadata): array
+    {
+        $complianceKeys = [
+            'workflow_policy_version',
+            'complexity_classification',
+            'task_category',
+            'plan_required',
+            'plan_completed',
+            'verification_required',
+            'verification_completed',
+            'compliance_block_reason',
+            'compliance_remediation',
+            'compliance_gates',
+            'compliance_status',
+        ];
+
+        return array_intersect_key($metadata, array_flip($complianceKeys));
     }
 
     public function events(Request $request, int $id): JsonResponse

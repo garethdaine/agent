@@ -282,7 +282,7 @@ class MessengerConnectorController extends Controller
         $changedFields = [];
 
         foreach ($validated as $key => $value) {
-            if ($connector->$key !== $value) {
+            if ($value !== $connector->$key) {
                 $changedFields[] = $key;
             }
         }

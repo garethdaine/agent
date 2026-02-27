@@ -42,12 +42,12 @@ class InterrogationBuildCommandGuardTest extends TestCase
         );
     }
 
-    public function test_it_requires_sqlite_connection_for_interrogation_build_runs(): void
+    public function test_it_requires_sqlite_or_pgsql_testing_connection_for_interrogation_build_runs(): void
     {
         $guard = app(InterrogationBuildCommandGuard::class);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('DB_CONNECTION must be sqlite');
+        $this->expectExceptionMessage('DB_CONNECTION must be sqlite or pgsql_testing');
 
         $guard->enforce(
             ['php', 'artisan', 'test'],
@@ -92,6 +92,59 @@ class InterrogationBuildCommandGuardTest extends TestCase
         );
 
         $this->assertTrue(true);
+    }
+
+    public function test_it_allows_safe_artisan_test_commands_with_isolated_pgsql_testing_database(): void
+    {
+        $guard = app(InterrogationBuildCommandGuard::class);
+
+        $guard->enforce(
+            ['php', 'artisan', 'test'],
+            [
+                'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'DB_CONNECTION' => 'pgsql_testing',
+                'DB_DATABASE' => '/tmp/interrogation-sentinel.sqlite',
+                'TEST_DB_DATABASE' => 'agent_test',
+            ],
+        );
+
+        $this->assertTrue(true);
+    }
+
+    public function test_it_rejects_non_isolated_pgsql_testing_database_name(): void
+    {
+        $guard = app(InterrogationBuildCommandGuard::class);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('TEST_DB_DATABASE must be an isolated test database');
+
+        $guard->enforce(
+            ['php', 'artisan', 'test'],
+            [
+                'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'DB_CONNECTION' => 'pgsql_testing',
+                'DB_DATABASE' => '/tmp/interrogation-sentinel.sqlite',
+                'TEST_DB_DATABASE' => 'agent',
+            ],
+        );
+    }
+
+    public function test_it_rejects_pgsql_testing_when_test_database_matches_primary_database(): void
+    {
+        $guard = app(InterrogationBuildCommandGuard::class);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('TEST_DB_DATABASE must differ from DB_DATABASE');
+
+        $guard->enforce(
+            ['php', 'artisan', 'test'],
+            [
+                'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'DB_CONNECTION' => 'pgsql_testing',
+                'DB_DATABASE' => 'agent_test',
+                'TEST_DB_DATABASE' => 'agent_test',
+            ],
+        );
     }
 
     private function sandboxDatabasePath(string $fileName): string

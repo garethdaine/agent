@@ -14,8 +14,61 @@ export default {
 
     theme: {
         extend: {
+            colors: {
+                background: 'var(--background)',
+                foreground: 'var(--foreground)',
+                card: {
+                    DEFAULT: 'var(--card)',
+                    foreground: 'var(--card-foreground)',
+                },
+                popover: {
+                    DEFAULT: 'var(--popover)',
+                    foreground: 'var(--popover-foreground)',
+                },
+                primary: {
+                    DEFAULT: 'var(--primary)',
+                    foreground: 'var(--primary-foreground)',
+                },
+                secondary: {
+                    DEFAULT: 'var(--secondary)',
+                    foreground: 'var(--secondary-foreground)',
+                },
+                muted: {
+                    DEFAULT: 'var(--muted)',
+                    foreground: 'var(--muted-foreground)',
+                },
+                accent: {
+                    DEFAULT: 'var(--accent)',
+                    foreground: 'var(--accent-foreground)',
+                },
+                destructive: {
+                    DEFAULT: 'var(--destructive)',
+                    foreground: 'var(--destructive-foreground)',
+                },
+                success: {
+                    DEFAULT: 'var(--success)',
+                    foreground: 'var(--success-foreground)',
+                },
+                warning: {
+                    DEFAULT: 'var(--warning)',
+                    foreground: 'var(--warning-foreground)',
+                },
+                border: 'var(--border)',
+                input: {
+                    DEFAULT: 'var(--input)',
+                    background: 'var(--input-background)',
+                },
+                ring: 'var(--ring)',
+            },
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['var(--font-sans)'],
+                mono: ['var(--font-mono)'],
+            },
+            borderRadius: {
+                sm: 'calc(var(--radius) - 4px)',
+                md: 'calc(var(--radius) - 2px)',
+                lg: 'var(--radius)',
+                xl: 'calc(var(--radius) + 4px)',
             },
         },
     },

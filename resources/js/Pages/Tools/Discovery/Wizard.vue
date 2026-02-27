@@ -11,6 +11,17 @@ import StatusCard from '@/Components/Interrogation/StatusCard.vue';
 import SummaryViewer from '@/Components/Interrogation/SummaryViewer.vue';
 import { formatInterrogationError } from '@/Components/Interrogation/errorFormatting';
 import { isAnswerableQuestionEvent } from '@/Components/Interrogation/questionPresentation';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardDescription from '@/Components/ui/CardDescription.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import CardFooter from '@/Components/ui/CardFooter.vue';
+import Button from '@/Components/ui/Button.vue';
+import Input from '@/Components/ui/Input.vue';
+import Badge from '@/Components/ui/Badge.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
+import Spinner from '@/Components/ui/Spinner.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -572,11 +583,6 @@ const advancePreDiscovery = async () => {
 
     try {
         const phase = Number(session.value?.phase ?? PHASE.SETUP);
-        if (phase === PHASE.TECH_STACK_SETUP && techStacks.value.length === 0) {
-            error.value = 'Add at least one tech stack entry before starting discovery.';
-            return;
-        }
-
         const endpoint = phase === PHASE.TECH_STACK_SETUP
             ? 'start-discovery'
             : 'advance-pre-discovery';
@@ -1088,7 +1094,7 @@ const restartFromBeginning = async () => {
         selectedQuestionId.value = '';
         awaitingNextQuestion.value = false;
         submittedQuestionCount.value = 0;
-        notice.value = 'Session restarted. Optionally connect a task provider, then add your tech stack before discovery.';
+        notice.value = 'Session restarted. Optionally connect a task provider and/or add tech stack context before discovery.';
         await loadSession(true);
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to restart session.';
@@ -1190,114 +1196,122 @@ onBeforeUnmount(() => {
         <template #header>
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">{{ session?.name || `Session #${sessionId}` }}</h2>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ session?.project_directory || 'Loading...' }}</p>
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">{{ session?.name || `Session #${sessionId}` }}</h2>
+                    <p class="mt-1 text-xs text-muted-foreground">{{ session?.project_directory || 'Loading...' }}</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <SessionStatusBadge v-if="session" :status="session.status" />
-                    <button
+                    <Button
                         v-if="session && !session.deleted_at
                             && (['failed', 'paused', 'setup'].includes(session.status)
                                 || (session.status === 'interrogating' && session.phase === PHASE.INTERROGATION))"
-                        type="button"
-                        class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50 dark:border-amber-700/70 dark:text-amber-300 dark:hover:bg-amber-950/30"
+                        variant="outline"
+                        size="sm"
                         :disabled="busy"
                         @click="retrySession"
                     >
                         Retry
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         v-if="session && !session.deleted_at"
-                        type="button"
-                        class="rounded border border-orange-300 px-2 py-1 text-xs text-orange-700 hover:bg-orange-50 dark:border-orange-700/70 dark:text-orange-300 dark:hover:bg-orange-950/30"
+                        variant="outline"
+                        size="sm"
                         :disabled="busy"
                         @click="restartFromBeginning"
                     >
                         Restart Fresh
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         v-if="session && !session.deleted_at"
-                        type="button"
-                        class="rounded border border-blue-300 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50 dark:border-blue-700/70 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                        variant="outline"
+                        size="sm"
                         :disabled="busy"
                         @click="renameCurrentSession"
                     >
                         Rename
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         v-if="session && !session.deleted_at && session.phase === PHASE.INTERROGATION"
-                        type="button"
-                        class="rounded border border-orange-300 px-2 py-1 text-xs text-orange-700 hover:bg-orange-50 dark:border-orange-700/70 dark:text-orange-300 dark:hover:bg-orange-950/30"
+                        variant="outline"
+                        size="sm"
                         :disabled="busy"
                         @click="cleanupInvalidQuestions"
                     >
                         Clean Questions
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         v-if="session && session.phase < PHASE.BUILD_TASKS && session.status !== 'paused'"
-                        type="button"
-                        class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
+                        variant="secondary"
+                        size="sm"
                         :disabled="busy"
                         @click="pause"
                     >
                         Pause
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         v-if="session && session.phase < PHASE.BUILD_TASKS && session.status === 'paused'"
-                        type="button"
-                        class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
+                        variant="secondary"
+                        size="sm"
                         :disabled="busy"
                         @click="resume"
                     >
                         Resume
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         v-if="session && !session.deleted_at"
-                        type="button"
-                        class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:border-red-800/70 dark:text-red-300 dark:hover:bg-red-950/30"
+                        variant="destructive"
+                        size="sm"
                         :disabled="busy"
                         @click="deleteSession"
                     >
                         Delete
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         v-if="session && session.deleted_at"
-                        type="button"
-                        class="rounded border border-green-300 px-2 py-1 text-xs text-green-700 hover:bg-green-50 dark:border-green-800/70 dark:text-green-300 dark:hover:bg-green-950/30"
+                        variant="outline"
+                        size="sm"
                         :disabled="busy"
                         @click="restoreSession"
                     >
                         Restore
-                    </button>
+                    </Button>
                     <Link
                         v-if="session"
                         :href="route('tools.discovery.session.settings', session.id)"
-                        class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200"
                     >
-                        Session Settings
+                        <Button variant="outline" size="sm">Session Settings</Button>
                     </Link>
-                    <Link :href="route('tools.discovery.index')" class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200">Back</Link>
+                    <Link :href="route('tools.discovery.index')">
+                        <Button variant="outline" size="sm">Back</Button>
+                    </Link>
                 </div>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-7xl space-y-4">
-                <div v-if="displayError.summary" class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
-                    <p>{{ displayError.summary }}</p>
+                <Card v-if="displayError.summary" class="border-destructive/50 bg-destructive/10 px-3 py-2">
+                    <p class="text-sm text-destructive">{{ displayError.summary }}</p>
                     <details v-if="displayError.details" class="mt-2">
-                        <summary class="cursor-pointer text-xs font-medium">Show technical details</summary>
-                        <pre class="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded border border-red-200 bg-white p-2 text-[11px] text-red-700 dark:border-red-800/60 dark:bg-gray-950 dark:text-red-200">{{ displayError.details }}</pre>
+                        <summary class="cursor-pointer text-xs font-medium text-destructive">Show technical details</summary>
+                        <pre class="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-md border border-destructive/30 bg-card p-2 text-[11px] text-destructive">{{ displayError.details }}</pre>
                     </details>
-                </div>
-                <p v-if="notice" class="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-900/60 dark:bg-green-950/40 dark:text-green-300">{{ notice }}</p>
+                </Card>
+                <Card v-if="notice" class="border-success/50 bg-success/10 px-3 py-2">
+                    <p class="text-sm text-success">{{ notice }}</p>
+                </Card>
 
-                <div v-if="loading" class="rounded-lg border border-gray-200 bg-white p-8 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">Loading session...</div>
+                <Card v-if="loading" class="p-8">
+                    <div class="flex items-center gap-3">
+                        <Spinner size="sm" />
+                        <span class="text-sm text-muted-foreground">Loading session...</span>
+                    </div>
+                </Card>
 
                 <template v-else-if="session">
-                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <Card class="p-4">
                         <PhaseStepper :phase="session.phase" />
-                    </div>
+                    </Card>
 
                     <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
                         <div v-if="session.phase >= PHASE.INTERROGATION && session.phase < PHASE.PLANNING" class="xl:col-span-3">
@@ -1306,130 +1320,134 @@ onBeforeUnmount(() => {
 
                         <div class="space-y-4" :class="session.phase >= PHASE.PLANNING ? 'xl:col-span-9' : 'xl:col-span-6'">
                             <template v-if="session.phase <= PHASE.TECH_STACK_SETUP">
-                                <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Pre-Discovery Setup</p>
-                                    <h3 class="mt-1 text-base font-semibold text-gray-900 dark:text-gray-100">Setup</h3>
-                                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                                        Task provider is optional. You can connect Linear now or skip it and continue to tech stack setup.
-                                    </p>
+                                <Card>
+                                    <CardHeader>
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pre-Discovery Setup</p>
+                                        <CardTitle>Setup</CardTitle>
+                                        <CardDescription>
+                                            Task provider is optional. You can connect Linear now or skip it and continue to tech stack setup.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent class="space-y-6">
+                                        <Card class="bg-muted/50">
+                                            <CardHeader class="pb-3">
+                                                <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Task Provider (Optional)</p>
+                                            </CardHeader>
+                                            <CardContent class="pt-0 space-y-3">
+                                                <p v-if="linearProvider" class="text-sm text-foreground">
+                                                    Connected to Linear
+                                                    <span v-if="linearProvider.provider_workspace_name">({{ linearProvider.provider_workspace_name }})</span>
+                                                    <span v-if="linearProvider.team_name">· Team: {{ linearProvider.team_name }}</span>
+                                                </p>
+                                                <p v-else class="text-sm text-muted-foreground">Linear is not connected for this session.</p>
+                                                <div class="flex flex-wrap gap-2">
+                                                    <Button
+                                                        v-if="!linearProvider"
+                                                        size="sm"
+                                                        :disabled="providerConnecting"
+                                                        @click="startProviderOAuth('linear')"
+                                                    >
+                                                        {{ providerConnecting ? 'Redirecting...' : 'Connect Linear' }}
+                                                    </Button>
+                                                    <Button
+                                                        v-else
+                                                        variant="outline"
+                                                        size="sm"
+                                                        :disabled="providerDisconnecting"
+                                                        @click="disconnectProvider('linear')"
+                                                    >
+                                                        {{ providerDisconnecting ? 'Disconnecting...' : 'Disconnect Linear' }}
+                                                    </Button>
+                                                </div>
+                                                <div v-if="linearProvider" class="space-y-2">
+                                                    <div class="flex items-center gap-2">
+                                                        <select
+                                                            v-model="providerTeamId"
+                                                            class="flex w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring h-9"
+                                                        >
+                                                            <option value="">Select a Linear team...</option>
+                                                            <option v-for="team in linearTeams" :key="team.id" :value="team.id">
+                                                                {{ team.name || team.id }}
+                                                            </option>
+                                                        </select>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            :disabled="providerContextLoading"
+                                                            @click="loadLinearProviderContext({ force: true })"
+                                                        >
+                                                            <Spinner v-if="providerContextLoading" size="sm" class="mr-1" />
+                                                            {{ providerContextLoading ? 'Loading...' : 'Refresh' }}
+                                                        </Button>
+                                                    </div>
+                                                    <div class="flex justify-end">
+                                                        <Button
+                                                            size="sm"
+                                                            :disabled="providerSettingsSaving || providerTeamId.trim() === ''"
+                                                            @click="saveLinearTeamSelection"
+                                                        >
+                                                            {{ providerSettingsSaving ? 'Saving...' : 'Save Linear Team' }}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
 
-                                    <div class="mt-3 rounded border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
-                                        <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Task Provider (Optional)</p>
-                                        <p v-if="linearProvider" class="text-sm text-gray-800 dark:text-gray-100">
-                                            Connected to Linear
-                                            <span v-if="linearProvider.provider_workspace_name">({{ linearProvider.provider_workspace_name }})</span>
-                                            <span v-if="linearProvider.team_name">· Team: {{ linearProvider.team_name }}</span>
-                                        </p>
-                                        <p v-else class="text-sm text-gray-700 dark:text-gray-200">Linear is not connected for this session.</p>
-                                        <div class="mt-3 flex flex-wrap gap-2">
-                                            <button
-                                                v-if="!linearProvider"
-                                                type="button"
-                                                class="rounded bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-                                                :disabled="providerConnecting"
-                                                @click="startProviderOAuth('linear')"
-                                            >
-                                                {{ providerConnecting ? 'Redirecting...' : 'Connect Linear' }}
-                                            </button>
-                                            <button
-                                                v-else
-                                                type="button"
-                                                class="rounded border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
-                                                :disabled="providerDisconnecting"
-                                                @click="disconnectProvider('linear')"
-                                            >
-                                                {{ providerDisconnecting ? 'Disconnecting...' : 'Disconnect Linear' }}
-                                            </button>
-                                        </div>
-                                        <div v-if="linearProvider" class="mt-3 space-y-2">
-                                            <div class="flex items-center gap-2">
-                                                <select
-                                                    v-model="providerTeamId"
-                                                    class="w-full rounded border border-gray-300 px-2 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                                                >
-                                                    <option value="">Select a Linear team...</option>
-                                                    <option v-for="team in linearTeams" :key="team.id" :value="team.id">
-                                                        {{ team.name || team.id }}
-                                                    </option>
-                                                </select>
-                                                <button
-                                                    type="button"
-                                                    class="rounded border border-gray-300 px-2 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700/50"
-                                                    :disabled="providerContextLoading"
-                                                    @click="loadLinearProviderContext({ force: true })"
-                                                >
-                                                    {{ providerContextLoading ? 'Loading...' : 'Refresh' }}
-                                                </button>
+                                        <div class="space-y-3">
+                                            <div>
+                                                <h3 class="text-base font-semibold text-foreground">Tech Stack</h3>
+                                                <p class="mt-1 text-sm text-muted-foreground">
+                                                    Tech stack entries are optional. Add them one-by-one with documentation URLs to improve discovery, planning, and build context.
+                                                </p>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <div v-for="stack in techStacks" :key="stack.id" class="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+                                                    <div>
+                                                        <p class="font-medium text-foreground">{{ stack.name }}</p>
+                                                        <a :href="stack.documentation_url" target="_blank" rel="noreferrer" class="text-xs text-primary underline">{{ stack.documentation_url }}</a>
+                                                    </div>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        :disabled="busy"
+                                                        @click="removeTechStack(stack.id)"
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                </div>
+                                                <div v-if="techStacks.length === 0" class="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                                                    No tech stack entries added yet.
+                                                </div>
+                                            </div>
+
+                                            <div class="grid grid-cols-1 gap-2 md:grid-cols-3">
+                                                <Input
+                                                    v-model="techStackDraft.name"
+                                                    type="text"
+                                                    placeholder="Stack name (e.g. Laravel 12)"
+                                                />
+                                                <Input
+                                                    v-model="techStackDraft.documentation_url"
+                                                    type="url"
+                                                    class="md:col-span-2"
+                                                    placeholder="Documentation URL"
+                                                />
                                             </div>
                                             <div class="flex justify-end">
-                                                <button
-                                                    type="button"
-                                                    class="rounded bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-                                                    :disabled="providerSettingsSaving || providerTeamId.trim() === ''"
-                                                    @click="saveLinearTeamSelection"
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    :disabled="techStackSubmitting"
+                                                    @click="addTechStack"
                                                 >
-                                                    {{ providerSettingsSaving ? 'Saving...' : 'Save Linear Team' }}
-                                                </button>
+                                                    {{ techStackSubmitting ? 'Adding...' : 'Add Tech Stack' }}
+                                                </Button>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <div class="mt-4">
-                                        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100">Tech Stack</h3>
-                                        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                                            Add stack entries one-by-one with documentation URLs. These are used as context in discovery, planning, and build execution.
-                                        </p>
-                                        <div class="mt-3 space-y-2">
-                                            <div v-for="stack in techStacks" :key="stack.id" class="flex flex-wrap items-center justify-between gap-2 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900/40">
-                                                <div>
-                                                    <p class="font-medium text-gray-900 dark:text-gray-100">{{ stack.name }}</p>
-                                                    <a :href="stack.documentation_url" target="_blank" rel="noreferrer" class="text-xs text-indigo-700 underline dark:text-indigo-300">{{ stack.documentation_url }}</a>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:border-red-800/70 dark:text-red-300 dark:hover:bg-red-950/30"
-                                                    :disabled="busy"
-                                                    @click="removeTechStack(stack.id)"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                            <div v-if="techStacks.length === 0" class="rounded border border-dashed border-gray-300 px-3 py-2 text-xs text-gray-500 dark:border-gray-600 dark:text-gray-400">
-                                                No tech stack entries added yet.
-                                            </div>
-                                        </div>
-
-                                        <div class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
-                                            <input
-                                                v-model="techStackDraft.name"
-                                                type="text"
-                                                class="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                                                placeholder="Stack name (e.g. Laravel 12)"
-                                            />
-                                            <input
-                                                v-model="techStackDraft.documentation_url"
-                                                type="url"
-                                                class="rounded border border-gray-300 px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 md:col-span-2"
-                                                placeholder="Documentation URL"
-                                            />
-                                        </div>
-                                        <div class="mt-2 flex justify-end">
-                                            <button
-                                                type="button"
-                                                class="rounded border border-indigo-300 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-800/70 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
-                                                :disabled="techStackSubmitting"
-                                                @click="addTechStack"
-                                            >
-                                                {{ techStackSubmitting ? 'Adding...' : 'Add Tech Stack' }}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div class="mt-4 flex justify-end">
-                                        <button
-                                            type="button"
-                                            class="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-                                            :disabled="busy || (session.phase === PHASE.TECH_STACK_SETUP && techStacks.length === 0)"
+                                    </CardContent>
+                                    <CardFooter class="justify-end">
+                                        <Button
+                                            :disabled="busy"
                                             @click="advancePreDiscovery"
                                         >
                                             {{
@@ -1437,31 +1455,33 @@ onBeforeUnmount(() => {
                                                     ? 'Continue to Tech Stack'
                                                     : 'Start Discovery'
                                             }}
-                                        </button>
-                                    </div>
-                                </div>
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
                             </template>
 
                             <StatusCard v-if="session.phase === PHASE.DISCOVERY" :session="session" :latest-discovery-event="latestDiscoveryEvent" />
 
                             <template v-if="session.phase === PHASE.INTERROGATION">
-                                <div
+                                <Card
                                     v-if="selectedQuestion && latestQuestion && selectedQuestion.question_id !== latestQuestion.question_id"
-                                    class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200"
+                                    class="border-warning/50 bg-warning/10 px-3 py-2"
                                 >
-                                    Revising an earlier question ({{ selectedQuestion.question_id }}).
-                                    <button type="button" class="ml-2 font-medium underline" @click="selectedQuestionId = ''">Return to latest question</button>
-                                </div>
+                                    <p class="text-xs text-warning">
+                                        Revising an earlier question ({{ selectedQuestion.question_id }}).
+                                        <button type="button" class="ml-2 font-medium underline" @click="selectedQuestionId = ''">Return to latest question</button>
+                                    </p>
+                                </Card>
                                 <QuestionRenderer v-if="!awaitingNextQuestion" :question="activeQuestion" />
-                                <div
+                                <Card
                                     v-if="awaitingNextQuestion"
-                                    class="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
+                                    class="border-primary/30 bg-primary/5 px-4 py-3"
                                 >
-                                    <div class="flex items-center gap-2">
-                                        <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                                    <div class="flex items-center gap-2 text-sm text-primary">
+                                        <Spinner size="sm" />
                                         <span>Answer submitted. Generating next question...</span>
                                     </div>
-                                </div>
+                                </Card>
                                 <AnswerInput
                                     v-if="!awaitingNextQuestion"
                                     :question="activeQuestion"
@@ -1483,41 +1503,47 @@ onBeforeUnmount(() => {
                             </template>
 
                             <template v-if="session.phase === PHASE.PLANNING">
-                                <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                                    <div class="mb-3 flex justify-end">
-                                        <button
-                                            v-if="hasMeaningfulPlan && !hasPlanApproved"
-                                            type="button"
-                                            class="mr-2 rounded border border-indigo-300 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-700/70 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
-                                            :disabled="busy || actionState.regeneratePlan || actionState.revisePlan || actionState.approvePlan || isPlanRevising"
-                                            @click="regeneratePlan"
-                                        >
-                                            {{ actionState.regeneratePlan ? 'Regenerating...' : 'Regenerate Plan' }}
-                                        </button>
-                                        <button
-                                            v-if="!hasMeaningfulPlan || !hasPlanApproved"
-                                            type="button"
-                                            class="rounded bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-                                            :disabled="planPrimaryActionDisabled"
-                                            @click="!hasMeaningfulPlan ? generatePlan() : approvePlan()"
-                                        >
-                                            {{ planPrimaryActionLabel }}
-                                        </button>
-                                        <span
-                                            v-else
-                                            class="rounded border border-green-400 bg-green-50 px-3 py-2 text-sm font-semibold text-green-700 dark:border-green-800/70 dark:bg-green-950/30 dark:text-green-300"
-                                        >Plan Approved</span>
-                                    </div>
-                                    <PlanViewer
-                                        :plan="session.plan_json || {}"
-                                        :busy="busy || actionState.exportPlan || actionState.approvePlan"
-                                        :generating="isPlanGenerating"
-                                        :revising="isPlanRevising"
-                                        :revision-submitting="actionState.revisePlan"
-                                        @revise="requestRevision"
-                                        @export="exportPlan"
-                                    />
-                                </div>
+                                <Card>
+                                    <CardHeader class="flex-row items-center justify-between">
+                                        <CardTitle>Implementation Plan</CardTitle>
+                                        <div class="flex items-center gap-2">
+                                            <Button
+                                                v-if="hasMeaningfulPlan && !hasPlanApproved"
+                                                variant="outline"
+                                                size="sm"
+                                                :disabled="busy || actionState.regeneratePlan || actionState.revisePlan || actionState.approvePlan || isPlanRevising"
+                                                @click="regeneratePlan"
+                                            >
+                                                {{ actionState.regeneratePlan ? 'Regenerating...' : 'Regenerate Plan' }}
+                                            </Button>
+                                            <Button
+                                                v-if="!hasMeaningfulPlan || !hasPlanApproved"
+                                                :disabled="planPrimaryActionDisabled"
+                                                @click="!hasMeaningfulPlan ? generatePlan() : approvePlan()"
+                                            >
+                                                {{ planPrimaryActionLabel }}
+                                            </Button>
+                                            <Badge
+                                                v-else
+                                                variant="outline"
+                                                class="border-success text-success bg-success/10 px-3 py-1.5"
+                                            >
+                                                Plan Approved
+                                            </Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <PlanViewer
+                                            :plan="session.plan_json || {}"
+                                            :busy="busy || actionState.exportPlan || actionState.approvePlan"
+                                            :generating="isPlanGenerating"
+                                            :revising="isPlanRevising"
+                                            :revision-submitting="actionState.revisePlan"
+                                            @revise="requestRevision"
+                                            @export="exportPlan"
+                                        />
+                                    </CardContent>
+                                </Card>
                             </template>
 
                             <template v-if="session.phase === PHASE.BUILD_RULES">

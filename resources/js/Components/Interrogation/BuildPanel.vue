@@ -1,9 +1,9 @@
 <script setup>
 import MarkdownEditor from '@/Components/Markdown/MarkdownEditor.vue';
-import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import { formatInterrogationError } from '@/Components/Interrogation/errorFormatting';
 import { formatAgentRunEventEntries } from '@/Support/agentRunEventFormatting';
-import { computed, ref, watch } from 'vue';
+import axios from 'axios';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
 const props = defineProps({
     mode: {
@@ -83,6 +83,16 @@ const taskProviderSyncError = computed(() => formatInterrogationError(taskProvid
 const taskUpdateState = computed(() => (typeof props.actions?.updateBuildTaskIds === 'object' && props.actions?.updateBuildTaskIds !== null ? props.actions.updateBuildTaskIds : {}));
 const taskDeleteState = computed(() => (typeof props.actions?.deleteBuildTaskIds === 'object' && props.actions?.deleteBuildTaskIds !== null ? props.actions.deleteBuildTaskIds : {}));
 const taskRegenerateState = computed(() => (typeof props.actions?.regenerateBuildTaskIds === 'object' && props.actions?.regenerateBuildTaskIds !== null ? props.actions.regenerateBuildTaskIds : {}));
+const activeRunEvents = ref([]);
+const activeRunEventsRunId = ref(null);
+const activeRunEventsAfterSequence = ref(0);
+const activeRunEventsLoading = ref(false);
+const activeRunEventsError = ref('');
+const activeRunEventsBootstrapComplete = ref(false);
+const activeRunEventsPollTimer = ref(null);
+
+const TERMINAL_RUN_STATUSES = new Set(['succeeded', 'failed', 'killed', 'timed_out', 'skipped']);
+const ACTIVE_RUN_POLL_MS = 2000;
 
 const canGenerate = computed(() => !props.disabled && !props.actions.generateBuildTasks && status.value !== 'generating_tasks');
 const canApproveTasks = computed(() => !props.disabled && !props.actions.approveBuildTasks && tasks.value.length > 0 && status.value !== 'generating_tasks');
@@ -152,10 +162,209 @@ watch(
     { immediate: true }
 );
 
-const activeRunLogEntries = computed(() => {
-    const tail = Array.isArray(activeRun.value?.log_tail) ? activeRun.value.log_tail : [];
+const activeRunId = computed(() => Number(activeRun.value?.id ?? 0));
 
-    return formatAgentRunEventEntries(tail);
+const clearActiveRunEventsPollTimer = () => {
+    if (activeRunEventsPollTimer.value !== null) {
+        clearTimeout(activeRunEventsPollTimer.value);
+        activeRunEventsPollTimer.value = null;
+    }
+};
+
+const normalizeRunEventList = (entries) => {
+    if (!Array.isArray(entries)) {
+        return [];
+    }
+
+    return entries
+        .map((entry, index) => {
+            const sequence = Number(entry?.sequence ?? NaN);
+            if (!Number.isFinite(sequence) || sequence <= 0) {
+                return null;
+            }
+
+            return {
+                id: entry?.id ?? `run-event-${sequence}-${index}`,
+                sequence,
+                event_type: String(entry?.event_type ?? '').trim(),
+                payload: entry?.payload ?? '',
+                event_ts: entry?.event_ts ?? entry?.created_at ?? null,
+            };
+        })
+        .filter((entry) => entry !== null)
+        .sort((a, b) => Number(a.sequence) - Number(b.sequence));
+};
+
+const mergeActiveRunEvents = (incomingEntries, { replace = false } = {}) => {
+    const incoming = normalizeRunEventList(incomingEntries);
+    if (incoming.length === 0 && !replace) {
+        return;
+    }
+
+    const combined = replace ? incoming : [...activeRunEvents.value, ...incoming];
+    const bySequence = new Map();
+
+    combined.forEach((entry) => {
+        bySequence.set(Number(entry.sequence), entry);
+    });
+
+    const merged = Array.from(bySequence.values())
+        .sort((a, b) => Number(a.sequence) - Number(b.sequence))
+        .slice(-2500);
+
+    activeRunEvents.value = merged;
+    activeRunEventsAfterSequence.value = Number(merged[merged.length - 1]?.sequence ?? 0);
+};
+
+const fetchRunEvents = async (runId, { bootstrap = false } = {}) => {
+    if (!Number.isFinite(runId) || runId <= 0) {
+        return;
+    }
+
+    if (activeRunEventsLoading.value) {
+        return;
+    }
+
+    activeRunEventsLoading.value = true;
+    activeRunEventsError.value = '';
+
+    try {
+        let afterSequence = bootstrap ? 0 : Number(activeRunEventsAfterSequence.value ?? 0);
+        let hasMore = true;
+        let pageCount = 0;
+        const collected = [];
+
+        while (hasMore && pageCount < 40) {
+            const { data } = await axios.get(`/agent/api/v1/runs/${runId}/events`, {
+                params: {
+                    after_sequence: afterSequence,
+                    limit: 500,
+                },
+            });
+
+            if (activeRunEventsRunId.value !== runId) {
+                return;
+            }
+
+            const page = normalizeRunEventList(data?.data);
+            if (page.length > 0) {
+                collected.push(...page);
+            }
+
+            const nextAfter = Number(data?.meta?.next_after_sequence ?? afterSequence);
+            hasMore = Boolean(data?.meta?.has_more);
+
+            if (Number.isFinite(nextAfter) && nextAfter > afterSequence) {
+                afterSequence = nextAfter;
+            } else if (page.length > 0) {
+                afterSequence = Number(page[page.length - 1]?.sequence ?? afterSequence);
+            } else {
+                hasMore = false;
+            }
+
+            pageCount += 1;
+        }
+
+        if (activeRunEventsRunId.value !== runId) {
+            return;
+        }
+
+        if (bootstrap) {
+            mergeActiveRunEvents(collected, { replace: true });
+            activeRunEventsBootstrapComplete.value = true;
+        } else if (collected.length > 0) {
+            mergeActiveRunEvents(collected, { replace: false });
+        }
+    } catch (error) {
+        activeRunEventsError.value = error?.response?.data?.error?.message ?? 'Failed to load full run log.';
+    } finally {
+        activeRunEventsLoading.value = false;
+    }
+};
+
+const scheduleActiveRunEventsPoll = () => {
+    clearActiveRunEventsPollTimer();
+
+    const runId = Number(activeRunId.value ?? 0);
+    const runStatus = String(activeRun.value?.status ?? '').trim().toLowerCase();
+
+    if (!Number.isFinite(runId) || runId <= 0 || TERMINAL_RUN_STATUSES.has(runStatus)) {
+        return;
+    }
+
+    activeRunEventsPollTimer.value = setTimeout(async () => {
+        await fetchRunEvents(runId, { bootstrap: false });
+        scheduleActiveRunEventsPoll();
+    }, ACTIVE_RUN_POLL_MS);
+};
+
+watch(
+    activeRunId,
+    async (nextRunId) => {
+        clearActiveRunEventsPollTimer();
+        activeRunEvents.value = [];
+        activeRunEventsAfterSequence.value = 0;
+        activeRunEventsError.value = '';
+        activeRunEventsBootstrapComplete.value = false;
+
+        if (!Number.isFinite(nextRunId) || nextRunId <= 0) {
+            activeRunEventsRunId.value = null;
+            return;
+        }
+
+        activeRunEventsRunId.value = Number(nextRunId);
+        mergeActiveRunEvents(activeRun.value?.log_tail ?? [], { replace: true });
+        await fetchRunEvents(Number(nextRunId), { bootstrap: true });
+        scheduleActiveRunEventsPoll();
+    },
+    { immediate: true }
+);
+
+watch(
+    () => activeRun.value?.log_tail,
+    (nextTail) => {
+        const runId = Number(activeRunId.value ?? 0);
+        if (!Number.isFinite(runId) || runId <= 0 || activeRunEventsRunId.value !== runId) {
+            return;
+        }
+
+        mergeActiveRunEvents(nextTail ?? [], { replace: false });
+    },
+    { deep: true }
+);
+
+const activeRunSourceEvents = computed(() => {
+    const runId = Number(activeRunId.value ?? 0);
+    if (Number.isFinite(runId) && runId > 0 && activeRunEventsRunId.value === runId && activeRunEvents.value.length > 0) {
+        return activeRunEvents.value;
+    }
+
+    return normalizeRunEventList(activeRun.value?.log_tail ?? []);
+});
+
+const activeRunLogEntries = computed(() => {
+    return formatAgentRunEventEntries(activeRunSourceEvents.value);
+});
+
+const activeRunUnifiedLog = computed(() => {
+    return activeRunLogEntries.value
+        .map((entry) => {
+            const payload = String(entry?.payload ?? '').trim();
+            if (payload === '') {
+                return '';
+            }
+
+            const prefix = String(entry?.prefix ?? '').trim();
+            return prefix !== '' ? `${prefix}\n${payload}` : payload;
+        })
+        .filter((line) => line !== '')
+        .join('\n\n');
+});
+
+const hasActiveRunUnifiedLog = computed(() => String(activeRunUnifiedLog.value).trim() !== '');
+
+onBeforeUnmount(() => {
+    clearActiveRunEventsPollTimer();
 });
 
 const addProjectRule = () => {
@@ -603,23 +812,27 @@ const submitTaskRegeneration = (task) => {
             <p v-if="activeRun" class="mt-2 text-xs text-gray-600 dark:text-gray-300">Run #{{ activeRun.id }} · {{ activeRun.status }}</p>
         </div>
 
-        <div v-if="isExecutionMode && activeRunLogEntries.length > 0" class="mt-4">
-            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Active Run Log Tail</p>
-            <div class="mt-2 max-h-56 overflow-auto rounded border border-gray-200 bg-gray-950 p-3 text-xs text-gray-100 dark:border-gray-700">
-                <div v-for="entry in activeRunLogEntries" :key="entry.key" class="mb-2 whitespace-pre-wrap break-words">
-                    <div class="text-[11px] text-gray-400">{{ entry.prefix }}</div>
-                    <MarkdownRenderer
-                        v-if="entry.format === 'markdown'"
-                        :markdown="entry.payload"
-                        :normalize="false"
-                        class="tail-markdown prose prose-sm mt-1 max-w-none rounded border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 font-sans text-emerald-100 dark:prose-invert prose-headings:mb-2 prose-headings:mt-3 prose-p:my-1.5 prose-li:my-0.5 prose-code:rounded prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5"
-                    />
-                    <pre v-else class="mt-0.5 whitespace-pre-wrap break-words font-mono" :class="{
-                        'text-rose-300': entry.tone === 'stderr',
-                        'text-sky-200': entry.tone === 'lifecycle',
-                        'text-emerald-200': entry.tone === 'structured',
-                    }">{{ entry.payload }}</pre>
-                </div>
+        <div v-if="isExecutionMode && (hasActiveRunUnifiedLog || activeRunEventsLoading || activeRunEventsError)" class="mt-4">
+            <div class="flex items-center justify-between gap-2">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Active Run AI Log</p>
+                <span
+                    v-if="activeRunEventsLoading"
+                    class="rounded border border-indigo-300 bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:border-indigo-800/70 dark:bg-indigo-950/30 dark:text-indigo-300"
+                >
+                    Syncing full run output...
+                </span>
+                <span
+                    v-else-if="activeRunEventsBootstrapComplete"
+                    class="rounded border border-green-300 bg-green-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-700 dark:border-green-800/70 dark:bg-green-950/30 dark:text-green-300"
+                >
+                    Unified
+                </span>
+            </div>
+            <p v-if="activeRunEventsError" class="mt-2 rounded border border-rose-300 bg-rose-50 px-2 py-1 text-[11px] text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+                {{ activeRunEventsError }}
+            </p>
+            <div v-if="hasActiveRunUnifiedLog" class="mt-2 max-h-72 overflow-auto rounded border border-gray-200 bg-gray-950 p-3 text-xs text-gray-100 dark:border-gray-700">
+                <pre class="whitespace-pre-wrap break-words font-mono leading-relaxed">{{ activeRunUnifiedLog }}</pre>
             </div>
         </div>
 

@@ -2,11 +2,8 @@
 
 namespace Tests\Feature\Messenger;
 
-use App\DTOs\Messenger\NormalizedMessage;
-use App\Jobs\Messenger\ProcessChatIntent;
 use App\Jobs\Messenger\ProcessInboundMessage;
 use App\Jobs\Messenger\SendOutboundMessage;
-use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\ChatAction;
 use App\Models\ChatMessage;

@@ -1,6 +1,8 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import JobForm from './Partials/JobForm.vue';
+import Card from '@/Components/ui/Card.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
 import { Head, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { reactive, ref } from 'vue';
@@ -81,18 +83,22 @@ const onSubmit = async ({ payload, invalidEnvJson, invalidTaskMarkdown }) => {
         <Head title="Create Job" />
 
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Create Agent Job</h2>
+            <h2 class="text-xl font-semibold leading-tight text-foreground">Create Agent Job</h2>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-5xl rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                <JobForm
-                    v-model="model"
-                    :errors="errors"
-                    :is-submitting="isSubmitting"
-                    submit-label="Create Job"
-                    @submit="onSubmit"
-                />
+            <div class="mx-auto max-w-[1440px]">
+                <Card>
+                    <CardContent class="pt-6">
+                        <JobForm
+                            v-model="model"
+                            :errors="errors"
+                            :is-submitting="isSubmitting"
+                            submit-label="Create Job"
+                            @submit="onSubmit"
+                        />
+                    </CardContent>
+                </Card>
             </div>
         </div>
     </AppLayout>

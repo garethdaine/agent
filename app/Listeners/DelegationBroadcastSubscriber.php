@@ -10,6 +10,7 @@ use App\Events\DelegationTaskVerified;
 use App\Events\DelegationUserSummaryBroadcast;
 use App\Models\DelegationGraph;
 use App\Models\DelegationTask;
+use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
@@ -26,6 +27,13 @@ use Illuminate\Contracts\Queue\ShouldQueue;
  */
 class DelegationBroadcastSubscriber implements ShouldQueue
 {
+    private readonly FeatureFlagManager $featureFlags;
+
+    public function __construct(?FeatureFlagManager $featureFlags = null)
+    {
+        $this->featureFlags = $featureFlags ?? app(FeatureFlagManager::class);
+    }
+
     /**
      * The queue this listener should be dispatched on.
      */
@@ -47,6 +55,10 @@ class DelegationBroadcastSubscriber implements ShouldQueue
      */
     public function handleGraphStarted(DelegationGraphStarted $event): void
     {
+        if (! $this->featureFlags->enabled(FeatureFlagManager::DELEGATION_ENABLED)) {
+            return;
+        }
+
         $graph = $event->graph->fresh();
         if ($graph === null) {
             return;
@@ -64,6 +76,10 @@ class DelegationBroadcastSubscriber implements ShouldQueue
      */
     public function handleGraphCompleted(DelegationGraphCompleted $event): void
     {
+        if (! $this->featureFlags->enabled(FeatureFlagManager::DELEGATION_ENABLED)) {
+            return;
+        }
+
         $graph = $event->graph->fresh();
         if ($graph === null) {
             return;
@@ -82,6 +98,10 @@ class DelegationBroadcastSubscriber implements ShouldQueue
      */
     public function handleAttemptCompleted(DelegationAttemptCompleted $event): void
     {
+        if (! $this->featureFlags->enabled(FeatureFlagManager::DELEGATION_ENABLED)) {
+            return;
+        }
+
         $attempt = $event->attempt->fresh(['task', 'task.graph']);
         if ($attempt === null || $attempt->task === null || $attempt->task->graph === null) {
             return;
@@ -105,6 +125,10 @@ class DelegationBroadcastSubscriber implements ShouldQueue
      */
     public function handleTaskVerified(DelegationTaskVerified $event): void
     {
+        if (! $this->featureFlags->enabled(FeatureFlagManager::DELEGATION_ENABLED)) {
+            return;
+        }
+
         $task = $event->task->fresh(['graph']);
         if ($task === null || $task->graph === null) {
             return;

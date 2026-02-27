@@ -9,6 +9,7 @@ use App\Events\DelegationTaskVerified;
 use App\Models\DelegationAttempt;
 use App\Models\DelegationGraph;
 use App\Models\DelegationTask;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Delegation\AttemptSpawner;
 use App\Support\Delegation\DelegateeAssigner;
 use App\Support\Delegation\GraphStateTransitionService;
@@ -33,6 +34,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 class DelegationCoordinator
 {
     public function __construct(
+        private readonly FeatureFlagManager $featureFlags,
         private readonly DelegateeAssigner $assigner,
         private readonly AttemptSpawner $spawner,
         private readonly VerificationPipeline $pipeline,
@@ -57,6 +59,10 @@ class DelegationCoordinator
      */
     public function handleGraphStarted(DelegationGraphStarted $event): void
     {
+        if (! $this->featureFlags->enabled(FeatureFlagManager::DELEGATION_ENABLED)) {
+            return;
+        }
+
         $graph = $event->graph->fresh();
         if ($graph === null || $graph->status !== DelegationGraph::STATUS_RUNNING) {
             return;
@@ -73,6 +79,10 @@ class DelegationCoordinator
      */
     public function handleAttemptCompleted(DelegationAttemptCompleted $event): void
     {
+        if (! $this->featureFlags->enabled(FeatureFlagManager::DELEGATION_ENABLED)) {
+            return;
+        }
+
         $attempt = $event->attempt->fresh(['task', 'task.graph']);
         if ($attempt === null) {
             return;
@@ -111,6 +121,10 @@ class DelegationCoordinator
      */
     public function handleTaskVerified(DelegationTaskVerified $event): void
     {
+        if (! $this->featureFlags->enabled(FeatureFlagManager::DELEGATION_ENABLED)) {
+            return;
+        }
+
         $task = $event->task->fresh(['graph', 'dependents']);
         if ($task === null) {
             return;

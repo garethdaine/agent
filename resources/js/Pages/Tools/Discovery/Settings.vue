@@ -1,6 +1,16 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardDescription from '@/Components/ui/CardDescription.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
+import Button from '@/Components/ui/Button.vue';
+import Input from '@/Components/ui/Input.vue';
+import Textarea from '@/Components/ui/Textarea.vue';
+import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { ArrowLeft } from 'lucide-vue-next';
 import axios from 'axios';
 import { onMounted, reactive, ref } from 'vue';
 
@@ -93,52 +103,68 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">Discovery Settings</h2>
-                <Link :href="route('tools.discovery.index')" class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200">Back</Link>
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Discovery Settings</h2>
+                <Link :href="route('tools.discovery.index')">
+                    <Button variant="outline" size="sm">
+                        <ArrowLeft class="h-4 w-4" />
+                        Back
+                    </Button>
+                </Link>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-4xl space-y-4 rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-                <p v-if="error" class="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{{ error }}</p>
+            <div class="mx-auto max-w-4xl">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Global Discovery Settings</CardTitle>
+                        <CardDescription>Configure default behavior for all discovery sessions.</CardDescription>
+                    </CardHeader>
+                    <CardContent class="space-y-4">
+                        <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ error }}</div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Default Runner</label>
-                    <select v-model="form.default_runner" class="mt-1 w-full rounded-md border border-gray-300 bg-white text-gray-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400">
-                        <option value="claude">claude</option>
-                        <option value="codex">codex</option>
-                    </select>
-                </div>
+                        <Skeleton v-if="loading" class="h-32 w-full" />
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">System Prompt Override</label>
-                    <textarea v-model="form.system_prompt" rows="14" class="mt-1 w-full rounded-md border border-gray-300 bg-white font-mono text-sm text-gray-900 placeholder:text-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:border-indigo-400 dark:focus:ring-indigo-400" />
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to use the built-in runtime-safe prompt.</p>
-                </div>
+                        <template v-else>
+                            <div>
+                                <label class="block text-sm font-medium">Default Runner</label>
+                                <select
+                                    v-model="form.default_runner"
+                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    <option value="claude">claude</option>
+                                    <option value="codex">codex</option>
+                                </select>
+                            </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Max Active Sessions</label>
-                    <input
-                        v-model.number="form.max_active_sessions"
-                        type="number"
-                        min="1"
-                        max="50"
-                        class="mt-1 w-full rounded-md border border-gray-300 bg-white text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-indigo-400 dark:focus:ring-indigo-400"
-                    />
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Maximum concurrently active discovery sessions per user.</p>
-                    <p v-if="firstValidationError('value')" class="mt-1 text-sm text-red-600 dark:text-red-300">{{ firstValidationError('value') }}</p>
-                </div>
+                            <div>
+                                <label class="block text-sm font-medium">System Prompt Override</label>
+                                <Textarea v-model="form.system_prompt" :rows="14" class="mt-1 font-mono" />
+                                <p class="mt-1 text-xs text-muted-foreground">Leave empty to use the built-in runtime-safe prompt.</p>
+                            </div>
 
-                <div class="flex justify-end">
-                    <button
-                        type="button"
-                        class="rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        :disabled="saving || loading"
-                        @click="save"
-                    >
-                        {{ saving ? 'Saving...' : 'Save Settings' }}
-                    </button>
-                </div>
+                            <div>
+                                <label class="block text-sm font-medium">Max Active Sessions</label>
+                                <Input
+                                    v-model.number="form.max_active_sessions"
+                                    type="number"
+                                    min="1"
+                                    max="50"
+                                    class="mt-1"
+                                    :error="!!firstValidationError('value')"
+                                />
+                                <p class="mt-1 text-xs text-muted-foreground">Maximum concurrently active discovery sessions per user.</p>
+                                <p v-if="firstValidationError('value')" class="mt-1 text-sm text-destructive">{{ firstValidationError('value') }}</p>
+                            </div>
+
+                            <div class="flex justify-end">
+                                <Button :disabled="saving || loading" @click="save">
+                                    {{ saving ? 'Saving...' : 'Save Settings' }}
+                                </Button>
+                            </div>
+                        </template>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     </AppLayout>

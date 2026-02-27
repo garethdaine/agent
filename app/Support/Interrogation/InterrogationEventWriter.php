@@ -105,6 +105,28 @@ class InterrogationEventWriter
     /**
      * @param  array<string, mixed>  $payload
      */
+    public function appendSummaryReview(array $payload): InterrogationEvent
+    {
+        return $this->append(
+            InterrogationEvent::TYPE_SUMMARY_REVIEW,
+            array_merge($payload, ['at' => now()->toIso8601String()])
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function appendPlanReview(array $payload): InterrogationEvent
+    {
+        return $this->append(
+            InterrogationEvent::TYPE_PLAN_REVIEW,
+            array_merge($payload, ['at' => now()->toIso8601String()])
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
     private function append(string $eventType, array $payload): InterrogationEvent
     {
         $payload = $this->redactPayload($payload);

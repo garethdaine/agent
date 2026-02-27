@@ -10,3 +10,98 @@ Use this file to capture correction-driven lessons.
 - Prevention rule:
 - Applied in:
 
+## Entry
+- Date: 2026-02-25
+- Source (job run id / interrogation session id): Interrogation session 4 / build 4
+- Correction: User reported run monitor output was still unreadable and cluttered with raw JSON fragments.
+- Pattern: Streamed AI output can arrive as concatenated/partial JSON envelopes across event chunks; single-message JSON parsing is insufficient and leaks transport noise to UI.
+- Prevention rule: Treat monitor output as a stream protocol. Parse multiple JSON values per chunk, carry incomplete fragments across entries, and suppress wrapper/noise text when structured envelopes are detected.
+- Applied in: `resources/js/Support/agentRunEventFormatting.js`
+
+## Entry
+- Date: 2026-02-25
+- Source (job run id / interrogation session id): Interrogation session 4 / build 4
+- Correction: User reported another false positive where rate-limit was detected from line-numbered source snippet output using `N->` markers.
+- Pattern: False-positive guards that match only one snippet marker format (`N→`) miss semantically identical formats (`N->`, `N=>`) emitted by different tooling.
+- Prevention rule: Normalize snippet detection to cover common line-number formats before applying blocker keyword patterns (approval/clarification/rate-limit).
+- Applied in: `app/Support/Agent/RunEventWriter.php` and `tests/Feature/AgentRunnerLifecycleTest.php`
+
+## Entry
+- Date: 2026-02-25
+- Source (job run id / interrogation session id): Interrogation session 4 / build 4
+- Correction: User reported build task UI showing `ReviewContextBuilder` as in-progress even though its run had completed.
+- Pattern: Build progression can appear stuck when `interrogation` queue workers are not running; task finalization only occurs when `ExecuteInterrogationBuildJob` is consumed.
+- Prevention rule: Verify active Horizon supervisors include `interrogation` queue whenever build execution is running, and re-dispatch `ExecuteInterrogationBuildJob` after restoring workers.
+- Applied in: Runtime operation (Horizon restart + re-dispatch of `ExecuteInterrogationBuildJob` for session 4)
+
+## Entry
+- Date: 2026-02-25
+- Source (job run id / interrogation session id): Interrogation session 4 / build 4
+- Correction: User reported another false positive rate-limit detection from line-numbered code snippets embedded as escaped `\\n` JSON text.
+- Pattern: Keyword gates misfire on escaped snippet payloads when snippet heuristics only look for real newline delimiters.
+- Prevention rule: Snippet detectors must recognize both real newline (`\n`) and escaped newline (`\\n`) prefixes before applying blocker/rate-limit patterns.
+- Applied in: `app/Support/Agent/RunEventWriter.php` and `tests/Feature/AgentRunnerLifecycleTest.php`
+
+## Entry
+- Date: 2026-02-25
+- Source (job run id / interrogation session id): Interrogation session 4 / build 4
+- Correction: User reported another false positive from doubly escaped snippet payloads (`\\\\n 55-> ...`) still triggering rate-limit detection.
+- Pattern: Multi-level serialized payloads can preserve line markers behind one extra escape layer, bypassing strict `\\n`-only matching.
+- Prevention rule: For snippet heuristics, accept one-or-more backslashes before `n` (`(?:\\\\)+n`) so nested escaped newlines are treated as code snippets.
+- Applied in: `app/Support/Agent/RunEventWriter.php` and `tests/Feature/AgentRunnerLifecycleTest.php`
+
+## Entry
+- Date: 2026-02-25
+- Source (job run id / interrogation session id): Interrogation session 4 / build 4
+- Correction: User clarified the DB guardrail is non-negotiable because it prevents the main agent database from being wiped during build execution.
+- Pattern: "Fixing" build test bootstrap failures by reverting to sqlite defaults can violate test safety assumptions and reintroduce production-data risk.
+- Prevention rule: For interrogation builds, treat DB isolation as a hard invariant: keep destructive commands blocked and require test-safe `pgsql_testing` isolation contract (`TEST_DB_*` distinct from primary DB), never relax toward primary DB settings.
+- Applied in: `app/Support/Interrogation/InterrogationBuildCommandGuard.php`, `app/Support/Interrogation/BuildTaskRunFactory.php`, `tests/Unit/BuildTaskRunFactoryTest.php`
+
+## Entry
+- Date: 2026-02-25
+- Source (job run id / interrogation session id): Interrogation session 4 / build 4
+- Correction: User reported active run logs were still unreadable and duplicated, and requested a single consolidated AI log during execution.
+- Pattern: Tail-only log views and envelope-level rendering are insufficient for streamed agent output; they hide context and can surface duplicate assistant text from stream/final message envelopes.
+- Prevention rule: For active execution logs, hydrate full run events incrementally and render a unified transcript view with duplicate suppression, rather than relying only on short tails.
+- Applied in: `resources/js/Support/agentRunEventFormatting.js`, `resources/js/Components/Interrogation/BuildPanel.vue`
+
+## Entry
+- Date: 2026-02-25
+- Source (job run id / interrogation session id): Interrogation session 4 / build task 8
+- Correction: User reported run `#43` reconciled to failed (`process_not_found`) but task remained `in_progress` in the build UI.
+- Pattern: Run-level reconciliation without orchestrator handoff can leave build-task/session state stale even when the underlying run is terminal.
+- Prevention rule: Whenever reconciliation force-transitions an `interrogation_build` run to terminal, immediately queue `ExecuteInterrogationBuildJob` to finalize task/build metadata and avoid stuck `in_progress` UI states.
+- Applied in: `app/Support/Agent/ReconcileActiveRunsService.php`, `tests/Feature/AgentDispatchDueCommandTest.php`
+
+## Entry
+- Date: 2026-02-25
+- Source (job run id / interrogation session id): Interrogation session 4 / build task 8
+- Correction: User reported build appeared failed/stuck after reconciliation, and pending tasks must never continue past a failed guardrailed task.
+- Pattern: If build metadata is stale (`running`) but a prior task is already `failed`/`blocked`, orchestration can incorrectly start the next pending task unless terminal-task checks run before scheduling.
+- Prevention rule: Before starting any pending build task, assert there are no existing `failed`/`blocked` tasks; if present, finalize lifecycle immediately (`failed`/`paused`) instead of continuing.
+- Applied in: `app/Jobs/ExecuteInterrogationBuildJob.php`, `tests/Unit/ExecuteInterrogationBuildJobTest.php`
+
+## Entry
+- Date: 2026-02-26
+- Source (job run id / interrogation session id): Interrogation session 4 / build task 12
+- Correction: Full test suite and integration verification for adversarial reviewer feature.
+- Pattern: New feature integration testing should verify config defaults, service container bindings, code style compliance, and document edge cases for future reference.
+- Prevention rule: Before marking a complex feature complete, run comprehensive verification including: all related tests, full regression suite (document unrelated failures), config validation via tinker, service resolution checks, and code style/analysis passes.
+- Applied in: Adversarial reviewer feature (AdversarialReviewerService, ReviewerPayloadGuard, ReviewerPayloadNormalizer, ReviewerContextBuilder)
+
+## Entry
+- Date: 2026-02-27
+- Source (job run id / interrogation session id): Interrogation session 4 / build run 67
+- Correction: User flagged false positives where permission/clarification/rate-limit blockers were inferred from escaped code snippets shown in output, not real runtime agent messages.
+- Pattern: Regex-only blocker detection that scans raw output without snippet-context checks can misclassify embedded test/code text as live runtime failures.
+- Prevention rule: Before setting blocker metadata, require runtime-like context and explicitly ignore non-runtime snippets (line-numbered or escaped-newline code payloads with code tokens).
+- Applied in: `app/Support/Agent/RunEventWriter.php`, `tests/Feature/AgentRunnerLifecycleTest.php`
+
+## Entry
+- Date: 2026-02-27
+- Source (job run id / interrogation session id): Interrogation build monitor false-positive report (UI snippet payload)
+- Correction: User reported additional false positives where detector matched approval/rate-limit phrases inside Vue/JS source snippets emitted in run output.
+- Pattern: Detection logic that only filters escaped/line-numbered snippets still misclassifies inline source snippets containing HTML/JS tokens and copied status strings.
+- Prevention rule: Treat multiline payloads with multiple source-code signals (HTML tags/template attributes + JS/PHP token patterns) as non-runtime snippets and skip blocker/rate-limit extraction.
+- Applied in: `app/Support/Agent/RunEventWriter.php`, `tests/Feature/AgentRunnerLifecycleTest.php`

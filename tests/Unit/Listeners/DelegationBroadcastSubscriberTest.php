@@ -29,19 +29,20 @@ class DelegationBroadcastSubscriberTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['delegation.enabled' => true]);
         $this->user = User::factory()->create();
         $this->graph = DelegationGraph::factory()->create(['user_id' => $this->user->id]);
     }
 
     public function test_subscriber_implements_should_queue(): void
     {
-        $subscriber = new DelegationBroadcastSubscriber();
+        $subscriber = new DelegationBroadcastSubscriber;
         $this->assertInstanceOf(ShouldQueue::class, $subscriber);
     }
 
     public function test_subscriber_uses_delegation_queue(): void
     {
-        $subscriber = new DelegationBroadcastSubscriber();
+        $subscriber = new DelegationBroadcastSubscriber;
         $this->assertSame('delegation', $subscriber->queue);
     }
 
@@ -49,7 +50,7 @@ class DelegationBroadcastSubscriberTest extends TestCase
     {
         Event::fake([DelegationGraphBroadcast::class, DelegationUserSummaryBroadcast::class]);
 
-        $subscriber = new DelegationBroadcastSubscriber();
+        $subscriber = new DelegationBroadcastSubscriber;
         $event = new DelegationGraphStarted($this->graph);
 
         $subscriber->handleGraphStarted($event);
@@ -64,7 +65,7 @@ class DelegationBroadcastSubscriberTest extends TestCase
     {
         Event::fake([DelegationGraphBroadcast::class, DelegationUserSummaryBroadcast::class]);
 
-        $subscriber = new DelegationBroadcastSubscriber();
+        $subscriber = new DelegationBroadcastSubscriber;
         $event = new DelegationGraphStarted($this->graph);
 
         $subscriber->handleGraphStarted($event);
@@ -79,7 +80,7 @@ class DelegationBroadcastSubscriberTest extends TestCase
     {
         Event::fake([DelegationGraphBroadcast::class, DelegationUserSummaryBroadcast::class]);
 
-        $subscriber = new DelegationBroadcastSubscriber();
+        $subscriber = new DelegationBroadcastSubscriber;
         $event = new DelegationGraphCompleted($this->graph, DelegationGraph::STATUS_SUCCEEDED);
 
         $subscriber->handleGraphCompleted($event);
@@ -103,7 +104,7 @@ class DelegationBroadcastSubscriberTest extends TestCase
             'status' => DelegationAttempt::STATUS_SUCCEEDED,
         ]);
 
-        $subscriber = new DelegationBroadcastSubscriber();
+        $subscriber = new DelegationBroadcastSubscriber;
         $event = new DelegationAttemptCompleted($attempt);
 
         $subscriber->handleAttemptCompleted($event);
@@ -128,7 +129,7 @@ class DelegationBroadcastSubscriberTest extends TestCase
             'delegation_task_id' => $task->id,
         ]);
 
-        $subscriber = new DelegationBroadcastSubscriber();
+        $subscriber = new DelegationBroadcastSubscriber;
         $event = new DelegationTaskVerified($task, $attempt, true);
 
         $subscriber->handleTaskVerified($event);
@@ -152,7 +153,7 @@ class DelegationBroadcastSubscriberTest extends TestCase
             'delegation_task_id' => $task->id,
         ]);
 
-        $subscriber = new DelegationBroadcastSubscriber();
+        $subscriber = new DelegationBroadcastSubscriber;
         $event = new DelegationTaskVerified($task, $attempt, false, 2);
 
         $subscriber->handleTaskVerified($event);
@@ -169,7 +170,7 @@ class DelegationBroadcastSubscriberTest extends TestCase
 
         $this->graph->update(['status' => DelegationGraph::STATUS_RUNNING]);
 
-        $subscriber = new DelegationBroadcastSubscriber();
+        $subscriber = new DelegationBroadcastSubscriber;
         $event = new DelegationGraphStarted($this->graph->fresh());
 
         $subscriber->handleGraphStarted($event);
@@ -192,7 +193,7 @@ class DelegationBroadcastSubscriberTest extends TestCase
             'status' => DelegationTask::STATUS_RUNNING,
         ]);
 
-        $subscriber = new DelegationBroadcastSubscriber();
+        $subscriber = new DelegationBroadcastSubscriber;
         $event = new DelegationGraphStarted($this->graph->fresh());
 
         $subscriber->handleGraphStarted($event);

@@ -228,6 +228,148 @@ class AgentRunnerLifecycleTest extends TestCase
         $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $metadata['approval_resolution'] ?? null);
     }
 
+    public function test_approval_phrase_inside_escaped_code_snippet_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/approval-escaped-snippet-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+$this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $metadata['approval_resolution'] ?? null);\n\npublic function test_permissions_banner(): void {\n    file_put_contents($approvalExec, "#!/bin/sh\necho \"I need permission to use web tools\"\nexit 0\n");
+OUT
+exit 0
+SH;
+        file_put_contents($snippetExec, $script);
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/approval-escaped-snippet.md';
+        file_put_contents($taskFile, "# Approval Escaped Snippet\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Approval Escaped Snippet',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+                'approval_required' => false,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['approval_required'] ?? true));
+        $this->assertNull($metadata['approval_detected_at'] ?? null);
+        $this->assertNull($metadata['approval_resolution'] ?? null);
+    }
+
+    public function test_approval_phrase_inside_vue_template_snippet_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/approval-vue-template-snippet-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+</button>\n                        </td>\n                        <tr v-if="!loading && runs.length === 0">\n                            <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">No runs in range.</td>\n                        </tr>\n<div class="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">\n<div class="event-tail">\n[30rem] overflow-auto bg-gray-950 p-3 font-mono text-xs text-gray-100\">\nApproval likely required in active run output.\n</div>
+OUT
+exit 0
+SH;
+        file_put_contents($snippetExec, $script);
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/approval-vue-template-snippet.md';
+        file_put_contents($taskFile, "# Approval Vue Template Snippet\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Approval Vue Template Snippet',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+                'approval_required' => false,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['approval_required'] ?? true));
+        $this->assertNull($metadata['approval_detected_at'] ?? null);
+        $this->assertNull($metadata['approval_resolution'] ?? null);
+    }
+
     public function test_write_permission_blocker_output_forces_failed_status_even_with_zero_exit_code(): void
     {
         $permissionExec = $this->sandboxBase.'/bin/write-permission-runner';
@@ -294,6 +436,78 @@ class AgentRunnerLifecycleTest extends TestCase
         $this->assertSame(AgentJobRun::STATUS_FAILED, $metadata['approval_resolution'] ?? null);
     }
 
+    public function test_write_permission_phrase_inside_escaped_code_snippet_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/write-permission-escaped-snippet-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+$this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $metadata['approval_resolution'] ?? null);\n\npublic function test_write_permission_blocker_output_forces_failed_status_even_with_zero_exit_code(): void {\n    file_put_contents($permissionExec, "#!/bin/sh\necho \"I need your permission to write files to app/ and database/.\"\necho \"All file write operations are denied by the permission system.\"\nexit 0\n");
+OUT
+exit 0
+SH;
+        file_put_contents($snippetExec, $script);
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/write-permission-escaped-snippet.md';
+        file_put_contents($taskFile, "# Write Permission Escaped Snippet\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Write Permission Escaped Snippet',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+                'approval_required' => false,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertNull($run->error_code);
+        $this->assertFalse((bool) ($metadata['permission_blocker_detected'] ?? false));
+        $this->assertNull($metadata['permission_blocker_detected_at'] ?? null);
+        $this->assertNull($metadata['permission_blocker_resolution'] ?? null);
+    }
+
     public function test_clarification_request_output_sets_clarification_metadata(): void
     {
         $clarifyExec = $this->sandboxBase.'/bin/clarify-runner';
@@ -355,6 +569,137 @@ class AgentRunnerLifecycleTest extends TestCase
         $this->assertTrue((bool) ($metadata['clarification_required'] ?? false));
         $this->assertNotEmpty($metadata['clarification_detected_at'] ?? null);
         $this->assertStringContainsString('Could you clarify', (string) ($metadata['clarification_excerpt'] ?? ''));
+    }
+
+    public function test_clarification_phrase_inside_escaped_code_snippet_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/clarification-escaped-snippet-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+$this->assertTrue((bool) ($metadata['clarification_required'] ?? false));\n\npublic function test_clarification_request_output_sets_clarification_metadata(): void {\n    file_put_contents($clarifyExec, "#!/bin/sh\necho \"Could you clarify whether we should keep the old policy mapping?\"\nexit 0\n");
+OUT
+exit 0
+SH;
+        file_put_contents($snippetExec, $script);
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/clarification-escaped-snippet.md';
+        file_put_contents($taskFile, "# Clarification Escaped Snippet\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Clarification Escaped Snippet',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['clarification_required'] ?? false));
+        $this->assertNull($metadata['clarification_detected_at'] ?? null);
+    }
+
+    public function test_clarification_detection_ignores_needs_clarification_heading_text(): void
+    {
+        $headingExec = $this->sandboxBase.'/bin/clarification-heading-runner';
+        file_put_contents($headingExec, "#!/bin/sh\necho \"### Needs Clarification Verdict (Summary Only):\"\nexit 0\n");
+        chmod($headingExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $headingExec,
+            'codex' => $headingExec,
+            'custom' => $headingExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $headingExec.' -p {{task_markdown_path}}',
+            'codex' => $headingExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/clarification-heading.md';
+        file_put_contents($taskFile, "# Clarification heading only\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Clarification Heading Ignore',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['clarification_required'] ?? false));
+        $this->assertArrayNotHasKey('clarification_detected_at', $metadata);
     }
 
     public function test_approval_detection_ignores_codex_banner_lines(): void
@@ -613,6 +958,147 @@ class AgentRunnerLifecycleTest extends TestCase
         $this->assertNotNull($state);
     }
 
+    public function test_rate_limit_phrase_inside_escaped_code_snippet_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/rate-limit-escaped-code-snippet-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+private function finalizeTerminal(AgentJobRun $run, array $extra): void {\n    if (! isset($extra['error_summary'])) {\n        $extra['error_summary'] = 'Runner hit an upstream usage/rate limit.';\n    }\n}
+OUT
+exit 0
+SH;
+        file_put_contents($snippetExec, $script);
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limit-escaped-code-snippet.md';
+        file_put_contents($taskFile, "# Rate Limit Escaped Code Snippet\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limit Escaped Code Snippet',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+        $state = AgentSystemState::query()->find(sprintf('job_rate_limit_hold_until:%d', $job->id));
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
+        $this->assertNull($metadata['rate_limit_hold_until'] ?? null);
+        $this->assertNull($state);
+    }
+
+    public function test_rate_limit_phrase_inside_javascript_snippet_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/rate-limit-javascript-snippet-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+did not succeed)\n            if (runStatus === 'succeeded' && !holdActive) {\n                return null;\n            }\n            return {\n                excerpt: String(metadata.rate_limit_excerpt ?? 'Upstream usage/rate limit detected.'),\n                holdUntil,\n                holdActive,\n            };\n        }\n    },\n    const openApprovalModal = (run) => {\n        if (approvalRefreshedAt.value == null)\nOUT
+exit 0
+SH;
+        file_put_contents($snippetExec, $script);
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limit-javascript-snippet.md';
+        file_put_contents($taskFile, "# Rate Limit JavaScript Snippet\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limit JavaScript Snippet',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+        $state = AgentSystemState::query()->find(sprintf('job_rate_limit_hold_until:%d', $job->id));
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
+        $this->assertNull($metadata['rate_limit_hold_until'] ?? null);
+        $this->assertNull($state);
+    }
+
     public function test_rate_limit_handling_summary_text_does_not_trigger_rate_limit_detection(): void
     {
         $summaryExec = $this->sandboxBase.'/bin/summary-runner';
@@ -675,6 +1161,257 @@ class AgentRunnerLifecycleTest extends TestCase
         $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
         $this->assertNull($metadata['rate_limit_hold_until'] ?? null);
         $this->assertNull($state);
+    }
+
+    public function test_rate_limit_phrase_inside_line_numbered_snippet_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/rate-limit-snippet-runner';
+        file_put_contents($snippetExec, "#!/bin/sh\necho \"    61→ return ErrorEnvelope::make(\" \necho \"    62→   'RATE_LIMITED',\" \necho \"    63→   'Too many requests. Please retry shortly.',\" \necho \"    64→   429\" \necho \"    65→ );\" \nexit 0\n");
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limit-snippet.md';
+        file_put_contents($taskFile, "# Rate Limit Snippet\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limit Snippet Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
+    }
+
+    public function test_rate_limit_phrase_inside_ascii_arrow_line_numbered_snippet_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/rate-limit-ascii-snippet-runner';
+        file_put_contents($snippetExec, "#!/bin/sh\necho \"  12->use Illuminate\\\\Support\\\\Facades\\\\RateLimiter;\" \necho \"  13->'RATE_LIMITED',\" \necho \"  14->'Too many requests. Please retry shortly.',\" \necho \"  15->429\" \nexit 0\n");
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limit-ascii-snippet.md';
+        file_put_contents($taskFile, "# Rate Limit ASCII Snippet\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limit ASCII Snippet Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
+    }
+
+    public function test_rate_limit_phrase_inside_escaped_newline_line_numbered_snippet_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/rate-limit-escaped-newline-snippet-runner';
+        file_put_contents($snippetExec, "#!/bin/sh\necho \"message:{\\\"content\\\":\\\"1-><?php\\\\n2->use Illuminate\\\\\\\\Cache\\\\\\\\RateLimiting\\\\\\\\Limit;\\\\n3->'Too many requests. Please retry shortly.',\\\\n4->429\\\"}\" \nexit 0\n");
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limit-escaped-newline-snippet.md';
+        file_put_contents($taskFile, "# Rate Limit Escaped Newline Snippet\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limit Escaped Newline Snippet Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
+    }
+
+    public function test_rate_limit_phrase_inside_double_escaped_newline_line_numbered_snippet_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/rate-limit-double-escaped-newline-snippet-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+message:{"content":"):\\\\n 55->\\\\n 56-> RateLimiter::for(\"agent-mutations\", function (Request $request) {\\\\n 57-> return [\\\\n 58-> \"Too many requests. Please retry shortly.\",\\\\n 59-> ];"}
+OUT
+exit 0
+SH;
+        file_put_contents($snippetExec, $script);
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limit-double-escaped-newline-snippet.md';
+        file_put_contents($taskFile, "# Rate Limit Double Escaped Newline Snippet\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limit Double Escaped Newline Snippet Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
     }
 
     private function runExecuteAgentRunJob(int $runId): void

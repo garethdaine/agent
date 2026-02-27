@@ -30,11 +30,19 @@ class RunEventWriter
 
     private const PERMISSION_BLOCKER_PATTERN = '/\b(?:need|needs|required|requires)\s+(?:your\s+)?(?:file\s+)?write\s+permissions?\b|\bgrant\s+(?:file\s+)?write\s+permissions?\b|\bwrite\s+permissions?\s+(?:have\s+not\s+been|haven\'t\s+been|were\s+not|are\s+not)\s+granted\b|\b(?:all\s+)?file\s+write\s+operations?\s+are\s+denied\b|\bcannot\s+(?:create|write)\s+(?:any\s+)?(?:new\s+)?files?\b|\bpermission\s+(?:loop|wall)\b/i';
 
-    private const CLARIFICATION_PATTERN = '/\b(?:could|can)\s+you\s+clarify\b|\bneed(?:s)?\s+(?:your\s+)?clarification\b|\bplease\s+clarify\b|\bi\s+need\s+clarification\b|\bquestion\s+for\s+you\b|\bcan\s+you\s+confirm\b|\bshould\s+i\s+(?:proceed|continue|use|do)\b/i';
+    private const CLARIFICATION_PATTERN = '/\b(?:could|can)\s+you\s+clarify\b|\b(?:i|we)\s+need\s+(?:your\s+)?clarification\b|\bneed\s+clarification\s+from\s+you\b|\bplease\s+clarify\b|\bquestion\s+for\s+you\b|\bcan\s+you\s+confirm\b|\bshould\s+i\s+(?:proceed|continue|use|do)\b/i';
 
     private const RATE_LIMIT_PATTERN = '/\bhit(?:ting)?\s+(?:your\s+)?limit\b|\brate[-\s]?limited\b|\btoo many requests\b|\bquota exceeded\b|\busage(?:\/rate)? limit\b/i';
 
     private const RATE_LIMIT_FALSE_POSITIVE_PATTERN = '/\brate limit handling\b|\brate limits? handling\b|\berror handling\s*\([^)]*rate limits?[^)]*\)/i';
+
+    private const LINE_NUMBERED_SNIPPET_PATTERN = '/(?:^|\n|(?:\\\\)+n)\s*\d+\s*(?:→|->|=>)/u';
+
+    private const ESCAPED_NEWLINE_PATTERN = '/(?:\\\\)+n/';
+
+    private const CODE_LIKE_SNIPPET_PATTERN = '/\b(?:public|protected|private)\s+function\b|\bfile_put_contents\s*\(|\$\w+->\w+\s*\(|\bassert(?:Same|True|False|Null|NotEmpty|ArrayHasKey|StringContainsString)\s*\(|\bconfig\(\)->set\s*\(|\breturn\s+\$[A-Za-z_][A-Za-z0-9_]*\b/i';
+
+    private const INLINE_CODE_TOKENS_PATTERN = '/<\s*\/?\s*[A-Za-z][^>]*>|\b(?:const|let|var|function|return|if|foreach)\b|=>|->|::|class=|v-if=|\$[A-Za-z_][A-Za-z0-9_]*/';
 
     public function __construct(private AgentJobRun $run)
     {
@@ -94,22 +102,28 @@ class RunEventWriter
 
         $this->run->metadata_json = $metadata;
 
-        if (($eventType === 'stdout' || $eventType === 'stderr')
+        $isNonRuntimeSnippet = $this->isLikelyNonRuntimeSnippet($chunk);
+
+        if (! $isNonRuntimeSnippet
+            && ($eventType === 'stdout' || $eventType === 'stderr')
             && preg_match(self::APPROVAL_PATTERN, $chunk) === 1) {
             $this->markApprovalRequired($chunk);
         }
 
-        if (($eventType === 'stdout' || $eventType === 'stderr')
+        if (! $isNonRuntimeSnippet
+            && ($eventType === 'stdout' || $eventType === 'stderr')
             && preg_match(self::PERMISSION_BLOCKER_PATTERN, $chunk) === 1) {
             $this->markPermissionBlockerDetected($chunk);
         }
 
-        if (($eventType === 'stdout' || $eventType === 'stderr')
+        if (! $isNonRuntimeSnippet
+            && ($eventType === 'stdout' || $eventType === 'stderr')
             && preg_match(self::CLARIFICATION_PATTERN, $chunk) === 1) {
             $this->markClarificationRequired($chunk);
         }
 
-        if (($eventType === 'stdout' || $eventType === 'stderr')
+        if (! $isNonRuntimeSnippet
+            && ($eventType === 'stdout' || $eventType === 'stderr')
             && $this->shouldMarkRateLimitDetected($chunk)) {
             $this->markRateLimitDetected($chunk);
         }
@@ -390,6 +404,55 @@ class RunEventWriter
         }
 
         return true;
+    }
+
+    private function isLineNumberedSnippet(string $chunk): bool
+    {
+        return preg_match(self::LINE_NUMBERED_SNIPPET_PATTERN, $chunk) === 1;
+    }
+
+    private function isLikelyNonRuntimeSnippet(string $chunk): bool
+    {
+        if ($this->isLineNumberedSnippet($chunk)) {
+            return true;
+        }
+
+        if ($this->isInlineCodeSnippet($chunk)) {
+            return true;
+        }
+
+        if (preg_match(self::ESCAPED_NEWLINE_PATTERN, $chunk) !== 1) {
+            return false;
+        }
+
+        return preg_match(self::CODE_LIKE_SNIPPET_PATTERN, $chunk) === 1;
+    }
+
+    private function isInlineCodeSnippet(string $chunk): bool
+    {
+        if (preg_match('/\n|(?:\\\\)+n/', $chunk) !== 1) {
+            return false;
+        }
+
+        $signalCount = 0;
+
+        if (preg_match('/<\s*\/?\s*[A-Za-z][^>]*>/', $chunk) === 1) {
+            $signalCount++;
+        }
+
+        if (preg_match('/\b(?:const|let|var|function|return|if|foreach|public|protected|private)\b/', $chunk) === 1) {
+            $signalCount++;
+        }
+
+        if (preg_match('/=>|->|::|class=|v-if=|\$[A-Za-z_][A-Za-z0-9_]*/', $chunk) === 1) {
+            $signalCount++;
+        }
+
+        if ($signalCount < 2) {
+            return false;
+        }
+
+        return preg_match(self::INLINE_CODE_TOKENS_PATTERN, $chunk) === 1;
     }
 
     /**

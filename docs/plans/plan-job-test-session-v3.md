@@ -1,6 +1,6 @@
 # Implementation Plan
 
-Derived from discovery session 13.
+Derived from discovery session 23.
 
 ## Scope
 - Update app/Jobs/ExecuteInterrogationPlanJob.php

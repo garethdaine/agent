@@ -7,10 +7,12 @@ use App\Jobs\SyncInterrogationTaskStatusToTaskProviderJob;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\InterrogationBuildTask;
+use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
 use App\Models\User;
 use App\Support\Interrogation\BuildExecutionBackupService;
 use App\Support\Interrogation\BuildTaskRunFactory;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -298,6 +300,116 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         );
 
         Queue::assertNotPushed(SyncInterrogationTaskStatusToTaskProviderJob::class);
+    }
+
+    public function test_job_still_finalizes_task_when_task_provider_sync_dispatch_throws(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ]);
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_FAILED, [
+            'error_code' => 'PROCESS_NOT_FOUND',
+            'error_summary' => 'Run PID no longer exists during reconciliation.',
+            'metadata_json' => [
+                'reconcile_reason' => 'process_not_found',
+            ],
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 8,
+            'title' => 'Unblock failed reconciliation',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $dispatcher = \Mockery::mock(Dispatcher::class);
+        $dispatcher->shouldReceive('dispatch')->andThrow(new \RuntimeException('queue unavailable'));
+        $dispatcher->shouldReceive('dispatchSync')->andThrow(new \RuntimeException('queue unavailable'));
+        $dispatcher->shouldReceive('dispatchNow')->andThrow(new \RuntimeException('queue unavailable'));
+        $this->app->instance(Dispatcher::class, $dispatcher);
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_FAILED, (string) $task->status);
+        $this->assertSame('Run PID no longer exists during reconciliation.', (string) $task->last_error);
+        $this->assertSame('failed', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame($task->id, data_get($session->metadata_json, 'build.active_task_id'));
+        $this->assertSame($run->id, data_get($session->metadata_json, 'build.active_run_id'));
+
+        $queueFailureNotice = InterrogationEvent::query()
+            ->where('interrogation_session_id', (int) $session->id)
+            ->where('event_type', InterrogationEvent::TYPE_SYSTEM)
+            ->where('payload->notice', 'build_task_provider_sync_queue_failed')
+            ->exists();
+
+        $this->assertTrue($queueFailureNotice);
+    }
+
+    public function test_job_does_not_start_pending_tasks_when_a_previous_task_is_already_failed(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+            'active_task_id' => null,
+            'active_run_id' => null,
+        ]);
+
+        $failedRun = $this->makeRun($user, AgentJobRun::STATUS_FAILED, [
+            'error_code' => 'PROCESS_NOT_FOUND',
+            'error_summary' => 'Run PID no longer exists during reconciliation.',
+            'metadata_json' => [
+                'reconcile_reason' => 'process_not_found',
+            ],
+        ]);
+
+        InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 8,
+            'title' => 'Failed task',
+            'status' => InterrogationBuildTask::STATUS_FAILED,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $failedRun->id,
+            'last_error' => 'Run PID no longer exists during reconciliation.',
+            'finished_at' => now('UTC')->subMinute(),
+        ]);
+
+        $pendingTask = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 9,
+            'title' => 'Should not start',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+            'attempt_count' => 0,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $pendingTask->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_PENDING, (string) $pendingTask->status);
+        $this->assertNull($pendingTask->agent_job_run_id);
+        $this->assertSame('failed', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame(InterrogationSession::STATUS_FAILED, (string) $session->status);
+        $this->assertSame('BUILD_EXECUTION_FAILED', (string) $session->error_code);
     }
 
     /**

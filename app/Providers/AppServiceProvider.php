@@ -14,7 +14,18 @@ use App\Policies\AgentJobPolicy;
 use App\Policies\AgentJobRunPolicy;
 use App\Policies\InterrogationSessionPolicy;
 use App\Support\Agent\ErrorEnvelope;
+use App\Contracts\OrchestrationPolicyServiceContract;
+use App\Support\Compliance\ComplianceFlagResolver;
+use App\Support\Compliance\ComplexityClassifier;
+use App\Support\Compliance\LessonsManager;
+use App\Support\Compliance\OrchestrationPolicyService;
+use App\Support\Compliance\VerificationEvidenceEvaluator;
+use App\Support\Interrogation\Adapters\ClaudeAdapter;
+use App\Support\Interrogation\AdversarialReviewerService;
 use App\Support\Interrogation\InterrogationBuildCommandGuard;
+use App\Support\Interrogation\ReviewerContextBuilder;
+use App\Support\Interrogation\ReviewerPayloadGuard;
+use App\Support\Interrogation\ReviewerPayloadNormalizer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Request;
@@ -29,7 +40,24 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(AdversarialReviewerService::class, function ($app) {
+            return new AdversarialReviewerService(
+                $app->make(ClaudeAdapter::class),
+                new ReviewerPayloadGuard,
+                new ReviewerPayloadNormalizer,
+                new ReviewerContextBuilder
+            );
+        });
+
+        $this->app->singleton(ComplexityClassifier::class, fn () => ComplexityClassifier::fromConfig());
+
+        $this->app->singleton(VerificationEvidenceEvaluator::class);
+
+        $this->app->singleton(OrchestrationPolicyServiceContract::class, OrchestrationPolicyService::class);
+
+        $this->app->singleton(ComplianceFlagResolver::class);
+
+        $this->app->singleton(LessonsManager::class, fn () => LessonsManager::fromConfig());
     }
 
     /**
@@ -41,12 +69,9 @@ class AppServiceProvider extends ServiceProvider
             app(InterrogationBuildCommandGuard::class)->enforceFromGlobals();
         }
 
-        // Register delegation event subscribers (only if delegation is enabled)
-        if (config('delegation.enabled', false)) {
-            $events->subscribe(DelegationCoordinator::class);
-            $events->subscribe(DelegationRecoveryHandler::class);
-            $events->subscribe(DelegationBroadcastSubscriber::class);
-        }
+        $events->subscribe(DelegationCoordinator::class);
+        $events->subscribe(DelegationRecoveryHandler::class);
+        $events->subscribe(DelegationBroadcastSubscriber::class);
 
         Gate::policy(AgentJob::class, AgentJobPolicy::class);
         Gate::policy(AgentJobRun::class, AgentJobRunPolicy::class);
