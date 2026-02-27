@@ -158,7 +158,11 @@ class AgentJobController extends Controller
             'task_markdown_path' => $taskMarkdownPath,
             'working_directory' => $validated['working_directory'],
             'env_json' => $validated['env_json'] ?? null,
+            'active_hours_config' => $validated['active_hours_config'] ?? null,
             'last_validated_executable_path' => $request->resolvedExecutablePath(),
+            'star_preamble_enabled' => $validated['star_preamble_enabled'] ?? null,
+            'targeted_retry_enabled' => $validated['targeted_retry_enabled'] ?? null,
+            'max_retries' => $validated['max_retries'] ?? null,
         ]);
 
         $auditLogger->recordUserAction(
@@ -208,6 +212,7 @@ class AgentJobController extends Controller
             'task_markdown_path',
             'working_directory',
             'env_json',
+            'active_hours_config',
             'last_validated_executable_path',
         ]);
         $validated = $request->validated();
@@ -226,7 +231,7 @@ class AgentJobController extends Controller
 
         $taskMarkdownPath = $this->resolveTaskMarkdownPath($request, $validated, $taskMarkdownStorage);
 
-        $job->fill([
+        $data = [
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'cron_expression' => $validated['cron_expression'],
@@ -240,7 +245,26 @@ class AgentJobController extends Controller
             'working_directory' => $validated['working_directory'],
             'env_json' => $validated['env_json'] ?? null,
             'last_validated_executable_path' => $request->resolvedExecutablePath(),
-        ]);
+        ];
+
+        if ($request->boolean('disable_active_hours')) {
+            $data['active_hours_config'] = null;
+        } elseif ($request->has('active_hours_config')) {
+            $data['active_hours_config'] = $validated['active_hours_config'];
+        }
+
+        // Handle STAR configuration fields
+        if ($request->has('star_preamble_enabled')) {
+            $data['star_preamble_enabled'] = $validated['star_preamble_enabled'];
+        }
+        if ($request->has('targeted_retry_enabled')) {
+            $data['targeted_retry_enabled'] = $validated['targeted_retry_enabled'];
+        }
+        if ($request->has('max_retries')) {
+            $data['max_retries'] = $validated['max_retries'];
+        }
+
+        $job->fill($data);
         $job->save();
 
         $after = $job->only(array_keys($before));
@@ -515,6 +539,10 @@ class AgentJobController extends Controller
             'task_markdown_path' => $job->task_markdown_path,
             'working_directory' => $job->working_directory,
             'env_json' => $job->env_json,
+            'active_hours_config' => $job->active_hours_config,
+            'star_preamble_enabled' => $job->star_preamble_enabled,
+            'targeted_retry_enabled' => $job->targeted_retry_enabled,
+            'max_retries' => $job->max_retries,
             'deleted_at' => optional($job->deleted_at)?->toIso8601String(),
             'created_at' => optional($job->created_at)?->toIso8601String(),
             'updated_at' => optional($job->updated_at)?->toIso8601String(),

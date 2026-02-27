@@ -27,6 +27,10 @@ class AgentJob extends Model
             'cooldown_seconds' => 'integer',
             'scheduled_path_failure_streak' => 'integer',
             'env_json' => 'array',
+            'active_hours_config' => 'array',
+            'star_preamble_enabled' => 'boolean',
+            'targeted_retry_enabled' => 'boolean',
+            'max_retries' => 'integer',
         ];
     }
 

@@ -7,6 +7,13 @@ import { Head, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { reactive, ref } from 'vue';
 
+const props = defineProps({
+    config: {
+        type: Object,
+        default: () => ({}),
+    },
+});
+
 const errors = reactive({});
 const isSubmitting = ref(false);
 
@@ -94,6 +101,7 @@ const onSubmit = async ({ payload, invalidEnvJson, invalidTaskMarkdown }) => {
                             v-model="model"
                             :errors="errors"
                             :is-submitting="isSubmitting"
+                            :config="props.config"
                             submit-label="Create Job"
                             @submit="onSubmit"
                         />

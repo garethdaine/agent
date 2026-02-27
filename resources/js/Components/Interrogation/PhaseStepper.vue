@@ -76,7 +76,7 @@ const connectorClass = (stepIndex) => {
 </script>
 
 <template>
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto px-1">
         <div class="flex min-w-[700px] items-start justify-between py-1">
             <template v-for="(step, index) in steps" :key="step.label">
                 <div class="flex flex-1 items-start last:flex-none">

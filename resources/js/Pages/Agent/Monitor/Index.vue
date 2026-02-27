@@ -35,6 +35,11 @@ const clarificationModalRunId = ref(null);
 const rateLimitBusy = ref(false);
 const rateLimitError = ref('');
 const rateLimitModalRunId = ref(null);
+const lessonConfirmBusy = ref(false);
+const lessonDismissed = ref(false);
+const retryModalRunId = ref(null);
+const retryBusy = ref(false);
+const retryError = ref('');
 
 const BASE_POLL_MS = 2000;
 const INACTIVE_POLL_MS = 10000;
@@ -44,6 +49,17 @@ const ACTIVE_RUN_STATUSES = ['queued', 'starting', 'running', 'stopping'];
 const OUTPUT_EVENT_TYPES = ['stdout', 'stderr'];
 const CODEX_DEFAULT_MODEL = 'gpt-5.3-codex';
 
+const reasoningStepConfig = {
+    situation: { label: 'SITUATION', color: 'bg-blue-100 text-blue-800' },
+    task: { label: 'TASK', color: 'bg-green-100 text-green-800' },
+    action: { label: 'ACTION', color: 'bg-amber-100 text-amber-800' },
+    result: { label: 'RESULT', color: 'bg-purple-100 text-purple-800' },
+};
+
+const getReasoningStepBadge = (step) => {
+    return reasoningStepConfig[step] || null;
+};
+
 const consecutiveFailureWarning = computed(() => failureCount.value >= 3);
 
 const activeRuns = computed(() => runs.value.filter((run) => ACTIVE_RUN_STATUSES.includes(run.status)));
@@ -51,6 +67,50 @@ const selectedRun = computed(() => runs.value.find((run) => run.id === selectedR
 const approvalModalRun = computed(() => runs.value.find((run) => run.id === approvalModalRunId.value) ?? null);
 const clarificationModalRun = computed(() => runs.value.find((run) => run.id === clarificationModalRunId.value) ?? null);
 const rateLimitModalRun = computed(() => runs.value.find((run) => run.id === rateLimitModalRunId.value) ?? null);
+
+// Retry chain visualization
+const retryChain = computed(() => {
+    if (!selectedRun.value) return [];
+
+    const chain = [];
+    let current = selectedRun.value;
+
+    // Build chain going backwards
+    while (current.metadata_json?.retry_of_run_id) {
+        const parentId = current.metadata_json.retry_of_run_id;
+        const parent = runs.value.find(r => r.id === parentId);
+        if (parent) {
+            chain.unshift(parent);
+            current = parent;
+        } else {
+            chain.unshift({ id: parentId, status: 'unknown' });
+            break;
+        }
+    }
+
+    chain.push(selectedRun.value);
+    return chain;
+});
+
+const isRetryRun = computed(() => {
+    return !!selectedRun.value?.metadata_json?.retry_of_run_id;
+});
+
+// Suggested lesson display
+const showSuggestedLesson = computed(() => {
+    const hint = selectedRun.value?.metadata_json?.failure_mode_hint;
+    return hint?.suggested_lesson && !selectedRun.value?.metadata_json?.suggested_lesson_confirmed;
+});
+
+const suggestedLessonText = computed(() => {
+    return selectedRun.value?.metadata_json?.failure_mode_hint?.suggested_lesson || '';
+});
+
+// Manual retry eligibility
+const canRetryRun = computed(() => {
+    return selectedRun.value?.status === 'failed' && selectedRun.value?.metadata_json?.reasoning_summary;
+});
+
 const selectedRunNoOutputSeconds = computed(() => {
     const run = selectedRun.value;
 
@@ -485,7 +545,54 @@ const runAnywayAfterRateLimit = async () => {
 const selectRun = async (runId) => {
     selectedRunId.value = runId;
     events.value = [];
+    lessonDismissed.value = false;
     await loadEvents();
+};
+
+const confirmLesson = async () => {
+    if (!selectedRun.value) return;
+
+    lessonConfirmBusy.value = true;
+    try {
+        await axios.post(`/agent/api/v1/runs/${selectedRun.value.id}/confirm-lesson`);
+        await loadMonitor(true);
+    } catch (error) {
+        console.error('Failed to confirm lesson:', error);
+    } finally {
+        lessonConfirmBusy.value = false;
+    }
+};
+
+const dismissLesson = () => {
+    lessonDismissed.value = true;
+};
+
+const openRetryModal = () => {
+    if (!selectedRun.value) return;
+    retryError.value = '';
+    retryModalRunId.value = selectedRun.value.id;
+};
+
+const closeRetryModal = () => {
+    retryModalRunId.value = null;
+    retryError.value = '';
+};
+
+const submitRetry = async () => {
+    if (!retryModalRunId.value) return;
+
+    retryBusy.value = true;
+    retryError.value = '';
+
+    try {
+        await axios.post(`/agent/api/v1/runs/${retryModalRunId.value}/retry`);
+        await loadMonitor(true);
+        closeRetryModal();
+    } catch (error) {
+        retryError.value = error?.response?.data?.error?.message ?? error?.message ?? 'Could not dispatch retry.';
+    } finally {
+        retryBusy.value = false;
+    }
 };
 
 const handleVisibility = () => {
@@ -527,14 +634,14 @@ onBeforeUnmount(() => {
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
             <div class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 lg:grid-cols-3">
-                <Card>
-                    <CardContent class="p-5">
-                        <div class="flex items-center gap-2 mb-3">
-                            <Heart class="w-4 h-4 text-success" />
-                            <span class="text-muted-foreground uppercase tracking-wider text-[11px] font-semibold">Scheduler Health</span>
+                <Card class="h-full">
+                    <div class="flex h-full min-h-[136px] flex-col p-6">
+                        <div class="flex items-center gap-2.5">
+                            <Heart class="h-4 w-4 text-success" />
+                            <span class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Scheduler Health</span>
                         </div>
                         <div :class="[
-                            'text-[22px] font-bold',
+                            'mt-4 text-[22px] font-bold leading-tight',
                             scheduler.status === 'healthy' ? 'text-success' : '',
                             scheduler.status === 'degraded' ? 'text-warning' : '',
                             scheduler.status === 'down' ? 'text-destructive' : '',
@@ -542,33 +649,35 @@ onBeforeUnmount(() => {
                         ]">
                             {{ scheduler.status }}
                         </div>
-                        <p class="mt-2 text-xs text-muted-foreground">Last seen: {{ scheduler.last_seen_at ?? 'never' }}</p>
-                        <p class="mt-1 text-xs text-muted-foreground">Age: {{ scheduler.age_seconds ?? 'n/a' }}s</p>
-                    </CardContent>
+                        <div class="mt-3 space-y-1.5 text-xs leading-5 text-muted-foreground">
+                            <p>Last seen: {{ scheduler.last_seen_at ?? 'never' }}</p>
+                            <p>Age: {{ scheduler.age_seconds ?? 'n/a' }}s</p>
+                        </div>
+                    </div>
                 </Card>
 
-                <Card>
-                    <CardContent class="p-5">
-                        <div class="flex items-center gap-2 mb-3">
-                            <Gauge class="w-4 h-4 text-primary" />
-                            <span class="text-muted-foreground uppercase tracking-wider text-[11px] font-semibold">Queue Lag</span>
+                <Card class="h-full">
+                    <div class="flex h-full min-h-[136px] flex-col p-6">
+                        <div class="flex items-center gap-2.5">
+                            <Gauge class="h-4 w-4 text-primary" />
+                            <span class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Queue Lag</span>
                         </div>
-                        <div :class="['text-[22px] font-bold', queueLag.warning ? 'text-warning' : 'text-foreground']">
+                        <div :class="['mt-4 text-[22px] font-bold leading-tight', queueLag.warning ? 'text-warning' : 'text-foreground']">
                             {{ queueLag.count }} queued / oldest {{ queueLag.oldestSeconds }}s
                         </div>
-                        <p class="mt-2 text-xs text-muted-foreground">Warning threshold: oldest &gt; 60s or queued &gt; 10</p>
-                    </CardContent>
+                        <p class="mt-3 text-xs leading-5 text-muted-foreground">Warning threshold: oldest &gt; 60s or queued &gt; 10</p>
+                    </div>
                 </Card>
 
-                <Card>
-                    <CardContent class="p-5">
-                        <div class="flex items-center gap-2 mb-3">
-                            <Radio class="w-4 h-4 text-primary" />
-                            <span class="text-muted-foreground uppercase tracking-wider text-[11px] font-semibold">Poll Status</span>
+                <Card class="h-full">
+                    <div class="flex h-full min-h-[136px] flex-col p-6">
+                        <div class="flex items-center gap-2.5">
+                            <Radio class="h-4 w-4 text-primary" />
+                            <span class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Poll Status</span>
                         </div>
-                        <div class="text-sm text-foreground">Consecutive failures: {{ failureCount }}</div>
-                        <p class="mt-2 text-xs text-muted-foreground">Intervals: active 2s, inactive 10s, hidden 15s with backoff.</p>
-                    </CardContent>
+                        <div class="mt-4 text-[22px] font-semibold leading-tight text-foreground">{{ failureCount }} consecutive failures</div>
+                        <p class="mt-3 text-xs leading-5 text-muted-foreground">Intervals: active 2s, inactive 10s, hidden 15s with backoff.</p>
+                    </div>
                 </Card>
             </div>
 
@@ -667,11 +776,62 @@ onBeforeUnmount(() => {
 
                 <Card>
                     <div class="px-5 py-4 border-b border-border">
-                        <h3 class="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">Event Tail</h3>
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">Event Tail</h3>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    v-if="isRetryRun"
+                                    class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+                                >
+                                    Retry of #{{ selectedRun.metadata_json.retry_of_run_id }}
+                                </span>
+                                <Button
+                                    v-if="canRetryRun"
+                                    variant="outline"
+                                    size="sm"
+                                    @click="openRetryModal"
+                                >
+                                    <RefreshCw class="w-3 h-3 mr-1" />
+                                    Retry
+                                </Button>
+                            </div>
+                        </div>
+
+                        <!-- Retry Chain -->
+                        <div v-if="retryChain.length > 1" class="mt-3 flex items-center gap-2 text-sm">
+                            <span class="text-muted-foreground">Retry chain:</span>
+                            <template v-for="(run, index) in retryChain" :key="run.id">
+                                <button
+                                    @click="selectRun(run.id)"
+                                    :class="[
+                                        'px-2 py-1 rounded transition-colors',
+                                        run.id === selectedRun?.id
+                                            ? 'bg-primary/20 text-primary font-medium'
+                                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                    ]"
+                                >
+                                    #{{ run.id }}
+                                    <span v-if="run.status === 'failed'" class="text-destructive ml-0.5">✗</span>
+                                    <span v-else-if="run.status === 'succeeded'" class="text-success ml-0.5">✓</span>
+                                </button>
+                                <span v-if="index < retryChain.length - 1" class="text-muted-foreground">→</span>
+                            </template>
+                        </div>
                     </div>
                     <div id="event-tail" class="h-[30rem] overflow-auto bg-[#0c1222] p-4 font-mono text-sm text-foreground">
                         <div v-for="entry in formattedEvents" :key="entry.key" class="mb-2 whitespace-pre-wrap break-words">
-                            <div class="text-[11px] text-muted-foreground">{{ entry.prefix }}</div>
+                            <div class="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                <span
+                                    v-if="entry.reasoningStep && getReasoningStepBadge(entry.reasoningStep)"
+                                    :class="[
+                                        'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0',
+                                        getReasoningStepBadge(entry.reasoningStep)?.color
+                                    ]"
+                                >
+                                    {{ getReasoningStepBadge(entry.reasoningStep)?.label }}
+                                </span>
+                                <span>{{ entry.prefix }}</span>
+                            </div>
                             <MarkdownRenderer
                                 v-if="entry.format === 'markdown'"
                                 :markdown="entry.payload"
@@ -693,6 +853,89 @@ onBeforeUnmount(() => {
                         </div>
                         <p v-if="events.length === 0" class="text-muted-foreground">No events yet for selected run.</p>
                     </div>
+
+                    <!-- Suggested Lesson Banner -->
+                    <div
+                        v-if="showSuggestedLesson && !lessonDismissed"
+                        class="mx-4 mb-4 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg"
+                    >
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="text-sm font-medium text-amber-800 dark:text-amber-300">Suggested Lesson</h3>
+                                <p class="mt-1 text-sm text-amber-700 dark:text-amber-400">
+                                    {{ suggestedLessonText }}
+                                </p>
+                                <div class="mt-3 flex gap-3">
+                                    <Button
+                                        size="sm"
+                                        @click="confirmLesson"
+                                        :disabled="lessonConfirmBusy"
+                                        class="bg-amber-600 hover:bg-amber-700 text-white"
+                                    >
+                                        {{ lessonConfirmBusy ? 'Adding...' : 'Add to Lessons' }}
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        @click="dismissLesson"
+                                        class="text-amber-700 dark:text-amber-400 hover:text-amber-900"
+                                    >
+                                        Dismiss
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+            </div>
+
+            <!-- Retry Modal -->
+            <div v-if="retryModalRunId" class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
+                <Card class="w-full max-w-2xl border-primary/40 shadow-xl">
+                    <CardContent class="p-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <RefreshCw class="w-5 h-5 text-primary" />
+                                    <h3 class="text-lg font-semibold text-primary">Retry Run</h3>
+                                </div>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    Dispatch a targeted retry for run #{{ retryModalRunId }}.
+                                </p>
+                            </div>
+                            <Button variant="ghost" size="sm" @click="closeRetryModal">
+                                <X class="w-4 h-4" />
+                            </Button>
+                        </div>
+
+                        <div class="mt-4 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm text-primary">
+                            <p>The system will generate a corrective reframe prompt based on the STAR reasoning analysis from the failed run.</p>
+                        </div>
+
+                        <p v-if="retryError" class="mt-2 text-xs text-destructive">{{ retryError }}</p>
+
+                        <div class="mt-4 flex items-center gap-2">
+                            <Button
+                                :disabled="retryBusy"
+                                @click="submitRetry"
+                            >
+                                <RefreshCw v-if="retryBusy" class="w-4 h-4 animate-spin mr-1" />
+                                {{ retryBusy ? 'Dispatching...' : 'Dispatch Retry' }}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                :disabled="retryBusy"
+                                @click="closeRetryModal"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </CardContent>
                 </Card>
             </div>
 

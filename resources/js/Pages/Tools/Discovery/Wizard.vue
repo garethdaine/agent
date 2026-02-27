@@ -1516,9 +1516,9 @@ onBeforeUnmount(() => {
 
                             <template v-if="session.phase === PHASE.PLANNING">
                                 <Card>
-                                    <CardHeader class="flex-row items-center justify-between">
+                                    <CardHeader class="!flex !flex-row !items-center !justify-between !space-y-0 gap-3 border-b border-border pb-4">
                                         <CardTitle>Implementation Plan</CardTitle>
-                                        <div class="flex items-center gap-2">
+                                        <div class="flex flex-wrap items-center justify-end gap-2">
                                             <Button
                                                 v-if="hasMeaningfulPlan && !hasPlanApproved"
                                                 variant="outline"

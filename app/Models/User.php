@@ -101,4 +101,42 @@ class User extends Authenticatable
     {
         return $this->hasMany(DelegateeProfile::class);
     }
+
+    /**
+     * Check if the user has any of the given roles.
+     *
+     * Uses config-based allowlist for role assignment.
+     *
+     * @param  string|array<string>  $roles
+     */
+    public function hasRole(string|array $roles): bool
+    {
+        $roles = is_array($roles) ? $roles : [$roles];
+        $userRoles = $this->getRoles();
+
+        return count(array_intersect($userRoles, $roles)) > 0;
+    }
+
+    /**
+     * Get the user's assigned roles from config.
+     *
+     * @return array<string>
+     */
+    protected function getRoles(): array
+    {
+        $adminIds = config('agent.roles.admin_user_ids', []);
+        $analyticsIds = config('agent.roles.analytics_user_ids', []);
+
+        $roles = [];
+
+        if (in_array($this->id, $adminIds, true)) {
+            $roles[] = 'admin';
+        }
+
+        if (in_array($this->id, $analyticsIds, true)) {
+            $roles[] = 'analytics';
+        }
+
+        return $roles;
+    }
 }

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AgentRunEvent extends Model
 {
+    public const REASONING_STEPS = ['situation', 'task', 'action', 'result'];
+
     protected $guarded = [];
 
     protected function casts(): array

@@ -1,7 +1,11 @@
 <script setup>
-import { computed, reactive, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import Button from '@/Components/ui/Button.vue';
 import Card from '@/Components/ui/Card.vue';
+import NlScheduleInput from '@/Components/Agent/NlScheduleInput.vue';
+import ParseConfirmationModal from '@/Components/Agent/ParseConfirmationModal.vue';
+import LlmDegradationWarning from '@/Components/Agent/LlmDegradationWarning.vue';
 
 const props = defineProps({
     modelValue: {
@@ -19,6 +23,10 @@ const props = defineProps({
     isSubmitting: {
         type: Boolean,
         default: false,
+    },
+    config: {
+        type: Object,
+        default: () => ({}),
     },
 });
 
@@ -122,6 +130,10 @@ const form = reactive({
     task_markdown_content: '',
     working_directory: '',
     env_json_text: '{}',
+    active_hours_config: null,
+    star_preamble_enabled: null,
+    targeted_retry_enabled: null,
+    max_retries: null,
 });
 
 const templateBuilder = reactive({
@@ -146,6 +158,127 @@ const schedule = reactive({
     everyHours: 1,
     weekday: 1,
     monthDay: 1,
+});
+
+// Natural Language scheduling state
+const pendingParseAttemptId = ref(null);
+const nlParseError = ref(null);
+let echoChannel = null;
+
+// Confirmation modal state
+const showConfirmationModal = ref(false);
+const pendingParseResult = ref(null);
+const ambiguousOptions = ref([]);
+
+// Degradation warning state
+const showDegradationWarning = ref(false);
+const degradationResult = ref(null);
+const degradationError = ref(null);
+
+// Disable active hours checkbox state (for edit mode)
+const disableActiveHours = ref(false);
+
+watch(disableActiveHours, (newValue) => {
+    if (newValue) {
+        form.active_hours_config = null;
+    }
+});
+
+const page = usePage();
+const userId = computed(() => page.props.auth?.user?.id);
+
+const applyParseResult = (result) => {
+    form.cron_expression = result.cron_expression;
+    form.active_hours_config = result.active_hours || null;
+    schedule.mode = 'advanced';
+    showConfirmationModal.value = false;
+    pendingParseResult.value = null;
+    ambiguousOptions.value = [];
+    showDegradationWarning.value = false;
+    degradationResult.value = null;
+    degradationError.value = null;
+};
+
+const handleParsed = (data) => {
+    nlParseError.value = null;
+    if (data.result.confidence >= 0.75 && !data.result.ambiguous) {
+        // High confidence - auto-apply
+        applyParseResult(data.result);
+    } else {
+        // Low confidence or ambiguous - show confirmation modal
+        pendingParseResult.value = data.result;
+        ambiguousOptions.value = data.result.ambiguous_options || [];
+        showConfirmationModal.value = true;
+    }
+};
+
+const handleConfirm = (result) => {
+    applyParseResult(result);
+};
+
+const handleEditAdvanced = () => {
+    form.cron_expression = pendingParseResult.value.cron_expression;
+    form.active_hours_config = pendingParseResult.value.active_hours || null;
+    schedule.mode = 'advanced';
+    showConfirmationModal.value = false;
+    pendingParseResult.value = null;
+    ambiguousOptions.value = [];
+};
+
+const handleCancel = () => {
+    showConfirmationModal.value = false;
+    pendingParseResult.value = null;
+    ambiguousOptions.value = [];
+};
+
+const handleDegradationConfirm = (result) => {
+    applyParseResult(result);
+};
+
+const handleDegradationCancel = () => {
+    showDegradationWarning.value = false;
+    degradationResult.value = null;
+    degradationError.value = null;
+};
+
+const handleQueued = (parseAttemptId) => {
+    pendingParseAttemptId.value = parseAttemptId;
+};
+
+const handleParseError = (message) => {
+    nlParseError.value = message;
+};
+
+// WebSocket listener for NL parse results
+onMounted(() => {
+    if (window.Echo && userId.value) {
+        echoChannel = window.Echo.private(`user.${userId.value}`)
+            .listen('.NlParseCompleted', (event) => {
+                if (event.parse_attempt_id === pendingParseAttemptId.value) {
+                    if (event.status === 'completed') {
+                        handleParsed({ result: event.result });
+                    } else if (event.status === 'failed') {
+                        nlParseError.value = null;
+                        // Show degradation warning with rule_based_result fallback
+                        if (event.rule_based_result) {
+                            degradationResult.value = event.rule_based_result;
+                            degradationError.value = event.error || 'Advanced parsing failed';
+                            showDegradationWarning.value = true;
+                        } else {
+                            nlParseError.value = event.error || 'Parse failed';
+                        }
+                    }
+                    pendingParseAttemptId.value = null;
+                }
+            });
+    }
+});
+
+onUnmounted(() => {
+    if (window.Echo && userId.value) {
+        window.Echo.leave(`user.${userId.value}`);
+    }
+    echoChannel = null;
 });
 
 const parseInteger = (value, fallback) => {
@@ -243,6 +376,20 @@ const parseCronIntoBasicSchedule = (cronExpression) => {
     return false;
 };
 
+// ISO-8601 day names (1=Mon..7=Sun)
+const dayNames = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const formatDays = (days) => {
+    if (!days || days.length === 0) return 'none';
+    if (days.length === 7) return 'every day';
+
+    const sorted = [...days].sort((a, b) => a - b);
+    if (JSON.stringify(sorted) === JSON.stringify([1, 2, 3, 4, 5])) return 'weekdays';
+    if (JSON.stringify(sorted) === JSON.stringify([6, 7])) return 'weekends';
+
+    return sorted.map((d) => dayNames[d]).join(', ');
+};
+
 const hydrate = (value) => {
     form.name = value.name ?? '';
     form.description = value.description ?? '';
@@ -257,9 +404,20 @@ const hydrate = (value) => {
     form.task_markdown_content = value.task_markdown_content ?? '';
     form.working_directory = value.working_directory ?? '';
     form.env_json_text = JSON.stringify(value.env_json ?? {}, null, 2);
+    form.active_hours_config = value.active_hours_config ?? null;
+    form.star_preamble_enabled = value.star_preamble_enabled ?? null;
+    form.targeted_retry_enabled = value.targeted_retry_enabled ?? null;
+    form.max_retries = value.max_retries ?? null;
     taskSource.mode = form.task_markdown_content.trim() !== '' ? 'inline' : 'path';
 
-    if (parseCronIntoBasicSchedule(form.cron_expression)) {
+    // Reset disable checkbox when hydrating
+    disableActiveHours.value = false;
+
+    // For edits (when there's an existing job id), always use Advanced mode
+    // This ensures NL-created jobs open in Advanced mode for manual cron editing
+    if (value.id) {
+        schedule.mode = 'advanced';
+    } else if (parseCronIntoBasicSchedule(form.cron_expression)) {
         schedule.mode = 'basic';
     } else {
         schedule.mode = 'advanced';
@@ -398,6 +556,10 @@ const buildTemplateFromPreset = () => {
 
 const generatedTemplate = computed(() => buildTemplateFromPreset());
 
+const globalMaxRetries = computed(() => {
+    return props.config?.targeted_retry?.max_retries ?? 1;
+});
+
 const applyGeneratedTemplate = () => {
     form.command_template = generatedTemplate.value;
 };
@@ -493,6 +655,18 @@ const submit = () => {
         payload.env_json = env;
     }
 
+    // Handle active hours: either disable or include config
+    if (disableActiveHours.value) {
+        payload.disable_active_hours = true;
+    } else if (form.active_hours_config) {
+        payload.active_hours_config = form.active_hours_config;
+    }
+
+    // Handle STAR configuration fields
+    payload.star_preamble_enabled = form.star_preamble_enabled;
+    payload.targeted_retry_enabled = form.targeted_retry_enabled;
+    payload.max_retries = form.max_retries;
+
     emit('submit', { payload, invalidEnvJson: env === '__INVALID_JSON__', invalidTaskMarkdown: null });
 };
 </script>
@@ -526,7 +700,7 @@ const submit = () => {
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <div>
                         <p class="text-sm font-medium text-foreground">Schedule</p>
-                        <p class="text-xs text-muted-foreground">Use Basic mode for guided scheduling or Advanced mode to type a cron expression.</p>
+                        <p class="text-xs text-muted-foreground">Use Basic mode for guided scheduling, Advanced mode to type a cron expression, or Natural Language to describe your schedule.</p>
                     </div>
                     <div class="flex items-center gap-4 text-sm">
                         <label class="inline-flex items-center gap-2">
@@ -536,6 +710,10 @@ const submit = () => {
                         <label class="inline-flex items-center gap-2">
                             <input v-model="schedule.mode" type="radio" value="advanced" class="border-input" />
                             Advanced
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input v-model="schedule.mode" type="radio" value="natural_language" class="border-input" />
+                            Natural Language
                         </label>
                     </div>
                 </div>
@@ -608,10 +786,51 @@ const submit = () => {
                     </div>
                 </div>
 
-                <div v-else>
+                <div v-else-if="schedule.mode === 'advanced'">
                     <label class="block text-sm font-medium text-foreground">Cron Expression</label>
                     <input v-model="form.cron_expression" type="text" class="mt-1 w-full rounded-md border border-input bg-input-background font-mono focus-visible:ring-2 focus-visible:ring-ring" />
                     <p class="mt-1 text-xs text-muted-foreground">5-part numeric cron. Supports numbers, <code>*</code>, ranges, lists, and step values.</p>
+
+                    <!-- Active Hours Display and Disable Checkbox -->
+                    <div v-if="form.active_hours_config || disableActiveHours" class="mt-4 rounded-md border border-border p-3">
+                        <div v-if="form.active_hours_config && !disableActiveHours" class="mb-3">
+                            <p class="text-sm font-medium text-foreground">Active Hours Restriction</p>
+                            <p class="mt-1 text-sm text-muted-foreground">
+                                This job only runs between {{ form.active_hours_config.start }} and {{ form.active_hours_config.end }}
+                                on days: {{ formatDays(form.active_hours_config.days) }}
+                            </p>
+                        </div>
+
+                        <label class="inline-flex items-center gap-2 text-sm">
+                            <input v-model="disableActiveHours" type="checkbox" class="rounded border-input" />
+                            <span>Disable active hours restriction</span>
+                        </label>
+                        <p v-if="disableActiveHours" class="mt-1 text-xs text-muted-foreground">
+                            Active hours will be removed when you save. The job will run on every cron match.
+                        </p>
+                    </div>
+                </div>
+
+                <div v-else-if="schedule.mode === 'natural_language'" class="mt-4">
+                    <NlScheduleInput
+                        :timezone="form.timezone"
+                        @parsed="handleParsed"
+                        @queued="handleQueued"
+                        @error="handleParseError"
+                    />
+                    <div v-if="pendingParseAttemptId" class="mt-3 rounded-md border border-warning/50 bg-warning/10 px-3 py-2 text-sm text-warning">
+                        Parsing schedule... Waiting for result.
+                    </div>
+                    <div v-if="nlParseError" class="mt-3 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                        {{ nlParseError }}
+                    </div>
+                    <div v-if="form.cron_expression && form.cron_expression !== '0 9 * * *'" class="mt-3">
+                        <label class="block text-sm font-medium text-foreground">Generated Cron Expression</label>
+                        <input :value="form.cron_expression" type="text" readonly class="mt-1 w-full rounded-md border border-input bg-muted font-mono text-sm" />
+                        <p v-if="form.active_hours_config" class="mt-1 text-xs text-muted-foreground">
+                            Active hours: {{ form.active_hours_config.start }} - {{ form.active_hours_config.end }}
+                        </p>
+                    </div>
                 </div>
 
                 <p v-if="errors.cron_expression" class="mt-2 text-sm text-destructive">{{ errors.cron_expression[0] }}</p>
@@ -790,6 +1009,90 @@ const submit = () => {
                 <p v-if="errors.env_json" class="mt-1 text-sm text-destructive">{{ errors.env_json[0] }}</p>
             </div>
 
+            <!-- Reasoning & Retry Section -->
+            <div class="lg:col-span-2 rounded-md border border-border p-4">
+                <div class="mb-4">
+                    <h3 class="text-sm font-medium text-foreground">Reasoning & Retry</h3>
+                    <p class="mt-1 text-xs text-muted-foreground">
+                        Configure STAR structured reasoning and automatic retry behavior.
+                    </p>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- STAR Preamble Toggle -->
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-5 items-center">
+                            <input
+                                id="star_preamble_enabled"
+                                v-model="form.star_preamble_enabled"
+                                type="checkbox"
+                                :true-value="true"
+                                :false-value="false"
+                                class="h-4 w-4 rounded border-input"
+                            />
+                        </div>
+                        <div>
+                            <label for="star_preamble_enabled" class="text-sm font-medium text-foreground">
+                                Enable STAR Preamble
+                            </label>
+                            <p class="text-xs text-muted-foreground">
+                                Prepend structured reasoning framework (Situation, Task, Action, Result)
+                                before task execution. Research shows +85% accuracy improvement on complex tasks.
+                            </p>
+                            <p v-if="form.star_preamble_enabled === null" class="mt-1 text-xs text-muted-foreground">
+                                Currently inheriting from global config.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Targeted Retry Toggle -->
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-5 items-center">
+                            <input
+                                id="targeted_retry_enabled"
+                                v-model="form.targeted_retry_enabled"
+                                type="checkbox"
+                                :true-value="true"
+                                :false-value="false"
+                                class="h-4 w-4 rounded border-input"
+                            />
+                        </div>
+                        <div>
+                            <label for="targeted_retry_enabled" class="text-sm font-medium text-foreground">
+                                Enable Targeted Retry
+                            </label>
+                            <p class="text-xs text-muted-foreground">
+                                Automatically retry failed runs with a corrective prompt targeting
+                                the specific reasoning step that went wrong.
+                            </p>
+                            <p v-if="form.targeted_retry_enabled === null" class="mt-1 text-xs text-muted-foreground">
+                                Currently inheriting from global config.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Max Retries (shown when targeted retry enabled) -->
+                    <div v-if="form.targeted_retry_enabled" class="ml-7">
+                        <label for="max_retries" class="block text-sm font-medium text-foreground">
+                            Maximum Retries
+                        </label>
+                        <input
+                            id="max_retries"
+                            v-model.number="form.max_retries"
+                            type="number"
+                            min="0"
+                            max="10"
+                            class="mt-1 block w-24 rounded-md border border-input bg-input-background shadow-sm focus-visible:ring-2 focus-visible:ring-ring sm:text-sm"
+                            placeholder="1"
+                        />
+                        <p class="mt-1 text-xs text-muted-foreground">
+                            Leave empty to use global default ({{ globalMaxRetries }}).
+                        </p>
+                        <p v-if="errors.max_retries" class="mt-1 text-sm text-destructive">{{ errors.max_retries[0] }}</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="flex items-center gap-2">
                 <input id="is_enabled" v-model="form.is_enabled" type="checkbox" class="rounded border-input" />
                 <label for="is_enabled" class="text-sm text-foreground">Enabled</label>
@@ -801,5 +1104,22 @@ const submit = () => {
                 {{ submitLabel }}
             </Button>
         </div>
+
+        <ParseConfirmationModal
+            :show="showConfirmationModal"
+            :result="pendingParseResult"
+            :ambiguous-options="ambiguousOptions"
+            @confirm="handleConfirm"
+            @cancel="handleCancel"
+            @edit-advanced="handleEditAdvanced"
+        />
+
+        <LlmDegradationWarning
+            :show="showDegradationWarning"
+            :rule-based-result="degradationResult"
+            :error-message="degradationError"
+            @confirm="handleDegradationConfirm"
+            @cancel="handleDegradationCancel"
+        />
     </form>
 </template>

@@ -6,14 +6,19 @@ use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Models\AgentJobRun;
 use App\Support\Agent\CommandTemplateRenderer;
 use App\Support\Agent\Duration;
+use App\Support\Agent\FailureModeClassifier;
+use App\Support\Agent\ReasoningStepParser;
 use App\Support\Agent\RunEventWriter;
 use App\Support\Agent\RunStateTransitionService;
 use App\Support\Agent\RuntimeValidation;
+use App\Support\Agent\StarPreambleGenerator;
+use App\Support\Agent\TargetedRetryService;
 use App\Support\Agent\UsageLimitState;
 use App\Support\Compliance\DTOs\PolicyEvaluationResult;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
@@ -22,6 +27,8 @@ class ExecuteAgentRunJob implements ShouldQueue
     use Queueable;
 
     private ?UsageLimitState $usageLimitState = null;
+
+    private ?string $enhancedTaskPath = null;
 
     public int $tries = 1;
 
@@ -127,7 +134,40 @@ class ExecuteAgentRunJob implements ShouldQueue
             $run->job->last_validated_executable_path = $runtimeCheck['resolved_executable_path'];
             $run->job->save();
 
+            // STAR Preamble Injection
+            $starGenerator = app(StarPreambleGenerator::class);
+            $starApplied = false;
+            $abGroup = null;
+
+            if ($starGenerator->isEnabled($run->job)) {
+                $abGroup = $starGenerator->assignAbGroup($run->job);
+
+                // If A/B testing and assigned to control, skip STAR
+                if ($abGroup !== 'control') {
+                    $preamble = $starGenerator->generate($run->job, $run);
+                    $this->prepareEnhancedTaskMarkdown($run, $preamble);
+                    $starApplied = true;
+                }
+            }
+
+            // Store A/B group
+            if ($abGroup !== null) {
+                $run->update(['star_ab_group' => $abGroup]);
+            }
+
+            // Store STAR metadata
+            $this->updateMetadata($run, ['star_preamble_applied' => $starApplied]);
+
             $tokens = $renderer->renderTokens($run->job, $run);
+
+            // Override task_markdown_path token with enhanced path if STAR was applied
+            if ($this->enhancedTaskPath !== null) {
+                $tokens = array_map(
+                    fn (string $token): string => $token === $run->job->task_markdown_path ? $this->enhancedTaskPath : $token,
+                    $tokens
+                );
+            }
+
             $env = $this->mergedEnvironment($run);
 
             $process = new Process($tokens, $run->job->working_directory, $env);
@@ -193,10 +233,14 @@ class ExecuteAgentRunJob implements ShouldQueue
                 ? CarbonImmutable::now('UTC')->addSeconds($heartbeatIntervalSeconds)
                 : null;
 
+            // Initialize reasoning parser before the monitoring loop
+            $reasoningParser = new ReasoningStepParser();
+
             while ($process->isRunning()) {
                 $stdout = $process->getIncrementalOutput();
                 if ($stdout !== '') {
-                    $writer->appendOutput('stdout', $stdout);
+                    $reasoningStep = $reasoningParser->parse($stdout);
+                    $writer->appendOutput('stdout', $stdout, $reasoningStep);
                 }
 
                 $stderr = $process->getIncrementalErrorOutput();
@@ -290,7 +334,8 @@ class ExecuteAgentRunJob implements ShouldQueue
 
             $remainingOut = $process->getIncrementalOutput();
             if ($remainingOut !== '') {
-                $writer->appendOutput('stdout', $remainingOut);
+                $reasoningStep = $reasoningParser->parse($remainingOut);
+                $writer->appendOutput('stdout', $remainingOut, $reasoningStep);
             }
 
             $remainingErr = $process->getIncrementalErrorOutput();
@@ -348,6 +393,25 @@ class ExecuteAgentRunJob implements ShouldQueue
                 $metadata['termination_mode'] = $terminationMode;
             }
 
+            // Store reasoning summary in metadata
+            $reasoningSummary = $reasoningParser->getSummary();
+            if ($reasoningSummary['all_completed'] || ! empty(array_filter(
+                $reasoningSummary['steps'],
+                fn ($s) => $s['completed']
+            ))) {
+                $metadata['reasoning_summary'] = $reasoningSummary;
+            }
+
+            // Classify failure mode if run failed with STAR data
+            if ($finalStatus === AgentJobRun::STATUS_FAILED && ! empty($reasoningSummary['steps'])) {
+                $classifier = app(FailureModeClassifier::class);
+                $hint = $classifier->classify($reasoningSummary, $run->job);
+
+                if ($hint !== null) {
+                    $metadata['failure_mode_hint'] = $hint->toArray();
+                }
+            }
+
             $payload = [
                 'exit_code' => $exitCode,
                 'signal' => $process->getTermSignal(),
@@ -364,6 +428,9 @@ class ExecuteAgentRunJob implements ShouldQueue
             }
 
             $this->finalizeTerminal($run, $transitions, $finalStatus, $payload);
+
+            // Cleanup temp file
+            $this->cleanupEnhancedTaskFile();
         } catch (\Throwable $throwable) {
             report($throwable);
             $this->failRunSafely($run, $transitions, $throwable);
@@ -489,6 +556,29 @@ class ExecuteAgentRunJob implements ShouldQueue
         }
 
         $this->applyPathFailurePolicy($run);
+
+        // Automatic targeted retry on STAR-structured failures
+        $this->attemptTargetedRetry($run, $status);
+    }
+
+    private function attemptTargetedRetry(AgentJobRun $run, string $status): void
+    {
+        if ($status !== AgentJobRun::STATUS_FAILED) {
+            return;
+        }
+
+        try {
+            $retryService = app(TargetedRetryService::class);
+            if ($retryService->shouldRetry($run)) {
+                $retryService->dispatchRetry($run);
+            }
+        } catch (\Throwable $throwable) {
+            // Log but don't fail the finalization
+            Log::warning('Failed to dispatch targeted retry', [
+                'run_id' => $run->id,
+                'error' => $throwable->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -678,5 +768,45 @@ class ExecuteAgentRunJob implements ShouldQueue
         $metadata = (array) ($run->metadata_json ?? []);
         $run->metadata_json = array_merge($metadata, $result->metadataPatch);
         $run->save();
+    }
+
+    /**
+     * Prepare enhanced task markdown with STAR preamble prepended.
+     */
+    private function prepareEnhancedTaskMarkdown(AgentJobRun $run, string $preamble): void
+    {
+        $originalPath = $run->job->task_markdown_path;
+        $originalContent = '';
+
+        if ($originalPath && File::exists($originalPath)) {
+            $originalContent = File::get($originalPath);
+        }
+
+        $enhancedContent = $preamble."\n\n".$originalContent;
+
+        $tempPath = sys_get_temp_dir().'/star_task_'.$run->id.'.md';
+        File::put($tempPath, $enhancedContent);
+
+        $this->enhancedTaskPath = $tempPath;
+    }
+
+    /**
+     * @param  array<string, mixed>  $patch
+     */
+    private function updateMetadata(AgentJobRun $run, array $patch): void
+    {
+        $metadata = (array) ($run->metadata_json ?? []);
+        $run->metadata_json = array_merge($metadata, $patch);
+        $run->save();
+    }
+
+    /**
+     * Clean up temporary enhanced task file.
+     */
+    private function cleanupEnhancedTaskFile(): void
+    {
+        if ($this->enhancedTaskPath !== null && File::exists($this->enhancedTaskPath)) {
+            File::delete($this->enhancedTaskPath);
+        }
     }
 }

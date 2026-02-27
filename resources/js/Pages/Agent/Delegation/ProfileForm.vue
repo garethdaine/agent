@@ -15,7 +15,7 @@ import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import Spinner from '@/Components/ui/Spinner.vue';
-import { ArrowLeft, Save } from 'lucide-vue-next';
+import { ArrowLeft, Save, RefreshCw } from 'lucide-vue-next';
 
 const props = defineProps({
     profileId: {
@@ -78,6 +78,7 @@ const loadProfile = async () => {
             is_active: profile.is_active ?? true,
             capability_ids: profile.capabilities?.map(c => c.id) || [],
         };
+        profileTrustUpdatedAt.value = profile.trust_updated_at;
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load profile.';
     } finally {
@@ -129,9 +130,55 @@ const toggleCapability = (capId) => {
     }
 };
 
+// Trust score state
+const trustScore = ref(null);
+const trustLoading = ref(false);
+const profileTrustUpdatedAt = ref(null);
+
+const fetchTrustScore = async () => {
+    if (!isEdit.value) return;
+
+    trustLoading.value = true;
+    try {
+        const { data } = await axios.get(`/agent/api/v1/delegation/delegatee-profiles/${props.profileId}/trust`);
+        trustScore.value = data.data;
+    } catch (e) {
+        console.error('Failed to fetch trust score:', e);
+    } finally {
+        trustLoading.value = false;
+    }
+};
+
+const recalculateTrust = async () => {
+    await fetchTrustScore();
+};
+
+const getTrustScoreClass = (score) => {
+    if (score < 0.4) return 'text-red-600 dark:text-red-400';
+    if (score < 0.8) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-green-600 dark:text-green-400';
+};
+
+const getTrustLevel = (score) => {
+    if (score < 0.4) return 'Low';
+    if (score < 0.8) return 'Medium';
+    return 'High';
+};
+
+const formatComponentName = (key) => {
+    return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
+
+const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleString();
+};
+
 onMounted(async () => {
     await loadCapabilities();
     await loadProfile();
+    await fetchTrustScore();
 });
 </script>
 
@@ -262,6 +309,79 @@ onMounted(async () => {
                                     />
                                     <span class="text-sm text-foreground">Active</span>
                                 </label>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Trust Score Panel (Edit mode only) -->
+                    <Card v-if="isEdit">
+                        <CardHeader>
+                            <CardTitle>Trust Score</CardTitle>
+                            <CardDescription>Performance-based trust calibration from STAR reasoning metrics</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div v-if="trustLoading" class="flex items-center gap-2 text-muted-foreground">
+                                <RefreshCw class="h-4 w-4 animate-spin" />
+                                Loading trust score...
+                            </div>
+
+                            <div v-else-if="trustScore" class="space-y-4">
+                                <!-- Main Score -->
+                                <div class="flex items-center gap-4">
+                                    <div
+                                        :class="[
+                                            'text-3xl font-bold',
+                                            getTrustScoreClass(trustScore.score)
+                                        ]"
+                                    >
+                                        {{ Math.round(trustScore.score * 100) }}%
+                                    </div>
+                                    <div class="text-sm text-muted-foreground space-y-0.5">
+                                        <div>Level: <span class="font-medium text-foreground">{{ getTrustLevel(trustScore.score) }}</span></div>
+                                        <div>Confidence: <span class="font-medium text-foreground">{{ trustScore.confidence }}</span></div>
+                                        <div>Sample size: <span class="font-medium text-foreground">{{ trustScore.sample_size }} runs</span></div>
+                                        <div>Source: <span class="font-medium text-foreground">{{ trustScore.source }}</span></div>
+                                    </div>
+                                </div>
+
+                                <!-- Component Breakdown -->
+                                <div v-if="trustScore.components && Object.keys(trustScore.components).length > 0" class="space-y-2">
+                                    <h4 class="text-sm font-medium text-foreground">Component Breakdown</h4>
+                                    <div
+                                        v-for="(value, key) in trustScore.components"
+                                        :key="key"
+                                        class="flex items-center gap-2"
+                                    >
+                                        <span class="text-sm text-muted-foreground w-40 truncate">{{ formatComponentName(key) }}</span>
+                                        <div class="flex-1 bg-muted rounded-full h-2">
+                                            <div
+                                                class="bg-primary h-2 rounded-full transition-all"
+                                                :style="{ width: `${Math.min(value * 100, 100)}%` }"
+                                            ></div>
+                                        </div>
+                                        <span class="text-sm text-muted-foreground w-12 text-right">{{ Math.round(value * 100) }}%</span>
+                                    </div>
+                                </div>
+
+                                <!-- Last Updated -->
+                                <div class="text-xs text-muted-foreground">
+                                    Last updated: {{ formatDate(profileTrustUpdatedAt) }}
+                                </div>
+
+                                <!-- Recalculate Button -->
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    :disabled="trustLoading"
+                                    @click="recalculateTrust"
+                                >
+                                    <RefreshCw :class="['mr-2 h-3 w-3', { 'animate-spin': trustLoading }]" />
+                                    {{ trustLoading ? 'Recalculating...' : 'Recalculate' }}
+                                </Button>
+                            </div>
+
+                            <div v-else class="text-muted-foreground">
+                                No trust score available yet. Trust scores are calculated after runs complete with STAR reasoning enabled.
                             </div>
                         </CardContent>
                     </Card>

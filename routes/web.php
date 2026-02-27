@@ -49,12 +49,21 @@ Route::middleware([
     })->name('agent.jobs.index');
 
     Route::get('/agent/jobs/create', function () {
-        return Inertia::render('Agent/Jobs/Create');
+        return Inertia::render('Agent/Jobs/Create', [
+            'config' => [
+                'targeted_retry' => config('agent.targeted_retry'),
+                'star_preamble' => config('agent.star_preamble'),
+            ],
+        ]);
     })->name('agent.jobs.create');
 
     Route::get('/agent/jobs/{id}/edit', function (int $id) {
         return Inertia::render('Agent/Jobs/Edit', [
             'jobId' => $id,
+            'config' => [
+                'targeted_retry' => config('agent.targeted_retry'),
+                'star_preamble' => config('agent.star_preamble'),
+            ],
         ]);
     })->name('agent.jobs.edit');
 

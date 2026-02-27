@@ -9,10 +9,12 @@ use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\InterrogationSession;
+use App\Models\NlParseAttempt;
 use App\Policies\AgentAuditLogPolicy;
 use App\Policies\AgentJobPolicy;
 use App\Policies\AgentJobRunPolicy;
 use App\Policies\InterrogationSessionPolicy;
+use App\Policies\NlParseAttemptPolicy;
 use App\Support\Agent\ErrorEnvelope;
 use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Support\Compliance\ComplianceFlagResolver;
@@ -77,6 +79,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AgentJobRun::class, AgentJobRunPolicy::class);
         Gate::policy(AgentAuditLog::class, AgentAuditLogPolicy::class);
         Gate::policy(InterrogationSession::class, InterrogationSessionPolicy::class);
+        Gate::policy(NlParseAttempt::class, NlParseAttemptPolicy::class);
+
+        Gate::define('view-nl-parse-telemetry', function ($user) {
+            return $user->hasRole(['admin', 'analytics']);
+        });
 
         RateLimiter::for('agent-mutations', function (Request $request) {
             return [

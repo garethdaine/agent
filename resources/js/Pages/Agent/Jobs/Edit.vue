@@ -13,6 +13,10 @@ const props = defineProps({
         type: Number,
         required: true,
     },
+    config: {
+        type: Object,
+        default: () => ({}),
+    },
 });
 
 const errors = reactive({});
@@ -20,6 +24,7 @@ const isSubmitting = ref(false);
 const loading = ref(true);
 
 const model = reactive({
+    id: null,
     name: '',
     description: '',
     cron_expression: '0 9 * * *',
@@ -33,6 +38,10 @@ const model = reactive({
     task_markdown_content: '',
     working_directory: '',
     env_json: {},
+    active_hours_config: null,
+    star_preamble_enabled: null,
+    targeted_retry_enabled: null,
+    max_retries: null,
 });
 
 const clearErrors = () => {
@@ -69,6 +78,7 @@ const load = async () => {
     }
 
     Object.assign(model, {
+        id: job.id,
         name: job.name,
         description: job.description ?? '',
         cron_expression: job.cron_expression,
@@ -82,6 +92,10 @@ const load = async () => {
         task_markdown_content: job.task_markdown_content ?? '',
         working_directory: job.working_directory,
         env_json: job.env_json ?? {},
+        active_hours_config: job.active_hours_config ?? null,
+        star_preamble_enabled: job.star_preamble_enabled ?? null,
+        targeted_retry_enabled: job.targeted_retry_enabled ?? null,
+        max_retries: job.max_retries ?? null,
     });
 
     loading.value = false;
@@ -143,6 +157,7 @@ onMounted(load);
                             v-model="model"
                             :errors="errors"
                             :is-submitting="isSubmitting"
+                            :config="props.config"
                             submit-label="Update Job"
                             @submit="onSubmit"
                         />

@@ -7,6 +7,7 @@ use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentSystemState;
 use App\Models\SchedulerHeartbeat;
+use App\Support\NlSchedule\ActiveHoursEvaluator;
 use Carbon\CarbonImmutable;
 use Cron\CronExpression;
 use Illuminate\Database\QueryException;
@@ -18,6 +19,7 @@ class DispatchDueService
         private ReconcileActiveRunsService $reconcileActiveRuns,
         private AuditLogger $auditLogger,
         private UsageLimitState $usageLimitState,
+        private ActiveHoursEvaluator $activeHoursEvaluator,
     ) {}
 
     /**
@@ -60,6 +62,7 @@ class DispatchDueService
         $skippedOverlapCount = 0;
         $skippedCooldownCount = 0;
         $skippedRateLimitedCount = 0;
+        $skippedActiveHoursCount = 0;
         $errorCount = $reconcileError === null ? 0 : 1;
 
         foreach ($dispatchCandidates as $candidate) {
@@ -74,6 +77,8 @@ class DispatchDueService
                     $skippedCooldownCount++;
                 } elseif ($result === 'skipped_rate_limited') {
                     $skippedRateLimitedCount++;
+                } elseif ($result === 'skipped_active_hours') {
+                    $skippedActiveHoursCount++;
                 }
             } catch (\Throwable $throwable) {
                 report($throwable);
@@ -98,6 +103,7 @@ class DispatchDueService
                     'skipped_overlap_count' => $skippedOverlapCount,
                     'skipped_cooldown_count' => $skippedCooldownCount,
                     'skipped_rate_limited_count' => $skippedRateLimitedCount,
+                    'skipped_active_hours_count' => $skippedActiveHoursCount,
                     'error_count' => $errorCount,
                     'deferred_capacity_count' => $deferredCapacityCount,
                     'tick_started_at' => $tickStartedAt->toIso8601String(),
@@ -113,6 +119,7 @@ class DispatchDueService
             'skipped_overlap_count' => $skippedOverlapCount,
             'skipped_cooldown_count' => $skippedCooldownCount,
             'skipped_rate_limited_count' => $skippedRateLimitedCount,
+            'skipped_active_hours_count' => $skippedActiveHoursCount,
             'error_count' => $errorCount,
             'deferred_capacity_count' => $deferredCapacityCount,
             'watermark_minute_utc' => $watermarkToPersist->toIso8601String(),
@@ -359,6 +366,16 @@ class DispatchDueService
             $finishedAt = $tickTimestamp;
         }
 
+        // Active hours check - only if config exists (null = no restriction, backward compatible)
+        if ($status !== AgentJobRun::STATUS_SKIPPED && $job->active_hours_config !== null) {
+            if (!$this->activeHoursEvaluator->isWithinActiveHours($dueWindow, $job->active_hours_config, $job->timezone)) {
+                $status = AgentJobRun::STATUS_SKIPPED;
+                $metadata['skip_reason'] = 'outside_active_hours';
+                $metadata['active_hours_config'] = $job->active_hours_config;
+                $finishedAt = $tickTimestamp;
+            }
+        }
+
         try {
             $run = AgentJobRun::query()->create([
                 'agent_job_id' => $job->id,
@@ -403,6 +420,7 @@ class DispatchDueService
             'overlap' => 'skipped_overlap',
             'cooldown' => 'skipped_cooldown',
             'rate_limited' => 'skipped_rate_limited',
+            'outside_active_hours' => 'skipped_active_hours',
             default => 'skipped_cooldown',
         };
     }

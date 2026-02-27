@@ -32,7 +32,7 @@ class RunEventWriter
 
     private const CLARIFICATION_PATTERN = '/\b(?:could|can)\s+you\s+clarify\b|\b(?:i|we)\s+need\s+(?:your\s+)?clarification\b|\bneed\s+clarification\s+from\s+you\b|\bplease\s+clarify\b|\bquestion\s+for\s+you\b|\bcan\s+you\s+confirm\b|\bshould\s+i\s+(?:proceed|continue|use|do)\b/i';
 
-    private const RATE_LIMIT_PATTERN = '/\bhit(?:ting)?\s+(?:your\s+)?limit\b|\brate[-\s]?limited\b|\btoo many requests\b|\bquota exceeded\b|\busage(?:\/rate)? limit\b/i';
+    private const RATE_LIMIT_PATTERN = '/\bhit(?:ting)?\s+(?:your\s+)?limit\b|\brate[-\s]?limited\b|\btoo many requests\b|\bquota exceeded\b|\b429\b|\bretry[-\s]?after\b/i';
 
     private const RATE_LIMIT_FALSE_POSITIVE_PATTERN = '/\brate limit handling\b|\brate limits? handling\b|\berror handling\s*\([^)]*rate limits?[^)]*\)/i';
 
@@ -51,7 +51,7 @@ class RunEventWriter
             ->max('sequence') ?? 0) + 1;
     }
 
-    public function appendOutput(string $eventType, string $rawPayload): void
+    public function appendOutput(string $eventType, string $rawPayload, ?string $reasoningStep = null): void
     {
         if ($rawPayload === '') {
             return;
@@ -60,7 +60,7 @@ class RunEventWriter
         $chunks = $this->chunkString($rawPayload, self::CHUNK_BYTES);
 
         foreach ($chunks as $chunk) {
-            $this->appendChunk($eventType, $chunk);
+            $this->appendChunk($eventType, $chunk, $reasoningStep);
         }
 
         $this->persistRunStats();
@@ -76,7 +76,7 @@ class RunEventWriter
         });
     }
 
-    private function appendChunk(string $eventType, string $chunk): void
+    private function appendChunk(string $eventType, string $chunk, ?string $reasoningStep = null): void
     {
         if ($this->captureHalted) {
             $this->incrementTruncateBytes($eventType, strlen($chunk));
@@ -164,8 +164,8 @@ class RunEventWriter
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: $piece;
             }
 
-            $this->tryWrite(function () use ($eventType, $payload): void {
-                $this->createEvent($eventType, $payload);
+            $this->tryWrite(function () use ($eventType, $payload, $reasoningStep): void {
+                $this->createEvent($eventType, $payload, $reasoningStep);
             });
         }
     }
@@ -203,13 +203,14 @@ class RunEventWriter
         }
     }
 
-    private function createEvent(string $eventType, string $payload): void
+    private function createEvent(string $eventType, string $payload, ?string $reasoningStep = null): void
     {
         AgentRunEvent::query()->create([
             'agent_job_run_id' => $this->run->id,
             'event_type' => $eventType,
             'sequence' => $this->nextSequence++,
             'payload' => $payload,
+            'reasoning_step' => $reasoningStep,
             'event_ts' => CarbonImmutable::now('UTC'),
         ]);
     }
@@ -394,6 +395,10 @@ class RunEventWriter
 
     private function shouldMarkRateLimitDetected(string $chunk): bool
     {
+        if ($this->isStructuredRateLimitErrorEvent($chunk)) {
+            return true;
+        }
+
         if (preg_match(self::RATE_LIMIT_PATTERN, $chunk) !== 1) {
             return false;
         }
@@ -413,6 +418,10 @@ class RunEventWriter
 
     private function isLikelyNonRuntimeSnippet(string $chunk): bool
     {
+        if ($this->isStructuredMachineEventWithoutAssistantIntent($chunk)) {
+            return true;
+        }
+
         if ($this->isLineNumberedSnippet($chunk)) {
             return true;
         }
@@ -453,6 +462,108 @@ class RunEventWriter
         }
 
         return preg_match(self::INLINE_CODE_TOKENS_PATTERN, $chunk) === 1;
+    }
+
+    private function isStructuredMachineEventWithoutAssistantIntent(string $chunk): bool
+    {
+        $decoded = $this->decodeStructuredEvent($chunk);
+        if (! is_array($decoded)) {
+            return false;
+        }
+
+        $type = strtolower((string) ($decoded['type'] ?? ''));
+
+        // Claude stream-json user events often contain tool_result payloads that echo source snippets.
+        if ($type === 'user' && $this->containsToolResultContent($decoded)) {
+            return true;
+        }
+
+        if (in_array($type, ['thread.started', 'turn.started', 'turn.completed', 'thread.completed'], true)) {
+            return true;
+        }
+
+        if (str_starts_with($type, 'item.')) {
+            $itemType = strtolower((string) (($decoded['item']['type'] ?? null) ?? ''));
+
+            return $itemType !== 'agent_message';
+        }
+
+        return false;
+    }
+
+    private function isStructuredRateLimitErrorEvent(string $chunk): bool
+    {
+        $decoded = $this->decodeStructuredEvent($chunk);
+        if (! is_array($decoded)) {
+            return false;
+        }
+
+        $type = strtolower((string) ($decoded['type'] ?? ''));
+
+        if (! in_array($type, ['error', 'turn.failed', 'result'], true)) {
+            return false;
+        }
+
+        $blob = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (! is_string($blob) || $blob === '') {
+            return false;
+        }
+
+        return preg_match('/\brate[-\s]?limit(?:ed|ing|s)?\b|\btoo many requests\b|\bquota exceeded\b|\bretry[-\s]?after\b|\b429\b/i', $blob) === 1;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function decodeStructuredEvent(string $chunk): ?array
+    {
+        $trimmed = trim($chunk);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $decoded = json_decode($trimmed, true);
+
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        if (is_string($decoded)) {
+            $nested = json_decode($decoded, true);
+            if (is_array($nested)) {
+                return $nested;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $decoded
+     */
+    private function containsToolResultContent(array $decoded): bool
+    {
+        $message = $decoded['message'] ?? null;
+        if (! is_array($message)) {
+            return false;
+        }
+
+        $content = $message['content'] ?? null;
+        if (! is_array($content)) {
+            return false;
+        }
+
+        foreach ($content as $block) {
+            if (! is_array($block)) {
+                continue;
+            }
+
+            if (strtolower((string) ($block['type'] ?? '')) === 'tool_result') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

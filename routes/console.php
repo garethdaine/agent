@@ -37,3 +37,6 @@ Schedule::command('delegation:reconcile')
 Schedule::command('delegation:recompute-metrics')
     ->everyFifteenMinutes()
     ->withoutOverlapping();
+
+Schedule::command('nl-parse:cleanup')
+    ->dailyAt('03:00');

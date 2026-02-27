@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\Messenger\MessengerHealthController;
 use App\Http\Controllers\Api\V1\Messenger\MessengerMetricsController;
 use App\Http\Controllers\Api\V1\Messenger\WebhookController;
 use App\Http\Controllers\Api\V1\MessengerConnectorController;
+use App\Http\Controllers\Internal\NlScheduleController;
 use App\Http\Middleware\AgentApiVersionHeader;
 use App\Http\Middleware\Messenger\CorrelationId;
 use App\Http\Middleware\Messenger\ReplayProtection;
@@ -51,6 +52,8 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/runs/{id}', [AgentRunController::class, 'show']);
             Route::get('/runs/{id}/events', [AgentRunController::class, 'events']);
             Route::post('/runs/{id}/stop', [AgentRunController::class, 'stop'])->middleware('throttle:agent-mutations');
+            Route::post('/runs/{id}/retry', [AgentRunController::class, 'retry'])->middleware('throttle:agent-mutations');
+            Route::post('/runs/{id}/confirm-lesson', [AgentRunController::class, 'confirmSuggestedLesson'])->middleware('throttle:agent-mutations');
 
             Route::get('/dashboard/metrics', [AgentRunController::class, 'dashboardMetrics']);
             Route::get('/health/scheduler', [AgentRunController::class, 'schedulerHealth']);
@@ -171,6 +174,7 @@ Route::middleware([AgentApiVersionHeader::class])
                 Route::put('/delegatee-profiles/{id}', [DelegateeProfileController::class, 'update'])->middleware('throttle:agent-mutations');
                 Route::delete('/delegatee-profiles/{id}', [DelegateeProfileController::class, 'destroy'])->middleware('throttle:agent-mutations');
                 Route::post('/delegatee-profiles/{id}/restore', [DelegateeProfileController::class, 'restore'])->middleware('throttle:agent-mutations');
+                Route::get('/delegatee-profiles/{id}/trust', [DelegateeProfileController::class, 'trust']);
             });
         });
 
@@ -192,3 +196,9 @@ Route::middleware([AgentApiVersionHeader::class])
                     ->name('agent.api.connectors.whatsapp.webhook');
             });
     });
+
+// Internal API routes for NL Schedule parsing
+Route::middleware(['auth:sanctum'])->prefix('internal/api')->group(function (): void {
+    Route::post('/schedule/parse', [NlScheduleController::class, 'parse']);
+    Route::get('/schedule/parse/{parseAttemptId}', [NlScheduleController::class, 'show']);
+});

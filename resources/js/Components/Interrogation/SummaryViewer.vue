@@ -133,7 +133,7 @@ watch(() => props.status, (nextStatus) => {
 
                 <MarkdownRenderer
                     :markdown="normalizedSummaryMarkdown"
-                    class="summary-markdown summary-markdown-scroll prose prose-sm max-w-none rounded-lg border border-border bg-muted/30 p-4 text-foreground    prose-headings:mb-2 prose-headings:mt-4 prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"
+                    class="summary-markdown summary-markdown-scroll prose prose-sm max-w-none rounded-lg border border-border bg-muted/30 p-4 text-foreground dark:prose-invert prose-headings:mb-2 prose-headings:mt-4 prose-headings:text-foreground prose-p:my-2 prose-li:my-1 prose-strong:text-foreground prose-th:text-foreground prose-td:text-foreground prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"
                 />
 
                 <div class="space-y-3">
@@ -170,7 +170,7 @@ watch(() => props.status, (nextStatus) => {
                         <MarkdownRenderer
                             v-if="privateNotes !== ''"
                             :markdown="privateNotes"
-                            class="summary-markdown notes-markdown prose prose-sm max-w-none text-foreground  prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"
+                            class="summary-markdown notes-markdown prose prose-sm max-w-none text-foreground dark:prose-invert prose-headings:text-foreground prose-strong:text-foreground prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"
                         />
                         <p v-else class="text-sm text-muted-foreground">No private notes.</p>
                     </div>
@@ -218,7 +218,7 @@ watch(() => props.status, (nextStatus) => {
                 <textarea
                     v-model="continueForm.focus"
                     rows="3"
-                    class="mt-2 w-full rounded-md border-input text-sm text-foreground"
+                    class="mt-2 w-full rounded-md border border-input bg-input-background text-sm text-foreground"
                     placeholder="Add specific ambiguities you want the next interrogation round to resolve."
                 />
                 <div class="mt-2 flex justify-end">
@@ -238,7 +238,7 @@ watch(() => props.status, (nextStatus) => {
                 <textarea
                     v-model="reviseForm.notes"
                     rows="4"
-                    class="mt-2 w-full rounded-md border-input text-sm text-foreground"
+                    class="mt-2 w-full rounded-md border border-input bg-input-background text-sm text-foreground"
                     placeholder="Describe what needs changing in the summary."
                 />
                 <div class="mt-2 flex justify-end">
@@ -260,14 +260,14 @@ watch(() => props.status, (nextStatus) => {
 :deep(.summary-markdown) {
     max-width: 100%;
     overflow-x: hidden;
-    --summary-table-border: #d1d5db;
-    --summary-table-head-bg: #f3f4f6;
-    --summary-table-head-border: #d1d5db;
-    --summary-table-head-text: #111827;
-    --summary-table-cell-bg: #ffffff;
-    --summary-table-cell-alt-bg: #f9fafb;
-    --summary-table-cell-border: #e5e7eb;
-    --summary-table-cell-text: #1f2937;
+    --summary-table-border: rgb(var(--border));
+    --summary-table-head-bg: rgb(var(--muted));
+    --summary-table-head-border: rgb(var(--border));
+    --summary-table-head-text: rgb(var(--foreground));
+    --summary-table-cell-bg: rgb(var(--card));
+    --summary-table-cell-alt-bg: rgb(var(--muted) / 0.4);
+    --summary-table-cell-border: rgb(var(--border));
+    --summary-table-cell-text: rgb(var(--foreground));
 }
 
 :deep(.summary-markdown-scroll) {
@@ -279,13 +279,11 @@ watch(() => props.status, (nextStatus) => {
 }
 
 :deep(.summary-markdown table) {
-    display: block;
-    width: max-content;
+    display: table;
+    width: 100%;
     min-width: 100%;
     max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
+    table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0;
     border: 1px solid var(--summary-table-border);
@@ -330,30 +328,6 @@ watch(() => props.status, (nextStatus) => {
 
 :deep(.summary-markdown tbody tr:nth-child(even) td) {
     background: var(--summary-table-cell-alt-bg);
-}
-
-:deep(.dark .summary-markdown) {
-    --summary-table-border: #4b5563;
-    --summary-table-head-bg: #1f2937;
-    --summary-table-head-border: #4b5563;
-    --summary-table-head-text: #f3f4f6;
-    --summary-table-cell-bg: #111827;
-    --summary-table-cell-alt-bg: #1f2937;
-    --summary-table-cell-border: #374151;
-    --summary-table-cell-text: #f3f4f6;
-}
-
-@media (prefers-color-scheme: dark) {
-    :deep(.summary-markdown) {
-        --summary-table-border: #4b5563;
-        --summary-table-head-bg: #1f2937;
-        --summary-table-head-border: #4b5563;
-        --summary-table-head-text: #f3f4f6;
-        --summary-table-cell-bg: #111827;
-        --summary-table-cell-alt-bg: #1f2937;
-        --summary-table-cell-border: #374151;
-        --summary-table-cell-text: #f3f4f6;
-    }
 }
 
 :deep(.summary-markdown pre) {

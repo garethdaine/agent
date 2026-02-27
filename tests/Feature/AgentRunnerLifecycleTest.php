@@ -1099,6 +1099,149 @@ SH;
         $this->assertNull($state);
     }
 
+    public function test_rate_limit_phrase_inside_structured_user_tool_result_event_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/rate-limit-structured-user-tool-result-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+{"type":"user","message":{"role":"user","content":[{"tool_use_id":"tool_123","type":"tool_result","content":"PASS Tests\\Unit\\InterrogationCodexAdapterCommandTest\\nconst excerpt = String(metadata.rate_limit_excerpt ?? 'Upstream usage/rate limit detected.');"}]}}
+OUT
+exit 0
+SH;
+        file_put_contents($snippetExec, $script);
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limit-structured-user-tool-result.md';
+        file_put_contents($taskFile, "# Rate Limit Structured User Tool Result\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limit Structured User Tool Result',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+        $state = AgentSystemState::query()->find(sprintf('job_rate_limit_hold_until:%d', $job->id));
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
+        $this->assertNull($metadata['rate_limit_hold_until'] ?? null);
+        $this->assertNull($state);
+    }
+
+    public function test_structured_rate_limit_error_event_sets_rate_limit_metadata(): void
+    {
+        $errorExec = $this->sandboxBase.'/bin/structured-rate-limit-error-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+{"type":"error","error":{"code":"rate_limit_exceeded","message":"429 Too many requests. Retry-After: 60"}}
+OUT
+exit 1
+SH;
+        file_put_contents($errorExec, $script);
+        chmod($errorExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $errorExec,
+            'codex' => $errorExec,
+            'custom' => $errorExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $errorExec.' -p {{task_markdown_path}}',
+            'codex' => $errorExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/structured-rate-limit-error.md';
+        file_put_contents($taskFile, "# Structured Rate Limit Error\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Structured Rate Limit Error',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+        $state = AgentSystemState::query()->find(sprintf('job_rate_limit_hold_until:%d', $job->id));
+
+        $this->assertSame(AgentJobRun::STATUS_FAILED, $run->status);
+        $this->assertSame('RATE_LIMITED', $run->error_code);
+        $this->assertTrue((bool) ($metadata['rate_limit_detected'] ?? false));
+        $this->assertNotEmpty($metadata['rate_limit_hold_until'] ?? null);
+        $this->assertNotNull($state);
+    }
+
     public function test_rate_limit_handling_summary_text_does_not_trigger_rate_limit_detection(): void
     {
         $summaryExec = $this->sandboxBase.'/bin/summary-runner';

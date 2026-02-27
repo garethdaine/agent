@@ -53,6 +53,15 @@ class UpdateAgentJobRequest extends FormRequest
             'task_markdown_content' => ['nullable', 'string', 'max:200000', 'required_without:task_markdown_path'],
             'working_directory' => ['required', 'string', 'max:1024'],
             'env_json' => ['nullable', 'array'],
+            'active_hours_config' => ['nullable', 'array'],
+            'active_hours_config.start' => ['required_with:active_hours_config', 'date_format:H:i'],
+            'active_hours_config.end' => ['required_with:active_hours_config', 'date_format:H:i'],
+            'active_hours_config.days' => ['required_with:active_hours_config', 'array', 'min:1'],
+            'active_hours_config.days.*' => ['integer', 'between:1,7'],
+            'disable_active_hours' => ['sometimes', 'boolean'],
+            'star_preamble_enabled' => ['nullable', 'boolean'],
+            'targeted_retry_enabled' => ['nullable', 'boolean'],
+            'max_retries' => ['nullable', 'integer', 'min:0', 'max:10'],
         ];
     }
 

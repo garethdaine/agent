@@ -11,6 +11,8 @@ use App\Support\Agent\Duration;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Agent\RunEventWriter;
 use App\Support\Agent\RunStateTransitionService;
+use App\Support\Agent\TargetedRetryService;
+use App\Support\Compliance\LessonsManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -225,6 +227,7 @@ class AgentRunController extends Controller
                 'sequence' => $event->sequence,
                 'event_type' => $event->event_type,
                 'payload' => $event->payload,
+                'reasoning_step' => $event->reasoning_step,
                 'created_at' => $this->toRfc3339Millis($event->created_at),
                 'event_ts' => $this->toRfc3339Millis($event->event_ts),
             ]),
@@ -421,6 +424,73 @@ class AgentRunController extends Controller
                 'accepted_at' => CarbonImmutable::now('UTC')->toIso8601String(),
             ],
         ], 202);
+    }
+
+    public function retry(Request $request, int $id, TargetedRetryService $retryService): JsonResponse
+    {
+        $run = AgentJobRun::with('job.user')->findOrFail($id);
+
+        // Authorization check
+        if ($run->job->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Validate run is in failed state
+        if ($run->status !== AgentJobRun::STATUS_FAILED) {
+            return response()->json([
+                'error' => 'Only failed runs can be retried',
+            ], 422);
+        }
+
+        $customPrompt = $request->input('retry_prompt');
+
+        $retryRun = $retryService->dispatchRetry($run, $customPrompt);
+
+        return response()->json([
+            'data' => [
+                'id' => $retryRun->id,
+                'status' => $retryRun->status,
+                'retry_of_run_id' => $run->id,
+            ]
+        ], 201);
+    }
+
+    public function confirmSuggestedLesson(Request $request, int $id, LessonsManager $lessons): JsonResponse
+    {
+        $run = AgentJobRun::with('job.user')->findOrFail($id);
+
+        if ($run->job->user_id !== $request->user()->id) {
+            abort(403, 'Unauthorized');
+        }
+
+        $metadata = $run->metadata_json ?? [];
+        $suggestedLesson = $metadata['failure_mode_hint']['suggested_lesson'] ?? null;
+
+        if (! $suggestedLesson) {
+            return response()->json([
+                'error' => 'No suggested lesson available for this run',
+            ], 422);
+        }
+
+        // Append lesson
+        $lessons->appendLesson(
+            base_path(),
+            $suggestedLesson,
+            'failure_mode_classification',
+            [
+                'task_title' => $run->job->name,
+                'task_category' => $run->job->task_category?->value ?? 'unknown',
+                'runner_type' => $run->job->runner_type,
+                'run_id' => $run->id,
+            ]
+        );
+
+        // Update metadata
+        $metadata['suggested_lesson_confirmed'] = true;
+        $metadata['suggested_lesson_confirmed_at'] = now()->toIso8601String();
+        $run->update(['metadata_json' => $metadata]);
+
+        return response()->json(['success' => true]);
     }
 
     public function schedulerHealth(): JsonResponse

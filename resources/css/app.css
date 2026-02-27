@@ -10,9 +10,23 @@
 }
 
 @layer base {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+    select,
+    textarea {
+        background-color: rgb(var(--input-background) / 1);
+        border-color: rgb(var(--input) / 1);
+        color: rgb(var(--foreground) / 1);
+    }
+
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])::placeholder,
+    textarea::placeholder {
+        color: rgb(var(--muted-foreground) / 1);
+    }
+
     .dark input:not([type='checkbox']):not([type='radio']):not([type='range']),
     .dark select,
     .dark textarea {
+        background-color: rgb(var(--input-background) / 1);
         color: rgb(243 244 246);
         caret-color: rgb(243 244 246);
         color-scheme: dark;

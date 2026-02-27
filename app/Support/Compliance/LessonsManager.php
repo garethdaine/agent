@@ -53,13 +53,15 @@ class LessonsManager
      * @param  string|null  $query  Optional keyword query for filtering
      * @param  TaskCategory|null  $category  Optional category filter
      * @param  int|null  $tokenBudget  Optional token budget override
+     * @param  string|null  $runnerType  Optional runner type filter (claude, codex, custom)
      * @return array<int, array{timestamp: string, source: string, content: string}>
      */
     public function queryLessons(
         string $projectDirectory,
         ?string $query = null,
         ?TaskCategory $category = null,
-        ?int $tokenBudget = null
+        ?int $tokenBudget = null,
+        ?string $runnerType = null
     ): array {
         $path = $this->getLessonsPath($projectDirectory);
         $budget = $tokenBudget ?? $this->defaultTokenBudget;
@@ -77,6 +79,12 @@ class LessonsManager
         // Filter by category if provided
         if ($category !== null) {
             $entries = array_filter($entries, fn ($e) => ! isset($e['category']) || $e['category'] === $category->value
+            );
+        }
+
+        // Filter by runner_type if provided
+        if ($runnerType !== null) {
+            $entries = array_filter($entries, fn ($e) => ! isset($e['runner_type']) || $e['runner_type'] === $runnerType
             );
         }
 
@@ -129,6 +137,7 @@ class LessonsManager
         $timestamp = now()->toIso8601String();
         $category = $context['task_category'] ?? 'unknown';
         $taskTitle = $context['task_title'] ?? 'Unknown Task';
+        $runnerType = $context['runner_type'] ?? 'unknown';
 
         return <<<MD
 ### [{$timestamp}] [{$source}]
@@ -137,13 +146,14 @@ class LessonsManager
 **Context:**
 - Task: {$taskTitle}
 - Category: {$category}
+- Runner: {$runnerType}
 MD;
     }
 
     /**
      * Parse entries from the lessons file content.
      *
-     * @return array<int, array{timestamp: string, source: string, content: string, category?: string}>
+     * @return array<int, array{timestamp: string, source: string, content: string, category?: string, runner_type?: string}>
      */
     private function parseEntries(string $content): array
     {
@@ -155,10 +165,16 @@ MD;
         foreach ($matches as $match) {
             $entryContent = trim($match[3]);
             $category = null;
+            $runnerType = null;
 
             // Extract category from content if present
             if (preg_match('/Category:\s*(\w+)/', $entryContent, $categoryMatch)) {
                 $category = $categoryMatch[1];
+            }
+
+            // Extract runner_type from content if present
+            if (preg_match('/Runner:\s*(\w+)/', $entryContent, $runnerMatch)) {
+                $runnerType = $runnerMatch[1];
             }
 
             $entry = [
@@ -169,6 +185,10 @@ MD;
 
             if ($category !== null) {
                 $entry['category'] = $category;
+            }
+
+            if ($runnerType !== null) {
+                $entry['runner_type'] = $runnerType;
             }
 
             $entries[] = $entry;

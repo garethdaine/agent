@@ -26,6 +26,8 @@ class DelegateeProfile extends Model
             'env_json' => 'array',
             'config_json' => 'array',
             'is_active' => 'boolean',
+            'trust_score' => 'decimal:2',
+            'trust_updated_at' => 'datetime',
         ];
     }
 

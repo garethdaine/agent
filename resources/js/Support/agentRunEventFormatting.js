@@ -198,6 +198,7 @@ const buildEntryContext = (entry) => {
     const payloadRaw = stringifyPayload(entry?.payload);
     const fallbackTimestamp = String(entry?.event_ts ?? entry?.created_at ?? '').trim() || null;
     const key = String(entry?.id ?? `${sequence}:${eventType}`);
+    const reasoningStep = entry?.reasoning_step ?? null;
 
     return {
         entry,
@@ -207,6 +208,7 @@ const buildEntryContext = (entry) => {
         fallbackTimestamp,
         key,
         prefix: buildPrefix(sequence, eventType),
+        reasoningStep,
     };
 };
 
@@ -314,12 +316,14 @@ const makeFormattedEntry = ({
     payload,
     tone = 'plain',
     format = 'pre',
+    reasoningStep = null,
 }) => ({
     key,
     prefix,
     payload,
     tone,
     format,
+    reasoningStep,
 });
 
 const normalizeTextForDeduping = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
@@ -762,6 +766,7 @@ export const formatAgentRunEventEntry = (entry) => {
                 payload: lifecycleSummary,
                 tone: 'lifecycle',
                 format: 'pre',
+                reasoningStep: context.reasoningStep,
             });
         }
 
@@ -772,6 +777,7 @@ export const formatAgentRunEventEntry = (entry) => {
                 payload: JSON.stringify(lifecyclePayload, null, 2),
                 tone: 'structured',
                 format: 'pre',
+                reasoningStep: context.reasoningStep,
             });
         }
     }
@@ -786,6 +792,7 @@ export const formatAgentRunEventEntry = (entry) => {
             payload: JSON.stringify(parsedPayload, null, 2),
             tone: context.eventType === 'stderr' ? 'stderr' : 'structured',
             format: 'pre',
+            reasoningStep: context.reasoningStep,
         });
     }
 
@@ -796,6 +803,7 @@ export const formatAgentRunEventEntry = (entry) => {
             payload: normalizedPayload,
             tone: context.eventType === 'stderr' ? 'stderr' : 'markdown',
             format: 'markdown',
+            reasoningStep: context.reasoningStep,
         });
     }
 
@@ -805,6 +813,7 @@ export const formatAgentRunEventEntry = (entry) => {
         payload: normalizedPayload,
         tone: context.eventType === 'stderr' ? 'stderr' : 'plain',
         format: 'pre',
+        reasoningStep: context.reasoningStep,
     });
 };
 

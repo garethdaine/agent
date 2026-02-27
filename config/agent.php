@@ -115,4 +115,38 @@ return [
             'directory_count' => (int) env('AGENT_COMPLIANCE_DIRECTORY_THRESHOLD', 2),
         ],
     ],
+
+    'star_preamble' => [
+        'enabled' => (bool) env('AGENT_STAR_PREAMBLE_ENABLED', true),
+        'ab_test_enabled' => (bool) env('AGENT_STAR_AB_TEST_ENABLED', false),
+        'ab_test_treatment_percent' => (int) env('AGENT_STAR_AB_TEST_PERCENT', 50),
+    ],
+
+    'targeted_retry' => [
+        'enabled' => (bool) env('AGENT_TARGETED_RETRY_ENABLED', false),
+        'max_retries' => (int) env('AGENT_TARGETED_RETRY_MAX', 1),
+    ],
+
+    'trust' => [
+        'window_size' => (int) env('AGENT_TRUST_WINDOW_SIZE', 50),
+        'default_score' => (float) env('AGENT_TRUST_DEFAULT_SCORE', 0.5),
+        'min_job_runs' => (int) env('AGENT_TRUST_MIN_JOB_RUNS', 10),
+        'recalc_interval_runs' => (int) env('AGENT_TRUST_RECALC_INTERVAL', 10),
+    ],
+
+    'nl_parse' => [
+        'confidence_threshold' => (float) env('NL_PARSE_CONFIDENCE_THRESHOLD', 0.75),
+        'llm_timeout_seconds' => (int) env('NL_PARSE_TIMEOUT_SECONDS', 30),
+        'idempotency_window_seconds' => (int) env('NL_PARSE_IDEMPOTENCY_SECONDS', 60),
+        'rate_limit_per_minute' => (int) env('NL_PARSE_RATE_LIMIT_PER_MINUTE', 10),
+        'rate_limit_per_hour' => (int) env('NL_PARSE_RATE_LIMIT_PER_HOUR', 60),
+        'max_input_length' => (int) env('NL_PARSE_MAX_INPUT_LENGTH', 200),
+        'min_interval_minutes' => (int) env('NL_PARSE_MIN_INTERVAL_MINUTES', 1),
+        'retention_days' => (int) env('NL_PARSE_RETENTION_DAYS', 90),
+    ],
+
+    'roles' => [
+        'admin_user_ids' => $parseEnvCsvList('AGENT_ADMIN_USER_IDS'),
+        'analytics_user_ids' => $parseEnvCsvList('AGENT_ANALYTICS_USER_IDS'),
+    ],
 ];

@@ -197,7 +197,7 @@ const renderItemMarkdown = (item) => {
             <MarkdownRenderer
                 v-if="hasMeaningfulPlanMarkdown"
                 :markdown="planMarkdown"
-                class="summary-markdown summary-markdown-scroll prose prose-sm max-w-none rounded-lg border border-border bg-muted/30 p-4 text-foreground    prose-headings:mb-2 prose-headings:mt-4 prose-p:my-2 prose-li:my-1 prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"
+                class="summary-markdown summary-markdown-scroll prose prose-sm max-w-none rounded-lg border border-border bg-muted/30 p-4 text-foreground dark:prose-invert prose-headings:mb-2 prose-headings:mt-4 prose-headings:text-foreground prose-p:my-2 prose-li:my-1 prose-strong:text-foreground prose-th:text-foreground prose-td:text-foreground prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"
             />
             <p v-else class="rounded bg-muted/30 p-3 text-sm text-foreground  ">Plan not generated yet.</p>
 
@@ -220,7 +220,7 @@ const renderItemMarkdown = (item) => {
                             >
                                 <MarkdownRenderer
                                     :markdown="renderItemMarkdown(item)"
-                                    class="summary-markdown prose prose-sm max-w-none"
+                                    class="summary-markdown prose prose-sm max-w-none text-foreground dark:prose-invert prose-headings:text-foreground prose-strong:text-foreground prose-th:text-foreground prose-td:text-foreground"
                                 />
                             </li>
                         </ul>
@@ -233,7 +233,10 @@ const renderItemMarkdown = (item) => {
         <div v-if="hasPlan" class="mt-4 rounded-md border border-border p-3 ">
             <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Request Revision</p>
             <div class="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
-                <select v-model="revision.action" class="rounded-md border-input text-sm text-foreground   ">
+                <select
+                    v-model="revision.action"
+                    class="h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
                     <option value="expand">Expand</option>
                     <option value="simplify">Simplify</option>
                     <option value="add_examples">Add Examples</option>
@@ -299,14 +302,14 @@ const renderItemMarkdown = (item) => {
 :deep(.summary-markdown) {
     max-width: 100%;
     overflow-x: hidden;
-    --summary-table-border: #d1d5db;
-    --summary-table-head-bg: #f3f4f6;
-    --summary-table-head-border: #d1d5db;
-    --summary-table-head-text: #111827;
-    --summary-table-cell-bg: #ffffff;
-    --summary-table-cell-alt-bg: #f9fafb;
-    --summary-table-cell-border: #e5e7eb;
-    --summary-table-cell-text: #1f2937;
+    --summary-table-border: rgb(var(--border));
+    --summary-table-head-bg: rgb(var(--muted));
+    --summary-table-head-border: rgb(var(--border));
+    --summary-table-head-text: rgb(var(--foreground));
+    --summary-table-cell-bg: rgb(var(--card));
+    --summary-table-cell-alt-bg: rgb(var(--muted) / 0.4);
+    --summary-table-cell-border: rgb(var(--border));
+    --summary-table-cell-text: rgb(var(--foreground));
 }
 
 :deep(.summary-markdown-scroll) {
@@ -318,13 +321,11 @@ const renderItemMarkdown = (item) => {
 }
 
 :deep(.summary-markdown table) {
-    display: block;
-    width: max-content;
+    display: table;
+    width: 100%;
     min-width: 100%;
     max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
+    table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0;
     border: 1px solid var(--summary-table-border);
@@ -369,30 +370,6 @@ const renderItemMarkdown = (item) => {
 
 :deep(.summary-markdown tbody tr:nth-child(even) td) {
     background: var(--summary-table-cell-alt-bg);
-}
-
-:deep(.dark .summary-markdown) {
-    --summary-table-border: #4b5563;
-    --summary-table-head-bg: #1f2937;
-    --summary-table-head-border: #4b5563;
-    --summary-table-head-text: #f3f4f6;
-    --summary-table-cell-bg: #111827;
-    --summary-table-cell-alt-bg: #1f2937;
-    --summary-table-cell-border: #374151;
-    --summary-table-cell-text: #f3f4f6;
-}
-
-@media (prefers-color-scheme: dark) {
-    :deep(.summary-markdown) {
-        --summary-table-border: #4b5563;
-        --summary-table-head-bg: #1f2937;
-        --summary-table-head-border: #4b5563;
-        --summary-table-head-text: #f3f4f6;
-        --summary-table-cell-bg: #111827;
-        --summary-table-cell-alt-bg: #1f2937;
-        --summary-table-cell-border: #374151;
-        --summary-table-cell-text: #f3f4f6;
-    }
 }
 
 :deep(.summary-markdown pre) {

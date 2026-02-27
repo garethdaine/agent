@@ -384,3 +384,107 @@ The rollout must preserve existing run safety, queue stability, and auditability
 - [ ] Verify Build Execution stage controls/surfaces and capture final session state evidence.
 - [ ] Patch any discovered UI parity mismatches against Figma design surfaces and rebuild frontend assets.
 - [ ] Document review evidence and outcomes in this file.
+
+## 2026-02-27 - Dark Mode Form Field Regression (Discovery Wizard)
+
+- [x] Locate remaining white controls in discovery summary/plan/build surfaces.
+- [x] Patch form control classes so text/select/textarea controls use `bg-input-background`.
+- [x] Fix global dark form override to use minifier-safe token syntax (`rgb(var(--input-background) / 1)`).
+- [x] Rebuild frontend assets to verify compiled CSS keeps dark input/select backgrounds.
+
+### Review
+
+- Root cause:
+  - Several Build panel inputs/textareas still relied on form-plugin defaults without explicit tokenized background classes.
+  - Base dark form override used `rgb(var(--input-background))`, which was stripped in minified output, so fallback dark background rule was not applied consistently.
+- Fix:
+  - Added `bg-input-background` to remaining Build panel editable fields and regeneration notes input surfaces.
+  - Updated Plan revision action select to explicit tokenized field styling (full-width, border, background, focus ring).
+  - Added explicit border utility on Summary amendment/interrogation focus textareas for consistent control rendering.
+  - Updated global form control base styles in `resources/css/app.css` to use `rgb(var(--token) / 1)` and tokenized border/text colors.
+- Verification evidence:
+  - `npm run build` (client + SSR) passed.
+  - Compiled CSS check confirms `.dark input...,.dark select,.dark textarea{background-color:rgb(var(--input-background) / 1);...}` is present in `public/build/assets/app-mfAROlMI.css`.
+
+## 2026-02-27 - Build Step (Phase 9) Parity Alignment
+
+- [x] Compare live build execution step against Figma reference (`pause-kindle-31517753.figma.site/tools/discovery/6`).
+- [x] Refactor execution-mode surface from table-first layout to progress-header + timeline/accordion pattern.
+- [x] Keep Tasks-phase editable table unchanged while isolating execution-phase presentation.
+- [x] Rebuild frontend assets and verify running session (`/tools/discovery/9`) renders updated execution UI.
+- [x] Monitor live execution metadata for blockers after parity patch.
+
+### Review
+
+- Root cause:
+  - Execution phase used the same dense table pattern as task management, which drifted from the Figma final-step design intent (execution overview card + progress + task timeline cards).
+- Fix:
+  - Updated `resources/js/Components/Interrogation/BuildPanel.vue` execution mode to:
+    - render `Build Execution` summary card with action controls and progress meter,
+    - render task timeline rows with status badges and expandable details,
+    - remove execution-mode duplicate task table surface.
+  - Restricted editable task table to Tasks phase only (`isTasksMode`).
+- Verification evidence:
+  - `npm run build` passed (client + SSR).
+  - Live parity screenshot after patch: `tmp/build-step-live-after-parity.png`.
+  - Reference screenshot used for comparison: `tmp/build-step-figma-reference.png`.
+  - Runtime monitor after patch showed healthy progression without blockers:
+    - `completed:2, in_progress:1, pending:9`
+    - `active_task_id:88`, `active_run_id:1727`
+    - `flags:null`, `requires_clarification:null`
+
+### Review (Follow-up)
+
+- Additional parity gap:
+  - Tasks phase (phase 8) was still table-based and visually inconsistent with the updated execution-phase card/timeline pattern.
+- Follow-up fix:
+  - Refactored phase-8 tasks list from table to expandable card/timeline rows.
+  - Added Tasks summary card with status chips and action group (`Generate`, `Approve`, `Start Build`) to align with design language.
+  - Preserved edit/delete/regenerate workflows by moving controls into expanded task-card details.
+  - Restricted phase-specific controls so rules/actions/execution views render with clear separation.
+- Verification evidence:
+  - `npm run build` passed after phase-8 refactor (client + SSR).
+
+## 2026-02-27 - Phase Stepper Active Circle Clipping
+
+- [x] Identify the stepper layout/style causing the active final-step circle to clip on the right edge.
+- [x] Patch stepper container spacing so the active ring renders fully at step 9.
+- [x] Rebuild frontend assets to verify no compile regressions.
+
+### Review
+
+- Root cause:
+  - The active step uses an outer ring (`ring-4`), and the stepper row had no horizontal breathing room, so the final node could be clipped at the container edge.
+- Fix:
+  - Added horizontal padding to the stepper scroll container in `resources/js/Components/Interrogation/PhaseStepper.vue` (`overflow-x-auto px-1`).
+- Verification evidence:
+  - `npm run build` (client + SSR) passed.
+
+## 2026-02-27 - Monitor Metrics Card Spacing Polish
+
+- [x] Audit the top monitor metrics cards (`Scheduler Health`, `Queue Lag`, `Poll Status`) for spacing/typography inconsistency.
+- [x] Refine card content padding, heading rhythm, and metric/body text spacing while preserving existing colors/states.
+- [x] Verify the updated cards render correctly at `https://agent.test/agent/monitor` and run a frontend build check.
+
+### Review
+
+- Root cause:
+  - The first styling pass increased metric typography too aggressively, which made card content feel heavier and less balanced than the original design.
+- Final fix:
+  - Kept improved card structure (`p-6`, consistent icon/label rhythm, consistent detail spacing).
+  - Reverted metric typography to compact sizes (`text-[22px]` range) with tighter leading.
+  - Added `min-h-[136px]` and `flex-col` card content layout for stable vertical spacing across all three cards.
+  - Removed inherited `pt-0` on the top monitor cards by replacing `CardContent` with explicit padded wrappers for that row only.
+- Verification evidence:
+  - Browser-verified on `https://agent.test/agent/monitor`.
+  - Screenshot: `tmp/monitor-cards-pt0-removed.png`.
+
+### Review (Structured Output Hardening)
+
+- User concern: prior issues existed with structured JSON streams from CLI output.
+- Hardening approach:
+  - Added structured-event-aware guards for non-runtime events (e.g., `type=user` with `tool_result`) to prevent false positives.
+  - Added structured rate-limit error detection (`type=error|turn.failed|result` with rate-limit indicators).
+  - Kept structured parsing opportunistic (`json_decode` best-effort); fallback heuristics still operate if parsing fails.
+- Verification evidence:
+  - `php artisan test tests/Feature/AgentRunnerLifecycleTest.php` (23 passed)

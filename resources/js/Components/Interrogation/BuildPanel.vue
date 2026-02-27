@@ -119,6 +119,160 @@ const statusLabel = computed(() => status.value.replace(/_/g, ' '));
 const isTaskUpdating = (taskId) => Boolean(taskUpdateState.value?.[taskId] || taskUpdateState.value?.[String(taskId)]);
 const isTaskDeleting = (taskId) => Boolean(taskDeleteState.value?.[taskId] || taskDeleteState.value?.[String(taskId)]);
 const isTaskRegenerating = (taskId) => Boolean(taskRegenerateState.value?.[taskId] || taskRegenerateState.value?.[String(taskId)]);
+const selectedExecutionTaskId = ref(null);
+const selectedTaskDetailsId = ref(null);
+
+const normalizeTaskStatus = (value) => String(value ?? 'pending').trim().toLowerCase();
+const COMPLETED_TASK_STATUSES = new Set(['completed']);
+const FAILED_TASK_STATUSES = new Set(['failed', 'blocked', 'cancelled', 'killed', 'timed_out']);
+const RUNNING_TASK_STATUSES = new Set(['in_progress', 'running']);
+
+const executionCompletedCount = computed(() => {
+    return tasks.value.filter((task) => COMPLETED_TASK_STATUSES.has(normalizeTaskStatus(task?.status))).length;
+});
+
+const executionProgressPercent = computed(() => {
+    if (tasks.value.length === 0) {
+        return 0;
+    }
+
+    return Math.round((executionCompletedCount.value / tasks.value.length) * 100);
+});
+
+const executionSummaryLabel = computed(() => {
+    if (tasks.value.length === 0) {
+        return 'No tasks generated yet';
+    }
+
+    return `${executionCompletedCount.value} of ${tasks.value.length} tasks complete`;
+});
+
+const tasksPendingCount = computed(() => {
+    return tasks.value.filter((task) => normalizeTaskStatus(task?.status) === 'pending').length;
+});
+
+const tasksCompletedCount = computed(() => {
+    return tasks.value.filter((task) => COMPLETED_TASK_STATUSES.has(normalizeTaskStatus(task?.status))).length;
+});
+
+const tasksFailedCount = computed(() => {
+    return tasks.value.filter((task) => FAILED_TASK_STATUSES.has(normalizeTaskStatus(task?.status))).length;
+});
+
+const taskStatusLabel = (value) => {
+    const normalized = normalizeTaskStatus(value);
+    if (normalized === 'in_progress') {
+        return 'running';
+    }
+
+    return normalized === '' ? 'pending' : normalized;
+};
+
+const taskStatusBadgeClass = (value) => {
+    const normalized = normalizeTaskStatus(value);
+
+    if (COMPLETED_TASK_STATUSES.has(normalized)) {
+        return 'border-success/30 bg-success/10 text-success';
+    }
+
+    if (RUNNING_TASK_STATUSES.has(normalized)) {
+        return 'border-primary/30 bg-primary/10 text-primary';
+    }
+
+    if (FAILED_TASK_STATUSES.has(normalized)) {
+        return 'border-destructive/30 bg-destructive/10 text-destructive';
+    }
+
+    return 'border-input bg-muted/30 text-muted-foreground';
+};
+
+const taskAttemptLabel = (task) => {
+    const attempts = Number(task?.attempt_count ?? 0);
+    if (!Number.isFinite(attempts) || attempts <= 0) {
+        return 'Not started';
+    }
+
+    return `${attempts} attempt${attempts === 1 ? '' : 's'}`;
+};
+
+const selectDefaultExecutionTask = () => {
+    const taskList = tasks.value;
+    if (!Array.isArray(taskList) || taskList.length === 0) {
+        selectedExecutionTaskId.value = null;
+        return;
+    }
+
+    if (activeTask.value?.id) {
+        selectedExecutionTaskId.value = activeTask.value.id;
+        return;
+    }
+
+    const preferredTask = taskList.find((task) => RUNNING_TASK_STATUSES.has(normalizeTaskStatus(task?.status)))
+        ?? taskList.find((task) => FAILED_TASK_STATUSES.has(normalizeTaskStatus(task?.status)))
+        ?? taskList.find((task) => COMPLETED_TASK_STATUSES.has(normalizeTaskStatus(task?.status)))
+        ?? taskList[0];
+
+    selectedExecutionTaskId.value = preferredTask?.id ?? null;
+};
+
+const toggleExecutionTask = (taskId) => {
+    if (selectedExecutionTaskId.value === taskId) {
+        selectedExecutionTaskId.value = null;
+        return;
+    }
+
+    selectedExecutionTaskId.value = taskId;
+};
+
+const toggleTaskDetails = (taskId) => {
+    if (selectedTaskDetailsId.value === taskId) {
+        selectedTaskDetailsId.value = null;
+        return;
+    }
+
+    selectedTaskDetailsId.value = taskId;
+};
+
+watch(
+    [tasks, activeTask, isExecutionMode],
+    () => {
+        if (!isExecutionMode.value) {
+            return;
+        }
+
+        const stillExists = tasks.value.some((task) => task?.id === selectedExecutionTaskId.value);
+        if (!stillExists || (activeTask.value?.id && selectedExecutionTaskId.value !== activeTask.value.id)) {
+            selectDefaultExecutionTask();
+        }
+    },
+    { deep: true, immediate: true }
+);
+
+watch(
+    [tasks, isTasksMode, editingTaskId, regeneratingTaskId],
+    () => {
+        if (!isTasksMode.value) {
+            selectedTaskDetailsId.value = null;
+            return;
+        }
+
+        const ids = tasks.value.map((task) => task?.id).filter((id) => id !== null && id !== undefined);
+        const selectedExists = ids.includes(selectedTaskDetailsId.value);
+
+        if (!selectedExists) {
+            selectedTaskDetailsId.value = ids[0] ?? null;
+        }
+
+        if (editingTaskId.value !== null) {
+            selectedTaskDetailsId.value = editingTaskId.value;
+        }
+
+        if (regeneratingTaskId.value !== null) {
+            selectedTaskDetailsId.value = regeneratingTaskId.value;
+        }
+    },
+    { deep: true, immediate: true }
+);
 
 const normalizeProjectRuleEntries = (rules) => {
     if (!Array.isArray(rules)) {
@@ -666,7 +820,7 @@ const submitTaskRegeneration = (task) => {
                         <input
                             :value="rule.title"
                             type="text"
-                            class="w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
+                            class="w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
                             :placeholder="`Rule ${index + 1} title`"
                             @input="updateProjectRuleTitle(index, $event.target.value)"
                         />
@@ -691,9 +845,8 @@ const submitTaskRegeneration = (task) => {
             </div>
         </div>
 
-        <div class="mt-3 flex flex-wrap gap-2">
+        <div v-if="isRulesMode" class="mt-3 flex flex-wrap gap-2">
             <button
-                v-if="isRulesMode || isTasksMode"
                 type="button"
                 class="rounded bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 :disabled="!canGenerate"
@@ -701,61 +854,55 @@ const submitTaskRegeneration = (task) => {
             >
                 {{ actions.generateBuildTasks ? 'Generating...' : 'Generate Build Tasks' }}
             </button>
-            <button
-                v-if="isTasksMode"
-                type="button"
-                class="rounded border border-primary/30 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="!canApproveTasks"
-                @click="emit('approve-tasks')"
-            >
-                {{ actions.approveBuildTasks ? 'Approving...' : (tasksApprovedAt ? 'Re-Approve Build Tasks' : 'Approve Build Tasks') }}
-            </button>
-            <button
-                v-if="isTasksMode"
-                type="button"
-                class="rounded border border-success/30 px-3 py-2 text-xs font-semibold text-success hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="!canStart"
-                @click="emit('start')"
-            >
-                {{ actions.startBuild ? 'Starting...' : 'Start Build' }}
-            </button>
+        </div>
 
-            <button
-                v-if="isExecutionMode"
-                type="button"
-                class="rounded border border-warning/30 px-3 py-2 text-xs font-semibold text-warning hover:bg-warning/10 disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="!canPause"
-                @click="emit('pause')"
-            >
-                {{ actions.pauseBuild ? 'Pausing...' : 'Pause Build' }}
-            </button>
-            <button
-                v-if="isExecutionMode"
-                type="button"
-                class="rounded border border-primary/30 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="!canResume"
-                @click="emit('resume')"
-            >
-                {{ actions.resumeBuild ? 'Resuming...' : 'Resume Build' }}
-            </button>
-            <button
-                v-if="isExecutionMode"
-                type="button"
-                class="rounded border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="!canRetry"
-                @click="emit('retry')"
-            >
-                {{ retryLabel }}
-            </button>
-            <button
-                v-if="isExecutionMode"
-                type="button"
-                class="rounded border border-warning/30 px-3 py-2 text-xs font-semibold text-warning hover:bg-warning/10 disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="!canRerunAll"
-                @click="emit('rerun-all')"
-            >
-                {{ actions.startBuild ? 'Re-running build...' : 'Re-run Build' }}
-            </button>
+        <div v-if="isTasksMode" class="mt-3 rounded-lg border border-border bg-muted/20 p-3">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p class="text-base font-semibold text-foreground">Build Tasks</p>
+                    <p class="mt-1 text-xs text-muted-foreground">Review and approve generated tasks before starting execution.</p>
+                </div>
+                <span class="rounded-full border border-input px-2 py-1 text-xs font-medium capitalize text-foreground">{{ statusLabel }}</span>
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span class="rounded-full border border-input bg-muted/30 px-2 py-1">{{ tasks.length }} total</span>
+                <span class="rounded-full border border-success/30 bg-success/10 px-2 py-1 text-success">{{ tasksCompletedCount }} completed</span>
+                <span class="rounded-full border border-input bg-muted/30 px-2 py-1">{{ tasksPendingCount }} pending</span>
+                <span
+                    v-if="tasksFailedCount > 0"
+                    class="rounded-full border border-destructive/30 bg-destructive/10 px-2 py-1 text-destructive"
+                >
+                    {{ tasksFailedCount }} failed
+                </span>
+            </div>
+
+            <div class="mt-3 flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    class="rounded bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="!canGenerate"
+                    @click="submitTaskGeneration"
+                >
+                    {{ actions.generateBuildTasks ? 'Generating...' : 'Generate Build Tasks' }}
+                </button>
+                <button
+                    type="button"
+                    class="rounded border border-primary/30 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="!canApproveTasks"
+                    @click="emit('approve-tasks')"
+                >
+                    {{ actions.approveBuildTasks ? 'Approving...' : (tasksApprovedAt ? 'Re-Approve Build Tasks' : 'Approve Build Tasks') }}
+                </button>
+                <button
+                    type="button"
+                    class="rounded border border-success/30 px-3 py-2 text-xs font-semibold text-success hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="!canStart"
+                    @click="emit('start')"
+                >
+                    {{ actions.startBuild ? 'Starting...' : 'Start Build' }}
+                </button>
+            </div>
         </div>
 
         <div v-if="(isRulesMode || isTasksMode) && status === 'generating_tasks'" class="mt-4 rounded border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
@@ -783,6 +930,103 @@ const submitTaskRegeneration = (task) => {
             <p class="mt-1">You can retry by clicking Generate Build Tasks.</p>
         </div>
 
+        <div v-if="isExecutionMode" class="mt-4 space-y-3">
+            <div class="rounded-lg border border-border bg-muted/20 p-3">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <p class="text-base font-semibold text-foreground">Build Execution</p>
+                        <p class="mt-1 text-xs capitalize text-muted-foreground">{{ statusLabel }}</p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="rounded border border-warning/30 px-3 py-1.5 text-xs font-semibold text-warning hover:bg-warning/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="!canPause"
+                            @click="emit('pause')"
+                        >
+                            {{ actions.pauseBuild ? 'Pausing...' : 'Pause Build' }}
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded border border-primary/30 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="!canResume"
+                            @click="emit('resume')"
+                        >
+                            {{ actions.resumeBuild ? 'Resuming...' : 'Resume Build' }}
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded border border-destructive/30 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="!canRetry"
+                            @click="emit('retry')"
+                        >
+                            {{ retryLabel }}
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded border border-warning/30 px-3 py-1.5 text-xs font-semibold text-warning hover:bg-warning/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="!canRerunAll"
+                            @click="emit('rerun-all')"
+                        >
+                            {{ actions.startBuild ? 'Re-running build...' : 'Re-run Build' }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{{ executionSummaryLabel }}</span>
+                    <span class="font-semibold text-foreground">{{ executionProgressPercent }}%</span>
+                </div>
+                <div class="mt-1.5 h-1.5 rounded-full bg-muted">
+                    <div
+                        class="h-1.5 rounded-full bg-primary transition-all duration-300"
+                        :style="{ width: `${executionProgressPercent}%` }"
+                    />
+                </div>
+            </div>
+
+            <div v-if="tasks.length > 0" class="rounded-lg border border-border bg-card/70 p-2">
+                <div class="space-y-2">
+                    <div
+                        v-for="task in tasks"
+                        :key="`execution-task-${task.id}`"
+                        class="rounded border border-border bg-muted/20"
+                    >
+                        <button
+                            type="button"
+                            class="w-full px-3 py-2 text-left"
+                            @click="toggleExecutionTask(task.id)"
+                        >
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex min-w-0 items-center gap-2">
+                                    <span
+                                        class="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                                        :class="taskStatusBadgeClass(task.status)"
+                                    >
+                                        {{ taskStatusLabel(task.status) }}
+                                    </span>
+                                    <span class="truncate text-sm font-medium text-foreground">#{{ task.sequence }} {{ task.title }}</span>
+                                </div>
+                                <span class="text-[11px] text-muted-foreground">{{ taskAttemptLabel(task) }}</span>
+                            </div>
+                        </button>
+
+                        <div
+                            v-if="selectedExecutionTaskId === task.id"
+                            class="border-t border-border px-3 py-2 text-xs"
+                        >
+                            <p v-if="task.description" class="text-muted-foreground">{{ task.description }}</p>
+                            <p v-if="task.last_error" class="mt-1 text-destructive">{{ task.last_error }}</p>
+                            <p v-if="activeTask?.id === task.id && activeRun" class="mt-1 text-muted-foreground">
+                                Run #{{ activeRun.id }} · {{ activeRun.status }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div v-if="isExecutionMode && flags.approval_required" class="mt-4 rounded border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
             <p class="font-semibold">Approval likely required in active run output.</p>
             <p v-if="flags.approval_excerpt" class="mt-1 whitespace-pre-wrap">{{ flags.approval_excerpt }}</p>
@@ -803,13 +1047,6 @@ const submitTaskRegeneration = (task) => {
             <p class="font-semibold">Rate limit detected.</p>
             <p v-if="flags.rate_limit_reset_at" class="mt-1">Reset at: {{ flags.rate_limit_reset_at }}</p>
             <p v-if="flags.rate_limit_excerpt" class="mt-1 whitespace-pre-wrap">{{ flags.rate_limit_excerpt }}</p>
-        </div>
-
-        <div v-if="isExecutionMode && activeTask" class="mt-4 rounded border border-border bg-muted/30 p-3  ">
-            <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Current Task</p>
-            <p class="mt-1 text-sm font-medium text-foreground ">#{{ activeTask.sequence }} · {{ activeTask.title }}</p>
-            <p v-if="activeTask.description" class="mt-1 text-xs text-muted-foreground ">{{ activeTask.description }}</p>
-            <p v-if="activeRun" class="mt-2 text-xs text-muted-foreground ">Run #{{ activeRun.id }} · {{ activeRun.status }}</p>
         </div>
 
         <div v-if="isExecutionMode && (hasActiveRunUnifiedLog || activeRunEventsLoading || activeRunEventsError)" class="mt-4">
@@ -841,7 +1078,7 @@ const submitTaskRegeneration = (task) => {
             <textarea
                 v-model="clarification"
                 rows="3"
-                class="mt-2 w-full rounded border border-input text-sm text-foreground"
+                class="mt-2 w-full rounded border border-input bg-input-background text-sm text-foreground"
                 placeholder="Add clarification for the active task..."
             />
             <div class="mt-2 flex justify-end">
@@ -856,7 +1093,7 @@ const submitTaskRegeneration = (task) => {
             </div>
         </div>
 
-        <div v-if="!isRulesMode" class="mt-4">
+        <div v-if="isTasksMode" class="mt-4">
             <div class="flex items-center justify-between gap-2">
                 <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Tasks</p>
                 <button
@@ -877,19 +1114,19 @@ const submitTaskRegeneration = (task) => {
                 <input
                     v-model="createTaskDraft.title"
                     type="text"
-                    class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
+                    class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
                     placeholder="Task title"
                 />
                 <textarea
                     v-model="createTaskDraft.description"
                     rows="2"
-                    class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
+                    class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
                     placeholder="Task description (optional)"
                 />
                 <textarea
                     v-model="createTaskDraft.instructions_markdown"
                     rows="4"
-                    class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
+                    class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
                     placeholder="Task instructions in markdown (optional)"
                 />
                 <div class="mt-2 flex justify-end gap-2">
@@ -914,131 +1151,138 @@ const submitTaskRegeneration = (task) => {
             <div v-if="tasks.length === 0" class="mt-2 rounded border border-dashed border-input px-3 py-2 text-xs text-muted-foreground  ">
                 No build tasks generated yet.
             </div>
-            <div v-else class="mt-2 overflow-x-auto">
-                <table class="min-w-full divide-y divide-border text-xs">
-                    <thead>
-                        <tr>
-                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-muted-foreground ">Task</th>
-                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-muted-foreground ">Status</th>
-                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-muted-foreground ">Attempts</th>
-                            <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-muted-foreground ">Error</th>
-                            <th v-if="isTasksMode" class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-muted-foreground ">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-border/60">
-                        <template v-for="task in tasks" :key="task.id">
-                            <tr>
-                                <td class="px-2 py-2">
-                                    <p class="text-foreground ">#{{ task.sequence }} {{ task.title }}</p>
-                                    <p v-if="task.description" class="mt-0.5 text-[11px] text-muted-foreground ">{{ task.description }}</p>
-                                    <p v-if="task.metadata_json?.regeneration?.status === 'queued'" class="mt-1 text-[11px] text-primary ">Regeneration queued...</p>
-                                    <p v-if="task.metadata_json?.regeneration?.status === 'failed'" class="mt-1 text-[11px] text-destructive ">Regeneration failed: {{ task.metadata_json?.regeneration?.error || 'Unknown error' }}</p>
-                                </td>
-                                <td class="px-2 py-2 text-muted-foreground ">{{ task.status }}</td>
-                                <td class="px-2 py-2 text-muted-foreground ">{{ task.attempt_count }}</td>
-                                <td class="px-2 py-2 text-muted-foreground ">{{ task.last_error || '-' }}</td>
-                                <td v-if="isTasksMode" class="px-2 py-2">
-                                    <div class="flex flex-wrap gap-1">
-                                        <button
-                                            type="button"
-                                            class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-                                            :disabled="!canManageTaskList || isTaskUpdating(task.id)"
-                                            @click="startTaskEdit(task)"
-                                        >
-                                            {{ isTaskUpdating(task.id) ? 'Saving...' : 'Edit' }}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="rounded border border-destructive/30 px-2 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
-                                            :disabled="!canManageTaskList || isTaskDeleting(task.id)"
-                                            @click="confirmTaskDelete(task)"
-                                        >
-                                            {{ isTaskDeleting(task.id) ? 'Deleting...' : 'Delete' }}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-                                            :disabled="!canManageTaskList || isTaskRegenerating(task.id)"
-                                            @click="startTaskRegeneration(task)"
-                                        >
-                                            {{ isTaskRegenerating(task.id) ? 'Queueing...' : 'Regenerate' }}
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr v-if="isTasksMode && editingTaskId === task.id" :key="`edit-${task.id}`" class="bg-muted/30 ">
-                                <td :colspan="isTasksMode ? 5 : 4" class="px-2 py-2">
-                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground ">Edit Task #{{ task.sequence }}</p>
-                                    <input
-                                        v-model="editTaskDraft.title"
-                                        type="text"
-                                        class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
-                                        placeholder="Task title"
-                                    />
-                                    <textarea
-                                        v-model="editTaskDraft.description"
-                                        rows="2"
-                                        class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
-                                        placeholder="Task description"
-                                    />
-                                    <textarea
-                                        v-model="editTaskDraft.instructions_markdown"
-                                        rows="4"
-                                        class="mt-2 w-full rounded border border-input px-2 py-1 text-xs text-foreground   "
-                                        placeholder="Task instructions in markdown"
-                                    />
-                                    <div class="mt-2 flex justify-end gap-2">
-                                        <button
-                                            type="button"
-                                            class="rounded border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
-                                            :disabled="isTaskUpdating(task.id)"
-                                            @click="cancelTaskEdit"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="rounded bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:bg-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
-                                            :disabled="isTaskUpdating(task.id) || editTaskDraft.title.trim() === ''"
-                                            @click="submitTaskEdit(task)"
-                                        >
-                                            {{ isTaskUpdating(task.id) ? 'Saving...' : 'Save Changes' }}
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr v-if="isTasksMode && regeneratingTaskId === task.id" :key="`regen-${task.id}`" class="bg-primary/5">
-                                <td :colspan="isTasksMode ? 5 : 4" class="px-2 py-2">
-                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-primary ">Regenerate Task #{{ task.sequence }} With Amend Notes</p>
-                                    <textarea
-                                        v-model="regenerateAmendNotes"
-                                        rows="3"
-                                        class="mt-2 w-full rounded border border-primary/30 px-2 py-1 text-xs text-foreground   "
-                                        placeholder="Describe exactly what should change for this task..."
-                                    />
-                                    <div class="mt-2 flex justify-end gap-2">
-                                        <button
-                                            type="button"
-                                            class="rounded border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
-                                            :disabled="isTaskRegenerating(task.id)"
-                                            @click="cancelTaskRegeneration"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="rounded bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                                            :disabled="isTaskRegenerating(task.id) || regenerateAmendNotes.trim() === ''"
-                                            @click="submitTaskRegeneration(task)"
-                                        >
-                                            {{ isTaskRegenerating(task.id) ? 'Queueing...' : 'Regenerate Task' }}
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
+            <div v-else class="mt-2 space-y-2">
+                <div
+                    v-for="task in tasks"
+                    :key="`task-card-${task.id}`"
+                    class="rounded border border-border bg-card/70"
+                >
+                    <button
+                        type="button"
+                        class="w-full px-3 py-2 text-left"
+                        @click="toggleTaskDetails(task.id)"
+                    >
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <span
+                                    class="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                                    :class="taskStatusBadgeClass(task.status)"
+                                >
+                                    {{ taskStatusLabel(task.status) }}
+                                </span>
+                                <span class="truncate text-sm font-medium text-foreground">#{{ task.sequence }} {{ task.title }}</span>
+                            </div>
+                            <span class="text-[11px] text-muted-foreground">{{ taskAttemptLabel(task) }}</span>
+                        </div>
+                    </button>
+
+                    <div
+                        v-if="selectedTaskDetailsId === task.id || editingTaskId === task.id || regeneratingTaskId === task.id"
+                        class="border-t border-border px-3 py-2"
+                    >
+                        <p v-if="task.description" class="text-xs text-muted-foreground">{{ task.description }}</p>
+                        <p v-if="task.last_error" class="mt-1 text-xs text-destructive">{{ task.last_error }}</p>
+                        <p v-if="task.metadata_json?.regeneration?.status === 'queued'" class="mt-1 text-xs text-primary">Regeneration queued...</p>
+                        <p v-if="task.metadata_json?.regeneration?.status === 'failed'" class="mt-1 text-xs text-destructive">
+                            Regeneration failed: {{ task.metadata_json?.regeneration?.error || 'Unknown error' }}
+                        </p>
+
+                        <div class="mt-2 flex flex-wrap gap-1">
+                            <button
+                                type="button"
+                                class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+                                :disabled="!canManageTaskList || isTaskUpdating(task.id)"
+                                @click="startTaskEdit(task)"
+                            >
+                                {{ isTaskUpdating(task.id) ? 'Saving...' : 'Edit' }}
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded border border-destructive/30 px-2 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                :disabled="!canManageTaskList || isTaskDeleting(task.id)"
+                                @click="confirmTaskDelete(task)"
+                            >
+                                {{ isTaskDeleting(task.id) ? 'Deleting...' : 'Delete' }}
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+                                :disabled="!canManageTaskList || isTaskRegenerating(task.id)"
+                                @click="startTaskRegeneration(task)"
+                            >
+                                {{ isTaskRegenerating(task.id) ? 'Queueing...' : 'Regenerate' }}
+                            </button>
+                        </div>
+
+                        <div v-if="editingTaskId === task.id" class="mt-3 rounded border border-border bg-muted/30 p-2">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground ">Edit Task #{{ task.sequence }}</p>
+                            <input
+                                v-model="editTaskDraft.title"
+                                type="text"
+                                class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
+                                placeholder="Task title"
+                            />
+                            <textarea
+                                v-model="editTaskDraft.description"
+                                rows="2"
+                                class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
+                                placeholder="Task description"
+                            />
+                            <textarea
+                                v-model="editTaskDraft.instructions_markdown"
+                                rows="4"
+                                class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
+                                placeholder="Task instructions in markdown"
+                            />
+                            <div class="mt-2 flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    class="rounded border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
+                                    :disabled="isTaskUpdating(task.id)"
+                                    @click="cancelTaskEdit"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:bg-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="isTaskUpdating(task.id) || editTaskDraft.title.trim() === ''"
+                                    @click="submitTaskEdit(task)"
+                                >
+                                    {{ isTaskUpdating(task.id) ? 'Saving...' : 'Save Changes' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div v-if="regeneratingTaskId === task.id" class="mt-3 rounded border border-primary/30 bg-primary/5 p-2">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-primary ">Regenerate Task #{{ task.sequence }} With Amend Notes</p>
+                            <textarea
+                                v-model="regenerateAmendNotes"
+                                rows="3"
+                                class="mt-2 w-full rounded border border-primary/30 bg-input-background px-2 py-1 text-xs text-foreground   "
+                                placeholder="Describe exactly what should change for this task..."
+                            />
+                            <div class="mt-2 flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    class="rounded border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
+                                    :disabled="isTaskRegenerating(task.id)"
+                                    @click="cancelTaskRegeneration"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="isTaskRegenerating(task.id) || regenerateAmendNotes.trim() === ''"
+                                    @click="submitTaskRegeneration(task)"
+                                >
+                                    {{ isTaskRegenerating(task.id) ? 'Queueing...' : 'Regenerate Task' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 

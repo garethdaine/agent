@@ -63,6 +63,18 @@ const setPage = async (page) => {
     await load(page);
 };
 
+const getTrustScoreClass = (score) => {
+    if (score < 0.4) return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+    if (score < 0.8) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+    return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+};
+
+const getTrustLevel = (score) => {
+    if (score < 0.4) return 'Low';
+    if (score < 0.8) return 'Medium';
+    return 'High';
+};
+
 onMounted(() => load());
 </script>
 
@@ -96,13 +108,14 @@ onMounted(() => load());
                                     <TableHead>Name</TableHead>
                                     <TableHead>Runner Type</TableHead>
                                     <TableHead>Capabilities</TableHead>
+                                    <TableHead>Trust Score</TableHead>
                                     <TableHead>Active</TableHead>
                                     <TableHead class="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 <TableRow v-if="loading">
-                                    <TableCell colspan="5" class="py-8">
+                                    <TableCell colspan="6" class="py-8">
                                         <div class="flex flex-col items-center justify-center gap-4">
                                             <Skeleton class="h-4 w-48" />
                                             <Skeleton class="h-4 w-32" />
@@ -133,6 +146,22 @@ onMounted(() => load());
                                         </div>
                                     </TableCell>
                                     <TableCell>
+                                        <div v-if="profile.trust_score !== null" class="flex items-center gap-2">
+                                            <span
+                                                :class="[
+                                                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                                                    getTrustScoreClass(profile.trust_score)
+                                                ]"
+                                            >
+                                                {{ Math.round(profile.trust_score * 100) }}%
+                                            </span>
+                                            <span class="text-xs text-muted-foreground">
+                                                {{ getTrustLevel(profile.trust_score) }}
+                                            </span>
+                                        </div>
+                                        <span v-else class="text-muted-foreground text-sm">N/A</span>
+                                    </TableCell>
+                                    <TableCell>
                                         <Badge :variant="profile.is_active ? 'default' : 'outline'">
                                             {{ profile.is_active ? 'Yes' : 'No' }}
                                         </Badge>
@@ -157,7 +186,7 @@ onMounted(() => load());
                                     </TableCell>
                                 </TableRow>
                                 <TableRow v-if="!loading && profiles.length === 0">
-                                    <TableCell colspan="5" class="py-8 text-center text-muted-foreground">
+                                    <TableCell colspan="6" class="py-8 text-center text-muted-foreground">
                                         No profiles found.
                                     </TableCell>
                                 </TableRow>

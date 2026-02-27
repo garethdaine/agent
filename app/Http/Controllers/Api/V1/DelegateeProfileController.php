@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DelegateeProfile;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
+use App\Support\Delegation\TrustScoreCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -258,6 +259,25 @@ class DelegateeProfileController extends Controller
         ]);
     }
 
+    public function trust(Request $request, int $id, TrustScoreCalculator $calculator): JsonResponse
+    {
+        $profile = DelegateeProfile::find($id);
+
+        if ($profile === null) {
+            return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);
+        }
+
+        if ($profile->user_id !== $request->user()->id) {
+            return ErrorEnvelope::make('FORBIDDEN', 'Access denied.', 403);
+        }
+
+        $trustScore = $calculator->calculate($profile->runner_type);
+
+        return response()->json([
+            'data' => $trustScore->toArray(),
+        ]);
+    }
+
     private function transformProfile(DelegateeProfile $profile, bool $includeDetails = false): array
     {
         $payload = [
@@ -267,6 +287,8 @@ class DelegateeProfileController extends Controller
             'command_template' => $profile->command_template,
             'working_directory' => $profile->working_directory,
             'is_active' => $profile->is_active,
+            'trust_score' => $profile->trust_score !== null ? (float) $profile->trust_score : null,
+            'trust_updated_at' => optional($profile->trust_updated_at)?->toIso8601String(),
             'deleted_at' => optional($profile->deleted_at)?->toIso8601String(),
             'created_at' => optional($profile->created_at)?->toIso8601String(),
             'updated_at' => optional($profile->updated_at)?->toIso8601String(),
