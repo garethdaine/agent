@@ -1,11 +1,16 @@
 <script setup>
-import { ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import Banner from '@/Components/Banner.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import {
+    applyThemePreference,
+    getStoredThemePreference,
+    setStoredThemePreference,
+} from '@/Support/theme';
 import {
     Clock,
     LayoutDashboard,
@@ -19,6 +24,8 @@ import {
     Menu,
     X,
     Check,
+    Moon,
+    Sun,
 } from 'lucide-vue-next';
 
 defineProps({
@@ -26,6 +33,34 @@ defineProps({
 });
 
 const showingNavigationDropdown = ref(false);
+const themePreference = ref(getStoredThemePreference());
+const resolvedTheme = ref('light');
+let mediaQueryList = null;
+
+const isDarkTheme = computed(() => resolvedTheme.value === 'dark');
+const isSystemTheme = computed(() => themePreference.value === 'system');
+
+const syncTheme = () => {
+    resolvedTheme.value = applyThemePreference(themePreference.value);
+};
+
+const toggleTheme = () => {
+    themePreference.value = isDarkTheme.value ? 'light' : 'dark';
+    setStoredThemePreference(themePreference.value);
+    syncTheme();
+};
+
+const useSystemTheme = () => {
+    themePreference.value = 'system';
+    setStoredThemePreference('system');
+    syncTheme();
+};
+
+const handleSystemThemeChange = () => {
+    if (themePreference.value === 'system') {
+        syncTheme();
+    }
+};
 
 const switchToTeam = (team) => {
     router.put(route('current-team.update'), {
@@ -38,6 +73,29 @@ const switchToTeam = (team) => {
 const logout = () => {
     router.post(route('logout'));
 };
+
+onMounted(() => {
+    syncTheme();
+
+    if (typeof window.matchMedia === 'function') {
+        mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
+        if (typeof mediaQueryList.addEventListener === 'function') {
+            mediaQueryList.addEventListener('change', handleSystemThemeChange);
+        } else if (typeof mediaQueryList.addListener === 'function') {
+            mediaQueryList.addListener(handleSystemThemeChange);
+        }
+    }
+});
+
+onBeforeUnmount(() => {
+    if (mediaQueryList) {
+        if (typeof mediaQueryList.removeEventListener === 'function') {
+            mediaQueryList.removeEventListener('change', handleSystemThemeChange);
+        } else if (typeof mediaQueryList.removeListener === 'function') {
+            mediaQueryList.removeListener(handleSystemThemeChange);
+        }
+    }
+});
 </script>
 
 <template>
@@ -95,7 +153,7 @@ const logout = () => {
                             </div>
                         </div>
 
-                        <div class="hidden sm:flex sm:items-center sm:ms-6">
+                        <div class="hidden sm:flex sm:items-center sm:ms-6 gap-2">
                             <div class="ms-3 relative">
                                 <!-- Teams Dropdown -->
                                 <Dropdown v-if="$page.props.jetstream.hasTeamFeatures" align="right" width="60">
@@ -149,6 +207,16 @@ const logout = () => {
                                 </Dropdown>
                             </div>
 
+                            <button
+                                type="button"
+                                class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
+                                :aria-label="isDarkTheme ? 'Switch to light mode' : 'Switch to dark mode'"
+                                @click="toggleTheme"
+                            >
+                                <Sun v-if="isDarkTheme" class="h-4 w-4" />
+                                <Moon v-else class="h-4 w-4" />
+                            </button>
+
                             <!-- Settings Dropdown -->
                             <div class="ms-3 relative">
                                 <Dropdown align="right" width="48">
@@ -179,6 +247,29 @@ const logout = () => {
                                         <DropdownLink v-if="$page.props.jetstream.hasApiFeatures" :href="route('api-tokens.index')">
                                             API Tokens
                                         </DropdownLink>
+
+                                        <div class="border-t border-border my-1" />
+
+                                        <div class="block px-4 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                                            Appearance
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            class="block w-full px-4 py-2 text-start text-sm leading-5 text-foreground hover:bg-muted focus:outline-none focus:bg-muted transition duration-150 ease-in-out"
+                                            @click="toggleTheme"
+                                        >
+                                            {{ isDarkTheme ? 'Switch to Light Mode' : 'Switch to Dark Mode' }}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            class="block w-full px-4 py-2 text-start text-sm leading-5 text-foreground hover:bg-muted focus:outline-none focus:bg-muted transition duration-150 ease-in-out"
+                                            :disabled="isSystemTheme"
+                                            @click="useSystemTheme"
+                                        >
+                                            Use System Theme
+                                        </button>
 
                                         <div class="border-t border-border my-1" />
 
@@ -256,6 +347,26 @@ const logout = () => {
                                     {{ $page.props.auth.user.email }}
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="mt-3 px-4">
+                            <button
+                                type="button"
+                                class="inline-flex h-8 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-foreground transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/50"
+                                @click="toggleTheme"
+                            >
+                                <Sun v-if="isDarkTheme" class="h-3.5 w-3.5" />
+                                <Moon v-else class="h-3.5 w-3.5" />
+                                {{ isDarkTheme ? 'Light mode' : 'Dark mode' }}
+                            </button>
+                            <button
+                                type="button"
+                                class="ms-2 inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium text-foreground transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50"
+                                :disabled="isSystemTheme"
+                                @click="useSystemTheme"
+                            >
+                                System
+                            </button>
                         </div>
 
                         <div class="mt-3 space-y-1 px-2">

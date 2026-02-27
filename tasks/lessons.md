@@ -105,3 +105,11 @@ Use this file to capture correction-driven lessons.
 - Pattern: Detection logic that only filters escaped/line-numbered snippets still misclassifies inline source snippets containing HTML/JS tokens and copied status strings.
 - Prevention rule: Treat multiline payloads with multiple source-code signals (HTML tags/template attributes + JS/PHP token patterns) as non-runtime snippets and skip blocker/rate-limit extraction.
 - Applied in: `app/Support/Agent/RunEventWriter.php`, `tests/Feature/AgentRunnerLifecycleTest.php`
+
+## Entry
+- Date: 2026-02-27
+- Source (job run id / interrogation session id): Discovery session 6 UI parity follow-up
+- Correction: User reported the rebuilt UI drifted from Figma, system dark mode was not detected, and no theme switch was available.
+- Pattern: Styling migrations that introduce tokenized colors and `dark:` classes can silently fail when Tailwind is left on media-mode and tokens are stored as hex strings (breaking `/alpha` utilities).
+- Prevention rule: For any token-based redesign, enforce `darkMode: 'class'`, bootstrap theme on first paint, provide an in-app theme control, and verify generated CSS includes key opacity classes (`bg-primary/10`, `bg-muted/50`, `bg-card/95`) before calling parity complete.
+- Applied in: `tailwind.config.js`, `resources/css/theme.css`, `resources/js/Support/theme.js`, `resources/js/Layouts/AppLayout.vue`, `resources/views/app.blade.php`

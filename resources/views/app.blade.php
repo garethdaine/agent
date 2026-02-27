@@ -6,12 +6,33 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg">
         <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="any">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+        <script>
+            (() => {
+                const key = 'agent-theme-preference';
+                const root = document.documentElement;
+                let preference = 'system';
+
+                try {
+                    const stored = window.localStorage.getItem(key);
+                    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+                        preference = stored;
+                    }
+                } catch (error) {
+                    // Ignore storage access errors (e.g. private browsing restrictions).
+                }
+
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const resolved = preference === 'dark' || (preference === 'system' && prefersDark) ? 'dark' : 'light';
+
+                root.classList.toggle('dark', resolved === 'dark');
+                root.style.colorScheme = resolved;
+                root.dataset.themePreference = preference;
+            })();
+        </script>
 
         <!-- Scripts -->
         @routes

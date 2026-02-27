@@ -26,6 +26,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { ArrowLeft, Pause, Pencil, Play, RefreshCw, RotateCcw, Settings, Trash2 } from 'lucide-vue-next';
 
 const props = defineProps({
     sessionId: {
@@ -1210,6 +1211,7 @@ onBeforeUnmount(() => {
                         :disabled="busy"
                         @click="retrySession"
                     >
+                        <RefreshCw class="h-3.5 w-3.5" />
                         Retry
                     </Button>
                     <Button
@@ -1219,6 +1221,7 @@ onBeforeUnmount(() => {
                         :disabled="busy"
                         @click="restartFromBeginning"
                     >
+                        <RotateCcw class="h-3.5 w-3.5" />
                         Restart Fresh
                     </Button>
                     <Button
@@ -1228,6 +1231,7 @@ onBeforeUnmount(() => {
                         :disabled="busy"
                         @click="renameCurrentSession"
                     >
+                        <Pencil class="h-3.5 w-3.5" />
                         Rename
                     </Button>
                     <Button
@@ -1246,6 +1250,7 @@ onBeforeUnmount(() => {
                         :disabled="busy"
                         @click="pause"
                     >
+                        <Pause class="h-3.5 w-3.5" />
                         Pause
                     </Button>
                     <Button
@@ -1255,6 +1260,7 @@ onBeforeUnmount(() => {
                         :disabled="busy"
                         @click="resume"
                     >
+                        <Play class="h-3.5 w-3.5" />
                         Resume
                     </Button>
                     <Button
@@ -1264,6 +1270,7 @@ onBeforeUnmount(() => {
                         :disabled="busy"
                         @click="deleteSession"
                     >
+                        <Trash2 class="h-3.5 w-3.5" />
                         Delete
                     </Button>
                     <Button
@@ -1279,17 +1286,22 @@ onBeforeUnmount(() => {
                         v-if="session"
                         :href="route('tools.discovery.session.settings', session.id)"
                     >
-                        <Button variant="outline" size="sm">Session Settings</Button>
+                        <Button variant="outline" size="sm">
+                            <Settings class="h-3.5 w-3.5" />
+                            Session Settings
+                        </Button>
                     </Link>
                     <Link :href="route('tools.discovery.index')">
-                        <Button variant="outline" size="sm">Back</Button>
+                        <Button variant="outline" size="sm">
+                            <ArrowLeft class="h-3.5 w-3.5" />
+                            Back
+                        </Button>
                     </Link>
                 </div>
             </div>
         </template>
 
-        <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-7xl space-y-4">
+        <div class="space-y-4">
                 <Card v-if="displayError.summary" class="border-destructive/50 bg-destructive/10 px-3 py-2">
                     <p class="text-sm text-destructive">{{ displayError.summary }}</p>
                     <details v-if="displayError.details" class="mt-2">
@@ -1595,7 +1607,6 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
                 </template>
-            </div>
         </div>
     </AppLayout>
 </template>

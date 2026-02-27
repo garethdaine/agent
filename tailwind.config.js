@@ -2,8 +2,11 @@ import defaultTheme from 'tailwindcss/defaultTheme';
 import forms from '@tailwindcss/forms';
 import typography from '@tailwindcss/typography';
 
+const withOpacity = (cssVariable) => `rgb(var(${cssVariable}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 export default {
+    darkMode: 'class',
     content: [
         './vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php',
         './vendor/laravel/jetstream/**/*.blade.php',
@@ -15,50 +18,50 @@ export default {
     theme: {
         extend: {
             colors: {
-                background: 'var(--background)',
-                foreground: 'var(--foreground)',
+                background: withOpacity('--background'),
+                foreground: withOpacity('--foreground'),
                 card: {
-                    DEFAULT: 'var(--card)',
-                    foreground: 'var(--card-foreground)',
+                    DEFAULT: withOpacity('--card'),
+                    foreground: withOpacity('--card-foreground'),
                 },
                 popover: {
-                    DEFAULT: 'var(--popover)',
-                    foreground: 'var(--popover-foreground)',
+                    DEFAULT: withOpacity('--popover'),
+                    foreground: withOpacity('--popover-foreground'),
                 },
                 primary: {
-                    DEFAULT: 'var(--primary)',
-                    foreground: 'var(--primary-foreground)',
+                    DEFAULT: withOpacity('--primary'),
+                    foreground: withOpacity('--primary-foreground'),
                 },
                 secondary: {
-                    DEFAULT: 'var(--secondary)',
-                    foreground: 'var(--secondary-foreground)',
+                    DEFAULT: withOpacity('--secondary'),
+                    foreground: withOpacity('--secondary-foreground'),
                 },
                 muted: {
-                    DEFAULT: 'var(--muted)',
-                    foreground: 'var(--muted-foreground)',
+                    DEFAULT: withOpacity('--muted'),
+                    foreground: withOpacity('--muted-foreground'),
                 },
                 accent: {
-                    DEFAULT: 'var(--accent)',
-                    foreground: 'var(--accent-foreground)',
+                    DEFAULT: withOpacity('--accent'),
+                    foreground: withOpacity('--accent-foreground'),
                 },
                 destructive: {
-                    DEFAULT: 'var(--destructive)',
-                    foreground: 'var(--destructive-foreground)',
+                    DEFAULT: withOpacity('--destructive'),
+                    foreground: withOpacity('--destructive-foreground'),
                 },
                 success: {
-                    DEFAULT: 'var(--success)',
-                    foreground: 'var(--success-foreground)',
+                    DEFAULT: withOpacity('--success'),
+                    foreground: withOpacity('--success-foreground'),
                 },
                 warning: {
-                    DEFAULT: 'var(--warning)',
-                    foreground: 'var(--warning-foreground)',
+                    DEFAULT: withOpacity('--warning'),
+                    foreground: withOpacity('--warning-foreground'),
                 },
-                border: 'var(--border)',
+                border: withOpacity('--border'),
                 input: {
-                    DEFAULT: 'var(--input)',
-                    background: 'var(--input-background)',
+                    DEFAULT: withOpacity('--input'),
+                    background: withOpacity('--input-background'),
                 },
-                ring: 'var(--ring)',
+                ring: withOpacity('--ring'),
             },
             fontFamily: {
                 sans: ['var(--font-sans)'],

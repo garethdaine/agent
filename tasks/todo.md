@@ -1,5 +1,38 @@
 # Workflow Orchestration Instruction Rollout Plan
 
+## 2026-02-27 - Discovery Wizard Full Session Validation (Natural Language Scheduling)
+
+- [ ] Create a brand-new discovery session using `docs/discovery/natural-language-scheduling.md` as the feature brief on `https://agent.test`.
+- [ ] Drive the session end-to-end (setup → tech stack → discovery → interrogation → summary → planning → rules → tasks → build execution).
+- [ ] Capture UI parity findings at every stage/control surface against Figma reference (`https://pause-kindle-31517753.figma.site/tools/discovery/6` + wizard design system).
+- [ ] Patch wizard subcomponents that still use legacy styling and do not match the Figma visual language.
+- [ ] Re-run the same session flow checks in browser after patching.
+- [ ] Record verification results and any residual gaps.
+
+## 2026-02-27 - Figma UI Parity Hotfix (Discovery + App Shell)
+
+- [x] Compare current Laravel UI shell and Discovery Wizard against Figma reference (`https://pause-kindle-31517753.figma.site/`).
+- [x] Fix global theme architecture:
+  - [x] class-based dark mode in Tailwind
+  - [x] system preference detection on first load
+  - [x] persistent user override (light/dark) and visible switch control in app shell.
+- [x] Fix design-token opacity compatibility so classes like `bg-primary/10`, `bg-muted/50`, `border-border/60` render correctly.
+- [x] Align AppLayout and Discovery Wizard spacing/controls to Figma shell baseline (top-nav controls, max-width consistency, button/icon treatment).
+- [x] Run build/verification checks and capture results.
+- [x] Add review notes with what changed, what was verified, and any remaining gaps.
+
+### Review (2026-02-27)
+
+- Implemented class-based theme switching with system detection and persistent local preference (`light`/`dark`/`system`) applied at document boot and at app runtime.
+- Updated design tokens to RGB-channel CSS variables and Tailwind color mapping with alpha support (`rgb(var(--token) / <alpha-value>)`), restoring missing opacity utilities used across the redesigned UI.
+- Added visible theme controls to app shell (desktop icon toggle, mobile controls, and profile-menu appearance actions).
+- Aligned discovery wizard chrome closer to Figma shell (iconized controls and removed nested max-width/padding layer that constrained layout).
+- Verification:
+  - `npm run build` passed (client + SSR bundles)
+  - built CSS now includes expected token-opacity classes, including `.bg-primary/10`, `.bg-muted/50`, and `.bg-card/95`.
+- Remaining gap:
+  - Full page-by-page pixel-parity sweep against every Figma route is still outstanding; this pass focused on shell/theme/token issues that were causing major visual drift.
+
 ## Context
 
 Integrate the instruction set into both orchestration surfaces:
