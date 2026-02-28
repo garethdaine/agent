@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Messenger\Gateway\Enums\WorkerHealthStatus;
 use App\Models\ConnectorAccount;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -28,6 +29,7 @@ class ConnectorAccountFactory extends Factory
             'webhook_secret' => Str::random(32),
             'connection_mode' => ConnectorAccount::MODE_WEBHOOK,
             'status' => ConnectorAccount::STATUS_CONNECTED,
+            'runtime_state' => WorkerHealthStatus::Disconnected,
             'config' => $this->getDefaultConfig($provider),
             'account_key' => Str::random(16),
         ];
@@ -53,6 +55,19 @@ class ConnectorAccountFactory extends Factory
                 'bot_token' => $this->faker->numberBetween(100000000, 999999999).':'.Str::random(35),
             ],
             'config' => $this->getDefaultConfig(ConnectorAccount::PROVIDER_TELEGRAM),
+        ]);
+    }
+
+    public function discord(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'provider' => ConnectorAccount::PROVIDER_DISCORD,
+            'credentials' => [
+                'bot_token' => 'MTEyMzQ1Njc4OTAxMjM0NTY3OA.GxYmZc.'.Str::random(35),
+                'application_id' => (string) $this->faker->numberBetween(1000000000000000000, 9999999999999999999),
+                'public_key' => Str::random(64),
+            ],
+            'config' => $this->getDefaultConfig(ConnectorAccount::PROVIDER_DISCORD),
         ]);
     }
 
@@ -94,6 +109,10 @@ class ConnectorAccountFactory extends Factory
             ConnectorAccount::PROVIDER_TELEGRAM => [
                 'bot_token' => $this->faker->numberBetween(100000000, 999999999).':'.Str::random(35),
             ],
+            ConnectorAccount::PROVIDER_DISCORD => [
+                'bot_token' => 'MTEyMzQ1Njc4OTAxMjM0NTY3OA.GxYmZc.'.Str::random(35),
+                'application_id' => (string) $this->faker->numberBetween(1000000000000000000, 9999999999999999999),
+            ],
             default => [],
         };
     }
@@ -129,6 +148,17 @@ class ConnectorAccountFactory extends Factory
                 ],
                 'threading_mode' => 'reply_to',
                 'threading_fallback' => 'quote',
+            ]),
+            ConnectorAccount::PROVIDER_DISCORD => array_merge($baseConfig, [
+                'signature_verification' => [
+                    'scheme' => 'ed25519',
+                ],
+                'replay_protection' => [
+                    'strategy' => 'timestamp',
+                    'window_seconds' => 300,
+                ],
+                'threading_mode' => 'native',
+                'threading_fallback' => 'edit',
             ]),
             default => $baseConfig,
         };

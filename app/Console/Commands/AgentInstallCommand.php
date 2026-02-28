@@ -2,6 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Messenger\Discord\SlashCommandRegistrar;
+use App\Messenger\Validation\DiscordCredentialValidator;
+use App\Messenger\Validation\IngressProbe;
+use App\Messenger\Validation\WhatsAppCredentialValidator;
 use App\Models\ConnectorAccount;
 use App\Support\Messenger\ConnectorManager;
 use Illuminate\Console\Command;
@@ -41,6 +45,8 @@ class AgentInstallCommand extends Command
     private const SUPPORTED_CONNECTORS = [
         'slack',
         'telegram',
+        'discord',
+        'whatsapp',
     ];
 
     private const CONNECTOR_CREDENTIALS = [
@@ -51,6 +57,17 @@ class AgentInstallCommand extends Command
         ],
         'telegram' => [
             'bot_token' => 'Telegram Bot Token',
+        ],
+        'discord' => [
+            'bot_token' => 'Discord Bot Token',
+            'application_id' => 'Discord Application ID (snowflake)',
+            'public_key' => 'Discord Public Key (webhook mode only, optional)',
+        ],
+        'whatsapp' => [
+            'access_token' => 'WhatsApp Cloud API Access Token',
+            'phone_number_id' => 'WhatsApp Phone Number ID',
+            'app_secret' => 'Meta App Secret (for webhook signature verification)',
+            'verify_token' => 'Webhook Verify Token (you define this)',
         ],
     ];
 
@@ -357,6 +374,23 @@ class AgentInstallCommand extends Command
             $this->info(sprintf('  Credentials validated: %s', $validationResult['details']));
         }
 
+        // Determine connection mode
+        // WhatsApp is always webhook mode (Cloud API is webhook-only)
+        $mode = $connector === 'whatsapp' ? ConnectorAccount::MODE_WEBHOOK : $this->option('mode');
+
+        // For webhook mode, validate webhook endpoint with ingress probe
+        if ($mode === ConnectorAccount::MODE_WEBHOOK) {
+            $webhookUrl = $this->getWebhookUrl($connector);
+
+            if (! empty($webhookUrl)) {
+                $probeResult = $this->runIngressProbe($connector, $webhookUrl, $credentials);
+
+                if (! $probeResult) {
+                    return false;
+                }
+            }
+        }
+
         // Prompt for account name
         $name = $this->option('non-interactive')
             ? sprintf('%s Bot', ucfirst($connector))
@@ -365,9 +399,6 @@ class AgentInstallCommand extends Command
                 default: $validationResult['suggested_name'] ?? sprintf('%s Bot', ucfirst($connector)),
                 required: true,
             );
-
-        // Store connector account
-        $mode = $this->option('mode');
 
         $accountKey = $this->generateAccountKey($connector, $credentials);
 
@@ -388,8 +419,9 @@ class AgentInstallCommand extends Command
                 ),
             ]);
             $this->info(sprintf('  %s connector updated successfully.', ucfirst($connector)));
+            $account = $existingAccount->fresh();
         } else {
-            ConnectorAccount::create([
+            $account = ConnectorAccount::create([
                 'provider' => $connector,
                 'name' => $name,
                 'credentials' => $credentials,
@@ -404,6 +436,125 @@ class AgentInstallCommand extends Command
             $this->info(sprintf('  %s connector configured successfully.', ucfirst($connector)));
         }
 
+        // Register Discord slash commands after connector setup
+        if ($connector === 'discord') {
+            $this->registerDiscordSlashCommands($account);
+        }
+
+        // Show WhatsApp webhook configuration instructions
+        if ($connector === 'whatsapp') {
+            $this->displayWhatsAppWebhookInstructions($account, $credentials);
+        }
+
+        return true;
+    }
+
+    /**
+     * Display WhatsApp webhook configuration instructions.
+     *
+     * @param  array<string, string>  $credentials
+     */
+    private function displayWhatsAppWebhookInstructions(ConnectorAccount $account, array $credentials): void
+    {
+        $webhookUrl = url(sprintf('/messenger/webhooks/whatsapp/%s', $account->id));
+        $verifyToken = $credentials['verify_token'] ?? 'your-verify-token';
+
+        $this->newLine();
+        $this->info('  WhatsApp Webhook Configuration:');
+        $this->line('  ================================');
+        $this->newLine();
+        $this->line('  Configure these values in your Meta App Dashboard:');
+        $this->line('  https://developers.facebook.com/apps/YOUR_APP_ID/whatsapp-business/wa-settings/');
+        $this->newLine();
+        $this->line(sprintf('  Callback URL:   %s', $webhookUrl));
+        $this->line(sprintf('  Verify Token:   %s', $verifyToken));
+        $this->newLine();
+        $this->line('  Subscribe to the following webhook fields:');
+        $this->line('    - messages');
+        $this->newLine();
+        $this->warn('  Note: WhatsApp Cloud API only supports webhook mode (no local mode).');
+    }
+
+    /**
+     * Register Discord slash commands for the connector.
+     */
+    private function registerDiscordSlashCommands(ConnectorAccount $account): void
+    {
+        $this->line('  Registering slash commands...');
+
+        $registrar = app(SlashCommandRegistrar::class);
+        $result = $registrar->register($account);
+
+        if ($result->success) {
+            $commandNames = $result->getCommandNames();
+            $this->info(sprintf('  Slash commands registered: /%s', implode(', /', $commandNames)));
+        } else {
+            $this->warn(sprintf('  Failed to register slash commands: %s', $result->error));
+            $this->warn('  You may need to re-run installation or register manually.');
+        }
+    }
+
+    /**
+     * Get webhook URL for a connector from environment or configuration.
+     */
+    private function getWebhookUrl(string $connector): ?string
+    {
+        // Try connector-specific webhook URL first
+        $envKey = sprintf('MESSENGER_%s_WEBHOOK_URL', strtoupper($connector));
+        $webhookUrl = env($envKey, '');
+
+        if (! empty($webhookUrl)) {
+            return $webhookUrl;
+        }
+
+        // Fall back to generic webhook URL
+        $webhookUrl = env('MESSENGER_WEBHOOK_URL', '');
+
+        if (! empty($webhookUrl)) {
+            // Append connector path if not already included
+            if (! str_contains($webhookUrl, '/'.$connector)) {
+                return rtrim($webhookUrl, '/');
+            }
+
+            return $webhookUrl;
+        }
+
+        return null;
+    }
+
+    /**
+     * Run ingress probe for webhook validation.
+     *
+     * @param  array<string, string>  $credentials
+     */
+    private function runIngressProbe(string $connector, string $webhookUrl, array $credentials): bool
+    {
+        $this->line('  Validating webhook endpoint...');
+
+        $probe = app(IngressProbe::class);
+        $probeResult = $probe->probe($webhookUrl, $connector, $credentials, [
+            'skip_tls' => app()->environment('testing'),
+        ]);
+
+        if (! $probeResult->success) {
+            $this->error('  Webhook validation failed:');
+            $this->line(sprintf('    %s', $probeResult->diagnostic));
+
+            if (! $this->option('non-interactive')) {
+                if (! confirm('Continue anyway?', default: false)) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        } else {
+            $this->info('  Webhook endpoint validated successfully.');
+
+            if ($probeResult->hasWarning()) {
+                $this->warn(sprintf('  Warning: %s', $probeResult->warning));
+            }
+        }
+
         return true;
     }
 
@@ -414,9 +565,13 @@ class AgentInstallCommand extends Command
     private function validateProviderCredentials(string $connector, array $credentials): array
     {
         try {
+            $mode = $this->option('mode');
+
             return match ($connector) {
                 'slack' => $this->validateSlackCredentials($credentials),
                 'telegram' => $this->validateTelegramCredentials($credentials),
+                'discord' => $this->validateDiscordCredentials($credentials, $mode),
+                'whatsapp' => $this->validateWhatsAppCredentials($credentials),
                 default => ['valid' => true, 'error' => null, 'details' => 'Validation skipped', 'suggested_name' => null],
             };
         } catch (\Throwable $e) {
@@ -530,6 +685,72 @@ class AgentInstallCommand extends Command
 
     /**
      * @param  array<string, string>  $credentials
+     * @return array{valid: bool, error: ?string, details: ?string, suggested_name: ?string}
+     */
+    private function validateDiscordCredentials(array $credentials, string $mode): array
+    {
+        $validator = new DiscordCredentialValidator();
+        $result = $validator->validate($credentials, $mode);
+
+        if (! $result->isValid()) {
+            $errors = $result->getErrors();
+
+            return [
+                'valid' => false,
+                'error' => implode(', ', $errors),
+                'details' => null,
+                'suggested_name' => null,
+            ];
+        }
+
+        $metadata = $result->getMetadata();
+
+        return [
+            'valid' => true,
+            'error' => null,
+            'details' => sprintf('Bot: %s (%s)', $metadata['bot_username'] ?? 'unknown', $metadata['bot_id'] ?? 'unknown'),
+            'suggested_name' => $metadata['bot_username'] ?? null,
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $credentials
+     * @return array{valid: bool, error: ?string, details: ?string, suggested_name: ?string}
+     */
+    private function validateWhatsAppCredentials(array $credentials): array
+    {
+        // WhatsApp is webhook-only, so we always validate for webhook mode
+        $validator = new WhatsAppCredentialValidator();
+
+        // Add webhook_url from the domain we'd generate
+        $domain = config('app.url', 'https://example.com');
+        $credentials['webhook_url'] = $domain.'/messenger/webhooks/whatsapp/pending';
+
+        $result = $validator->validate($credentials, ConnectorAccount::MODE_WEBHOOK);
+
+        if (! $result->isValid()) {
+            $errors = $result->getErrors();
+
+            return [
+                'valid' => false,
+                'error' => implode(', ', $errors),
+                'details' => null,
+                'suggested_name' => null,
+            ];
+        }
+
+        $metadata = $result->getMetadata();
+
+        return [
+            'valid' => true,
+            'error' => null,
+            'details' => sprintf('Phone: %s (%s)', $metadata['display_phone_number'] ?? 'unknown', $metadata['verified_name'] ?? 'unknown'),
+            'suggested_name' => $metadata['verified_name'] ?? null,
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $credentials
      */
     private function generateAccountKey(string $connector, array $credentials): string
     {
@@ -537,6 +758,8 @@ class AgentInstallCommand extends Command
         $identifier = match ($connector) {
             'slack' => $credentials['bot_token'] ?? '',
             'telegram' => $credentials['bot_token'] ?? '',
+            'discord' => $credentials['bot_token'] ?? '',
+            'whatsapp' => $credentials['phone_number_id'] ?? '',
             default => Str::random(32),
         };
 

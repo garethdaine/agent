@@ -127,6 +127,15 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'messenger' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/messenger.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'tap' => [App\Messenger\Observability\CorrelationLogTap::class],
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];

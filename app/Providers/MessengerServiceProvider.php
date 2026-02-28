@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use App\Messenger\Gateway\MessengerGatewayManager;
 use App\Support\Messenger\ConnectorManager;
 use App\Support\Messenger\IdempotencyKeyGenerator;
 use Illuminate\Support\ServiceProvider;
+use React\EventLoop\Loop;
+use React\EventLoop\LoopInterface;
 
 class MessengerServiceProvider extends ServiceProvider
 {
@@ -31,6 +34,18 @@ class MessengerServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(IdempotencyKeyGenerator::class);
+
+        // Register ReactPHP EventLoop for gateway command
+        $this->app->singleton(LoopInterface::class, function () {
+            return Loop::get();
+        });
+
+        // Register MessengerGatewayManager for gateway command
+        $this->app->singleton(MessengerGatewayManager::class, function ($app) {
+            return new MessengerGatewayManager(
+                $app->make(LoopInterface::class)
+            );
+        });
     }
 
     /**

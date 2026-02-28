@@ -75,8 +75,8 @@ return [
                 'dedupe_ttl_seconds' => 3600,
             ],
             'rate_limit' => [
-                'requests_per_second' => 1,
-                'burst_limit' => 5,
+                'requests_per_second' => 30,
+                'burst_limit' => 30,
                 'backoff_base_seconds' => 1,
                 'backoff_multiplier' => 2,
                 'backoff_max_seconds' => 300,
@@ -99,8 +99,8 @@ return [
                 'window_seconds' => 300,
             ],
             'rate_limit' => [
-                'requests_per_second' => 1,
-                'burst_limit' => 5,
+                'requests_per_second' => 50,
+                'burst_limit' => 100,
                 'backoff_base_seconds' => 1,
                 'backoff_multiplier' => 2,
                 'backoff_max_seconds' => 300,
@@ -123,8 +123,8 @@ return [
                 'dedupe_ttl_seconds' => 3600,
             ],
             'rate_limit' => [
-                'requests_per_second' => 1,
-                'burst_limit' => 5,
+                'requests_per_second' => 80,
+                'burst_limit' => 200,
                 'backoff_base_seconds' => 1,
                 'backoff_multiplier' => 2,
                 'backoff_max_seconds' => 300,
@@ -199,6 +199,60 @@ return [
     'account_link' => [
         'token_ttl_minutes' => env('MESSENGER_LINK_TOKEN_TTL', 15),
         'use_redis_primary' => env('MESSENGER_LINK_USE_REDIS', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Gateway Runtime Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the messenger gateway supervisor process that manages
+    | local-mode workers (WebSocket, long-polling connections).
+    |
+    */
+
+    'gateway' => [
+        // Maximum time to wait for workers to drain during shutdown
+        'shutdown_timeout' => env('MESSENGER_GATEWAY_SHUTDOWN_TIMEOUT', 30),
+
+        // Interval between health check updates to database
+        'health_check_interval' => env('MESSENGER_GATEWAY_HEALTH_INTERVAL', 10),
+
+        // Interval for checking credential changes
+        'credential_poll_interval' => env('MESSENGER_GATEWAY_CREDENTIAL_POLL', 30),
+
+        // Reconnection backoff settings
+        'reconnect' => [
+            // Initial delay before first reconnection attempt
+            'initial_delay' => env('MESSENGER_GATEWAY_RECONNECT_INITIAL', 1),
+
+            // Maximum delay between reconnection attempts (5 minutes)
+            'max_delay' => env('MESSENGER_GATEWAY_RECONNECT_MAX', 300),
+
+            // Percentage of jitter to apply to delays (prevents thundering herd)
+            'jitter_percent' => env('MESSENGER_GATEWAY_RECONNECT_JITTER', 20),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Circuit Breaker Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Settings for the per-connector circuit breaker that protects outbound
+    | API calls from cascading failures.
+    |
+    */
+
+    'circuit_breaker' => [
+        // Number of consecutive failures before opening the circuit
+        'failure_threshold' => env('MESSENGER_CIRCUIT_FAILURE_THRESHOLD', 5),
+
+        // Seconds to wait before attempting recovery (half-open state)
+        'cooldown_seconds' => env('MESSENGER_CIRCUIT_COOLDOWN', 60),
+
+        // Number of test requests allowed in half-open state
+        'half_open_requests' => env('MESSENGER_CIRCUIT_HALF_OPEN', 3),
     ],
 
 ];

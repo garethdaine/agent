@@ -479,6 +479,21 @@ The rollout must preserve existing run safety, queue stability, and auditability
   - Browser-verified on `https://agent.test/agent/monitor`.
   - Screenshot: `tmp/monitor-cards-pt0-removed.png`.
 
+## 2026-02-27 - Planning Panel Top Spacing
+
+- [x] Identify where the plan panel content sits too close to the planning card header border.
+- [x] Add top margin above the plan content container in planning phase.
+- [x] Run frontend build verification.
+
+### Review
+
+- Root cause:
+  - `PlanViewer` was rendered directly inside `CardContent` (which defaults to `pt-0`), causing the plan container to sit flush against the header divider.
+- Fix:
+  - Wrapped `PlanViewer` in a `div.mt-4` inside the planning phase card.
+- Verification evidence:
+  - `npm run build` (client + SSR) passed.
+
 ### Review (Structured Output Hardening)
 
 - User concern: prior issues existed with structured JSON streams from CLI output.

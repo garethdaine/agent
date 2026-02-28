@@ -244,7 +244,7 @@ class ConnectorCredentialManager
                 'label' => 'Slack',
                 'description' => 'Connect a Slack app with bot token and signing secret.',
                 'default_connection_mode' => ConnectorAccount::MODE_WEBHOOK,
-                'supported_connection_modes' => [ConnectorAccount::MODE_WEBHOOK],
+                'supported_connection_modes' => [ConnectorAccount::MODE_WEBHOOK, ConnectorAccount::MODE_LOCAL],
                 'credential_fields' => [
                     [
                         'key' => 'bot_token',
@@ -259,6 +259,7 @@ class ConnectorCredentialManager
                         'label' => 'Signing Secret',
                         'type' => 'password',
                         'required' => true,
+                        'required_modes' => [ConnectorAccount::MODE_WEBHOOK],
                         'secret' => true,
                     ],
                     [
@@ -271,9 +272,10 @@ class ConnectorCredentialManager
                     ],
                     [
                         'key' => 'app_token',
-                        'label' => 'App Token (optional)',
+                        'label' => 'App Token',
                         'type' => 'password',
-                        'required' => false,
+                        'required' => true,
+                        'required_modes' => [ConnectorAccount::MODE_LOCAL],
                         'secret' => true,
                         'placeholder' => 'xapp-...',
                     ],
@@ -284,7 +286,7 @@ class ConnectorCredentialManager
                 'label' => 'Telegram',
                 'description' => 'Connect a Telegram bot token and webhook secret token.',
                 'default_connection_mode' => ConnectorAccount::MODE_WEBHOOK,
-                'supported_connection_modes' => [ConnectorAccount::MODE_WEBHOOK],
+                'supported_connection_modes' => [ConnectorAccount::MODE_WEBHOOK, ConnectorAccount::MODE_LOCAL],
                 'credential_fields' => [
                     [
                         'key' => 'bot_token',
@@ -308,7 +310,7 @@ class ConnectorCredentialManager
                 'label' => 'Discord',
                 'description' => 'Connect Discord interaction credentials (phase B provider).',
                 'default_connection_mode' => ConnectorAccount::MODE_WEBHOOK,
-                'supported_connection_modes' => [ConnectorAccount::MODE_WEBHOOK],
+                'supported_connection_modes' => [ConnectorAccount::MODE_WEBHOOK, ConnectorAccount::MODE_LOCAL],
                 'credential_fields' => [
                     [
                         'key' => 'application_id',
@@ -329,6 +331,7 @@ class ConnectorCredentialManager
                         'label' => 'Public Key',
                         'type' => 'password',
                         'required' => true,
+                        'required_modes' => [ConnectorAccount::MODE_WEBHOOK],
                         'secret' => true,
                     ],
                 ],

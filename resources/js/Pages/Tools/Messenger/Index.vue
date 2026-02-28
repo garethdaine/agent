@@ -15,8 +15,8 @@ import TableBody from '@/Components/ui/TableBody.vue';
 import TableRow from '@/Components/ui/TableRow.vue';
 import TableHead from '@/Components/ui/TableHead.vue';
 import TableCell from '@/Components/ui/TableCell.vue';
-import { Head } from '@inertiajs/vue3';
-import { RefreshCw } from 'lucide-vue-next';
+import { Head, Link } from '@inertiajs/vue3';
+import { RefreshCw, AlertCircle } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, ref, watch } from 'vue';
 
@@ -41,6 +41,7 @@ const health = ref({
     connectors: [],
     queue: { backlog_size: 0 },
     recent_error_rate: 0,
+    dead_letter_count: 0,
 });
 
 const metrics = ref({
@@ -101,6 +102,7 @@ const connectorCount = computed(() => connectors.value.length);
 const connectedCount = computed(() => connectors.value.filter((item) => item.status === 'connected').length);
 const queueBacklog = computed(() => Number(health.value?.queue?.backlog_size ?? 0));
 const recentErrorRate = computed(() => Number(health.value?.recent_error_rate ?? 0));
+const deadLetterCount = computed(() => Number(health.value?.dead_letter_count ?? 0));
 
 const inboundRows = computed(() => Object.entries(metrics.value?.inbound_messages ?? {}));
 const webhookFailureRows = computed(() => Object.entries(metrics.value?.webhook_failures ?? {}));
@@ -414,6 +416,21 @@ const getConnectorStatusVariant = (status) => {
     return 'outline';
 };
 
+const getConnectorRuntimeStateClass = (runtimeState) => {
+    switch (runtimeState) {
+        case 'connected':
+            return 'status-connected';
+        case 'reconnecting':
+            return 'status-reconnecting';
+        case 'disconnected':
+            return 'status-disconnected';
+        case 'error':
+            return 'status-error';
+        default:
+            return 'status-unknown';
+    }
+};
+
 watch(
     () => connectForm.value.provider,
     (providerKey) => {
@@ -447,10 +464,26 @@ onMounted(async () => {
         <template #header>
             <div class="flex items-center justify-between gap-3">
                 <h2 class="text-xl font-semibold leading-tight text-foreground">Messenger Control Plane</h2>
-                <Button variant="outline" size="sm" :disabled="loading || refreshing" @click="refreshAll">
-                    <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': refreshing }" />
-                    {{ refreshing ? 'Refreshing' : 'Refresh' }}
-                </Button>
+                <div class="flex items-center gap-2">
+                    <Link :href="route('messenger.dead-letters.index')">
+                        <Button variant="outline" size="sm">
+                            <AlertCircle class="h-4 w-4 mr-1" />
+                            Failed Messages
+                            <Badge v-if="deadLetterCount > 0" variant="destructive" class="ml-2">
+                                {{ deadLetterCount }}
+                            </Badge>
+                        </Button>
+                    </Link>
+                    <Link :href="route('messenger.health.dashboard')">
+                        <Button variant="outline" size="sm">
+                            Health
+                        </Button>
+                    </Link>
+                    <Button variant="outline" size="sm" :disabled="loading || refreshing" @click="refreshAll">
+                        <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': refreshing }" />
+                        {{ refreshing ? 'Refreshing' : 'Refresh' }}
+                    </Button>
+                </div>
             </div>
         </template>
 
@@ -615,9 +648,14 @@ onMounted(async () => {
                                         <TableCell class="text-muted-foreground">{{ connector.provider }}</TableCell>
                                         <TableCell class="text-muted-foreground">{{ connector.connection_mode }}</TableCell>
                                         <TableCell>
-                                            <Badge :variant="getConnectorStatusVariant(connector.status)" class="uppercase">
-                                                {{ connector.status }}
-                                            </Badge>
+                                            <div class="flex items-center gap-2">
+                                                <span
+                                                    class="status-dot"
+                                                    :class="getConnectorRuntimeStateClass(connector.runtime_state)"
+                                                    :title="connector.runtime_error_message"
+                                                ></span>
+                                                <span class="capitalize">{{ connector.runtime_state || connector.status }}</span>
+                                            </div>
                                         </TableCell>
                                         <TableCell class="text-muted-foreground">{{ connector.sessions_count ?? 0 }}</TableCell>
                                         <TableCell>
@@ -746,3 +784,43 @@ onMounted(async () => {
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.status-connected {
+    background: #22c55e;
+}
+
+.status-reconnecting {
+    background: #eab308;
+    animation: pulse 1s infinite;
+}
+
+.status-disconnected {
+    background: #9ca3af;
+}
+
+.status-error {
+    background: #ef4444;
+}
+
+.status-unknown {
+    background: #6b7280;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+</style>

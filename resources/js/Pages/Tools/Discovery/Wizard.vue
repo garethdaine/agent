@@ -1545,15 +1545,17 @@ onBeforeUnmount(() => {
                                         </div>
                                     </CardHeader>
                                     <CardContent>
-                                        <PlanViewer
-                                            :plan="session.plan_json || {}"
-                                            :busy="busy || actionState.exportPlan || actionState.approvePlan"
-                                            :generating="isPlanGenerating"
-                                            :revising="isPlanRevising"
-                                            :revision-submitting="actionState.revisePlan"
-                                            @revise="requestRevision"
-                                            @export="exportPlan"
-                                        />
+                                        <div class="mt-4">
+                                            <PlanViewer
+                                                :plan="session.plan_json || {}"
+                                                :busy="busy || actionState.exportPlan || actionState.approvePlan"
+                                                :generating="isPlanGenerating"
+                                                :revising="isPlanRevising"
+                                                :revision-submitting="actionState.revisePlan"
+                                                @revise="requestRevision"
+                                                @export="exportPlan"
+                                            />
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </template>

@@ -180,6 +180,14 @@ Use this file to capture correction-driven lessons.
 
 ## Entry
 - Date: 2026-02-27
+- Source (job run id / interrogation session id): Discovery planning UI follow-up
+- Correction: User requested extra space above the Plan container in the planning stage.
+- Pattern: Card sections using shared `CardContent` with default `pt-0` can make nested panels feel visually cramped under header dividers.
+- Prevention rule: For header/body card layouts, explicitly add top spacing to the first body surface when `CardContent` uses top-padding reset.
+- Applied in: `resources/js/Pages/Tools/Discovery/Wizard.vue`
+
+## Entry
+- Date: 2026-02-27
 - Source (job run id / interrogation session id): User correction on structured CLI output reliability
 - Correction: User reminded that structured JSON output had prior reliability issues and requested careful handling.
 - Pattern: Forcing structured parsing as a hard dependency can regress detection when CLI streams include mixed/non-JSON lines.

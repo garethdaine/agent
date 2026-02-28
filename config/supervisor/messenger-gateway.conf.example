@@ -1,0 +1,111 @@
+; =============================================================================
+; Supervisor Configuration for Messenger Gateway
+; =============================================================================
+;
+; This configuration file is an example for running the messenger gateway
+; process under supervisor in production environments.
+;
+; Installation:
+; 1. Copy this file to /etc/supervisor/conf.d/messenger-gateway.conf
+; 2. Update the paths to match your application installation
+; 3. Update the user to match your web server user
+; 4. Run: supervisorctl reread && supervisorctl update
+;
+; Usage:
+; - Start: supervisorctl start messenger-gateway
+; - Stop: supervisorctl stop messenger-gateway (sends SIGTERM, waits 35s)
+; - Restart: supervisorctl restart messenger-gateway
+; - Status: supervisorctl status messenger-gateway
+;
+; =============================================================================
+
+[program:messenger-gateway]
+; Process name for identification
+process_name=%(program_name)s
+
+; The command to run
+; Update /path/to/artisan to your application's artisan path
+command=php /path/to/artisan agent:messenger-gateway
+
+; Working directory (optional, useful for relative paths)
+; directory=/path/to/application
+
+; Auto-start when supervisor starts
+autostart=true
+
+; Auto-restart if the process exits
+; Options: true, false, unexpected
+autorestart=true
+
+; Number of seconds to wait for process to start
+startsecs=5
+
+; Number of retries before giving up
+startretries=3
+
+; User to run the process as
+; Should match your web server user (www-data, nginx, etc.)
+user=www-data
+
+; Number of processes to run (usually 1 for the gateway)
+numprocs=1
+
+; Redirect stderr to stdout for unified logging
+redirect_stderr=true
+
+; Log file location
+stdout_logfile=/var/log/messenger-gateway.log
+
+; Maximum log file size before rotation (0 = no rotation)
+stdout_logfile_maxbytes=10MB
+
+; Number of rotated log files to keep
+stdout_logfile_backups=5
+
+; Signal to send for graceful shutdown (TERM is standard)
+stopsignal=TERM
+
+; Seconds to wait for graceful shutdown before SIGKILL
+; Should be slightly longer than the gateway's shutdown_timeout (default 30s)
+stopwaitsecs=35
+
+; Send SIGKILL to child processes when stopping
+killasgroup=true
+
+; Send signals to the entire process group
+stopasgroup=true
+
+; Priority for start/stop ordering (lower = earlier start, later stop)
+priority=100
+
+; Environment variables (optional)
+; environment=APP_ENV="production",LOG_CHANNEL="stack"
+
+; =============================================================================
+; Alternative: Systemd Service Unit (for systems using systemd)
+; =============================================================================
+;
+; If you prefer systemd over supervisor, create:
+; /etc/systemd/system/messenger-gateway.service
+;
+; [Unit]
+; Description=Messenger Gateway Service
+; After=network.target
+;
+; [Service]
+; Type=simple
+; User=www-data
+; WorkingDirectory=/path/to/application
+; ExecStart=/usr/bin/php /path/to/artisan agent:messenger-gateway
+; Restart=always
+; RestartSec=5
+; TimeoutStopSec=35
+;
+; [Install]
+; WantedBy=multi-user.target
+;
+; Then run:
+; systemctl daemon-reload
+; systemctl enable messenger-gateway
+; systemctl start messenger-gateway
+; =============================================================================

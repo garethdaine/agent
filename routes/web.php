@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Messenger\AccountLinkController;
+use App\Http\Controllers\Messenger\DeadLetterController;
+use App\Http\Controllers\Messenger\DiscordWebhookController;
+use App\Http\Controllers\Messenger\MessengerHealthController;
+use App\Http\Controllers\Messenger\WhatsAppWebhookController;
 use App\Http\Controllers\TaskProviderOAuthController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +22,21 @@ Route::get('/', function () {
 // Messenger account linking routes
 Route::get('/messenger/link/{token}', [AccountLinkController::class, 'show'])
     ->name('messenger.link.show');
+
+// Discord webhook endpoint (signature verified in controller)
+Route::post('/messenger/webhooks/discord/{account}', [DiscordWebhookController::class, 'handle'])
+    ->name('messenger.webhooks.discord');
+
+// WhatsApp webhook endpoints (Cloud API v18+)
+// GET for verification (hub.mode=subscribe), POST for messages (HMAC-SHA256 verified in controller)
+Route::get('/messenger/webhooks/whatsapp/{account}', [WhatsAppWebhookController::class, 'verify'])
+    ->name('messenger.webhooks.whatsapp.verify');
+Route::post('/messenger/webhooks/whatsapp/{account}', [WhatsAppWebhookController::class, 'handle'])
+    ->name('messenger.webhooks.whatsapp');
+
+// Public messenger health endpoint for monitoring tools (no auth required)
+Route::get('/messenger/health', [MessengerHealthController::class, 'index'])
+    ->name('messenger.health');
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/messenger/link/{token}', [AccountLinkController::class, 'store'])
@@ -109,6 +128,22 @@ Route::middleware([
     Route::get('/tools/messenger', function () {
         return Inertia::render('Tools/Messenger/Index');
     })->name('tools.messenger.index');
+
+    // Messenger health dashboard (authenticated)
+    Route::get('/messenger/health/dashboard', [MessengerHealthController::class, 'dashboard'])
+        ->name('messenger.health.dashboard');
+
+    // Messenger dead-letter queue routes
+    Route::get('/messenger/dead-letters', [DeadLetterController::class, 'index'])
+        ->name('messenger.dead-letters.index');
+    Route::get('/messenger/dead-letters/{id}', [DeadLetterController::class, 'show'])
+        ->name('messenger.dead-letters.show');
+    Route::post('/messenger/dead-letters/{id}/retry', [DeadLetterController::class, 'retry'])
+        ->name('messenger.dead-letters.retry');
+    Route::post('/messenger/dead-letters/retry-bulk', [DeadLetterController::class, 'retryBulk'])
+        ->name('messenger.dead-letters.retry-bulk');
+    Route::delete('/messenger/dead-letters/{id}', [DeadLetterController::class, 'destroy'])
+        ->name('messenger.dead-letters.destroy');
 
     Route::get('/tools/discovery/{id}', function (int $id) {
         return Inertia::render('Tools/Discovery/Wizard', [

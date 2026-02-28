@@ -2,21 +2,16 @@
 
 namespace App\Support\Messenger;
 
+use App\Messenger\Exceptions\CircuitOpenException;
+use App\Messenger\Reliability\CircuitBreaker;
 use App\Models\ConnectorAccount;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class MessengerHttpClient
 {
-    private const CIRCUIT_BREAKER_KEY_PREFIX = 'messenger:circuit_breaker:';
-
-    private const CIRCUIT_STATE_CLOSED = 'closed';
-
-    private const CIRCUIT_STATE_OPEN = 'open';
-
-    private const CIRCUIT_STATE_HALF_OPEN = 'half_open';
+    private ?CircuitBreaker $circuitBreaker = null;
 
     public function __construct(
         private readonly ConnectorAccount $account,
@@ -31,7 +26,12 @@ class MessengerHttpClient
      */
     public function post(string $url, array $data = [], array $headers = []): array
     {
-        if ($this->isCircuitOpen()) {
+        $circuit = $this->getCircuitBreaker();
+
+        // Check circuit state before making request
+        try {
+            $circuit->canRequest();
+        } catch (CircuitOpenException $e) {
             Log::warning('[MessengerHttpClient] Circuit breaker open, rejecting request', [
                 'account_id' => $this->account->id,
                 'provider' => $this->account->provider,
@@ -59,7 +59,7 @@ class MessengerHttpClient
                 $lastResponse = $response;
 
                 if ($response->successful()) {
-                    $this->recordSuccess();
+                    $circuit->recordSuccess();
 
                     return [
                         'success' => true,
@@ -88,7 +88,7 @@ class MessengerHttpClient
 
                 // Handle server errors (5xx) with retry
                 if ($response->serverError()) {
-                    $this->recordFailure();
+                    $circuit->recordFailure();
                     $lastError = sprintf('Server error: %d', $response->status());
 
                     if ($attempt < $maxAttempts) {
@@ -110,7 +110,7 @@ class MessengerHttpClient
                     ];
                 }
             } catch (\Throwable $e) {
-                $this->recordFailure();
+                $circuit->recordFailure();
                 $lastError = $e->getMessage();
 
                 Log::error('[MessengerHttpClient] Request exception', [
@@ -142,60 +142,25 @@ class MessengerHttpClient
      */
     public function isCircuitOpen(): bool
     {
-        $state = Cache::get($this->getCircuitBreakerKey());
-
-        if ($state === self::CIRCUIT_STATE_OPEN) {
-            // Check if cooldown period has passed
-            $cooldownKey = $this->getCircuitBreakerKey().':cooldown_until';
-            $cooldownUntil = Cache::get($cooldownKey);
-
-            if ($cooldownUntil && now()->timestamp < $cooldownUntil) {
-                return true;
-            }
-
-            // Transition to half-open state
-            Cache::put($this->getCircuitBreakerKey(), self::CIRCUIT_STATE_HALF_OPEN, 300);
+        try {
+            $this->getCircuitBreaker()->canRequest();
 
             return false;
+        } catch (CircuitOpenException) {
+            return true;
         }
-
-        return false;
     }
 
     /**
-     * Record a successful request (resets circuit breaker).
+     * Get the circuit breaker for this connector.
      */
-    private function recordSuccess(): void
+    private function getCircuitBreaker(): CircuitBreaker
     {
-        Cache::forget($this->getCircuitBreakerKey());
-        Cache::forget($this->getCircuitBreakerKey().':failures');
-        Cache::forget($this->getCircuitBreakerKey().':cooldown_until');
-    }
-
-    /**
-     * Record a failed request (may trip circuit breaker).
-     */
-    private function recordFailure(): void
-    {
-        $config = $this->getRateLimitConfig();
-        $threshold = $config['circuit_breaker_threshold'] ?? 10;
-        $cooldownSeconds = $config['circuit_breaker_cooldown_seconds'] ?? 60;
-
-        $failuresKey = $this->getCircuitBreakerKey().':failures';
-        $failures = (int) Cache::get($failuresKey, 0) + 1;
-        Cache::put($failuresKey, $failures, $cooldownSeconds * 2);
-
-        if ($failures >= $threshold) {
-            Log::warning('[MessengerHttpClient] Circuit breaker tripped', [
-                'account_id' => $this->account->id,
-                'provider' => $this->account->provider,
-                'failures' => $failures,
-                'threshold' => $threshold,
-            ]);
-
-            Cache::put($this->getCircuitBreakerKey(), self::CIRCUIT_STATE_OPEN, $cooldownSeconds * 2);
-            Cache::put($this->getCircuitBreakerKey().':cooldown_until', now()->timestamp + $cooldownSeconds, $cooldownSeconds * 2);
+        if ($this->circuitBreaker === null) {
+            $this->circuitBreaker = CircuitBreaker::forConnector($this->account->id);
         }
+
+        return $this->circuitBreaker;
     }
 
     /**
@@ -275,14 +240,6 @@ class MessengerHttpClient
         $jitter = mt_rand(-intval($jitterRange * 1000), intval($jitterRange * 1000)) / 1000;
 
         return max(1, intval($delay + $jitter));
-    }
-
-    /**
-     * Get the circuit breaker cache key.
-     */
-    private function getCircuitBreakerKey(): string
-    {
-        return self::CIRCUIT_BREAKER_KEY_PREFIX.$this->account->id;
     }
 
     /**

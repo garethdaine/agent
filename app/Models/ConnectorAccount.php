@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Messenger\Gateway\Enums\WorkerHealthStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -48,6 +49,8 @@ class ConnectorAccount extends Model
         return [
             'credentials' => 'encrypted:array',
             'config' => 'array',
+            'runtime_state' => WorkerHealthStatus::class,
+            'last_health_check_at' => 'datetime',
         ];
     }
 
@@ -89,5 +92,40 @@ class ConnectorAccount extends Model
     public function isLocalMode(): bool
     {
         return $this->connection_mode === self::MODE_LOCAL;
+    }
+
+    public function isWebhookMode(): bool
+    {
+        return $this->connection_mode === self::MODE_WEBHOOK;
+    }
+
+    /**
+     * Update the runtime state for this connector.
+     *
+     * Called by MessengerGatewayManager during health checks.
+     */
+    public function updateRuntimeState(WorkerHealthStatus $status, ?string $error = null): void
+    {
+        $this->update([
+            'runtime_state' => $status,
+            'last_health_check_at' => now(),
+            'runtime_error_message' => $error,
+        ]);
+    }
+
+    /**
+     * Scope to filter local-mode connectors.
+     */
+    public function scopeLocalMode(Builder $query): void
+    {
+        $query->where('connection_mode', self::MODE_LOCAL);
+    }
+
+    /**
+     * Scope to filter webhook-mode connectors.
+     */
+    public function scopeWebhookMode(Builder $query): void
+    {
+        $query->where('connection_mode', self::MODE_WEBHOOK);
     }
 }

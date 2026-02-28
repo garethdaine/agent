@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Messenger;
 use App\Http\Controllers\Controller;
 use App\Models\ChatAction;
 use App\Models\ConnectorAccount;
+use App\Models\MessengerDeadLetter;
 use App\Support\Messenger\MetricsCollector;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Queue;
@@ -24,6 +25,7 @@ class MessengerHealthController extends Controller
         $status = $this->determineOverallStatus($connectors);
         $queueBacklog = $this->getQueueBacklogSize();
         $recentErrorRate = $this->calculateRecentErrorRate();
+        $deadLetterCount = $this->getDeadLetterCount();
 
         return response()->json([
             'status' => $status,
@@ -37,6 +39,7 @@ class MessengerHealthController extends Controller
                 'backlog_size' => $queueBacklog,
             ],
             'recent_error_rate' => $recentErrorRate,
+            'dead_letter_count' => $deadLetterCount,
         ]);
     }
 
@@ -90,5 +93,10 @@ class MessengerHealthController extends Controller
         }
 
         return round(($failed / $total) * 100, 2);
+    }
+
+    private function getDeadLetterCount(): int
+    {
+        return MessengerDeadLetter::count();
     }
 }
