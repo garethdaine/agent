@@ -498,7 +498,7 @@ function onGlobalKeydown(event) {
                                 <div
                                     ref="docsContentRef"
                                     data-docs-content
-                                    class="prose prose-invert mt-8 max-w-none"
+                                    class="docs-markdown prose prose-slate mt-8 max-w-none text-foreground dark:prose-invert"
                                 >
                                     <MarkdownRenderer
                                         v-if="selectedBodyMarkdown.trim() !== ''"

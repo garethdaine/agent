@@ -69,13 +69,16 @@ const triggerLabel = computed(() => {
 });
 
 const learnMoreUrl = computed(() => {
+    const slug = String(resolvedFragment.value?.learn_more_slug ?? props.learnMoreSlug ?? '').trim();
+    if (slug !== '') {
+        return `/docs/${slug}`;
+    }
+
     if (props.learnMoreHref && props.learnMoreHref.trim() !== '') {
         return props.learnMoreHref.trim();
     }
 
-    const slug = String(resolvedFragment.value?.learn_more_slug ?? '').trim();
-
-    return slug !== '' ? `/docs/${slug}` : null;
+    return null;
 });
 
 const panelClass = computed(() => {
@@ -96,10 +99,6 @@ const canRender = computed(() => {
 
 onMounted(async () => {
     document.addEventListener('pointerdown', onPointerDownOutside);
-
-    if (canRender.value) {
-        return;
-    }
 
     const key = String(props.uiKey ?? '').trim();
     if (key === '') {

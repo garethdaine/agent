@@ -125,4 +125,36 @@ describe('HelpHint', () => {
         expect(tooltip).toContain('Inline helper');
         expect(tooltip).not.toContain('undefined');
     });
+
+    it('prefers registry learn_more_slug over generic learn-more-href fallback', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    data: {
+                        ui_key: 'dashboard.overview',
+                        short_text: 'Fetched helper.',
+                        long_text: null,
+                        severity: 'info',
+                        learn_more_slug: 'dashboard-overview',
+                    },
+                }),
+            })
+        );
+
+        const wrapper = mount(HelpHint, {
+            props: {
+                uiKey: 'dashboard.overview',
+                shortText: 'Inline helper',
+                learnMoreHref: '/docs/overview',
+            },
+        });
+
+        await flushPromises();
+        await wrapper.get('button').trigger('click');
+
+        const learnMoreLink = wrapper.get('[role="tooltip"] a');
+        expect(learnMoreLink.attributes('href')).toBe('/docs/dashboard-overview');
+    });
 });

@@ -1,6 +1,7 @@
 - ui_key: dashboard.load_time
   short_text: Shows recent dashboard load-time trend.
   severity: warning
+  learn_more_slug: dashboard-overview
   links:
     - label: Laravel Docs
       url: https://laravel.com/docs/12.x
