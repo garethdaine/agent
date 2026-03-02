@@ -1651,6 +1651,15 @@ onBeforeUnmount(() => {
                             />
 
                             <template v-if="session.phase === PHASE.INTERROGATION">
+                                <Card
+                                    v-if="awaitingNextQuestion"
+                                    class="border-primary/30 bg-primary/5 px-4 py-3"
+                                >
+                                    <div class="flex items-center gap-2 text-sm text-primary">
+                                        <Spinner size="sm" />
+                                        <span>Answer submitted. Generating next question...</span>
+                                    </div>
+                                </Card>
                                 <StatusCard
                                     v-if="awaitingNextQuestion || !activeQuestion"
                                     :session="session"
@@ -1667,15 +1676,6 @@ onBeforeUnmount(() => {
                                     </p>
                                 </Card>
                                 <QuestionRenderer v-if="!awaitingNextQuestion" :question="activeQuestion" />
-                                <Card
-                                    v-if="awaitingNextQuestion"
-                                    class="border-primary/30 bg-primary/5 px-4 py-3"
-                                >
-                                    <div class="flex items-center gap-2 text-sm text-primary">
-                                        <Spinner size="sm" />
-                                        <span>Answer submitted. Generating next question...</span>
-                                    </div>
-                                </Card>
                                 <AnswerInput
                                     v-if="!awaitingNextQuestion"
                                     :question="activeQuestion"
