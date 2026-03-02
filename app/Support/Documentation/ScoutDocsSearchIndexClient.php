@@ -75,6 +75,8 @@ class ScoutDocsSearchIndexClient implements DocsSearchIndexClient
                     'snippet' => Str::limit($entry->summary ?: $entry->body_markdown, 180),
                     'domain' => $entry->domain,
                     'section' => $entry->section,
+                    'slug' => $entry->slug,
+                    'url' => '/docs/'.$entry->slug,
                     'route_names' => $routeNames,
                     'updated_at' => $entry->updated_at?->toIso8601String(),
                     '__order' => $index,
@@ -92,11 +94,17 @@ class ScoutDocsSearchIndexClient implements DocsSearchIndexClient
             ->get()
             ->values()
             ->map(function (DocumentationFragment $fragment, int $index): array {
+                $fragment->loadMissing('learnMoreEntry:id,slug');
+
+                $learnMoreSlug = $fragment->learnMoreEntry?->slug;
+
                 return [
                     'title' => $fragment->ui_key,
                     'snippet' => Str::limit($fragment->short_text ?: (string) $fragment->long_text, 180),
                     'domain' => 'tooltip',
                     'section' => $this->sectionFromUiKey($fragment->ui_key),
+                    'slug' => $learnMoreSlug,
+                    'url' => is_string($learnMoreSlug) && $learnMoreSlug !== '' ? '/docs/'.$learnMoreSlug : null,
                     'route_names' => is_array($fragment->route_names) ? $fragment->route_names : [],
                     'updated_at' => $fragment->updated_at?->toIso8601String(),
                     '__order' => $index,
@@ -141,6 +149,8 @@ class ScoutDocsSearchIndexClient implements DocsSearchIndexClient
                     'snippet' => Str::limit($artifact->description ?: (string) $artifact->summary, 180),
                     'domain' => 'api_doc',
                     'section' => $artifact->section,
+                    'slug' => $artifact->entry?->slug,
+                    'url' => $artifact->entry?->slug ? '/docs/'.$artifact->entry->slug : null,
                     'route_names' => $routeNames,
                     'updated_at' => $artifact->updated_at?->toIso8601String(),
                     '__order' => $index,

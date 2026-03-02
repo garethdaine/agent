@@ -95,6 +95,8 @@ class DocsSearchServiceTest extends TestCase
             'snippet',
             'domain',
             'section',
+            'slug',
+            'url',
             'route_affinity',
             'updated_at',
         ], array_keys($results[0]));

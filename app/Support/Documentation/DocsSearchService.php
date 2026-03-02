@@ -15,7 +15,16 @@ class DocsSearchService
     ) {}
 
     /**
-     * @return array<int, array{title: string, snippet: string, domain: string, section: string|null, route_affinity: bool, updated_at: string|null}>
+     * @return array<int, array{
+     *   title: string,
+     *   snippet: string,
+     *   domain: string,
+     *   section: string|null,
+     *   slug: string|null,
+     *   url: string|null,
+     *   route_affinity: bool,
+     *   updated_at: string|null
+     * }>
      */
     public function search(string $query, ?string $domain, ?string $section, ?string $routeName, int $limit = 20): array
     {
@@ -58,6 +67,8 @@ class DocsSearchService
                     'snippet' => (string) ($row['snippet'] ?? ''),
                     'domain' => (string) ($row['domain'] ?? ''),
                     'section' => isset($row['section']) && $row['section'] !== '' ? (string) $row['section'] : null,
+                    'slug' => isset($row['slug']) && is_string($row['slug']) && trim($row['slug']) !== '' ? trim((string) $row['slug']) : null,
+                    'url' => isset($row['url']) && is_string($row['url']) && trim($row['url']) !== '' ? trim((string) $row['url']) : null,
                     'route_affinity' => $routeAffinity,
                     'updated_at' => isset($row['updated_at']) ? (string) $row['updated_at'] : null,
                     '__order' => (int) ($row['__order'] ?? $index),

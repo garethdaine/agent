@@ -6,6 +6,57 @@
 
 ## Current — Open Items
 
+### Session 16 Task 1 — Draft deterministic repo analysis tool implementation spec (Completed)
+
+Pre-Execution Goal Articulation
+
+SITUATION
+- Requirements Discovery already provides a robust wizard/state-machine/event-stream foundation across setup, discovery, interrogation, summary, planning, and build.
+- Existing discovery behavior is primarily LLM-driven during discovery/interrogation and does not provide deterministic, reproducible repository-wide analysis artifacts.
+- The requested capability is a robust codebase/repo analysis tool with task-based execution, proper planning, full-repo understanding, and report generation/storage.
+
+TASK
+- Produce an implementation-ready technical plan for a new deterministic repo-analysis tool integrated into Agent’s existing architecture.
+- Align proposed design with existing conventions: queue jobs, phase transitions, event streaming, wizard UX, exports, and policy enforcement.
+- Define concrete scaffolding for schema, routes, controllers, services, jobs, artifacts, reports, and test strategy.
+
+ACTION
+- [x] Inspect existing discovery flow and lifecycle contracts (`InterrogationSession`, controller routes/actions, discovery/summary/build jobs, event writer, export services).
+- [x] Extract reusable patterns (state transitions, queue orchestration, websocket event flow, metadata and build-style task orchestration).
+- [x] Draft implementation-ready spec in `docs/plans/repo-analysis-tool.md` with:
+  - [x] deterministic architecture and reproducibility guarantees,
+  - [x] schema/model design,
+  - [x] API surface and wizard phase mapping,
+  - [x] queue/jobs/services scaffolding,
+  - [x] report generation/storage contracts,
+  - [x] verification/testing and rollout plan.
+
+RESULT
+- Completion is proven by a committed plan document that can be executed directly by engineering to implement the new repo-analysis capability with deterministic behavior and testable acceptance criteria.
+
+Assumptions and scope boundaries
+- Assumption: repo-analysis should be integrated as a new tool that reuses existing platform primitives rather than replacing Requirements Discovery.
+- Assumption: deterministic analyzers should be first-class, with LLM usage optional and downstream of locked deterministic artifacts.
+- Scope boundary: this task produces architecture/specification only (no runtime feature implementation in this task).
+
+Failure modes to guard
+- Malicious-caller mode: path traversal, hidden-file secret leakage, and unbounded scanning must be blocked via strict path policy and configurable excludes/limits.
+- Tired-maintainer mode: partial scans, non-reproducible outputs, and unclear failure handling must be surfaced by deterministic coverage gates and explicit task-level evidence.
+
+Review
+- [x] Evidence summary with exact files produced.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Added implementation plan: `docs/plans/repo-analysis-tool.md`.
+  - Plan includes concrete class/file scaffolding, API contracts, state machine, job orchestration, artifact schema, report formats, and rollout gates.
+- Conditions where this works:
+  - Existing interrogation queue/event architecture remains available for reuse.
+  - Path and policy validation continue to enforce allowed working directories and bounded execution.
+- Explicit non-goals / limitations:
+  - No migrations/models/controllers/jobs are implemented in this task.
+  - No frontend pages/components are implemented in this task.
+
 ### Session 15 Task 12 — Wire shared sync automation for pre-commit and deploy enforcement (Completed)
 
 Pre-Execution Goal Articulation

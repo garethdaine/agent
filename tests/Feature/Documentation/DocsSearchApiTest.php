@@ -29,6 +29,8 @@ class DocsSearchApiTest extends TestCase
                     'snippet' => 'Create and manage scheduled agent jobs.',
                     'domain' => 'product_doc',
                     'section' => 'general',
+                    'slug' => 'agent-jobs-overview',
+                    'url' => '/docs/agent-jobs-overview',
                     'route_affinity' => true,
                     'updated_at' => '2026-03-02T12:00:00Z',
                 ],
@@ -44,6 +46,8 @@ class DocsSearchApiTest extends TestCase
             ->assertJsonPath('data.0.snippet', 'Create and manage scheduled agent jobs.')
             ->assertJsonPath('data.0.domain', 'product_doc')
             ->assertJsonPath('data.0.section', 'general')
+            ->assertJsonPath('data.0.slug', 'agent-jobs-overview')
+            ->assertJsonPath('data.0.url', '/docs/agent-jobs-overview')
             ->assertJsonPath('data.0.route_affinity', true)
             ->assertJsonPath('data.0.updated_at', '2026-03-02T12:00:00Z');
     }
