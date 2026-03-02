@@ -130,8 +130,11 @@ const statusLabel = computed(() => humanizeDisplayValue(props.session?.status ??
                     :key="`${activity.sequence}-${activity.message}`"
                     class="rounded-md border border-primary/20 bg-card/70 px-2.5 py-1.5"
                 >
-                    <div class="flex items-center justify-between gap-2">
-                        <p class="text-xs text-foreground">{{ activity.message }}</p>
+                    <div class="flex items-start justify-between gap-2">
+                        <MarkdownRenderer
+                            :markdown="activity.message"
+                            class="prose prose-sm max-w-none text-foreground dark:prose-invert prose-p:my-0 prose-headings:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-strong:text-foreground prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-pre:my-1 prose-pre:max-h-44 prose-pre:overflow-auto"
+                        />
                         <span v-if="activity.count > 1" class="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
                             x{{ activity.count }}
                         </span>
