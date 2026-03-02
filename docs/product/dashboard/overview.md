@@ -64,3 +64,23 @@ Use the `24h` default range to compare current failure rate against the previous
 
 - [Monitor Overview](/docs/monitor-overview)
 - [Agent Jobs Overview](/docs/jobs-overview)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `dashboard` | ok | `dashboard` | `GET` |
+
+### Referenced Settings Keys
+
+- `dashboard.default_range`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->

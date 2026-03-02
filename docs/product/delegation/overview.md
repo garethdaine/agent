@@ -47,3 +47,23 @@ Create a graph with dependent tasks, assign capabilities, run execution, and ins
 ## Related Docs
 
 - [Requirements Discovery Overview](/docs/requirements-discovery-overview)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `agent.delegation.index` | ok | `agent/delegation` | `GET` |
+
+### Referenced Settings Keys
+
+- `delegation.max_parallel_tasks`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->

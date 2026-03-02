@@ -47,3 +47,23 @@ Enable a non-critical feature in staging, validate target surface behavior, then
 ## Related Docs
 
 - [Requirements Discovery Overview](/docs/requirements-discovery-overview)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `tools.features.settings` | ok | `tools/features/settings` | `GET` |
+
+### Referenced Settings Keys
+
+- `features.flags_refresh_minutes`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->

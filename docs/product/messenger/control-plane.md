@@ -52,3 +52,23 @@ Create a connector, validate credentials, run a provider test, and verify gatewa
 ## Related Docs
 
 - [API Token and Integration Flows](/docs/api-token-integration-flows)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `tools.messenger.index` | ok | `tools/messenger` | `GET` |
+
+### Referenced Settings Keys
+
+- `messenger.health_poll_interval_seconds`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->

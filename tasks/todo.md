@@ -1101,6 +1101,39 @@ Review:
   - Validation enforcement remains limited to `docs/product/**`, `docs/api/**`, and `docs/tooltips/**`.
   - Runtime model upsert/sync remains intentionally out of scope for this task.
 
+### 2026-03-02 — Session 15 Task 2 Follow-up: Commit-Time Code-Derived Docs Generation
+
+- [x] Fix docs generation regression where `source_path` used scoped values (`product/...`, `api/...`) and runtime snapshot injection skipped real files.
+- [x] Add `docs:generate` command test coverage for snapshot block refresh + generated artifact writes.
+- [x] Wire generation output paths through config for testability and deterministic overrides.
+- [x] Run docs generation/validation/coverage/sync verification end-to-end.
+- [x] Update docs contract README with generation + hook activation guidance.
+
+Review:
+- Root cause:
+  - Generation used `File::exists($sourcePath)` directly against scoped ingestion paths (`product/...`, `api/...`), so runtime snapshot updates silently no-op’d.
+- What changed:
+  - Added `DocsGenerationService::resolveEntrySourcePath()` to map scoped source paths to configured docs roots (`documentation.paths.product`, `documentation.paths.api`).
+  - Added generation output-path config keys in `config/documentation.php` (`documentation.generation.output_paths.*`).
+  - Added `tests/Feature/Documentation/DocsGenerateCommandTest.php` to lock snapshot-update behavior and unsupported-source failure behavior.
+  - Updated `scripts/docs/sync.sh` to run `docs:generate` before `docs:validate`, `docs:coverage`, and `docs:sync`.
+  - Kept commit mode non-blocking by default (`DOCS_SYNC_STRICT_COMMIT=0`) and documented strict override (`DOCS_SYNC_STRICT_COMMIT=1`).
+  - Updated surface-link selection scoring to avoid broad index pages overriding specific surface docs in generated coverage tables.
+- Verification:
+  - `php artisan test tests/Feature/Documentation/DocsGenerateCommandTest.php tests/Integration/Documentation/DocsAutomationFlowTest.php` => passed (`6 passed, 39 assertions`).
+  - `php artisan test --filter=Documentation` => passed (`65 passed, 439 assertions`).
+  - `php artisan docs:generate --source=repo` => passed (`Files written: 3 | Snapshot files updated: 3 | API routes indexed: 158`).
+  - `php artisan docs:validate` => passed (`Validated markdown files: 17, tooltip files: 2, tooltip fragments: 14`).
+  - `php artisan docs:coverage --fail-on-missing` => passed (`Coverage: 100.00% (12/12 surfaces)`).
+  - `php artisan docs:sync --mode=commit --source=repo` => passed (`Entries: 17 | Fragments: 14 | Links: 109`).
+  - `npm run build` => passed (client + SSR).
+- Conditions for correctness:
+  - `git config core.hooksPath .githooks` must be set for plain `git commit` to run the shared pre-commit hook.
+  - Docs source-of-truth remains `docs/product/**`, `docs/api/**`, `docs/tooltips/**`; generation derives structured updates from code/routes/front matter, not free-form narrative prose.
+- Explicit non-goals:
+  - No LLM-based natural-language authoring of new long-form prose was introduced.
+  - No external search backend/bootstrap (Typesense Docker provisioning) was changed in this follow-up.
+
 ### 2026-03-02 — Session 15 Task 7: Ship Docs Center Pages and Navigation Discoverability
 
 Pre-Execution Goal Articulation (STAR):

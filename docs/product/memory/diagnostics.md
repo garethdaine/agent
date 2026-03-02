@@ -52,3 +52,23 @@ Lower retrieval limit to reduce noise, run retrieval tests, then compare answer 
 ## Related Docs
 
 - [Monitor Overview](/docs/monitor-overview)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `tools.memory.index` | ok | `tools/memory` | `GET` |
+
+### Referenced Settings Keys
+
+- `memory.retrieval_limit`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->

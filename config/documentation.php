@@ -92,6 +92,14 @@ return [
         ],
     ],
 
+    'generation' => [
+        'output_paths' => [
+            'api_route_inventory' => base_path('docs/api/reference/agent-v1-route-inventory.md'),
+            'api_surface_reference' => base_path('docs/api/reference/agent-v1-surface-reference.md'),
+            'interface_surface_coverage' => base_path('docs/product/interface/surface-coverage.md'),
+        ],
+    ],
+
     'search' => [
         'reindex_delay_seconds' => (int) env('DOCS_SEARCH_REINDEX_DELAY_SECONDS', 5),
         'freshness_target_seconds' => 60,

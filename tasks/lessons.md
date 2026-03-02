@@ -11,6 +11,14 @@ Use this file to capture correction-driven lessons.
 - Applied in:
 
 ## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User correction on docs automation expectation after Session 15 docs implementation
+- Correction: User clarified that commit-time docs flow must update detailed documentation from code/API changes, not only validate/sync existing markdown.
+- Pattern: Treating "sync" as sufficient can leave a false sense of automation when content generation and runtime contract refresh are not enforced before commit.
+- Prevention rule: For docs platform tasks, explicitly separate and implement all three layers: `generate` (code-derived artifacts/sections), `validate+coverage` (contract gates), and `sync` (runtime upsert). Verify hook wiring (`core.hooksPath`) whenever commit-time automation is required.
+- Applied in: `app/Support/Documentation/DocsGenerationService.php`, `app/Console/Commands/DocsGenerateCommand.php`, `scripts/docs/sync.sh`, `tests/Feature/Documentation/DocsGenerateCommandTest.php`, `docs/README.md`
+
+## Entry
 - Date: 2026-02-25
 - Source (job run id / interrogation session id): Interrogation session 4 / build 4
 - Correction: User reported run monitor output was still unreadable and cluttered with raw JSON fragments.

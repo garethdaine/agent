@@ -110,3 +110,43 @@ php artisan docs:coverage --fail-on-missing
 ```
 
 This command enforces strict surface coverage criteria (overview, settings detail, example, troubleshooting, tooltip links) and exits non-zero when any required coverage is missing.
+
+## Generation Command (Code-Derived Docs)
+
+Run:
+
+```bash
+php artisan docs:generate --source=repo
+```
+
+This command auto-updates detailed docs artifacts from the current codebase:
+- regenerates API route inventory from registered `/agent/api/v1` routes,
+- regenerates API surface group reference from live route registration,
+- regenerates interface surface coverage from `config/docs_coverage.php`,
+- injects or refreshes `Runtime Contract Snapshot` blocks in each docs markdown entry to reflect current route/settings/feature-flag bindings.
+
+## Commit-Time Automation
+
+The shared docs automation script runs generation + validation + sync:
+
+```bash
+scripts/docs/sync.sh --mode=commit --source=repo
+```
+
+To ensure plain `git commit` executes it, configure repository hooks once:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Default commit behavior is non-blocking on docs gate failures (warning-only) for compatibility with existing workflow. To enforce strict commit blocking, set:
+
+```bash
+export DOCS_SYNC_STRICT_COMMIT=1
+```
+
+Commit hook execution uses `QUEUE_CONNECTION=sync` by default to avoid local Redis/extension coupling for docs-sync dispatch in pre-commit contexts. Override with:
+
+```bash
+export DOCS_SYNC_QUEUE_CONNECTION=redis
+```

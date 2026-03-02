@@ -65,3 +65,25 @@ The Jobs area is the primary control plane for scheduled automation. It covers j
 - [Dashboard Overview](/docs/dashboard-overview)
 - [Monitor Overview](/docs/monitor-overview)
 - [List Jobs API](/docs/jobs-list-api)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `agent.jobs.create` | ok | `agent/jobs/create` | `GET` |
+| `agent.jobs.edit` | ok | `agent/jobs/{id}/edit` | `GET` |
+| `agent.jobs.index` | ok | `agent/jobs` | `GET` |
+
+### Referenced Settings Keys
+
+- `jobs.default_page_size`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->

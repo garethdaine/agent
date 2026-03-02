@@ -53,3 +53,23 @@ Filter by `failed` status, open the latest failed run, inspect stderr and struct
 
 - [Dashboard Overview](/docs/dashboard-overview)
 - [Agent Jobs Overview](/docs/jobs-overview)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `agent.monitor.index` | ok | `agent/monitor` | `GET` |
+
+### Referenced Settings Keys
+
+- `monitor.poll_interval_seconds`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->

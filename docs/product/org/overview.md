@@ -48,3 +48,23 @@ Create a ritual template, schedule a run, monitor progression, and resolve any g
 ## Related Docs
 
 - [Delegation Overview](/docs/delegation-overview)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `org.index` | ok | `agent/org` | `GET` |
+
+### Referenced Settings Keys
+
+- `org.default_execution_window_minutes`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->

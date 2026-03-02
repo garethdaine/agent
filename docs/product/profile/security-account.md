@@ -47,3 +47,23 @@ Update profile metadata, rotate password, then verify active sessions follow tim
 ## Related Docs
 
 - [API Token and Integration Flows](/docs/api-token-integration-flows)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `profile.show` | ok | `user/profile` | `GET` |
+
+### Referenced Settings Keys
+
+- `profile.session_timeout_minutes`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->

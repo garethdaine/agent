@@ -61,3 +61,23 @@ Create a token, call a protected endpoint, and complete account-link callback ve
 ## Related Docs
 
 - [Messenger Control Plane](/docs/messenger-control-plane)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `messenger.link.show` | ok | `messenger/link/{token}` | `GET` |
+
+### Referenced Settings Keys
+
+- `api.tokens.default_expiration_days`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->

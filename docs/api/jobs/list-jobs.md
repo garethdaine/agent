@@ -76,3 +76,23 @@ Call `GET /agent/api/v1/jobs?page=1&per_page=25` to retrieve first page with exp
 ## Related Docs
 
 - [Agent Jobs Overview](/docs/jobs-overview)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `agent.jobs.index` | ok | `agent/jobs` | `GET` |
+
+### Referenced Settings Keys
+
+- `jobs.default_page_size`
+
+### Referenced Feature Flags
+
+- `docs_search_enabled`
+<!-- AUTO-GENERATED:END -->

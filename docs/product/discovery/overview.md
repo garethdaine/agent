@@ -54,3 +54,23 @@ Open a new discovery session, answer generated questions, approve the summary an
 
 - [Agent Jobs Overview](/docs/jobs-overview)
 - [Org Layer Overview](/docs/org-layer-overview)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `tools.discovery.index` | ok | `tools/discovery` | `GET` |
+
+### Referenced Settings Keys
+
+- `discovery.default_provider`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->

@@ -62,3 +62,24 @@ The Docs Center provides internal documentation for product surfaces and API con
 
 - [Interface Surface Coverage](/docs/interface-surface-coverage)
 - [Agent API v1 Surface Reference](/docs/agent-api-v1-surface-reference)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `docs.index` | ok | `docs` | `GET` |
+
+### Referenced Settings Keys
+
+- `docs.search.enabled`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+- `docs_search_enabled`
+<!-- AUTO-GENERATED:END -->

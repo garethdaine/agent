@@ -47,3 +47,23 @@ Set retention to 30 days, trigger `Run now`, and verify successful artifact crea
 ## Related Docs
 
 - [Org Layer Overview](/docs/org-layer-overview)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+The block below is generated from code and front-matter metadata.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `tools.backups.settings` | ok | `tools/backups/settings` | `GET` |
+
+### Referenced Settings Keys
+
+- `backups.retention_days`
+
+### Referenced Feature Flags
+
+- `docs_center_enabled`
+<!-- AUTO-GENERATED:END -->
