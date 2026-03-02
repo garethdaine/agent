@@ -266,6 +266,16 @@ const showRightSidebar = computed(() => {
 
     return phase >= PHASE.INTERROGATION;
 });
+const isProviderSetupStep = computed(() => {
+    const phase = Number(session.value?.phase ?? PHASE.SETUP);
+
+    return phase <= PHASE.PROVIDER_SETUP;
+});
+const isTechStackSetupStep = computed(() => {
+    const phase = Number(session.value?.phase ?? PHASE.SETUP);
+
+    return phase === PHASE.TECH_STACK_SETUP;
+});
 const contentColumnClass = computed(() => {
     if (showHistoryRail.value && showRightSidebar.value) {
         return 'xl:col-span-6';
@@ -1487,13 +1497,15 @@ onBeforeUnmount(() => {
                                 <Card>
                                     <CardHeader>
                                         <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pre-Discovery Setup</p>
-                                        <CardTitle>Setup</CardTitle>
-                                        <CardDescription>
-                                            Task provider is optional. You can connect Linear now or skip it and continue to tech stack setup.
-                                        </CardDescription>
+                                        <template v-if="isProviderSetupStep">
+                                            <CardTitle>Setup</CardTitle>
+                                            <CardDescription>
+                                                Task provider is optional. Connect Linear now or skip it and continue to tech stack setup.
+                                            </CardDescription>
+                                        </template>
                                     </CardHeader>
                                     <CardContent class="space-y-6">
-                                        <Card class="bg-muted/50">
+                                        <Card v-if="isProviderSetupStep" class="bg-muted/50">
                                             <CardHeader class="pb-3">
                                                 <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Task Provider (Optional)</p>
                                             </CardHeader>
@@ -1557,7 +1569,7 @@ onBeforeUnmount(() => {
                                             </CardContent>
                                         </Card>
 
-                                        <div class="space-y-3">
+                                        <div v-if="isTechStackSetupStep" class="space-y-3">
                                             <div>
                                                 <h3 class="text-base font-semibold text-foreground">Tech Stack</h3>
                                                 <p class="mt-1 text-sm text-muted-foreground">
@@ -1607,6 +1619,12 @@ onBeforeUnmount(() => {
                                                     {{ techStackSubmitting ? 'Adding...' : 'Add Tech Stack' }}
                                                 </Button>
                                             </div>
+                                        </div>
+                                        <div
+                                            v-else
+                                            class="rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground"
+                                        >
+                                            Tech stack setup is the next step. Click "Continue to Tech Stack" to move to phase 2.
                                         </div>
                                     </CardContent>
                                     <CardFooter class="justify-end">
