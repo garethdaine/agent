@@ -524,6 +524,107 @@ class ExecuteInterrogationRoundJobTest extends TestCase
         );
     }
 
+    public function test_round_repairs_semantic_duplicate_when_prior_answer_selected_multiple_options(): void
+    {
+        $session = $this->interrogatingSession();
+
+        InterrogationEvent::query()->create([
+            'interrogation_session_id' => $session->id,
+            'event_type' => InterrogationEvent::TYPE_QUESTION,
+            'sequence' => 1,
+            'payload' => [
+                'question_id' => 'q-delivery',
+                'question_text' => 'Which delivery channels are required for launch communications?',
+                'answer_type' => 'choice',
+                'options' => ['In-app', 'Email', 'Slack'],
+                'reasoning' => '',
+                'category' => 'delivery',
+                'progress_estimate' => 34,
+                'is_complete' => false,
+            ],
+            'event_ts' => now('UTC'),
+        ]);
+
+        InterrogationEvent::query()->create([
+            'interrogation_session_id' => $session->id,
+            'event_type' => InterrogationEvent::TYPE_ANSWER,
+            'sequence' => 2,
+            'payload' => [
+                'question_id' => 'q-delivery',
+                'answer_type' => 'choice',
+                'selected_options' => ['In-app', 'Email'],
+            ],
+            'event_ts' => now('UTC'),
+        ]);
+
+        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter->shouldReceive('buildQuestionCommand')
+            ->twice()
+            ->andReturn(
+                ['php', '-r', 'echo json_encode(["question_text" => "Which delivery channels should launch communications use by default?", "answer_type" => "choice", "options" => ["In-app","Email","Slack"], "progress_estimate" => 44, "is_complete" => false]);'],
+                ['php', '-r', 'echo json_encode(["question_text" => "Should launch comms include digest cadence controls in settings?", "answer_type" => "choice", "options" => ["Required","Optional"], "progress_estimate" => 52, "is_complete" => false]);'],
+            );
+        $adapter->shouldReceive('buildEnvironment')
+            ->twice()
+            ->andReturn([]);
+        $parseQuestionResponseCalls = 0;
+        $adapter->shouldReceive('parseQuestionResponse')
+            ->twice()
+            ->andReturnUsing(function () use (&$parseQuestionResponseCalls): array {
+                $parseQuestionResponseCalls++;
+
+                if ($parseQuestionResponseCalls === 1) {
+                    return [
+                        'question_id' => 'q-delivery-repeat',
+                        'question_text' => 'Which delivery channels should launch communications use by default?',
+                        'answer_type' => 'choice',
+                        'options' => ['In-app', 'Email', 'Slack'],
+                        'reasoning' => '',
+                        'category' => 'delivery',
+                        'progress_estimate' => 44,
+                        'is_complete' => false,
+                        'cli_session_id' => '',
+                    ];
+                }
+
+                return [
+                    'question_id' => 'q-digest-controls',
+                    'question_text' => 'Should launch comms include digest cadence controls in settings?',
+                    'answer_type' => 'choice',
+                    'options' => ['Required', 'Optional'],
+                    'reasoning' => '',
+                    'category' => 'delivery',
+                    'progress_estimate' => 52,
+                    'is_complete' => false,
+                    'cli_session_id' => '',
+                ];
+            });
+        $adapter->shouldReceive('buildReconstructCommand')->never();
+
+        $factory = $this->mock(AdapterFactory::class);
+        $factory->shouldReceive('make')
+            ->once()
+            ->andReturn($adapter);
+
+        $job = new ExecuteInterrogationRoundJob((int) $session->id, 'Answered q-delivery.', true);
+        $this->app->call([$job, 'handle']);
+
+        $this->assertTrue(
+            InterrogationEvent::query()
+                ->where('interrogation_session_id', $session->id)
+                ->where('event_type', InterrogationEvent::TYPE_QUESTION)
+                ->where('payload->question_id', 'q-digest-controls')
+                ->exists()
+        );
+        $this->assertFalse(
+            InterrogationEvent::query()
+                ->where('interrogation_session_id', $session->id)
+                ->where('event_type', InterrogationEvent::TYPE_QUESTION)
+                ->where('payload->question_id', 'q-delivery-repeat')
+                ->exists()
+        );
+    }
+
     public function test_round_does_not_fail_when_duplicate_question_persists_after_repairs(): void
     {
         Queue::fake();

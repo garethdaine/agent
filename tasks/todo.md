@@ -6,6 +6,63 @@
 
 ## Current — Open Items
 
+### Docs Center Pages + Auth Navigation Discoverability (Completed)
+
+Pre-Execution Goal Articulation
+
+SITUATION
+- `/docs` and `/docs/{slug}` web routes already exist and are authenticated.
+- `DocsPageController` already returns Inertia views `Docs/Index` and `Docs/Show`.
+- `resources/js/Pages/Docs/Index.vue` and `resources/js/Pages/Docs/Show.vue` do not exist yet.
+- Shared authenticated navigation in `resources/js/Layouts/AppLayout.vue` currently has no Docs nav item.
+- Existing docs feature tests cover auth/read-only behavior, but no dedicated `DocsNavigationTest` exists for discoverability requirements.
+
+TASK
+- Authenticated users can reach `/docs` and `/docs/{slug}` through working Inertia pages.
+- Shared authenticated primary navigation includes a Docs entry linking to `/docs`.
+- A dedicated feature test (`DocsNavigationTest`) proves docs route reachability, nav discoverability, slug resolution, unknown slug 404 behavior, and guest redirect behavior.
+
+ACTION
+- [x] Add `tests/Feature/Documentation/DocsNavigationTest.php` with assertions for:
+  - authenticated `/docs` route + expected Inertia component,
+  - docs navigation link discoverability in primary layout,
+  - `/docs/{slug}` resolution and unknown slug 404,
+  - guest redirect on docs routes.
+- [x] Run `php artisan test --filter=DocsNavigationTest` and capture initial failure.
+- [x] Implement docs UI shell pages:
+  - `resources/js/Pages/Docs/Index.vue`
+  - `resources/js/Pages/Docs/Show.vue`
+- [x] Add Docs entry to authenticated navigation in `resources/js/Layouts/AppLayout.vue` (desktop + responsive menus).
+- [x] Re-run `php artisan test --filter=DocsNavigationTest` and confirm pass.
+- [x] Run `npm run build` and confirm pass.
+
+RESULT
+- Evidence is:
+  - failing-then-passing `DocsNavigationTest` output,
+  - successful `npm run build`,
+  - test assertions proving docs link target and docs route resolution from in-app navigation target.
+
+Assumptions and scope boundaries
+- Assumption: `AppLayout.vue` is the shared authenticated navigation for targeted user roles.
+- Assumption: route names `docs.index` and `docs.show` remain stable.
+- Scope boundary: docs center shell + nav discoverability only; no tooltip/help hint integration.
+- Scope boundary: no changes to docs ingestion/search architecture in this task.
+
+Failure modes to guard
+- Malicious-caller mode: unauthenticated access to docs routes must remain blocked by auth middleware.
+- Tired-maintainer mode: route/link drift between nav and route names should be caught by explicit test assertions.
+
+Review
+- Added `tests/Feature/Documentation/DocsNavigationTest.php` with assertions for docs index reachability, layout nav discoverability, slug resolution, unknown slug 404, and guest redirects.
+- Added docs pages:
+  - `resources/js/Pages/Docs/Index.vue`
+  - `resources/js/Pages/Docs/Show.vue`
+- Added `Docs` navigation entry to both desktop and responsive authenticated nav menus in `resources/js/Layouts/AppLayout.vue`.
+- Verification evidence:
+  - Initial red state: `php artisan test --filter=DocsNavigationTest` failed due missing Inertia pages (`Docs/Index`, `Docs/Show`) and missing docs nav target in `AppLayout.vue`.
+  - Final green state: `php artisan test --filter=DocsNavigationTest` passed (5 tests, 32 assertions).
+  - Build validation: `npm run build` passed (client + SSR).
+
 ### Documentation + Tooltip Platform Discovery Brief (Completed)
 
 - [x] Audit current app surfaces (routes/pages/models/settings) to define documentation coverage boundaries.
@@ -212,6 +269,31 @@ Review:
 - Recommendation is to adopt AgentKeeper patterns (critical fact continuity + token-budget reconstruction) as a native additive layer, not as a vendored dependency.
 - Residual risk: continuity fact auto-promotion quality and scope leakage require careful thresholding + classification/scope guards during implementation.
 
+### Discovery/Interrogation/Planning UX + Codex Parity Fix Set (Completed)
+
+- [x] Investigate and patch planning-phase transient empty-state flicker (`Generating plan...` + robust sync/refetch while planning).
+- [x] Fix setup/tech stack layout to remove dead right column or provide meaningful contextual content.
+- [x] Improve Codex discovery/interrogation ongoing activity visibility to match Claude parity.
+- [x] Harden duplicate re-ask prevention parity for Codex interrogation flow end-to-end.
+- [x] Redesign active run AI log rendering for readability (structured timeline, grouped lifecycle, heartbeat collapse, command cards, severity styling, truncation/expand).
+- [x] Surface clear operator signal when queue worker is not running and discovery/planning cannot progress.
+- [x] Detect/classify Codex MCP connection-refused failures and surface a deduplicated actionable issue in Active Run UI and progress state.
+- [x] Add/update tests for touched backend transitions and duplicate-question regression protection.
+- [x] Run verification commands and capture exact before/after behavior + residual risks.
+
+Review:
+- Added deterministic planning hydration behavior in the wizard: planning-without-plan now renders as generating, with stronger auto-refetch (`include_events=1`) and websocket-triggered immediate re-sync for plan events.
+- Removed setup/tech stack/discovery dead-column layout by conditionally hiding the right stats rail before interrogation and expanding content to full width.
+- Upgraded runner visibility during discovery/interrogation with live activity timelines (including Codex issue/error/status messages) instead of static placeholders.
+- Added backend operator signals for queue-stall scenarios (`QUEUE_WORKER_UNAVAILABLE`) and surfaced them in the wizard.
+- Added MCP connection-refused classification at both runtime ingest and frontend presentation layers, with deduplicated issue cards and actionable remediation text.
+- Replaced raw active-run `<pre>` log block with structured timeline rendering: command cards (status/exit/duration/output expand), lifecycle grouping, heartbeat collapse/summary, stdout/stderr severity styling, and expandable truncation for long outputs.
+- Verification:
+  - `php artisan test tests/Feature/InterrogationApiWorkflowTest.php --filter="show_keeps_planning_session_with_missing_plan_in_generation_state|show_includes_operator_signal_when_discovery_queue_appears_stalled|show_includes_operator_signal_when_plan_generation_appears_stalled|show_marks_operational_status_plan_as_not_meaningful"` (4 passed)
+  - `php artisan test tests/Unit/ExecuteInterrogationRoundJobTest.php --filter="repairs_semantic_duplicate_when_prior_answer_selected_multiple_options|repairs_duplicate_question_against_answered_history|retries_duplicate_repair_without_resume_for_codex_session|does_not_fail_when_duplicate_question_persists_after_repairs"` (4 passed)
+  - `php artisan test tests/Feature/AgentRunnerLifecycleTest.php --filter="mcp_connection_refused_output_sets_deduplicated_mcp_issue_metadata"` (1 passed)
+  - `npm run build` (client + SSR build succeeded)
+
 ---
 
 ## Completed — Session Log
@@ -356,3 +438,41 @@ Review:
 - [x] Phase stepper active circle clipping.
 - [x] Monitor metrics card spacing.
 - [x] Planning panel top spacing.
+
+### 2026-03-02 — Codex Build False-Completion Guard
+
+- [x] Added explicit non-interactive runner-mode instructions to interrogation build task markdown to prevent “plan then stop” behavior.
+- [x] Added Codex-only execution-evidence gate in build finalization: successful run must show actionable mutation/verification command evidence.
+- [x] Added explicit `BUILD_TASK_NO_EXECUTION_EVIDENCE` error path for successful-but-no-op runs.
+- [x] Added unit coverage for no-evidence Codex success path and runner-mode markdown contract.
+- [x] Verification: `php artisan test tests/Unit/BuildTaskRunFactoryTest.php tests/Unit/ExecuteInterrogationBuildJobTest.php` (12 passed).
+
+### 2026-03-02 — Codex Build Context Leakage + Evidence Tightening
+
+- [x] Isolated Codex build-run env by explicitly unsetting desktop-thread vars in task env (`CODEX_THREAD_ID`, `CODEX_SESSION_ID`, `CODEX_INTERNAL_ORIGINATOR_OVERRIDE`).
+- [x] Updated run env merger to preserve `false` values so Symfony unsets inherited env vars instead of string-casting them.
+- [x] Tightened Codex build evidence gate to require implementation-path mutation evidence plus verification command evidence.
+- [x] Added regression coverage for checklist-only/meta-file mutation runs (must fail) and implementation+verification runs (must pass).
+- [x] Verification: `php artisan test tests/Unit/ExecuteInterrogationBuildJobTest.php tests/Unit/BuildTaskRunFactoryTest.php tests/Unit/InterrogationCodexAdapterCommandTest.php` (26 passed).
+
+### 2026-03-02 — Session 15 Task 6: Authenticated Read-Only Docs Contracts
+
+- [x] Write failing feature tests in `tests/Feature/Documentation/DocsAuthorizationTest.php` for:
+- [x] Authenticated access to docs read routes (`/docs`, `/docs/{slug}`, docs API reads).
+- [x] Unauthenticated denial behavior (web redirect + API 401).
+- [x] No docs write route surface (no POST/PUT/PATCH/DELETE routes under docs paths).
+- [x] Unauthorized role is forbidden from docs coverage endpoint.
+- [x] Unknown `slug` / `uiKey` and malformed search query validation paths.
+- [x] Run `php artisan test --filter=DocsAuthorizationTest` and capture expected failures.
+- [x] Wire read-only routes in `routes/web.php` and `routes/api.php` with auth middleware.
+- [x] Implement docs web/API controllers and docs search request validation.
+- [x] Add coverage authorization ability wiring and enforce it on coverage endpoint.
+- [x] Re-run `php artisan test --filter=DocsAuthorizationTest` until green.
+- [x] Verify route contracts with `php artisan route:list --path=docs`.
+- [x] Verify there are no docs write routes via route inspection command.
+- [x] Add review notes with verification evidence and known limitations.
+
+Review (to complete after implementation):
+- [x] Evidence summary: `php artisan test --filter=DocsAuthorizationTest` passed (9 tests, 18 assertions); `php artisan route:list --path=docs` shows 5 `GET|HEAD` docs routes; `php artisan route:list | rg "docs" | rg "POST|PUT|PATCH|DELETE"` returned no matches.
+- [x] Conditions for correctness: existing auth middleware (`auth:sanctum` + verified web group) remains active; role-based gate checks continue to use `User::hasRole(['admin','analytics'])`; docs catalog provides at least one valid slug (`overview`) and fragment key (`docs.overview`).
+- [x] Explicit non-goals / limitations: this task only adds read-contract wiring and minimal in-memory catalog data; no persistence/search-index integration, no authoring/write endpoints, and no dynamic coverage computation from full docs ingestion pipeline.

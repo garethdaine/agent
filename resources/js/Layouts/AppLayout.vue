@@ -30,6 +30,7 @@ import {
     Moon,
     Sun,
     Bell,
+    BookOpen,
 } from 'lucide-vue-next';
 
 defineProps({
@@ -269,6 +270,10 @@ onBeforeUnmount(() => {
                                     <LayoutDashboard class="w-4 h-4 mr-1.5" />
                                     Dashboard
                                 </NavLink>
+                                <NavLink :href="route('docs.index')" :active="route().current('docs.*')">
+                                    <BookOpen class="w-4 h-4 mr-1.5" />
+                                    Docs
+                                </NavLink>
                                 <NavLink :href="route('agent.jobs.index')" :active="route().current('agent.jobs.*')">
                                     <Briefcase class="w-4 h-4 mr-1.5" />
                                     Jobs
@@ -466,6 +471,10 @@ onBeforeUnmount(() => {
                         <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
                             <LayoutDashboard class="w-5 h-5" />
                             Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="route('docs.index')" :active="route().current('docs.*')">
+                            <BookOpen class="w-5 h-5" />
+                            Docs
                         </ResponsiveNavLink>
                         <ResponsiveNavLink :href="route('agent.jobs.index')" :active="route().current('agent.jobs.*')">
                             <Briefcase class="w-5 h-5" />

@@ -1,7 +1,7 @@
 <script setup>
 import MarkdownEditor from '@/Components/Markdown/MarkdownEditor.vue';
 import { formatInterrogationError } from '@/Components/Interrogation/errorFormatting';
-import { formatAgentRunEventEntries } from '@/Support/agentRunEventFormatting';
+import { buildAgentRunEventPresentation } from '@/Support/agentRunEventFormatting';
 import axios from 'axios';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
@@ -91,9 +91,13 @@ const activeRunEventsError = ref('');
 const activeRunEventsBootstrapComplete = ref(false);
 const activeRunEventsPollTimer = ref(null);
 const activeRunLogContainer = ref(null);
+const activeRunExpandedEntries = ref({});
+const activeRunExpandedCommandOutputs = ref({});
+const showHeartbeatEntries = ref(false);
 
 const TERMINAL_RUN_STATUSES = new Set(['succeeded', 'failed', 'killed', 'timed_out', 'skipped']);
 const ACTIVE_RUN_POLL_MS = 2000;
+const LOG_PREVIEW_CHAR_LIMIT = 800;
 
 const canGenerate = computed(() => !props.disabled && !props.actions.generateBuildTasks && status.value !== 'generating_tasks');
 const canApproveTasks = computed(() => !props.disabled && !props.actions.approveBuildTasks && tasks.value.length > 0 && status.value !== 'generating_tasks');
@@ -461,6 +465,9 @@ watch(
         activeRunEventsAfterSequence.value = 0;
         activeRunEventsError.value = '';
         activeRunEventsBootstrapComplete.value = false;
+        activeRunExpandedEntries.value = {};
+        activeRunExpandedCommandOutputs.value = {};
+        showHeartbeatEntries.value = false;
 
         if (!Number.isFinite(nextRunId) || nextRunId <= 0) {
             activeRunEventsRunId.value = null;
@@ -497,26 +504,127 @@ const activeRunSourceEvents = computed(() => {
     return normalizeRunEventList(activeRun.value?.log_tail ?? []);
 });
 
-const activeRunLogEntries = computed(() => {
-    return formatAgentRunEventEntries(activeRunSourceEvents.value);
+const activeRunPresentation = computed(() => {
+    return buildAgentRunEventPresentation(
+        activeRunSourceEvents.value,
+        {
+            issues: Array.isArray(props.build?.issues) ? props.build.issues : [],
+        }
+    );
 });
-
-const activeRunUnifiedLog = computed(() => {
-    return activeRunLogEntries.value
-        .map((entry) => {
-            const payload = String(entry?.payload ?? '').trim();
-            if (payload === '') {
-                return '';
-            }
-
-            const prefix = String(entry?.prefix ?? '').trim();
-            return prefix !== '' ? `${prefix}\n${payload}` : payload;
-        })
-        .filter((line) => line !== '')
-        .join('\n\n');
+const activeRunTimelineEntries = computed(() => {
+    return Array.isArray(activeRunPresentation.value?.timelineEntries)
+        ? activeRunPresentation.value.timelineEntries
+        : [];
 });
+const activeRunHeartbeatEntries = computed(() => {
+    return Array.isArray(activeRunPresentation.value?.heartbeatEntries)
+        ? activeRunPresentation.value.heartbeatEntries
+        : [];
+});
+const activeRunHeartbeatSummary = computed(() => activeRunPresentation.value?.heartbeatSummary ?? null);
+const activeRunIssues = computed(() => {
+    return Array.isArray(activeRunPresentation.value?.issues)
+        ? activeRunPresentation.value.issues
+        : [];
+});
+const hasActiveRunPresentation = computed(() => {
+    return activeRunTimelineEntries.value.length > 0
+        || activeRunHeartbeatEntries.value.length > 0
+        || activeRunIssues.value.length > 0;
+});
+const timelineEntryKindClass = (entry) => {
+    const kind = String(entry?.kind ?? '').trim().toLowerCase();
+    if (kind === 'stderr') {
+        return 'border-destructive/30 bg-destructive/5';
+    }
 
-const hasActiveRunUnifiedLog = computed(() => String(activeRunUnifiedLog.value).trim() !== '');
+    if (kind === 'command') {
+        return 'border-primary/30 bg-primary/5';
+    }
+
+    if (kind === 'lifecycle') {
+        return 'border-warning/30 bg-warning/10';
+    }
+
+    return 'border-border bg-muted/10';
+};
+const timelineEntryText = (entry) => String(entry?.text ?? '').trim();
+const isTimelineEntryExpandable = (entry) => timelineEntryText(entry).length > LOG_PREVIEW_CHAR_LIMIT;
+const isTimelineEntryExpanded = (entry) => Boolean(activeRunExpandedEntries.value?.[entry?.key]);
+const toggleTimelineEntryExpanded = (entry) => {
+    const key = String(entry?.key ?? '').trim();
+    if (key === '') {
+        return;
+    }
+
+    activeRunExpandedEntries.value = {
+        ...activeRunExpandedEntries.value,
+        [key]: !Boolean(activeRunExpandedEntries.value?.[key]),
+    };
+};
+const timelineEntryPreviewText = (entry) => {
+    const text = timelineEntryText(entry);
+    if (!isTimelineEntryExpandable(entry) || isTimelineEntryExpanded(entry)) {
+        return text;
+    }
+
+    return `${text.slice(0, LOG_PREVIEW_CHAR_LIMIT).trimEnd()}…`;
+};
+const isCommandOutputExpandable = (entry) => String(entry?.command?.output ?? '').trim().length > LOG_PREVIEW_CHAR_LIMIT;
+const isCommandOutputExpanded = (entry) => Boolean(activeRunExpandedCommandOutputs.value?.[entry?.key]);
+const toggleCommandOutputExpanded = (entry) => {
+    const key = String(entry?.key ?? '').trim();
+    if (key === '') {
+        return;
+    }
+
+    activeRunExpandedCommandOutputs.value = {
+        ...activeRunExpandedCommandOutputs.value,
+        [key]: !Boolean(activeRunExpandedCommandOutputs.value?.[key]),
+    };
+};
+const commandOutputPreview = (entry) => {
+    const text = String(entry?.command?.output ?? '').trim();
+    if (!isCommandOutputExpandable(entry) || isCommandOutputExpanded(entry)) {
+        return text;
+    }
+
+    return `${text.slice(0, LOG_PREVIEW_CHAR_LIMIT).trimEnd()}…`;
+};
+const commandStatusClass = (entry) => {
+    const status = String(entry?.command?.status ?? '').trim().toLowerCase();
+    if (status === 'completed') {
+        const exitCode = Number(entry?.command?.exitCode ?? NaN);
+        if (Number.isFinite(exitCode) && exitCode === 0) {
+            return 'border-success/30 bg-success/10 text-success';
+        }
+
+        return 'border-destructive/30 bg-destructive/10 text-destructive';
+    }
+
+    return 'border-primary/30 bg-primary/10 text-primary';
+};
+const timelineEntryHeaderLabel = (entry) => {
+    const kind = String(entry?.kind ?? '').trim().toLowerCase();
+    if (kind === 'command') {
+        return 'Command';
+    }
+
+    if (kind === 'stderr') {
+        return 'stderr';
+    }
+
+    if (kind === 'lifecycle') {
+        return 'Lifecycle';
+    }
+
+    if (kind === 'structured') {
+        return 'Structured';
+    }
+
+    return 'stdout';
+};
 
 const scrollActiveRunLogToBottom = () => {
     const container = activeRunLogContainer.value;
@@ -530,7 +638,7 @@ const scrollActiveRunLogToBottom = () => {
 watch(
     activeRunEventsAfterSequence,
     async (nextSequence, previousSequence) => {
-        if (!hasActiveRunUnifiedLog.value) {
+        if (!hasActiveRunPresentation.value) {
             return;
         }
 
@@ -550,7 +658,7 @@ watch(
 watch(
     activeRunId,
     async (nextRunId, previousRunId) => {
-        if (nextRunId === previousRunId || !hasActiveRunUnifiedLog.value) {
+        if (nextRunId === previousRunId || !hasActiveRunPresentation.value) {
             return;
         }
 
@@ -1091,7 +1199,7 @@ const submitTaskRegeneration = (task) => {
             <p v-if="flags.rate_limit_excerpt" class="mt-1 whitespace-pre-wrap">{{ flags.rate_limit_excerpt }}</p>
         </div>
 
-        <div v-if="isExecutionMode && (hasActiveRunUnifiedLog || activeRunEventsLoading || activeRunEventsError)" class="mt-4">
+        <div v-if="isExecutionMode && (hasActiveRunPresentation || activeRunEventsLoading || activeRunEventsError)" class="mt-4">
             <div class="flex items-center justify-between gap-2">
                 <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Active Run AI Log</p>
                 <span
@@ -1110,12 +1218,104 @@ const submitTaskRegeneration = (task) => {
             <p v-if="activeRunEventsError" class="mt-2 rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-[11px] text-destructive">
                 {{ activeRunEventsError }}
             </p>
+            <div v-if="activeRunIssues.length > 0" class="mt-2 space-y-2">
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-destructive">Issues</p>
+                <div
+                    v-for="issue in activeRunIssues"
+                    :key="`run-issue-${issue.key}`"
+                    class="rounded border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive"
+                >
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="font-semibold">{{ issue.title }}</p>
+                        <span class="rounded-full border border-destructive/40 bg-destructive/20 px-1.5 py-0.5 text-[10px] font-semibold">
+                            x{{ issue.count }}
+                        </span>
+                    </div>
+                    <p class="mt-1">{{ issue.detail }}</p>
+                    <p v-if="issue.suggestedAction" class="mt-1 text-[11px]">{{ issue.suggestedAction }}</p>
+                </div>
+            </div>
+            <div v-if="activeRunHeartbeatSummary" class="mt-2 rounded border border-border bg-muted/20 px-2 py-1.5 text-[11px] text-muted-foreground">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p>Heartbeat events: {{ activeRunHeartbeatSummary.count }}<span v-if="activeRunHeartbeatSummary.latestTimestampLabel"> · latest {{ activeRunHeartbeatSummary.latestTimestampLabel }}</span></p>
+                    <button
+                        type="button"
+                        class="rounded border border-input px-2 py-0.5 text-[10px] font-semibold text-foreground hover:bg-muted"
+                        @click="showHeartbeatEntries = !showHeartbeatEntries"
+                    >
+                        {{ showHeartbeatEntries ? 'Hide heartbeats' : 'Show heartbeats' }}
+                    </button>
+                </div>
+            </div>
             <div
-                v-if="hasActiveRunUnifiedLog"
+                v-if="hasActiveRunPresentation"
                 ref="activeRunLogContainer"
                 class="mt-2 max-h-72 overflow-auto rounded border border-border bg-gray-950 p-3 text-xs text-gray-100 "
             >
-                <pre class="whitespace-pre-wrap break-words font-mono leading-relaxed">{{ activeRunUnifiedLog }}</pre>
+                <div class="space-y-2 font-mono">
+                    <div
+                        v-for="entry in activeRunTimelineEntries"
+                        :key="entry.key"
+                        class="rounded border p-2"
+                        :class="timelineEntryKindClass(entry)"
+                    >
+                        <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-wide text-gray-300">
+                            <div class="flex items-center gap-2">
+                                <span>Seq {{ entry.sequence }}</span>
+                                <span>{{ timelineEntryHeaderLabel(entry) }}</span>
+                                <span v-if="entry.repeatCount > 1" class="rounded border border-border px-1.5 py-0.5">x{{ entry.repeatCount }}</span>
+                            </div>
+                            <span v-if="entry.timestampLabel">{{ entry.timestampLabel }}</span>
+                        </div>
+
+                        <div v-if="entry.kind === 'command'" class="mt-2 space-y-2">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="rounded border px-1.5 py-0.5 text-[10px] font-semibold" :class="commandStatusClass(entry)">
+                                    {{ entry.command?.status || 'running' }}
+                                </span>
+                                <span v-if="entry.command?.exitCode !== null" class="text-[11px] text-gray-300">exit {{ entry.command.exitCode }}</span>
+                                <span v-if="entry.command?.durationMs !== null" class="text-[11px] text-gray-300">{{ entry.command.durationMs }}ms</span>
+                            </div>
+                            <pre class="whitespace-pre-wrap break-words text-[11px] leading-relaxed text-gray-100">{{ entry.command?.command || 'Command unavailable' }}</pre>
+                            <div v-if="entry.command?.output" class="rounded border border-border/60 bg-black/30 p-2">
+                                <pre class="whitespace-pre-wrap break-words text-[11px] leading-relaxed text-gray-300">{{ commandOutputPreview(entry) }}</pre>
+                                <button
+                                    v-if="isCommandOutputExpandable(entry)"
+                                    type="button"
+                                    class="mt-1 rounded border border-input px-2 py-0.5 text-[10px] font-semibold text-gray-100 hover:bg-muted/40"
+                                    @click="toggleCommandOutputExpanded(entry)"
+                                >
+                                    {{ isCommandOutputExpanded(entry) ? 'Collapse output' : 'Expand output' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div v-else class="mt-2">
+                            <pre class="whitespace-pre-wrap break-words text-[11px] leading-relaxed">{{ timelineEntryPreviewText(entry) }}</pre>
+                            <button
+                                v-if="isTimelineEntryExpandable(entry)"
+                                type="button"
+                                class="mt-1 rounded border border-input px-2 py-0.5 text-[10px] font-semibold text-gray-100 hover:bg-muted/40"
+                                @click="toggleTimelineEntryExpanded(entry)"
+                            >
+                                {{ isTimelineEntryExpanded(entry) ? 'Collapse' : 'Expand' }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="showHeartbeatEntries"
+                        v-for="heartbeatEntry in activeRunHeartbeatEntries"
+                        :key="`${heartbeatEntry.key}-heartbeat`"
+                        class="rounded border border-border/70 bg-black/20 p-2"
+                    >
+                        <div class="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide text-gray-400">
+                            <span>Seq {{ heartbeatEntry.sequence }} · Heartbeat</span>
+                            <span v-if="heartbeatEntry.timestampLabel">{{ heartbeatEntry.timestampLabel }}</span>
+                        </div>
+                        <pre class="mt-1 whitespace-pre-wrap break-words text-[11px] leading-relaxed text-gray-400">{{ heartbeatEntry.text }}</pre>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -63,6 +63,7 @@ const localPlanRevisionPending = ref(false);
 const planRevisionQueuedAfterSequence = ref(0);
 const planIdleRecoveryAttempted = ref(false);
 const latestSessionLoadRequestId = ref(0);
+const planHydrationSyncTimer = ref(null);
 const actionState = ref({
     approvePlan: false,
     revisePlan: false,
@@ -152,6 +153,24 @@ const hasMeaningfulPlan = computed(() => {
 });
 const planGenerationStatus = computed(() => String(session.value?.metadata_json?.plan?.generation_status ?? '').toLowerCase());
 const planRevisionStatus = computed(() => String(session.value?.metadata_json?.plan?.revision_status ?? '').toLowerCase());
+const shouldHydratePendingPlan = computed(() => {
+    const phase = Number(session.value?.phase ?? PHASE.SETUP);
+    const status = String(session.value?.status ?? '').trim().toLowerCase();
+
+    if (phase !== PHASE.PLANNING) {
+        return false;
+    }
+
+    if (hasMeaningfulPlan.value || ['failed', 'paused', 'completed'].includes(status)) {
+        return false;
+    }
+
+    if (planGenerationStatus.value === 'failed' || planRevisionStatus.value === 'failed') {
+        return false;
+    }
+
+    return true;
+});
 const isPlanRevising = computed(() => {
     if ((session.value?.phase ?? 0) !== PHASE.PLANNING) {
         return false;
@@ -172,7 +191,13 @@ const isPlanGenerating = computed(() => {
         return false;
     }
 
-    return localPlanGenerationPending.value || ['queued', 'running'].includes(planGenerationStatus.value);
+    if (planGenerationStatus.value === 'failed' || planRevisionStatus.value === 'failed') {
+        return false;
+    }
+
+    return localPlanGenerationPending.value
+        || ['queued', 'running', 'idle', ''].includes(planGenerationStatus.value)
+        || shouldHydratePendingPlan.value;
 });
 const hasPlanApproved = computed(() => Boolean(session.value?.approved_at));
 const canApprovePlan = computed(() => hasMeaningfulPlan.value && !hasPlanApproved.value && !actionState.value.approvePlan && !busy.value && !isPlanGenerating.value && !isPlanRevising.value);
@@ -214,22 +239,43 @@ const latestPlanReadySequence = computed(() => {
 
     return 0;
 });
+const isPlanEvent = (event) => {
+    const type = String(event?.event_type ?? '').trim().toLowerCase();
+    const notice = String(event?.payload?.notice ?? '').trim().toLowerCase();
+
+    if (type === 'plan') {
+        return true;
+    }
+
+    if (type !== 'system') {
+        return false;
+    }
+
+    return notice.startsWith('plan_');
+};
 const build = computed(() => (session.value?.build && typeof session.value.build === 'object' ? session.value.build : {}));
 const taskProviders = computed(() => (Array.isArray(session.value?.task_providers) ? session.value.task_providers : []));
 const linearProvider = computed(() => taskProviders.value.find((provider) => String(provider?.driver ?? '').toLowerCase() === 'linear') ?? null);
-const contentColumnClass = computed(() => {
+const showHistoryRail = computed(() => {
     const phase = Number(session.value?.phase ?? PHASE.SETUP);
 
-    if (phase >= PHASE.PLANNING) {
-        return 'xl:col-span-9';
-    }
+    return phase >= PHASE.INTERROGATION && phase < PHASE.PLANNING;
+});
+const showRightSidebar = computed(() => {
+    const phase = Number(session.value?.phase ?? PHASE.SETUP);
 
-    if (phase >= PHASE.INTERROGATION) {
+    return phase >= PHASE.INTERROGATION;
+});
+const contentColumnClass = computed(() => {
+    if (showHistoryRail.value && showRightSidebar.value) {
         return 'xl:col-span-6';
     }
 
-    // Setup/tech-stack/discovery do not render the left history rail, so reclaim that width.
-    return 'xl:col-span-9';
+    if (showHistoryRail.value || showRightSidebar.value) {
+        return 'xl:col-span-9';
+    }
+
+    return 'xl:col-span-12';
 });
 const selectedLinearTeam = computed(() => {
     const targetId = String(providerTeamId.value ?? '').trim();
@@ -241,6 +287,16 @@ const selectedLinearTeam = computed(() => {
 });
 const techStacks = computed(() => (Array.isArray(session.value?.tech_stacks) ? session.value.tech_stacks : []));
 const displayError = computed(() => formatInterrogationError(error.value, { allowDetails: true, maxSummaryLength: 240 }));
+const discoveryActivityEvents = computed(() => {
+    return events.value
+        .filter((event) => ['discovery_activity', 'system', 'error'].includes(String(event?.event_type ?? '')))
+        .slice(-24);
+});
+const interrogationActivityEvents = computed(() => {
+    return events.value
+        .filter((event) => ['system', 'annotation', 'error', 'question', 'discovery_activity'].includes(String(event?.event_type ?? '')))
+        .slice(-24);
+});
 const buildActivity = computed(() => {
     const relevant = events.value
         .filter((event) => {
@@ -505,14 +561,37 @@ const loadNewEvents = async () => {
     }
 };
 
+const clearPlanHydrationSyncTimer = () => {
+    if (planHydrationSyncTimer.value !== null) {
+        clearTimeout(planHydrationSyncTimer.value);
+        planHydrationSyncTimer.value = null;
+    }
+};
+
+const queuePlanHydrationSync = () => {
+    clearPlanHydrationSyncTimer();
+    planHydrationSyncTimer.value = setTimeout(() => {
+        loadSession(true);
+    }, 700);
+};
+
 const schedulePoll = () => {
     clearTimeout(pollingTimer.value);
     pollingTimer.value = setTimeout(async () => {
         await loadNewEvents();
-        await loadSession(false);
+        await loadSession(shouldHydratePendingPlan.value);
         schedulePoll();
     }, 3000);
 };
+
+watch(shouldHydratePendingPlan, (pending) => {
+    if (!pending) {
+        clearPlanHydrationSyncTimer();
+        return;
+    }
+
+    queuePlanHydrationSync();
+});
 
 const subscribeEcho = () => {
     if (!window.Echo) {
@@ -540,10 +619,15 @@ const subscribeEcho = () => {
                 events.value = [...events.value, candidate].sort((a, b) => a.sequence - b.sequence).slice(-1200);
             }
 
-            loadSession(false);
+            if (isPlanEvent(candidate)) {
+                loadSession(true);
+                queuePlanHydrationSync();
+            } else {
+                loadSession(false);
+            }
         })
         .listen('.phase.changed', () => {
-            loadSession(false);
+            loadSession(true);
         });
 };
 
@@ -745,7 +829,7 @@ const confirmSummary = async () => {
     try {
         await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/confirm-summary`);
         localPlanGenerationPending.value = true;
-        await loadSession(false);
+        await loadSession(true);
     } catch (e) {
         localPlanGenerationPending.value = false;
         error.value = e?.response?.data?.error?.message ?? 'Failed to confirm summary.';
@@ -790,7 +874,7 @@ const generatePlan = async () => {
 
     try {
         await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/generate-plan`);
-        await loadSession(false);
+        await loadSession(true);
     } catch (e) {
         localPlanGenerationPending.value = false;
         error.value = e?.response?.data?.error?.message ?? 'Failed to queue plan generation.';
@@ -822,7 +906,7 @@ const requestRevision = async (payload) => {
     try {
         const { data } = await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/revise-plan`, payload);
         notice.value = data?.data?.message ?? 'Plan revision queued. Revising plan now.';
-        await loadSession(false);
+        await loadSession(true);
     } catch (e) {
         localPlanRevisionPending.value = false;
         error.value = e?.response?.data?.error?.message ?? 'Failed to request plan revision.';
@@ -844,7 +928,7 @@ const regeneratePlan = async () => {
     try {
         const { data } = await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/regenerate-plan`);
         notice.value = data?.data?.message ?? 'Plan regeneration queued.';
-        await loadSession(false);
+        await loadSession(true);
     } catch (e) {
         localPlanRevisionPending.value = false;
         error.value = e?.response?.data?.error?.message ?? 'Failed to regenerate plan.';
@@ -1239,6 +1323,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     clearTimeout(pollingTimer.value);
+    clearPlanHydrationSyncTimer();
     unsubscribeEcho();
 });
 </script>
@@ -1369,6 +1454,16 @@ onBeforeUnmount(() => {
                 <Card v-if="notice" class="border-success/50 bg-success/10 px-3 py-2">
                     <p class="text-sm text-success">{{ notice }}</p>
                 </Card>
+                <Card
+                    v-if="session?.operator_signal"
+                    class="border-warning/40 bg-warning/10 px-3 py-2"
+                >
+                    <p class="text-sm font-semibold text-warning">{{ session.operator_signal.title }}</p>
+                    <p class="mt-1 text-xs text-warning">{{ session.operator_signal.detail }}</p>
+                    <p v-if="session.operator_signal.suggested_action" class="mt-2 text-xs text-warning">
+                        {{ session.operator_signal.suggested_action }}
+                    </p>
+                </Card>
 
                 <Card v-if="loading" class="p-8">
                     <div class="flex items-center gap-3">
@@ -1383,7 +1478,7 @@ onBeforeUnmount(() => {
                     </Card>
 
                     <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
-                        <div v-if="session.phase >= PHASE.INTERROGATION && session.phase < PHASE.PLANNING" class="xl:col-span-3">
+                        <div v-if="showHistoryRail" class="xl:col-span-3">
                             <QaHistoryPanel :events="events" :selected-question-id="activeQuestion?.question_id || ''" @select-question="focusQuestion" />
                         </div>
 
@@ -1529,9 +1624,21 @@ onBeforeUnmount(() => {
                                 </Card>
                             </template>
 
-                            <StatusCard v-if="session.phase === PHASE.DISCOVERY" :session="session" :latest-discovery-event="latestDiscoveryEvent" />
+                            <StatusCard
+                                v-if="session.phase === PHASE.DISCOVERY"
+                                :session="session"
+                                phase-label="Discovery"
+                                :activity-events="discoveryActivityEvents"
+                                :latest-discovery-event="latestDiscoveryEvent"
+                            />
 
                             <template v-if="session.phase === PHASE.INTERROGATION">
+                                <StatusCard
+                                    v-if="awaitingNextQuestion || !activeQuestion"
+                                    :session="session"
+                                    phase-label="Interrogation"
+                                    :activity-events="interrogationActivityEvents"
+                                />
                                 <Card
                                     v-if="selectedQuestion && latestQuestion && selectedQuestion.question_id !== latestQuestion.question_id"
                                     class="border-warning/50 bg-warning/10 px-3 py-2"
@@ -1661,7 +1768,7 @@ onBeforeUnmount(() => {
                             </template>
                         </div>
 
-                        <div class="xl:col-span-3">
+                        <div v-if="showRightSidebar" class="xl:col-span-3">
                             <StatsPanel :session="session" :events="events" />
                         </div>
                     </div>

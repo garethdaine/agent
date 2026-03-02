@@ -45,6 +45,8 @@ class RunEventWriter
 
     private const INLINE_CODE_TOKENS_PATTERN = '/<\s*\/?\s*[A-Za-z][^>]*>|\b(?:const|let|var|function|return|if|foreach)\b|=>|->|::|class=|v-if=|\$[A-Za-z_][A-Za-z0-9_]*/';
 
+    private const MCP_CONNECTION_REFUSED_PATTERN = '/rmcp::transport::worker[\s\S]{0,1800}?transport channel closed[\s\S]{0,1800}?(https?:\/\/[^\s"\']+\/mcp)[\s\S]{0,1800}?connection refused/i';
+
     public function __construct(private AgentJobRun $run)
     {
         $this->nextSequence = (int) (AgentRunEvent::query()
@@ -115,6 +117,11 @@ class RunEventWriter
         $metadata['redaction_count'] = (int) ($metadata['redaction_count'] ?? 0) + $redactionCount;
 
         $this->run->metadata_json = $metadata;
+
+        $mcpEndpoints = $this->extractMcpUnavailableEndpoints($chunk);
+        foreach ($mcpEndpoints as $mcpEndpoint) {
+            $this->markMcpServerUnavailable($mcpEndpoint, $chunk);
+        }
 
         $isNonRuntimeSnippet = $this->isLikelyNonRuntimeSnippet($chunk);
 
@@ -407,6 +414,41 @@ class RunEventWriter
         $this->appendLifecycle($payload);
     }
 
+    private function markMcpServerUnavailable(string $endpoint, string $excerpt): void
+    {
+        $metadata = (array) ($this->run->metadata_json ?? []);
+        $issues = is_array($metadata['issues'] ?? null) ? $metadata['issues'] : [];
+        $existing = is_array($issues['mcp_server_unavailable'] ?? null) ? $issues['mcp_server_unavailable'] : [];
+        $count = max(0, (int) ($existing['count'] ?? 0)) + 1;
+        $now = CarbonImmutable::now('UTC')->toIso8601String();
+
+        $issues['mcp_server_unavailable'] = [
+            'code' => 'MCP_SERVER_UNAVAILABLE',
+            'title' => 'MCP server unavailable',
+            'detail' => sprintf('Could not connect to %s (connection refused).', $endpoint),
+            'suggested_action' => 'Start/restart the MCP server or update MCP endpoint config.',
+            'endpoint' => $endpoint,
+            'count' => $count,
+            'last_detected_at' => $now,
+            'first_detected_at' => is_string($existing['first_detected_at'] ?? null)
+                ? (string) $existing['first_detected_at']
+                : $now,
+            'excerpt' => substr(trim($excerpt), 0, 1000),
+        ];
+
+        $metadata['issues'] = $issues;
+        $metadata['mcp_connection_refused_detected'] = true;
+        $this->run->metadata_json = $metadata;
+
+        if ($count === 1) {
+            $this->appendLifecycle([
+                'type' => 'mcp_server_unavailable',
+                'at' => $now,
+                'endpoint' => $endpoint,
+            ]);
+        }
+    }
+
     private function shouldMarkRateLimitDetected(string $chunk): bool
     {
         if ($this->isStructuredRateLimitErrorEvent($chunk)) {
@@ -423,6 +465,35 @@ class RunEventWriter
         }
 
         return true;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractMcpUnavailableEndpoints(string $chunk): array
+    {
+        $matchCount = preg_match_all(self::MCP_CONNECTION_REFUSED_PATTERN, $chunk, $matches);
+        if (! is_int($matchCount) || $matchCount < 1) {
+            return [];
+        }
+
+        $endpoints = [];
+        $captured = $matches[1] ?? [];
+
+        if (! is_array($captured)) {
+            return [];
+        }
+
+        foreach ($captured as $candidate) {
+            $endpoint = trim((string) $candidate);
+            if ($endpoint === '') {
+                continue;
+            }
+
+            $endpoints[] = $endpoint;
+        }
+
+        return $endpoints;
     }
 
     private function isLineNumberedSnippet(string $chunk): bool

@@ -8,6 +8,7 @@ const ESCAPED_LINE_BREAK_PATTERN = /\\r\\n|\\n|\\r/g;
 const LINE_NUMBERED_SNIPPET_LINE_PATTERN = /^\s*(\d+)\s*(?:→|->|=>)\s?(.*)$/u;
 const LINE_NUMBERED_PREFIX_PATTERN = /^\s*\d+\s*\|\s?/u;
 const LINE_NUMBERED_PREFIX_CAPTURE_PATTERN = /^\s*(\d+)\s*\|\s?/u;
+const MCP_CONNECTION_REFUSED_PATTERN = /rmcp::transport::worker[\s\S]{0,1800}?transport channel closed[\s\S]{0,1800}?(https?:\/\/[^\s"']+\/mcp)[\s\S]{0,1800}?connection refused/i;
 
 const stringifyPayload = (payload) => {
     if (typeof payload === 'string') {
@@ -1087,4 +1088,341 @@ export const formatAgentRunEventEntries = (entries) => {
     const nonEmptyEntries = formattedEntries.filter((entry) => String(entry?.payload ?? '').trim() !== '');
 
     return dedupeFormattedEntries(nonEmptyEntries);
+};
+
+const formatTimelineTimestamp = (value) => {
+    const text = String(value ?? '').trim();
+    if (text === '') {
+        return '';
+    }
+
+    const asDate = new Date(text);
+    if (!Number.isFinite(asDate.getTime())) {
+        return '';
+    }
+
+    return asDate.toLocaleTimeString();
+};
+
+const extractMcpConnectionIssue = (value) => {
+    const text = String(value ?? '');
+    if (text === '') {
+        return null;
+    }
+
+    const match = text.match(MCP_CONNECTION_REFUSED_PATTERN);
+    if (!match) {
+        return null;
+    }
+
+    const endpoint = String(match[1] ?? '').trim() || 'http://localhost:3333/mcp';
+
+    return {
+        key: 'mcp_server_unavailable',
+        code: 'MCP_SERVER_UNAVAILABLE',
+        title: 'MCP server unavailable',
+        detail: `Could not connect to ${endpoint} (connection refused).`,
+        suggestedAction: 'Start/restart the MCP server on port 3333 or update MCP endpoint config.',
+        endpoint,
+    };
+};
+
+const extractCommandExecutionFromEnvelope = (payloadObject) => {
+    if (!isRecord(payloadObject)) {
+        return null;
+    }
+
+    const item = isRecord(payloadObject.item)
+        ? payloadObject.item
+        : (isRecord(payloadObject.event?.item) ? payloadObject.event.item : null);
+
+    if (!item || String(item.type ?? '').trim() !== 'command_execution') {
+        return null;
+    }
+
+    const command = String(item.command ?? '').trim();
+    const status = String(item.status ?? '').trim().toLowerCase() || 'running';
+    const exitCode = Number(item.exit_code ?? NaN);
+    const durationMs = Number(item.duration_ms ?? NaN);
+    const output = String(item.aggregated_output ?? item.output ?? '').trim();
+
+    return {
+        command,
+        status,
+        exitCode: Number.isFinite(exitCode) ? exitCode : null,
+        durationMs: Number.isFinite(durationMs) ? durationMs : null,
+        output,
+    };
+};
+
+const extractEnvelopeText = (payloadObject) => {
+    if (!isRecord(payloadObject)) {
+        return '';
+    }
+
+    const direct = String(payloadObject.message ?? payloadObject.text ?? payloadObject.content ?? '').trim();
+    if (direct !== '') {
+        return direct;
+    }
+
+    if (isRecord(payloadObject.item)) {
+        const fromItem = String(payloadObject.item.message ?? payloadObject.item.text ?? payloadObject.item.content ?? '').trim();
+        if (fromItem !== '') {
+            return fromItem;
+        }
+    }
+
+    if (isRecord(payloadObject.event) && isRecord(payloadObject.event.delta)) {
+        const deltaText = String(payloadObject.event.delta.text ?? '').trim();
+        if (deltaText !== '') {
+            return deltaText;
+        }
+    }
+
+    return '';
+};
+
+const collapseConsecutiveTimelineEntries = (entries) => {
+    const collapsed = [];
+
+    entries.forEach((entry) => {
+        const previous = collapsed[collapsed.length - 1];
+        if (!previous) {
+            collapsed.push({ ...entry, repeatCount: 1 });
+            return;
+        }
+
+        const sameEntry = previous.kind === entry.kind
+            && previous.eventType === entry.eventType
+            && String(previous.text ?? '') === String(entry.text ?? '')
+            && String(previous.command?.command ?? '') === String(entry.command?.command ?? '');
+
+        if (!sameEntry) {
+            collapsed.push({ ...entry, repeatCount: 1 });
+            return;
+        }
+
+        previous.repeatCount = Number(previous.repeatCount ?? 1) + 1;
+        previous.sequence = entry.sequence;
+        previous.timestamp = entry.timestamp;
+        previous.timestampLabel = entry.timestampLabel;
+        if (entry.command?.output) {
+            previous.command = {
+                ...previous.command,
+                ...entry.command,
+            };
+        }
+    });
+
+    return collapsed;
+};
+
+const pushOrUpdateIssue = (issuesByKey, issue, sequence, timestamp) => {
+    if (!issue || !issue.key) {
+        return;
+    }
+
+    const existing = issuesByKey.get(issue.key);
+    if (!existing) {
+        issuesByKey.set(issue.key, {
+            ...issue,
+            count: 1,
+            latestSequence: Number(sequence ?? 0),
+            latestTimestamp: timestamp ?? null,
+            logDetections: 1,
+            countFromMetadata: 0,
+        });
+        return;
+    }
+
+    const nextLogDetections = Number(existing.logDetections ?? 0) + 1;
+    const metadataCount = Number(existing.countFromMetadata ?? 0);
+
+    existing.logDetections = nextLogDetections;
+    existing.count = Math.max(nextLogDetections, metadataCount, Number(existing.count ?? 0));
+    existing.latestSequence = Number(sequence ?? existing.latestSequence ?? 0);
+    existing.latestTimestamp = timestamp ?? existing.latestTimestamp ?? null;
+    if (issue.endpoint) {
+        existing.endpoint = issue.endpoint;
+        existing.detail = issue.detail;
+    }
+};
+
+export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
+    if (!Array.isArray(entries)) {
+        return {
+            timelineEntries: [],
+            heartbeatEntries: [],
+            heartbeatSummary: null,
+            issues: [],
+        };
+    }
+
+    const stitchedEntries = stitchChunkedOutputEntries(entries);
+    const timeline = [];
+    const heartbeatEntries = [];
+    const issuesByKey = new Map();
+
+    const metadataIssues = Array.isArray(runMetadata?.issues) ? runMetadata.issues : [];
+    metadataIssues.forEach((issue) => {
+        const key = String(issue?.key ?? issue?.code ?? '').trim();
+        if (key === '') {
+            return;
+        }
+
+        issuesByKey.set(key, {
+            key,
+            code: String(issue?.code ?? key).trim(),
+            title: String(issue?.title ?? 'Issue detected').trim(),
+            detail: String(issue?.detail ?? '').trim(),
+            suggestedAction: String(issue?.suggested_action ?? '').trim(),
+            endpoint: String(issue?.endpoint ?? '').trim() || null,
+            count: Math.max(1, Number(issue?.count ?? 1)),
+            latestSequence: 0,
+            latestTimestamp: String(issue?.last_detected_at ?? '').trim() || null,
+            logDetections: 0,
+            countFromMetadata: Math.max(1, Number(issue?.count ?? 1)),
+        });
+    });
+
+    stitchedEntries.forEach((entry, index) => {
+        const context = buildEntryContext(entry);
+        const timestamp = String(entry?.event_ts ?? entry?.created_at ?? '').trim() || null;
+        const timestampLabel = formatTimelineTimestamp(timestamp);
+        const normalizedPayload = normalizeOutputPayload(context.eventType, context.payloadRaw);
+        const issueFromPayload = extractMcpConnectionIssue(normalizedPayload);
+        if (issueFromPayload) {
+            pushOrUpdateIssue(issuesByKey, issueFromPayload, context.sequence, timestamp);
+        }
+
+        if (context.eventType === 'lifecycle') {
+            const lifecyclePayload = parseJson(context.payloadRaw);
+            const lifecycleType = String(lifecyclePayload?.type ?? '').trim().toLowerCase();
+            const lifecycleSummary = formatLifecycleSummary(lifecyclePayload, context.fallbackTimestamp) ?? String(context.payloadRaw ?? '').trim();
+
+            if (lifecycleSummary === '') {
+                return;
+            }
+
+            const lifecycleEntry = {
+                key: `${context.key}:lifecycle:${index}`,
+                sequence: context.sequence,
+                eventType: context.eventType,
+                kind: 'lifecycle',
+                text: lifecycleSummary,
+                timestamp,
+                timestampLabel,
+            };
+
+            if (lifecycleType === 'heartbeat') {
+                heartbeatEntries.push(lifecycleEntry);
+            } else {
+                timeline.push(lifecycleEntry);
+            }
+
+            return;
+        }
+
+        const parsedPayload = parseJson(normalizedPayload);
+        const commandExecution = extractCommandExecutionFromEnvelope(parsedPayload);
+        if (commandExecution) {
+            const issueFromCommandOutput = extractMcpConnectionIssue(commandExecution.output);
+            if (issueFromCommandOutput) {
+                pushOrUpdateIssue(issuesByKey, issueFromCommandOutput, context.sequence, timestamp);
+            }
+
+            timeline.push({
+                key: `${context.key}:command:${index}`,
+                sequence: context.sequence,
+                eventType: context.eventType,
+                kind: 'command',
+                command: commandExecution,
+                text: commandExecution.command !== '' ? commandExecution.command : 'Executed command',
+                timestamp,
+                timestampLabel,
+            });
+
+            return;
+        }
+
+        const envelopeText = extractEnvelopeText(parsedPayload);
+        if (envelopeText !== '') {
+            timeline.push({
+                key: `${context.key}:envelope:${index}`,
+                sequence: context.sequence,
+                eventType: context.eventType,
+                kind: context.eventType === 'stderr' ? 'stderr' : 'stdout',
+                text: envelopeText,
+                timestamp,
+                timestampLabel,
+            });
+
+            return;
+        }
+
+        const readExcerptSummary = summarizeReadExcerptPayload(normalizedPayload, context.eventType);
+        if (readExcerptSummary !== null) {
+            timeline.push({
+                key: `${context.key}:excerpt:${index}`,
+                sequence: context.sequence,
+                eventType: context.eventType,
+                kind: 'structured',
+                text: readExcerptSummary,
+                timestamp,
+                timestampLabel,
+            });
+
+            return;
+        }
+
+        const text = String(stripLineNumberPrefixes(normalizedPayload) ?? '').trim();
+        if (text === '') {
+            return;
+        }
+
+        timeline.push({
+            key: `${context.key}:text:${index}`,
+            sequence: context.sequence,
+            eventType: context.eventType,
+            kind: context.eventType === 'stderr' ? 'stderr' : 'stdout',
+            text,
+            timestamp,
+            timestampLabel,
+        });
+    });
+
+    const collapsedTimeline = collapseConsecutiveTimelineEntries(
+        timeline.sort((a, b) => Number(a.sequence ?? 0) - Number(b.sequence ?? 0))
+    );
+    const collapsedHeartbeat = collapseConsecutiveTimelineEntries(
+        heartbeatEntries.sort((a, b) => Number(a.sequence ?? 0) - Number(b.sequence ?? 0))
+    );
+
+    const issues = Array.from(issuesByKey.values())
+        .filter((issue) => String(issue.title ?? '').trim() !== '' && String(issue.detail ?? '').trim() !== '')
+        .sort((a, b) => Number(b.latestSequence ?? 0) - Number(a.latestSequence ?? 0))
+        .map((issue) => ({
+            key: issue.key,
+            code: issue.code,
+            title: issue.title,
+            detail: issue.detail,
+            suggestedAction: issue.suggestedAction,
+            endpoint: issue.endpoint,
+            count: Math.max(1, Number(issue.count ?? 1)),
+            latestSequence: Number(issue.latestSequence ?? 0),
+            latestTimestamp: issue.latestTimestamp ?? null,
+        }));
+
+    return {
+        timelineEntries: collapsedTimeline,
+        heartbeatEntries: collapsedHeartbeat,
+        heartbeatSummary: collapsedHeartbeat.length > 0
+            ? {
+                count: collapsedHeartbeat.reduce((carry, entry) => carry + Number(entry.repeatCount ?? 1), 0),
+                latestTimestamp: collapsedHeartbeat[collapsedHeartbeat.length - 1]?.timestamp ?? null,
+                latestTimestampLabel: collapsedHeartbeat[collapsedHeartbeat.length - 1]?.timestampLabel ?? '',
+            }
+            : null,
+        issues,
+    };
 };

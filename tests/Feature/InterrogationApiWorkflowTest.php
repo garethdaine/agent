@@ -1210,6 +1210,105 @@ class InterrogationApiWorkflowTest extends TestCase
             ->assertJsonPath('data.has_meaningful_plan', false);
     }
 
+    public function test_show_keeps_planning_session_with_missing_plan_in_generation_state(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Planning in progress',
+            'runner_type' => 'codex',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_PLANNING,
+            'phase' => InterrogationSession::PHASE_PLANNING,
+            'plan_json' => [
+                'plan_markdown' => '',
+                'sections' => [],
+                'risks' => [],
+                'assumptions' => [],
+            ],
+            'metadata_json' => [
+                'plan' => [
+                    'generation_status' => 'queued',
+                    'generation_updated_at' => now('UTC')->toIso8601String(),
+                ],
+            ],
+        ]);
+
+        $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id)
+            ->assertOk()
+            ->assertJsonPath('data.phase', InterrogationSession::PHASE_PLANNING)
+            ->assertJsonPath('data.status', InterrogationSession::STATUS_PLANNING)
+            ->assertJsonPath('data.has_meaningful_plan', false)
+            ->assertJsonPath('data.metadata_json.plan.generation_status', 'queued')
+            ->assertJsonMissingPath('data.operator_signal');
+    }
+
+    public function test_show_includes_operator_signal_when_discovery_queue_appears_stalled(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Stalled discovery queue',
+            'runner_type' => 'codex',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_SETUP,
+            'phase' => InterrogationSession::PHASE_DISCOVERY,
+        ]);
+
+        $session->forceFill([
+            'updated_at' => now('UTC')->subSeconds(45),
+        ])->save();
+
+        $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id)
+            ->assertOk()
+            ->assertJsonPath('data.operator_signal.code', 'QUEUE_WORKER_UNAVAILABLE')
+            ->assertJsonPath('data.operator_signal.title', 'Interrogation queue worker may be unavailable');
+    }
+
+    public function test_show_includes_operator_signal_when_plan_generation_appears_stalled(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Stalled planning queue',
+            'runner_type' => 'codex',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_PLANNING,
+            'phase' => InterrogationSession::PHASE_PLANNING,
+            'plan_json' => [
+                'plan_markdown' => '',
+                'sections' => [],
+                'risks' => [],
+                'assumptions' => [],
+            ],
+            'metadata_json' => [
+                'plan' => [
+                    'generation_status' => 'queued',
+                    'generation_updated_at' => now('UTC')->subSeconds(65)->toIso8601String(),
+                ],
+            ],
+        ]);
+
+        $session->forceFill([
+            'updated_at' => now('UTC')->subSeconds(65),
+        ])->save();
+
+        $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id)
+            ->assertOk()
+            ->assertJsonPath('data.has_meaningful_plan', false)
+            ->assertJsonPath('data.operator_signal.code', 'QUEUE_WORKER_UNAVAILABLE')
+            ->assertJsonPath('data.operator_signal.title', 'Interrogation queue worker may be unavailable');
+    }
+
     public function test_summary_open_question_queue_advances_until_summary_regeneration(): void
     {
         Queue::fake();

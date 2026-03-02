@@ -139,6 +139,9 @@ class BuildTaskRunFactoryTest extends TestCase
         $markdown = @file_get_contents((string) $job->task_markdown_path);
 
         $this->assertIsString($markdown);
+        $this->assertStringContainsString('## Runner Mode', $markdown);
+        $this->assertStringContainsString('non-interactive and must complete end-to-end', $markdown);
+        $this->assertStringContainsString('Do not pause for user check-ins', $markdown);
         $this->assertStringContainsString('## Mandatory Workflow', $markdown);
         $this->assertStringContainsString('Write or update tests first', $markdown);
         $this->assertStringContainsString('run tests with `php artisan test` (or `composer test` when full preflight is needed)', $markdown);
@@ -150,15 +153,37 @@ class BuildTaskRunFactoryTest extends TestCase
         $this->assertStringContainsString('Architecture Constraints', $markdown);
     }
 
+    public function test_factory_sets_isolated_codex_home_for_codex_runner(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, ['build' => ['status' => 'running']], 'codex');
+        $task = $this->makeTask($session, 1);
+
+        $factory = app(BuildTaskRunFactory::class);
+        $run = $factory->create($session, $task);
+
+        $job = AgentJob::query()->findOrFail((int) $run->agent_job_id);
+        $codexHome = (string) data_get($job->env_json, 'CODEX_HOME', '');
+
+        $this->assertNotSame('', $codexHome);
+        $this->assertStringContainsString('/storage/framework/interrogation-codex/session-'.$session->id, $codexHome);
+        $this->assertDirectoryExists($codexHome);
+        $this->assertFalse((bool) data_get($job->env_json, 'CODEX_THREAD_ID', true));
+        $this->assertFalse((bool) data_get($job->env_json, 'CODEX_SESSION_ID', true));
+        $this->assertFalse((bool) data_get($job->env_json, 'CODEX_INTERNAL_ORIGINATOR_OVERRIDE', true));
+    }
+
     /**
      * @param  array<string, mixed>  $metadata
      */
-    private function makeSession(User $user, array $metadata = []): InterrogationSession
+    private function makeSession(User $user, array $metadata = [], string $runnerType = 'claude'): InterrogationSession
     {
         return InterrogationSession::query()->create([
             'user_id' => $user->id,
             'name' => 'Build Session',
-            'runner_type' => 'claude',
+            'runner_type' => $runnerType,
             'project_directory' => base_path(),
             'interrogation_type' => InterrogationSession::TYPE_FEATURE,
             'status' => InterrogationSession::STATUS_BUILD_EXECUTING,

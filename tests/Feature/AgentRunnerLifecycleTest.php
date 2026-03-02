@@ -958,6 +958,79 @@ SH;
         $this->assertNotNull($state);
     }
 
+    public function test_mcp_connection_refused_output_sets_deduplicated_mcp_issue_metadata(): void
+    {
+        $mcpUnavailableExec = $this->sandboxBase.'/bin/mcp-connection-refused-runner';
+        $script = <<<'SH'
+#!/bin/sh
+echo "rmcp::transport::worker: Transport channel closed while dialing http://localhost:3333/mcp :: Connection refused"
+echo "rmcp::transport::worker: Transport channel closed while dialing http://localhost:3333/mcp :: Connection refused"
+exit 1
+SH;
+        file_put_contents($mcpUnavailableExec, $script);
+        chmod($mcpUnavailableExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $mcpUnavailableExec,
+            'codex' => $mcpUnavailableExec,
+            'custom' => $mcpUnavailableExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $mcpUnavailableExec.' -p {{task_markdown_path}}',
+            'codex' => $mcpUnavailableExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/mcp-unavailable.md';
+        file_put_contents($taskFile, "# MCP unavailable\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'MCP Unavailable Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'command_template' => config('agent.default_templates.codex'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+        $mcpIssue = (array) data_get($metadata, 'issues.mcp_server_unavailable', []);
+
+        $this->assertSame(AgentJobRun::STATUS_FAILED, $run->status);
+        $this->assertTrue((bool) ($metadata['mcp_connection_refused_detected'] ?? false));
+        $this->assertSame('MCP_SERVER_UNAVAILABLE', (string) ($mcpIssue['code'] ?? ''));
+        $this->assertSame('MCP server unavailable', (string) ($mcpIssue['title'] ?? ''));
+        $this->assertSame('http://localhost:3333/mcp', (string) ($mcpIssue['endpoint'] ?? ''));
+        $this->assertSame(2, (int) ($mcpIssue['count'] ?? 0));
+        $this->assertNotEmpty($mcpIssue['last_detected_at'] ?? null);
+    }
+
     public function test_rate_limit_phrase_inside_escaped_code_snippet_does_not_trigger_detection(): void
     {
         $snippetExec = $this->sandboxBase.'/bin/rate-limit-escaped-code-snippet-runner';

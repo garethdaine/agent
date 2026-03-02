@@ -6,6 +6,7 @@ use App\Jobs\ExecuteInterrogationBuildJob;
 use App\Jobs\SyncInterrogationTaskStatusToTaskProviderJob;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
+use App\Models\AgentRunEvent;
 use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
@@ -105,6 +106,176 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         $session->refresh();
 
         $this->assertSame('completed', data_get($session->metadata_json, 'build.status'));
+    }
+
+    public function test_codex_success_without_actionable_execution_evidence_is_marked_failed(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ], 'codex');
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'source' => 'interrogation_build',
+            ],
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 1,
+            'payload' => '{"type":"item.started","item":{"type":"command_execution","command":"bash -lc \'ls -la\'"}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 2,
+            'payload' => '{"type":"item.completed","item":{"type":"agent_message","text":"I reviewed the requirements. Next I will write a plan before coding."}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'No-op codex task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_FAILED, (string) $task->status);
+        $this->assertSame(
+            'Runner exited successfully but did not execute concrete implementation or verification commands.',
+            (string) $task->last_error
+        );
+        $this->assertSame('failed', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame(1, (int) data_get($session->metadata_json, 'build.execution_evidence.command_count'));
+        $this->assertSame(0, (int) data_get($session->metadata_json, 'build.execution_evidence.mutation_command_count'));
+        $this->assertSame(0, (int) data_get($session->metadata_json, 'build.execution_evidence.implementation_mutation_command_count'));
+        $this->assertSame(0, (int) data_get($session->metadata_json, 'build.execution_evidence.verification_command_count'));
+        $this->assertFalse((bool) data_get($session->metadata_json, 'build.execution_evidence.has_actionable_execution'));
+
+        $errorNotice = InterrogationEvent::query()
+            ->where('interrogation_session_id', (int) $session->id)
+            ->where('event_type', InterrogationEvent::TYPE_ERROR)
+            ->where('payload->code', 'BUILD_TASK_NO_EXECUTION_EVIDENCE')
+            ->exists();
+
+        $this->assertTrue($errorNotice);
+    }
+
+    public function test_codex_success_with_only_meta_file_mutation_and_no_verification_is_marked_failed(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ], 'codex');
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'source' => 'interrogation_build',
+            ],
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 1,
+            'payload' => '{"type":"item.started","item":{"type":"command_execution","command":"cat > tasks/todo.md"}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Checklist-only codex task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_FAILED, (string) $task->status);
+        $this->assertSame(1, (int) data_get($session->metadata_json, 'build.execution_evidence.command_count'));
+        $this->assertSame(1, (int) data_get($session->metadata_json, 'build.execution_evidence.mutation_command_count'));
+        $this->assertSame(0, (int) data_get($session->metadata_json, 'build.execution_evidence.implementation_mutation_command_count'));
+        $this->assertSame(0, (int) data_get($session->metadata_json, 'build.execution_evidence.verification_command_count'));
+        $this->assertFalse((bool) data_get($session->metadata_json, 'build.execution_evidence.has_actionable_execution'));
+    }
+
+    public function test_codex_success_with_implementation_and_verification_evidence_completes_task(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ], 'codex');
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'source' => 'interrogation_build',
+            ],
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 1,
+            'payload' => '{"type":"item.started","item":{"type":"command_execution","command":"apply_patch <<\\\"PATCH\\\"\\n*** Update File: app/Models/DocumentationEntry.php\\nPATCH"}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 2,
+            'payload' => '{"type":"item.started","item":{"type":"command_execution","command":"bash -lc \"php artisan test --filter=DocumentationSchemaTest\""}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Implementation codex task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_COMPLETED, (string) $task->status);
     }
 
     public function test_job_preserves_failed_permission_blocker_context_for_build_retry_and_visibility(): void
@@ -415,12 +586,12 @@ class ExecuteInterrogationBuildJobTest extends TestCase
     /**
      * @param  array<string, mixed>  $build
      */
-    private function makeSession(User $user, array $build): InterrogationSession
+    private function makeSession(User $user, array $build, string $runnerType = 'claude'): InterrogationSession
     {
         return InterrogationSession::query()->create([
             'user_id' => $user->id,
             'name' => 'Build session',
-            'runner_type' => 'claude',
+            'runner_type' => $runnerType,
             'project_directory' => base_path(),
             'interrogation_type' => InterrogationSession::TYPE_FEATURE,
             'status' => InterrogationSession::STATUS_COMPLETED,

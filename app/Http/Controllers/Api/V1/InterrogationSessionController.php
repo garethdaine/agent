@@ -2631,6 +2631,11 @@ class InterrogationSessionController extends Controller
             'deleted_at' => $this->toRfc3339Millis($session->deleted_at),
         ];
 
+        $operatorSignal = $this->resolveOperatorSignal($session);
+        if ($operatorSignal !== null) {
+            $data['operator_signal'] = $operatorSignal;
+        }
+
         $complianceData = $this->extractComplianceData($session->metadata_json ?? []);
         if (! empty($complianceData)) {
             $data['compliance_summary'] = (new ComplianceSummaryResource($complianceData))->toArray(request());
@@ -2860,6 +2865,9 @@ class InterrogationSessionController extends Controller
                 : (is_string($build['rate_limit_excerpt'] ?? null) ? $build['rate_limit_excerpt'] : null),
         ];
 
+        $issues = is_array($runMetadata['issues'] ?? null) ? $runMetadata['issues'] : [];
+        $normalizedIssues = $this->normalizeBuildIssues($issues);
+
         if ($flags['rate_limit_reset_at'] === '') {
             $flags['rate_limit_reset_at'] = null;
         }
@@ -2872,6 +2880,7 @@ class InterrogationSessionController extends Controller
             'active_run' => $activeRun !== null ? $this->transformBuildRun($activeRun) : null,
             'project_rules' => $this->normalizedProjectRules((array) ($build['project_rules'] ?? [])),
             'flags' => $flags,
+            'issues' => $normalizedIssues,
             'pause_reason' => isset($build['pause_reason']) ? (string) $build['pause_reason'] : null,
             'error' => isset($build['error']) ? (string) $build['error'] : null,
             'completion_summary' => isset($build['completion_summary']) ? (string) $build['completion_summary'] : null,
@@ -3232,6 +3241,117 @@ class InterrogationSessionController extends Controller
         $validation = $guard->validate($session->plan_json);
 
         return (bool) ($validation['valid'] ?? false);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolveOperatorSignal(InterrogationSession $session): ?array
+    {
+        $now = CarbonImmutable::now('UTC');
+        $phase = (int) $session->phase;
+        $status = strtolower(trim((string) $session->status));
+
+        if ($phase === InterrogationSession::PHASE_DISCOVERY && $status === InterrogationSession::STATUS_SETUP) {
+            $reference = $session->updated_at ?? $session->created_at;
+            if (($this->secondsSinceReference($reference, $now) ?? 0) >= 20) {
+                return [
+                    'code' => 'QUEUE_WORKER_UNAVAILABLE',
+                    'severity' => 'warning',
+                    'title' => 'Interrogation queue worker may be unavailable',
+                    'detail' => 'Discovery was queued but has not started. The interrogation queue worker may not be running.',
+                    'suggested_action' => 'Start/restart the queue worker (for example `php artisan horizon` or `php artisan queue:work --queue=interrogation`) and retry discovery.',
+                ];
+            }
+        }
+
+        if (
+            $phase === InterrogationSession::PHASE_PLANNING
+            && $status === InterrogationSession::STATUS_PLANNING
+            && ! $this->hasMeaningfulPlan($session)
+        ) {
+            $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+            $planMeta = is_array($metadata['plan'] ?? null) ? $metadata['plan'] : [];
+            $generationStatus = strtolower(trim((string) ($planMeta['generation_status'] ?? '')));
+            $revisionStatus = strtolower(trim((string) ($planMeta['revision_status'] ?? '')));
+            $waitingForPlan = in_array($generationStatus, ['queued', 'running', 'idle'], true)
+                || in_array($revisionStatus, ['queued', 'running'], true);
+
+            if ($waitingForPlan) {
+                $reference = $planMeta['generation_updated_at']
+                    ?? $planMeta['revision_updated_at']
+                    ?? $session->updated_at
+                    ?? $session->created_at;
+
+                if (($this->secondsSinceReference($reference, $now) ?? 0) >= 30) {
+                    return [
+                        'code' => 'QUEUE_WORKER_UNAVAILABLE',
+                        'severity' => 'warning',
+                        'title' => 'Interrogation queue worker may be unavailable',
+                        'detail' => 'Plan generation has been queued but no plan output has been produced yet.',
+                        'suggested_action' => 'Start/restart the queue worker (for example `php artisan horizon` or `php artisan queue:work --queue=interrogation`) and retry plan generation.',
+                    ];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function secondsSinceReference(mixed $reference, CarbonImmutable $now): ?int
+    {
+        if ($reference === null) {
+            return null;
+        }
+
+        if (is_string($reference) && trim($reference) === '') {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($reference, 'UTC')->diffInSeconds($now);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $issues
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeBuildIssues(array $issues): array
+    {
+        $normalized = [];
+
+        foreach ($issues as $key => $issue) {
+            if (! is_array($issue)) {
+                continue;
+            }
+
+            $code = trim((string) ($issue['code'] ?? strtoupper((string) $key)));
+            $title = trim((string) ($issue['title'] ?? 'Issue detected'));
+            $detail = trim((string) ($issue['detail'] ?? ''));
+            $suggestedAction = trim((string) ($issue['suggested_action'] ?? ''));
+
+            if ($title === '' || $detail === '') {
+                continue;
+            }
+
+            $normalized[] = [
+                'key' => (string) $key,
+                'code' => $code,
+                'title' => $title,
+                'detail' => $detail,
+                'suggested_action' => $suggestedAction !== '' ? $suggestedAction : null,
+                'endpoint' => isset($issue['endpoint']) ? (string) $issue['endpoint'] : null,
+                'count' => max(1, (int) ($issue['count'] ?? 1)),
+                'first_detected_at' => isset($issue['first_detected_at']) ? (string) $issue['first_detected_at'] : null,
+                'last_detected_at' => isset($issue['last_detected_at']) ? (string) $issue['last_detected_at'] : null,
+                'excerpt' => isset($issue['excerpt']) ? (string) $issue['excerpt'] : null,
+            ];
+        }
+
+        return array_values($normalized);
     }
 
     /**

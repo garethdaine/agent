@@ -10,6 +10,9 @@ use App\Http\Controllers\Api\V1\ComplianceController;
 use App\Http\Controllers\Api\V1\DelegateeProfileController;
 use App\Http\Controllers\Api\V1\DelegationGraphController;
 use App\Http\Controllers\Api\V1\DelegationTaskController;
+use App\Http\Controllers\Api\V1\Docs\DocsCoverageController;
+use App\Http\Controllers\Api\V1\Docs\DocsFragmentController;
+use App\Http\Controllers\Api\V1\Docs\DocsSearchController;
 use App\Http\Controllers\Api\V1\InterrogationSessionController;
 use App\Http\Controllers\Api\V1\InterrogationSettingsController;
 use App\Http\Controllers\Api\V1\InterrogationTaskProviderController;
@@ -77,6 +80,13 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::post('/backups/run-now', [AgentBackupSettingsController::class, 'runNow'])->middleware('throttle:agent-mutations');
             Route::get('/features/settings', [AgentFeatureSettingsController::class, 'index']);
             Route::put('/features/settings', [AgentFeatureSettingsController::class, 'update'])->middleware('throttle:agent-mutations');
+
+            Route::prefix('docs')->group(function (): void {
+                Route::get('/search', [DocsSearchController::class, 'index']);
+                Route::get('/fragments/{uiKey}', [DocsFragmentController::class, 'show']);
+                Route::get('/coverage', [DocsCoverageController::class, 'index'])
+                    ->middleware('can:view-docs-coverage');
+            });
 
             Route::prefix('compliance')->group(function (): void {
                 Route::get('/status', [ComplianceController::class, 'status']);

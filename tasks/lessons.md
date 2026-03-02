@@ -361,3 +361,19 @@ Use this file to capture correction-driven lessons.
 - Pattern: Detecting duplicates without a concrete forward-progress action (auto-resolve/advance/complete) can leave the loop intact even when sessions no longer fail.
 - Prevention rule: Any duplicate-question detection must enforce a progression strategy: auto-resolve from prior confirmed answer, or auto-advance to next step when saturation is detected; warning-only is insufficient.
 - Applied in: `app/Jobs/ExecuteInterrogationRoundJob.php`, `config/agent.php`, `tests/Unit/ExecuteInterrogationRoundJobTest.php`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User-reported build marked complete but no docs feature code was generated (session 15, runs 2072-2084)
+- Correction: Codex build runs were accepted as completed on exit code `0` even when execution evidence showed planning/read-only behavior with no implementation commands.
+- Pattern: Success gating that relies only on process exit status can produce false-positive completion in autonomous build pipelines.
+- Prevention rule: For non-interactive Codex build runs, require concrete execution evidence (mutation or verification commands) before marking task `completed`; otherwise fail with explicit no-evidence error and retain diagnostics.
+- Applied in: `app/Jobs/ExecuteInterrogationBuildJob.php`, `app/Support/Interrogation/BuildTaskRunFactory.php`, `tests/Unit/ExecuteInterrogationBuildJobTest.php`, `tests/Unit/BuildTaskRunFactoryTest.php`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User-reported Codex build tasks still "completed" quickly with planning/checklist-only behavior and no feature files changed
+- Correction: Build-run evidence gate was too permissive (counted non-implementation mutations like `tasks/todo.md`) and build runner env still inherited Codex desktop thread/session vars.
+- Pattern: Autonomous run quality degrades when runner subprocesses inherit interactive desktop context and when execution evidence does not distinguish implementation mutations from housekeeping edits.
+- Prevention rule: For Codex build runs, scrub thread/session origin env vars (`CODEX_THREAD_ID`, `CODEX_SESSION_ID`, `CODEX_INTERNAL_ORIGINATOR_OVERRIDE`) and require both implementation-path mutation evidence (`app|database|config|routes|resources|tests|scripts`) plus verification command evidence before completing tasks.
+- Applied in: `app/Support/Interrogation/BuildTaskRunFactory.php`, `app/Jobs/ExecuteAgentRunJob.php`, `app/Jobs/ExecuteInterrogationBuildJob.php`, `tests/Unit/ExecuteInterrogationBuildJobTest.php`, `tests/Unit/BuildTaskRunFactoryTest.php`

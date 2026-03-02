@@ -139,6 +139,23 @@ class CodexAdapter implements InterrogationRunnerAdapter
             return null;
         }
 
+        $mcpEndpoint = $this->extractMcpUnavailableEndpoint($line);
+        if ($mcpEndpoint !== null) {
+            return [
+                'type' => 'issue',
+                'payload' => [
+                    'source' => 'codex',
+                    'code' => 'MCP_SERVER_UNAVAILABLE',
+                    'title' => 'MCP server unavailable',
+                    'message' => sprintf(
+                        'MCP server unavailable. Could not connect to %s (connection refused). Start/restart the MCP server or update MCP endpoint config.',
+                        $mcpEndpoint
+                    ),
+                    'endpoint' => $mcpEndpoint,
+                ],
+            ];
+        }
+
         if ($this->isIgnorableCodexStateWarning($line)) {
             return [
                 'type' => 'diagnostic',
@@ -174,6 +191,17 @@ class CodexAdapter implements InterrogationRunnerAdapter
         $message = (string) ($decoded['message'] ?? $decoded['text'] ?? $decoded['content'] ?? '');
         if ($message === '') {
             $message = $this->extractNestedStreamMessage($decoded);
+        }
+        if ($message === '') {
+            $message = $this->summarizeCodexStreamState($decoded);
+        }
+
+        $mcpEndpoint = $this->extractMcpUnavailableEndpoint(json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '');
+        if ($mcpEndpoint !== null) {
+            $message = sprintf(
+                'MCP server unavailable. Could not connect to %s (connection refused). Start/restart the MCP server or update MCP endpoint config.',
+                $mcpEndpoint
+            );
         }
 
         $payload = [
@@ -316,6 +344,37 @@ class CodexAdapter implements InterrogationRunnerAdapter
         }
 
         return 'Running discovery command.';
+    }
+
+    /**
+     * @param  array<string, mixed>  $decoded
+     */
+    private function summarizeCodexStreamState(array $decoded): string
+    {
+        $type = strtolower(trim((string) ($decoded['type'] ?? '')));
+
+        return match ($type) {
+            'thread.started' => 'Starting Codex analysis.',
+            'turn.started' => 'Running Codex analysis step.',
+            'turn.completed' => 'Completed Codex analysis step.',
+            'turn.failed', 'error' => 'Codex reported an execution error.',
+            default => '',
+        };
+    }
+
+    private function extractMcpUnavailableEndpoint(string $value): ?string
+    {
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/rmcp::transport::worker[\s\S]{0,1800}?transport channel closed[\s\S]{0,1800}?(https?:\/\/[^\s"\']+\/mcp)[\s\S]{0,1800}?connection refused/i', $value, $matches) !== 1) {
+            return null;
+        }
+
+        $endpoint = trim((string) ($matches[1] ?? ''));
+
+        return $endpoint !== '' ? $endpoint : null;
     }
 
     private function isLikelyCodeOrBlob(string $message): bool
@@ -641,8 +700,61 @@ class CodexAdapter implements InterrogationRunnerAdapter
         }
 
         $env['INTERROGATION_SESSION_ID'] = (string) $session->id;
+        $env['CODEX_HOME'] = $this->isolatedCodexHomeForSession((int) $session->id);
 
         return $env;
+    }
+
+    private function isolatedCodexHomeForSession(int $sessionId): string
+    {
+        $directory = storage_path('framework/interrogation-codex/session-'.$sessionId);
+
+        if (! is_dir($directory) && ! @mkdir($directory, 0775, true) && ! is_dir($directory)) {
+            throw new RuntimeException('Unable to create isolated Codex home directory: '.$directory);
+        }
+
+        $this->bootstrapIsolatedCodexAuth($directory);
+
+        return $directory;
+    }
+
+    private function bootstrapIsolatedCodexAuth(string $isolatedHome): void
+    {
+        if (! is_dir($isolatedHome.'/shell_snapshots')) {
+            @mkdir($isolatedHome.'/shell_snapshots', 0775, true);
+        }
+
+        $sourceAuth = $this->defaultCodexHome().'/auth.json';
+        if (! is_file($sourceAuth)) {
+            return;
+        }
+
+        $targetAuth = $isolatedHome.'/auth.json';
+        $sourceMtime = @filemtime($sourceAuth) ?: null;
+        $targetMtime = @filemtime($targetAuth) ?: null;
+        $needsCopy = ! is_file($targetAuth) || ($sourceMtime !== null && $targetMtime !== null && $sourceMtime > $targetMtime);
+
+        if (! $needsCopy) {
+            return;
+        }
+
+        @copy($sourceAuth, $targetAuth);
+        @chmod($targetAuth, 0600);
+    }
+
+    private function defaultCodexHome(): string
+    {
+        $explicit = trim((string) ($_ENV['CODEX_HOME'] ?? getenv('CODEX_HOME') ?: ''));
+        if ($explicit !== '') {
+            return $explicit;
+        }
+
+        $home = trim((string) ($_ENV['HOME'] ?? getenv('HOME') ?: ''));
+        if ($home !== '') {
+            return rtrim($home, '/').'/'.'.codex';
+        }
+
+        return base_path('.codex');
     }
 
     private function executable(): string

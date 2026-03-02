@@ -94,6 +94,10 @@ class AppServiceProvider extends ServiceProvider
             return $user->hasRole(['admin', 'analytics']);
         });
 
+        Gate::define('view-docs-coverage', function ($user) {
+            return $user->hasRole(['admin', 'analytics']);
+        });
+
         RateLimiter::for('agent-mutations', function (Request $request) {
             return [
                 Limit::perMinute(30)

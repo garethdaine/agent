@@ -4,6 +4,7 @@ use App\Http\Controllers\Messenger\AccountLinkController;
 use App\Http\Controllers\Messenger\DeadLetterController;
 use App\Http\Controllers\Messenger\MessengerHealthController;
 use App\Http\Controllers\TaskProviderOAuthController;
+use App\Http\Controllers\Docs\DocsPageController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -49,6 +50,11 @@ Route::middleware([
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
+
+    Route::get('/docs', [DocsPageController::class, 'index'])
+        ->name('docs.index');
+    Route::get('/docs/{slug}', [DocsPageController::class, 'show'])
+        ->name('docs.show');
 
     Route::get('/agent/jobs', function () {
         return Inertia::render('Agent/Jobs/Index');

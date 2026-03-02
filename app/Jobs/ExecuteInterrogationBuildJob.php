@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Models\AgentJobRun;
+use App\Models\AgentRunEvent;
 use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationSession;
 use App\Support\Interrogation\BuildExecutionBackupService;
@@ -303,6 +304,37 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         }
 
         if ($runStatus === AgentJobRun::STATUS_SUCCEEDED) {
+            if ($this->shouldEnforceCodexExecutionEvidence($session, $run)) {
+                $evidence = $this->collectCodexExecutionEvidence($run);
+
+                if (! $evidence['has_actionable_execution']) {
+                    $task->status = InterrogationBuildTask::STATUS_FAILED;
+                    $task->last_error = 'Runner exited successfully but did not execute concrete implementation or verification commands.';
+                    $task->finished_at = CarbonImmutable::now('UTC');
+                    $task->save();
+
+                    $build['status'] = 'failed';
+                    $build['error'] = $task->last_error;
+                    $build['active_task_id'] = (int) $task->id;
+                    $build['active_run_id'] = (int) $run->id;
+                    $build['failed_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+                    $build['execution_evidence'] = $evidence;
+                    $this->saveBuildMetadata($session, $build);
+
+                    $writer->appendError([
+                        'code' => 'BUILD_TASK_NO_EXECUTION_EVIDENCE',
+                        'message' => $task->last_error,
+                        'task_id' => $task->id,
+                        'run_id' => $run->id,
+                        'details' => $evidence,
+                    ]);
+
+                    $this->queueTaskProviderStatusSync($session, $task, $writer);
+
+                    return false;
+                }
+            }
+
             // Check compliance gates before allowing completion
             if ($policyService->isEnabled()) {
                 $completionResult = $policyService->evaluateCompletion($task);
@@ -407,6 +439,161 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $this->queueTaskProviderStatusSync($session, $task, $writer);
 
         return false;
+    }
+
+    private function shouldEnforceCodexExecutionEvidence(
+        InterrogationSession $session,
+        AgentJobRun $run,
+    ): bool {
+        if ((string) $session->runner_type !== 'codex') {
+            return false;
+        }
+
+        $metadata = is_array($run->metadata_json) ? $run->metadata_json : [];
+
+        return (string) ($metadata['source'] ?? '') === 'interrogation_build';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function collectCodexExecutionEvidence(AgentJobRun $run): array
+    {
+        $events = AgentRunEvent::query()
+            ->where('agent_job_run_id', (int) $run->id)
+            ->where('event_type', 'stdout')
+            ->orderBy('sequence')
+            ->get(['payload']);
+
+        $commandCount = 0;
+        $mutationCommandCount = 0;
+        $implementationMutationCommandCount = 0;
+        $verificationCommandCount = 0;
+        $latestAgentMessage = null;
+
+        foreach ($events as $event) {
+            $payload = (string) $event->payload;
+
+            foreach ($this->extractCommandsFromRunEventPayload($payload) as $command) {
+                if (! is_string($command) || trim($command) === '') {
+                    continue;
+                }
+
+                $commandCount++;
+
+                if ($this->isMutationCommand($command)) {
+                    $mutationCommandCount++;
+                }
+
+                if ($this->isImplementationMutationCommand($command)) {
+                    $implementationMutationCommandCount++;
+                }
+
+                if ($this->isVerificationCommand($command)) {
+                    $verificationCommandCount++;
+                }
+            }
+
+            $patchPathMatchCount = preg_match_all('/\*\*\*\s+(?:Add|Update|Delete)\s+File:\s+((?:app|database|config|routes|resources|tests|scripts)\/[^\n]+)/i', $payload, $patchMatches);
+            if (is_int($patchPathMatchCount) && $patchPathMatchCount > 0) {
+                $implementationMutationCommandCount += $patchPathMatchCount;
+                $mutationCommandCount += $patchPathMatchCount;
+            }
+
+            $messageMatchCount = preg_match_all('/"type":"agent_message","text":"([^"]+)"/', $payload, $messageMatches);
+            if (is_int($messageMatchCount) && $messageMatchCount > 0) {
+                $messages = (array) $messageMatches[1];
+                if ($messages !== []) {
+                    $latestAgentMessage = stripcslashes((string) end($messages));
+                }
+            }
+        }
+
+        return [
+            'command_count' => $commandCount,
+            'mutation_command_count' => $mutationCommandCount,
+            'implementation_mutation_command_count' => $implementationMutationCommandCount,
+            'verification_command_count' => $verificationCommandCount,
+            'has_actionable_execution' => $implementationMutationCommandCount > 0 && $verificationCommandCount > 0,
+            'latest_agent_message' => $latestAgentMessage,
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractCommandsFromRunEventPayload(string $payload): array
+    {
+        $commands = [];
+
+        foreach (preg_split('/\R/', $payload) ?: [] as $line) {
+            $line = trim((string) $line);
+            if ($line === '') {
+                continue;
+            }
+
+            $decoded = json_decode($line, true);
+            if (! is_array($decoded)) {
+                continue;
+            }
+
+            $item = is_array($decoded['item'] ?? null) ? $decoded['item'] : null;
+            $command = is_array($item) ? ($item['command'] ?? null) : null;
+            if (is_string($command) && trim($command) !== '') {
+                $commands[] = stripcslashes($command);
+            }
+        }
+
+        if ($commands !== []) {
+            return $commands;
+        }
+
+        $matchCount = preg_match_all('/"command":"((?:\\\\.|[^"\\\\])*)"/', $payload, $matches);
+        if (! is_int($matchCount) || $matchCount < 1) {
+            return [];
+        }
+
+        $fallback = [];
+        foreach ((array) ($matches[1] ?? []) as $rawCommand) {
+            if (! is_string($rawCommand) || trim($rawCommand) === '') {
+                continue;
+            }
+
+            $fallback[] = stripcslashes($rawCommand);
+        }
+
+        return $fallback;
+    }
+
+    private function isMutationCommand(string $command): bool
+    {
+        if (preg_match('/\b(apply_patch|tee\s+|sed\s+-i|perl\s+-i|mv\s+|cp\s+|mkdir\s+|touch\s+|git\s+(?:add|mv|rm)|php\s+artisan\s+make:|composer\s+(?:require|remove|install|update)|npm\s+(?:run|install)|yarn\s+|pnpm\s+)\b/i', $command) === 1) {
+            return true;
+        }
+
+        return preg_match('/(?:^|[^>])>>?\s*[^\s>]/', $command) === 1;
+    }
+
+    private function isImplementationMutationCommand(string $command): bool
+    {
+        if (! $this->isMutationCommand($command)) {
+            return false;
+        }
+
+        if (preg_match('/\b(php\s+artisan\s+make:|composer\s+(?:require|remove|install|update)|npm\s+(?:run|install)|yarn\s+|pnpm\s+)/i', $command) === 1) {
+            return true;
+        }
+
+        if (preg_match('/(?:^|[\s"\'`])(?:\.\/)?(app|database|config|routes|resources|tests|scripts)\/[^\s"\'`]+/i', $command) === 1) {
+            return true;
+        }
+
+        return preg_match('/\/(app|database|config|routes|resources|tests|scripts)\//i', $command) === 1;
+    }
+
+    private function isVerificationCommand(string $command): bool
+    {
+        return preg_match('/\b(php\s+artisan\s+test|composer\s+test|phpunit|pest|npm\s+test|vitest|jest|pytest)\b/i', $command) === 1;
     }
 
     private function persistActivePointers(InterrogationSession $session, InterrogationBuildTask $task, AgentJobRun $run): void
