@@ -7,6 +7,7 @@ namespace Tests\Unit\Messenger\Adapters;
 use App\DTOs\Messenger\OutboundPayload;
 use App\DTOs\Messenger\ReplayProtectionStrategy;
 use App\DTOs\Messenger\ThreadingStrategy;
+use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\ConnectorAccount;
 use App\Models\MessengerIdentityLink;
@@ -559,5 +560,70 @@ class DiscordAdapterTest extends TestCase
         Http::assertSent(function ($request) {
             return str_contains($request->url(), '/channels/1111111111111111111/messages');
         });
+    }
+
+    public function test_send_message_edits_original_interaction_response_when_context_exists(): void
+    {
+        $user = User::factory()->create();
+        $session = ChatSession::factory()->create([
+            'connector_account_id' => $this->account->id,
+            'user_id' => $user->id,
+            'channel_id' => '987654321098765432',
+        ]);
+
+        ChatMessage::create([
+            'chat_session_id' => $session->id,
+            'connector_account_id' => $this->account->id,
+            'direction' => ChatMessage::DIRECTION_INBOUND,
+            'content' => 'list my jobs',
+            'idempotency_key' => hash('sha256', 'discord-interaction-inbound-1'),
+            'provider_event_id' => 'interaction-123',
+            'provider_message_id' => 'interaction-123',
+            'created_at' => now(),
+        ]);
+
+        Cache::put(
+            sprintf('discord:interaction:%s:%s', $this->account->id, 'interaction-123'),
+            [
+                'token' => 'interaction-token-abc',
+                'application_id' => '1123456789012345678',
+            ],
+            900
+        );
+
+        Http::fake([
+            'https://discord.com/api/v10/webhooks/1123456789012345678/interaction-token-abc/messages/@original' => Http::response([
+                'id' => 'deferred-message-123',
+                'channel_id' => '987654321098765432',
+                'content' => 'Resolved response',
+            ], 200),
+            'https://discord.com/api/v10/channels/*/messages' => Http::response([
+                'id' => 'channel-message-should-not-be-used',
+            ], 200),
+        ]);
+
+        $payload = new OutboundPayload(
+            content: 'Resolved response',
+            channelId: '987654321098765432',
+            threadId: null,
+            replyToMessageId: null,
+            attachmentIds: [],
+        );
+
+        $result = $this->adapter->sendMessage($session, $payload);
+
+        $this->assertTrue($result->success);
+        $this->assertEquals('deferred-message-123', $result->providerMessageId);
+
+        Http::assertSent(function ($request) {
+            return $request->method() === 'PATCH'
+                && $request->url() === 'https://discord.com/api/v10/webhooks/1123456789012345678/interaction-token-abc/messages/@original';
+        });
+
+        Http::assertNotSent(function ($request) {
+            return str_contains($request->url(), '/channels/987654321098765432/messages');
+        });
+
+        $this->assertNull(Cache::get(sprintf('discord:interaction:%s:%s', $this->account->id, 'interaction-123')));
     }
 }

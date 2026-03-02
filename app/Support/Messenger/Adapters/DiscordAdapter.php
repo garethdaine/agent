@@ -10,6 +10,7 @@ use App\DTOs\Messenger\OutboundPayload;
 use App\DTOs\Messenger\ProviderResponse;
 use App\DTOs\Messenger\ReplayProtectionStrategy;
 use App\DTOs\Messenger\ThreadingStrategy;
+use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\ConnectorAccount;
 use App\Support\Messenger\MessengerHttpClient;
@@ -38,6 +39,8 @@ use Illuminate\Support\Facades\Log;
 class DiscordAdapter extends AbstractConnectorAdapter
 {
     private const API_BASE_URL = 'https://discord.com/api/v10';
+
+    private const INTERACTION_CONTEXT_TTL_SECONDS = 900;
 
     protected function getProviderName(): string
     {
@@ -109,14 +112,22 @@ class DiscordAdapter extends AbstractConnectorAdapter
     public function parseInboundMessage(Request $request): NormalizedMessage
     {
         $data = $request->all();
+        /** @var ConnectorAccount|null $account */
+        $account = $request->attributes->get('connector_account');
 
         // Check if this is an interaction (webhook) or a Gateway event
         if (isset($data['type']) && is_numeric($data['type'])) {
+            $this->storeInteractionContext($account, $data);
+
             return $this->parseInteraction($data);
         }
 
         // Gateway event
         if (isset($data['t']) && isset($data['d'])) {
+            if (($data['t'] ?? null) === 'INTERACTION_CREATE' && is_array($data['d'] ?? null)) {
+                $this->storeInteractionContext($account, $data['d']);
+            }
+
             return $this->parseGatewayEvent($data);
         }
 
@@ -148,6 +159,41 @@ class DiscordAdapter extends AbstractConnectorAdapter
             ]);
 
             return ProviderResponse::failure('Missing bot token');
+        }
+
+        // If this outbound is a response to a deferred slash interaction,
+        // edit the original interaction response so Discord clears "thinking…".
+        $interactionContext = $this->pullInteractionContextForSession($session, $account);
+        if ($interactionContext !== null) {
+            $originalResponse = Http::timeout(10)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->patch(
+                    sprintf(
+                        '%s/webhooks/%s/%s/messages/@original',
+                        self::API_BASE_URL,
+                        $interactionContext['application_id'],
+                        $interactionContext['token']
+                    ),
+                    ['content' => $payload->content]
+                );
+
+            if ($originalResponse->successful()) {
+                $responseData = $originalResponse->json();
+                $messageId = $responseData['id'] ?? null;
+
+                if ($messageId !== null) {
+                    $this->storeLastBotMessageId($session, $messageId);
+
+                    return ProviderResponse::success((string) $messageId, $responseData);
+                }
+            } else {
+                $this->logError('Failed to edit original Discord interaction response, falling back to channel post', [
+                    'account_id' => $account->id,
+                    'channel_id' => $session->channel_id,
+                    'status' => $originalResponse->status(),
+                    'body' => $originalResponse->body(),
+                ]);
+            }
         }
 
         // Determine target channel
@@ -708,5 +754,74 @@ class DiscordAdapter extends AbstractConnectorAdapter
     private function getBotToken(ConnectorAccount $account): ?string
     {
         return $account->credentials['bot_token'] ?? null;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $data
+     */
+    private function storeInteractionContext(?ConnectorAccount $account, ?array $data): void
+    {
+        if ($account === null || $data === null) {
+            return;
+        }
+
+        $interactionId = (string) ($data['id'] ?? '');
+        $interactionToken = (string) ($data['token'] ?? '');
+        $applicationId = trim((string) ($account->credentials['application_id'] ?? ''));
+
+        if ($interactionId === '' || $interactionToken === '' || $applicationId === '') {
+            return;
+        }
+
+        Cache::put(
+            $this->interactionContextCacheKey($account, $interactionId),
+            [
+                'token' => $interactionToken,
+                'application_id' => $applicationId,
+            ],
+            self::INTERACTION_CONTEXT_TTL_SECONDS
+        );
+    }
+
+    /**
+     * @return array{token:string,application_id:string}|null
+     */
+    private function pullInteractionContextForSession(ChatSession $session, ConnectorAccount $account): ?array
+    {
+        $latestInbound = $session->messages()
+            ->where('direction', ChatMessage::DIRECTION_INBOUND)
+            ->latest('created_at')
+            ->first();
+
+        if ($latestInbound === null) {
+            return null;
+        }
+
+        $interactionId = trim((string) ($latestInbound->provider_event_id ?? ''));
+        if ($interactionId === '') {
+            return null;
+        }
+
+        $context = Cache::pull($this->interactionContextCacheKey($account, $interactionId));
+        if (! is_array($context)) {
+            return null;
+        }
+
+        $token = trim((string) ($context['token'] ?? ''));
+        $applicationId = trim((string) ($context['application_id'] ?? ''));
+
+        if ($token === '' || $applicationId === '') {
+            return null;
+        }
+
+        return [
+            'token' => $token,
+            'application_id' => $applicationId,
+        ];
+    }
+
+    private function interactionContextCacheKey(ConnectorAccount $account, string $interactionId): string
+    {
+        return sprintf('discord:interaction:%s:%s', $account->id, $interactionId);
     }
 }
