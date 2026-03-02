@@ -230,7 +230,7 @@ Current repo has no `packages/` directory. Plan for extraction:
 
 ## 10.1 Engine Recommendation
 
-- Preferred: `Laravel Scout + Meilisearch` for relevance quality and typo tolerance.
+- Preferred: `Laravel Scout + Typesense` for local-first operation, relevance quality, and typo tolerance.
 - Fallback: Scout database engine for low-infra local mode (reduced ranking quality).
 
 ## 10.2 Indexing Schema
@@ -253,6 +253,17 @@ Common indexed fields:
 - Then summary/body relevance
 - Boost by current route affinity when searching from a given page
 
+## 10.4 Local Infrastructure Convention (Docker Compose)
+
+- Reuse the existing root `docker-compose.yml` as the shared local infra stack for containerized dependencies.
+- Treat it as the catch-all for external services needed by the app (for example: Neo4j, Typesense, and future infra services).
+- Do not create one-off compose files per feature unless there is a hard isolation requirement.
+- Use consistent patterns across services:
+  - Named volumes for persistent data
+  - Healthchecks for readiness
+  - Environment-driven configuration via `.env`
+  - Optional Compose `profiles` for selective startup when service count grows
+
 ## 11. Authoring and Governance Requirements
 
 - Roles:
@@ -265,6 +276,21 @@ Common indexed fields:
   - No orphan `ui_key` references
   - No missing docs for required critical routes/settings
   - Broken-link checks
+
+## 11.1 Commit Automation Requirement (Claude Hooks)
+
+- Add commit automation requirements for both:
+  - Claude tooling commits (Claude hooks)
+  - All local git commits (standard git `pre-commit` hook)
+- Requirement intent: docs/tooltips synchronization must run before **any** local commit is finalized, regardless of commit entrypoint.
+- This is a product requirement for the documentation platform rollout, not an immediate implementation in this discovery brief.
+- Hook behavior target:
+  - Trigger on commit commands
+  - Regenerate documentation and helper/tooltip artifacts
+  - Block commit if sync fails
+  - Allow explicit bypass for emergency/manual flows
+- Implementation-direction requirement: use one shared sync script/pipeline and invoke it from both Claude hook and git `pre-commit` hook paths to avoid drift.
+- Reference: https://code.claude.com/docs/en/hooks
 
 ## 12. Coverage and Quality Requirements
 
@@ -320,7 +346,7 @@ Definition of done for "fully documented area":
 - Risk: over-coupling docs and frontend keys.
   - Mitigation: stable key naming standard and lint checks.
 - Risk: search quality mismatch if DB driver only.
-  - Mitigation: prefer Meilisearch for production-like experience.
+  - Mitigation: prefer Typesense for production-like search behavior in local and hosted environments.
 - Risk: large scope across all app areas.
   - Mitigation: phase by criticality and use content templates.
 
@@ -338,7 +364,7 @@ This discovery is complete when:
 
 - Architecture direction is approved (in-app source-of-truth + Scramble for API docs).
 - Content model and key taxonomy are accepted.
-- Search engine decision is made (Meilisearch preferred, DB fallback acknowledged).
+- Search engine decision is made (Typesense preferred, DB fallback acknowledged).
 - Rollout phases and ownership are agreed.
 - Success metrics and coverage gates are accepted.
 
@@ -359,5 +385,5 @@ This discovery is complete when:
 - Docusaurus docs: https://docusaurus.io/docs
 - Docusaurus search: https://docusaurus.io/docs/search
 - Laravel Scout docs: https://laravel.com/docs/12.x/scout
+- Typesense docs: https://typesense.org/docs/
 - LaRecipe advisory reference: https://github.com/saleem-hadad/larecipe/security/advisories/GHSA-g9r4-3hm2-g96c
-

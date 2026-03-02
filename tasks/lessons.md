@@ -321,3 +321,35 @@ Use this file to capture correction-driven lessons.
 - Pattern: Feature shipping copy can lag behind product naming decisions, especially when labels are duplicated across nav + page headers + action views.
 - Prevention rule: When copy is corrected, run a scoped string audit (`rg`) across navigation and related page surfaces, then update all visible occurrences in one pass.
 - Applied in: `resources/js/Layouts/AppLayout.vue`, `resources/js/Pages/Agent/Org/Index.vue`, `resources/js/Pages/Agent/Org/Agents/*`, `resources/js/Pages/Agent/Org/Councils/Create.vue`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User correction on docs search engine choice
+- Correction: User requested locally running Typesense instead of Meilisearch for Scout-backed docs search.
+- Pattern: Infrastructure/tooling recommendations can conflict with explicit local-runtime preferences if defaults are assumed.
+- Prevention rule: When proposing stack options, confirm and prioritize the user's declared runtime preference (for this project: Typesense-first for local search) in all briefs and follow-up guidance.
+- Applied in: `docs/discovery/documentation-and-tooltip-system-requirements-brief.md`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User scope correction on Claude hooks request
+- Correction: User requested hook automation be captured as a requirement in briefs only, not implemented in-repo yet.
+- Pattern: Translating requirement statements directly into code changes can overshoot requested phase and create unintended artifacts.
+- Prevention rule: For discovery/requirements asks, default to brief updates only unless the user explicitly asks for implementation in code/config/scripts.
+- Applied in: `docs/discovery/documentation-and-tooltip-system-requirements-brief.md`, interrogation session `15` feature brief, cleanup of temporary hook artifacts
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User clarification on commit hook coverage
+- Correction: User clarified commit-sync requirement must apply to all local commits, not only Claude-triggered commits.
+- Pattern: Hook requirements can be under-scoped when tied only to one execution path (Claude) instead of all local git entrypoints.
+- Prevention rule: When documenting commit automation requirements, explicitly cover both Claude hooks and git `pre-commit` hooks unless the user narrows scope.
+- Applied in: `docs/discovery/documentation-and-tooltip-system-requirements-brief.md`, interrogation session `15` feature brief
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User correction on Codex interrogation duplicate-loop handling
+- Correction: User rejected hard-fail behavior (`status=failed`) for duplicate interrogation questions and requested Claude-parity continuity behavior.
+- Pattern: Adding strict guardrails that terminate sessions can regress UX when the expected behavior is graceful recovery and continued interrogation.
+- Prevention rule: For runtime quality guards in interrogation/planning flows, default to non-terminal recovery (retry, reset session state, continue with warning) and reserve terminal failure for unrecoverable parse/runtime exceptions only.
+- Applied in: `app/Jobs/ExecuteInterrogationRoundJob.php`, `tests/Unit/ExecuteInterrogationRoundJobTest.php`

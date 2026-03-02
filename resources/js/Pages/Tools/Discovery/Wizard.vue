@@ -217,6 +217,20 @@ const latestPlanReadySequence = computed(() => {
 const build = computed(() => (session.value?.build && typeof session.value.build === 'object' ? session.value.build : {}));
 const taskProviders = computed(() => (Array.isArray(session.value?.task_providers) ? session.value.task_providers : []));
 const linearProvider = computed(() => taskProviders.value.find((provider) => String(provider?.driver ?? '').toLowerCase() === 'linear') ?? null);
+const contentColumnClass = computed(() => {
+    const phase = Number(session.value?.phase ?? PHASE.SETUP);
+
+    if (phase >= PHASE.PLANNING) {
+        return 'xl:col-span-9';
+    }
+
+    if (phase >= PHASE.INTERROGATION) {
+        return 'xl:col-span-6';
+    }
+
+    // Setup/tech-stack/discovery do not render the left history rail, so reclaim that width.
+    return 'xl:col-span-9';
+});
 const selectedLinearTeam = computed(() => {
     const targetId = String(providerTeamId.value ?? '').trim();
     if (targetId === '') {
@@ -1373,7 +1387,7 @@ onBeforeUnmount(() => {
                             <QaHistoryPanel :events="events" :selected-question-id="activeQuestion?.question_id || ''" @select-question="focusQuestion" />
                         </div>
 
-                        <div class="space-y-4" :class="session.phase >= PHASE.PLANNING ? 'xl:col-span-9' : 'xl:col-span-6'">
+                        <div class="space-y-4" :class="contentColumnClass">
                             <template v-if="session.phase <= PHASE.TECH_STACK_SETUP">
                                 <Card>
                                     <CardHeader>

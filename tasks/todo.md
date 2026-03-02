@@ -96,6 +96,25 @@ Review:
 - [ ] Re-run the same session flow checks in browser after patching.
 - [ ] Record verification results and any residual gaps.
 
+### Interrogation Loop — Codex Duplicate Question Fix (In Progress)
+
+- [x] Compare Codex vs Claude interrogation round flow to isolate loop vector.
+- [x] Add runtime duplicate-intent guard for already-answered questions in interrogation.
+- [x] Add repair retry path that forces a materially different question and resets Codex resume state when needed.
+- [x] Add regression tests for duplicate-question loop prevention.
+- [x] Run targeted interrogation unit tests and capture outcomes.
+
+Review
+- Root cause: `ExecuteInterrogationRoundJob` accepted schema-valid questions without checking semantic duplication against already-answered questions, allowing Codex to loop across near-identical visibility/versioning prompts with new IDs.
+- Added duplicate-intent detection in round execution using answered-question history, text similarity, option similarity, selected-answer overlap, and topic overlap.
+- Added parity continuity prompting for interrogation rounds so both runners receive resolved-decision context in every turn (not only implicit CLI resume state).
+- Added automatic repair flow: request a materially different unresolved question; if duplicate persists on resumed Codex thread, retry with `cli_session_id` cleared and a context-recovery prompt.
+- Replaced hard failure on persistent duplicate output with non-terminal warning + continued interrogation, so sessions do not fail in the UI.
+- Added unit coverage in `tests/Unit/ExecuteInterrogationRoundJobTest.php` for duplicate repair, resume-reset recovery, and persistent-duplicate non-failure behavior.
+- Verification:
+  - `php artisan test tests/Unit/ExecuteInterrogationRoundJobTest.php`
+  - `php artisan test tests/Unit/QuestionPayloadGuardTest.php tests/Unit/InterrogationCodexAdapterCommandTest.php`
+
 ### Discord `/jobs list` Slash Command Failure (Completed)
 
 - [x] Reproduce and confirm why Discord slash `/jobs list` resolves to fallback intent.
