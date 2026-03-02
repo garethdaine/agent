@@ -393,3 +393,11 @@ Use this file to capture correction-driven lessons.
 - Pattern: Per-run mutation-only completion gates break idempotent build retries after prior successful implementation in the same workspace.
 - Prevention rule: Completion evidence must allow either (a) implementation mutation + verification or (b) zero-mutation revalidation with successful verification commands and explicit already-implemented signal.
 - Applied in: `app/Jobs/ExecuteInterrogationBuildJob.php`, `tests/Unit/ExecuteInterrogationBuildJobTest.php`, `tasks/todo.md`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User reported docs UI only showed two cards after build completion.
+- Correction: Docs web controller was still bound to static catalog fallback data rather than runtime synchronized documentation entries.
+- Pattern: A feature can be fully implemented in backend sync/search layers yet still appear incomplete when UI read path remains on legacy in-memory stubs.
+- Prevention rule: After adding runtime data pipelines, verify each user-facing read endpoint/page is wired to runtime models/services, not bootstrap stubs.
+- Applied in: `app/Http/Controllers/Docs/DocsPageController.php`, `resources/js/Pages/Docs/Show.vue`, `tests/Feature/Documentation/DocsNavigationTest.php`

@@ -1281,3 +1281,19 @@ Review
   - No changes were made to docs sync semantics beyond telemetry emission.
   - No additional retry/backoff orchestration was added for queue execution beyond existing queue behavior.
   - Existing framework-level duplicate event listener registration in this app is mitigated for docs telemetry via listener-level dedupe rather than global event-system reconfiguration.
+
+### 2026-03-02 — Docs UI Runtime Source Fix
+
+- [x] Diagnose why `/docs` only showed two static cards after docs sync.
+- [x] Switch docs web pages to prefer runtime DB entries (`documentation_entries`) with fallback to static catalog only when DB is empty.
+- [x] Render `entry.body_html` in docs show page for actual document content visibility.
+- [x] Sync docs to runtime DB and verify counts.
+- [x] Verify docs navigation/auth tests after controller changes.
+
+Review:
+- Root cause: `DocsPageController` was hardwired to `DocsCatalog` (2 static entries), so UI never reflected synced runtime docs records.
+- Verification:
+  - `php artisan docs:sync --mode=commit --source=repo` => `Entries: 12 | Fragments: 14 | Links: 61`
+  - Runtime counts: `entries=12, fragments=14, links=61`
+  - `php artisan test tests/Feature/Documentation/DocsNavigationTest.php tests/Feature/Documentation/DocsAuthorizationTest.php` => `16 passed`.
+- Note: `php artisan docs:openapi:ingest` still fails until OpenAPI operations include `x-linked-doc-slugs` metadata for each operation.

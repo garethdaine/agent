@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Documentation;
 
+use App\Models\DocumentationEntry;
 use App\Models\User;
 use App\Support\Documentation\DocsCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -65,6 +66,40 @@ class DocsNavigationTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Docs/Show')
                 ->where('entry.slug', 'overview')
+            );
+    }
+
+    public function test_docs_pages_prefer_runtime_documentation_entries_over_static_catalog(): void
+    {
+        $entry = DocumentationEntry::query()->create([
+            'domain' => 'product_doc',
+            'slug' => 'runtime-doc',
+            'locale' => 'en',
+            'title' => 'Runtime Documentation',
+            'summary' => 'Loaded from runtime docs table.',
+            'section' => 'runtime',
+            'status' => 'published',
+            'body_markdown' => '# Runtime',
+            'body_html' => '<h1>Runtime</h1>',
+        ]);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('docs.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Docs/Index')
+                ->where('entries.0.slug', (string) $entry->slug)
+            );
+
+        $this->actingAs($user)
+            ->get(route('docs.show', ['slug' => 'runtime-doc']))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Docs/Show')
+                ->where('entry.slug', 'runtime-doc')
+                ->where('entry.body_html', '<h1>Runtime</h1>')
             );
     }
 

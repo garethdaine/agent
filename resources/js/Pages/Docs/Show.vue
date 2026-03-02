@@ -36,6 +36,11 @@ defineProps({
                         <p class="text-xs text-muted-foreground uppercase tracking-wide">
                             {{ entry.domain }} · {{ entry.section }}
                         </p>
+                        <div
+                            v-if="entry.body_html && entry.body_html.trim() !== ''"
+                            class="prose prose-invert max-w-none pt-2"
+                            v-html="entry.body_html"
+                        />
                     </CardContent>
                 </Card>
             </div>
