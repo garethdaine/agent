@@ -317,7 +317,8 @@ async function fetchInstantSearch(query) {
         }
 
         const payload = await response.json();
-        instantSearch.results = Array.isArray(payload?.data) ? payload.data : [];
+        const remoteResults = Array.isArray(payload?.data) ? payload.data : [];
+        instantSearch.results = remoteResults.length > 0 ? remoteResults : buildLocalSearchResults(query);
         instantSearch.open = true;
     } catch (error) {
         if (error?.name === 'AbortError') {
@@ -330,6 +331,40 @@ async function fetchInstantSearch(query) {
     } finally {
         instantSearch.loading = false;
     }
+}
+
+function buildLocalSearchResults(query) {
+    const q = String(query ?? '').trim().toLowerCase();
+    if (q === '') {
+        return [];
+    }
+
+    return visibleEntries.value
+        .map((entry) => {
+            const title = String(entry.title ?? '');
+            const summary = String(entry.summary ?? '');
+            const section = String(entry.section ?? '');
+            const domain = String(entry.domain ?? '');
+            const slug = String(entry.slug ?? '').trim();
+
+            const haystack = [title, summary, section, domain, slug].join(' ').toLowerCase();
+            if (!haystack.includes(q)) {
+                return null;
+            }
+
+            return {
+                title,
+                snippet: summary || `Open ${title}`,
+                domain,
+                section: section || null,
+                slug: slug !== '' ? slug : null,
+                url: slug !== '' ? docsShowHref(slug) : null,
+                route_affinity: false,
+                updated_at: null,
+            };
+        })
+        .filter((item) => item !== null)
+        .slice(0, 12);
 }
 
 function closeInstantSearch() {

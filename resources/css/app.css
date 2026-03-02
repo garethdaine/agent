@@ -46,6 +46,7 @@
 @layer components {
     .docs-markdown {
         color: rgb(var(--foreground) / 1);
+        overflow-x: auto;
     }
 
     .docs-markdown :where(h1, h2, h3, h4, h5, h6) {
@@ -89,9 +90,10 @@
     }
 
     .docs-markdown :where(table) {
-        display: block;
-        width: 100%;
-        overflow-x: auto;
+        display: table;
+        width: max(100%, max-content);
+        min-width: 100%;
+        table-layout: fixed;
         border-collapse: separate;
         border-spacing: 0;
         border: 1px solid rgb(var(--border) / 1);
@@ -109,7 +111,8 @@
         font-weight: 700;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        white-space: nowrap;
+        white-space: normal;
+        word-break: break-word;
     }
 
     .docs-markdown :where(thead th:last-child) {
@@ -122,7 +125,8 @@
         padding: 0.75rem 0.875rem;
         vertical-align: top;
         color: rgb(var(--foreground) / 0.95);
-        white-space: nowrap;
+        white-space: normal;
+        word-break: break-word;
     }
 
     .docs-markdown :where(tbody td:last-child) {
