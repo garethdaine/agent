@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Discord adapter implementing the messenger connector interface.
@@ -355,6 +356,18 @@ class DiscordAdapter extends AbstractConnectorAdapter
         // Build content from interaction data
         $content = $this->buildInteractionContent($data);
 
+        if ($type === 2 && trim($content) === '') {
+            $interactionData = is_array($data['data'] ?? null) ? $data['data'] : [];
+
+            Log::warning('Discord interaction normalized to empty content', [
+                'interaction_id' => $data['id'] ?? null,
+                'interaction_type' => $type,
+                'top_level_keys' => array_keys($data),
+                'interaction_data_keys' => array_keys($interactionData),
+                'command_name' => $interactionData['name'] ?? null,
+            ]);
+        }
+
         return new NormalizedMessage(
             providerUserId: $providerUserId,
             channelId: $channelId,
@@ -462,35 +475,71 @@ class DiscordAdapter extends AbstractConnectorAdapter
      */
     private function mapKnownSlashCommand(string $commandName, array $options): ?string
     {
-        $subcommand = $this->extractFirstSubcommand($options);
-        if ($subcommand === null) {
-            return null;
+        if ($commandName === 'agent') {
+            $legacyCommand = $this->extractOptionValue($options, 'command')
+                ?? $this->extractOptionValue($options, 'text')
+                ?? $this->extractOptionValue($options, 'query');
+
+            if ($legacyCommand !== null && trim($legacyCommand) !== '') {
+                return trim($legacyCommand);
+            }
         }
 
-        $subcommandName = strtolower(trim($subcommand['name']));
-        $subcommandOptions = $subcommand['options'];
+        $subcommand = $this->extractFirstSubcommand($options);
+        if ($subcommand !== null) {
+            $subcommandName = strtolower(trim($subcommand['name']));
+            $subcommandOptions = $subcommand['options'];
 
-        if ($commandName === 'jobs') {
-            if ($subcommandName === 'list') {
-                return 'list my jobs';
+            if ($commandName === 'jobs') {
+                if ($subcommandName === 'list') {
+                    return 'list my jobs';
+                }
+
+                if ($subcommandName === 'run') {
+                    $jobId = $this->extractOptionValue($subcommandOptions, 'job_id');
+
+                    return $jobId !== null
+                        ? sprintf('run job %s now', $jobId)
+                        : null;
+                }
             }
 
-            if ($subcommandName === 'run') {
-                $jobId = $this->extractOptionValue($subcommandOptions, 'job_id');
+            if ($commandName === 'runs') {
+                if ($subcommandName === 'active') {
+                    return 'show active runs';
+                }
 
-                return $jobId !== null
-                    ? sprintf('run job %s now', $jobId)
-                    : null;
+                if ($subcommandName === 'stop') {
+                    $runId = $this->extractOptionValue($subcommandOptions, 'run_id');
+
+                    return $runId !== null
+                        ? sprintf('stop run %s', $runId)
+                        : null;
+                }
+            }
+        }
+
+        if ($commandName === 'jobs') {
+            $legacyAction = strtolower(trim((string) ($this->extractOptionValue($options, 'command')
+                ?? $this->extractOptionValue($options, 'action')
+                ?? '')));
+
+            if (in_array($legacyAction, ['list', 'ls', 'show'], true)) {
+                return 'list my jobs';
             }
         }
 
         if ($commandName === 'runs') {
-            if ($subcommandName === 'active') {
+            $legacyAction = strtolower(trim((string) ($this->extractOptionValue($options, 'command')
+                ?? $this->extractOptionValue($options, 'action')
+                ?? '')));
+
+            if (in_array($legacyAction, ['active', 'list', 'show'], true)) {
                 return 'show active runs';
             }
 
-            if ($subcommandName === 'stop') {
-                $runId = $this->extractOptionValue($subcommandOptions, 'run_id');
+            if ($legacyAction === 'stop') {
+                $runId = $this->extractOptionValue($options, 'run_id');
 
                 return $runId !== null
                     ? sprintf('stop run %s', $runId)
@@ -512,7 +561,7 @@ class DiscordAdapter extends AbstractConnectorAdapter
                 continue;
             }
 
-            if (($option['type'] ?? null) !== 1) {
+            if (! $this->isSubcommandOption($option['type'] ?? null)) {
                 continue;
             }
 
@@ -530,6 +579,11 @@ class DiscordAdapter extends AbstractConnectorAdapter
         }
 
         return null;
+    }
+
+    private function isSubcommandOption(mixed $type): bool
+    {
+        return (string) $type === '1';
     }
 
     /**

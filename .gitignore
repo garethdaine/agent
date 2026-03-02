@@ -24,6 +24,10 @@
 /vendor
 Homestead.json
 Homestead.yaml
+.~lock.*#
 Thumbs.db
+/playwright-report/
+/test-results/
+/tests/e2e/.auth/
 
 .firecrawl/

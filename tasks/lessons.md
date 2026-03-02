@@ -219,6 +219,14 @@ Use this file to capture correction-driven lessons.
 - Applied in: Workflow rule captured in `tasks/lessons.md`
 
 ## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User retry report for Discord `/jobs list` after initial fix
+- Correction: User reported timeout banner was resolved but command still fell back to "I couldn't understand that command."
+- Pattern: Fixing interaction ACK alone can mask a second parser-path bug; webhook and gateway payload shapes must both be validated from runtime logs, not inferred from one test path.
+- Prevention rule: For Discord command regressions, always verify end-to-end in logs: (1) interaction ACK sent, (2) normalized inbound content non-empty, (3) parser receives expected command text. Explicitly test `INTERACTION_CREATE` gateway payload parsing separately from webhook parsing.
+- Applied in: `app/Support/Messenger/Adapters/DiscordAdapter.php`, `tests/Unit/Messenger/Adapters/DiscordAdapterTest.php`
+
+## Entry
 - Date: 2026-03-01
 - Source (job run id / interrogation session id): User-reported 500 on `/agent/api/v1/notifications`
 - Correction: Notifications endpoint returned `500` because `notifications` table migration was pending in runtime DB.

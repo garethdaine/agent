@@ -6,6 +6,22 @@
 
 ## Current — Open Items
 
+### Documentation + Tooltip Platform Discovery Brief (Completed)
+
+- [x] Audit current app surfaces (routes/pages/models/settings) to define documentation coverage boundaries.
+- [x] Compare API-doc and human-doc tooling options (Scramble, Scribe, LaRecipe, Jigsaw, Docusaurus) against project needs.
+- [x] Define requirements for searchable user docs using Laravel Scout.
+- [x] Define requirements for contextual helper text and hover tooltips across the UI.
+- [x] Produce a requirements discovery brief with recommendations, phased rollout, and acceptance criteria.
+
+Review
+- Added a new requirements discovery brief at `docs/discovery/documentation-and-tooltip-system-requirements-brief.md`.
+- Recommendation from discovery:
+  - Keep `Scramble` focused on OpenAPI generation.
+  - Build first-party human documentation + tooltip domain in-app (with Scout indexing and unified UI context integration).
+  - Optionally export static docs later (Docusaurus/Jigsaw) for public docs, while retaining in-app authoring/search as system-of-record.
+- Noted current gap: there is no `packages/` directory yet; brief includes a package-ready architecture plan if/when the folder is introduced.
+
 ### Agent Org Layer — Remove Raw JSON UX (Completed)
 
 - [x] Replace raw JSON textareas in Org Agents form with structured controls (authority overrides + output schema builder).
@@ -92,8 +108,10 @@ Review:
 - Root causes:
   - Slash payload text normalization produced `jobs list` (and dropped nested option values), which missed existing parser patterns expecting phrases like `list my jobs`.
   - Discord Gateway `INTERACTION_CREATE` events were dispatched to async processing without first acknowledging interaction callbacks, causing Discord timeout banners.
+  - Discord Gateway payload parsing treated `INTERACTION_CREATE` as `MESSAGE_CREATE`, yielding empty inbound content (`""`) and causing fallback "I couldn't understand that command."
 - Fixes:
   - Updated `DiscordAdapter::buildInteractionContent()` to map known slash command structures (`jobs list`, `jobs run job_id`, `runs active`, `runs stop run_id`) into parser-friendly canonical text and to recursively flatten nested options in fallback mode.
+  - Updated `DiscordAdapter::parseGatewayEvent()` to route `INTERACTION_CREATE` events through interaction parsing instead of message parsing.
   - Updated `DiscordGatewayWorker` to immediately acknowledge interactions through Discord callback API (`/interactions/{id}/{token}/callback`), returning type `5` for normal interactions and type `8` for autocomplete.
   - Added regression tests for slash normalization and gateway ACK behavior.
 - Verification:

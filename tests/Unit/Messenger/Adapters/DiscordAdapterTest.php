@@ -406,6 +406,62 @@ class DiscordAdapterTest extends TestCase
         $this->assertSame('list my jobs', $normalized->content);
     }
 
+    public function test_parse_inbound_message_maps_jobs_list_subcommand_when_type_is_string(): void
+    {
+        $request = new Request();
+        $request->attributes->set('connector_account', $this->account);
+        $request->merge([
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => 'interaction-jobs-list-string-type',
+            'token' => 'interaction-token',
+            'member' => [
+                'user' => [
+                    'id' => '9876543210987654321',
+                    'username' => 'TestUser',
+                ],
+            ],
+            'channel_id' => '123456789012345678',
+            'data' => [
+                'name' => 'jobs',
+                'options' => [
+                    ['name' => 'list', 'type' => '1'],
+                ],
+            ],
+        ]);
+
+        $normalized = $this->adapter->parseInboundMessage($request);
+
+        $this->assertSame('list my jobs', $normalized->content);
+    }
+
+    public function test_parse_inbound_message_maps_legacy_agent_command_option_to_text(): void
+    {
+        $request = new Request();
+        $request->attributes->set('connector_account', $this->account);
+        $request->merge([
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => 'interaction-agent-legacy',
+            'token' => 'interaction-token',
+            'member' => [
+                'user' => [
+                    'id' => '9876543210987654321',
+                    'username' => 'TestUser',
+                ],
+            ],
+            'channel_id' => '123456789012345678',
+            'data' => [
+                'name' => 'agent',
+                'options' => [
+                    ['name' => 'command', 'value' => 'list my jobs'],
+                ],
+            ],
+        ]);
+
+        $normalized = $this->adapter->parseInboundMessage($request);
+
+        $this->assertSame('list my jobs', $normalized->content);
+    }
+
     public function test_parse_inbound_message_maps_runs_stop_subcommand_with_nested_run_id(): void
     {
         $request = new Request();
