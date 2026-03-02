@@ -105,6 +105,7 @@ return [
         'redis:memory-working' => 5,
         'redis:memory-formation' => 60,
         'redis:org-rituals' => 60,
+        'redis:repo-analysis' => 60,
     ],
 
     /*
@@ -302,6 +303,20 @@ return [
             'timeout' => 600,
             'nice' => 0,
         ],
+        'supervisor-repo-analysis' => [
+            'connection' => 'redis',
+            'queue' => ['repo-analysis'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(4, (int) env('HORIZON_REPO_ANALYSIS_MAX_PROCESSES', 2))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 1,
+            'backoff' => 0,
+            'timeout' => (int) env('HORIZON_REPO_ANALYSIS_TIMEOUT', 900),
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [
@@ -341,6 +356,11 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-repo-analysis' => [
+                'maxProcesses' => max(1, min(4, (int) env('HORIZON_REPO_ANALYSIS_MAX_PROCESSES', 2))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
         ],
 
         'local' => [
@@ -365,6 +385,9 @@ return [
                 //
             ],
             'supervisor-org-rituals' => [
+                //
+            ],
+            'supervisor-repo-analysis' => [
                 //
             ],
         ],

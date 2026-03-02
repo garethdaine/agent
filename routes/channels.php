@@ -2,6 +2,7 @@
 
 use App\Models\DelegationGraph;
 use App\Models\InterrogationSession;
+use App\Models\RepoAnalysisSession;
 use Illuminate\Support\Facades\Broadcast;
 
 // Register the /broadcasting/auth endpoint for private channel authentication.
@@ -32,6 +33,19 @@ Broadcast::channel('delegation.graph.{graphId}', function ($user, $graphId) {
 
 Broadcast::channel('delegation.user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
+});
+
+Broadcast::channel('repo-analysis.{sessionId}', function ($user, $sessionId) {
+    $session = RepoAnalysisSession::query()->find((int) $sessionId);
+    if ($session === null) {
+        return false;
+    }
+
+    if ($user->hasRole('admin')) {
+        return true;
+    }
+
+    return (int) $session->user_id === (int) $user->id;
 });
 
 // Memory system channels

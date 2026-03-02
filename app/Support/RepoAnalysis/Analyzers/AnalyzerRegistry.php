@@ -1,0 +1,126 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Support\RepoAnalysis\Analyzers;
+
+use InvalidArgumentException;
+
+class AnalyzerRegistry
+{
+    /**
+     * @var array<string, AnalyzerInterface>
+     */
+    private array $analyzers;
+
+    /**
+     * @var array<string, array<int, string>>
+     */
+    private array $profiles;
+
+    /**
+     * @param  array<int, AnalyzerInterface>|null  $analyzers
+     * @param  array<string, array<int, string>>|null  $profiles
+     */
+    public function __construct(?array $analyzers = null, ?array $profiles = null)
+    {
+        $analyzerList = $analyzers ?? [
+            new FilesystemManifestAnalyzer,
+            new DependencyManifestAnalyzer,
+            new LaravelRoutesAnalyzer,
+            new LaravelModelsMigrationsAnalyzer,
+            new QueueJobsEventsAnalyzer,
+            new FrontendModuleGraphAnalyzer,
+            new TestCoverageMapAnalyzer,
+            new RiskHotspotAnalyzer,
+        ];
+
+        $this->analyzers = [];
+        foreach ($analyzerList as $analyzer) {
+            $this->analyzers[$analyzer->key()] = $analyzer;
+        }
+
+        $this->profiles = $profiles ?? [
+            'default' => [
+                'filesystem_manifest',
+                'dependency_manifest',
+                'laravel_routes',
+                'laravel_models_migrations',
+                'queue_jobs_events',
+                'frontend_module_graph',
+                'test_coverage_map',
+                'risk_hotspot',
+            ],
+        ];
+    }
+
+    public function get(string $analyzerKey): AnalyzerInterface
+    {
+        $analyzer = $this->analyzers[$analyzerKey] ?? null;
+        if ($analyzer === null) {
+            throw new InvalidArgumentException(sprintf('Analyzer [%s] is not registered.', $analyzerKey));
+        }
+
+        return $analyzer;
+    }
+
+    /**
+     * @return array{analyzers: array<int, AnalyzerInterface>, skipped: array<int, array<string, mixed>>}
+     */
+    public function forProfile(string $profile, array $snapshot): array
+    {
+        $profileAnalyzers = $this->profiles[$profile] ?? null;
+        if (! is_array($profileAnalyzers)) {
+            $skipped = [];
+            foreach (array_keys($this->analyzers) as $key) {
+                $skipped[] = [
+                    'analyzer_key' => $key,
+                    'reason' => 'unsupported_profile',
+                    'profile' => $profile,
+                ];
+            }
+
+            return [
+                'analyzers' => [],
+                'skipped' => $skipped,
+            ];
+        }
+
+        $selected = [];
+        $skipped = [];
+        $seen = [];
+
+        foreach ($profileAnalyzers as $key) {
+            if (! is_string($key) || isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+
+            $analyzer = $this->analyzers[$key] ?? null;
+            if ($analyzer === null) {
+                $skipped[] = [
+                    'analyzer_key' => $key,
+                    'reason' => 'analyzer_not_registered',
+                ];
+
+                continue;
+            }
+
+            if (! $analyzer->supports($snapshot)) {
+                $skipped[] = [
+                    'analyzer_key' => $key,
+                    'reason' => 'unsupported_stack',
+                ];
+
+                continue;
+            }
+
+            $selected[] = $analyzer;
+        }
+
+        return [
+            'analyzers' => $selected,
+            'skipped' => $skipped,
+        ];
+    }
+}

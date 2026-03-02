@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\Messenger\WebhookController;
 use App\Http\Controllers\Api\V1\MessengerConnectorController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\Org;
+use App\Http\Controllers\Api\V1\RepoAnalysisSessionController;
 use App\Http\Controllers\Internal\NlScheduleController;
 use App\Http\Middleware\AgentApiVersionHeader;
 use App\Http\Middleware\Memory\MemoryEnabled;
@@ -142,6 +143,29 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/interrogation/settings', [InterrogationSettingsController::class, 'index']);
             Route::get('/interrogation/settings/{key}', [InterrogationSettingsController::class, 'show']);
             Route::put('/interrogation/settings/{key}', [InterrogationSettingsController::class, 'update'])->middleware('throttle:interrogation');
+
+            Route::get('/repo-analysis/sessions', [RepoAnalysisSessionController::class, 'index']);
+            Route::post('/repo-analysis/sessions', [RepoAnalysisSessionController::class, 'store'])->middleware('throttle:agent-mutations');
+            Route::get('/repo-analysis/sessions/{id}', [RepoAnalysisSessionController::class, 'show']);
+            Route::patch('/repo-analysis/sessions/{id}', [RepoAnalysisSessionController::class, 'update'])->middleware('throttle:agent-mutations');
+            Route::delete('/repo-analysis/sessions/{id}', [RepoAnalysisSessionController::class, 'destroy'])->middleware('throttle:agent-mutations');
+            Route::post('/repo-analysis/sessions/{id}/restore', [RepoAnalysisSessionController::class, 'restore'])->middleware('throttle:agent-mutations');
+
+            Route::post('/repo-analysis/sessions/{id}/start-snapshot', [RepoAnalysisSessionController::class, 'startSnapshot'])->middleware('throttle:agent-mutations');
+            Route::post('/repo-analysis/sessions/{id}/plan', [RepoAnalysisSessionController::class, 'plan'])->middleware('throttle:agent-mutations');
+            Route::post('/repo-analysis/sessions/{id}/execute', [RepoAnalysisSessionController::class, 'execute'])->middleware('throttle:agent-mutations');
+            Route::post('/repo-analysis/sessions/{id}/retry-task', [RepoAnalysisSessionController::class, 'retryTask'])->middleware('throttle:agent-mutations');
+            Route::post('/repo-analysis/sessions/{id}/validate-coverage', [RepoAnalysisSessionController::class, 'validateCoverage'])->middleware('throttle:agent-mutations');
+            Route::post('/repo-analysis/sessions/{id}/generate-report', [RepoAnalysisSessionController::class, 'generateReport'])->middleware('throttle:agent-mutations');
+            Route::post('/repo-analysis/sessions/{id}/pause', [RepoAnalysisSessionController::class, 'pause'])->middleware('throttle:agent-mutations');
+            Route::post('/repo-analysis/sessions/{id}/resume', [RepoAnalysisSessionController::class, 'resume'])->middleware('throttle:agent-mutations');
+            Route::post('/repo-analysis/sessions/{id}/retry', [RepoAnalysisSessionController::class, 'retry'])->middleware('throttle:agent-mutations');
+            Route::post('/repo-analysis/sessions/{id}/restart-from-beginning', [RepoAnalysisSessionController::class, 'restartFromBeginning'])->middleware('throttle:agent-mutations');
+
+            Route::get('/repo-analysis/sessions/{id}/events', [RepoAnalysisSessionController::class, 'events']);
+            Route::get('/repo-analysis/sessions/{id}/tasks', [RepoAnalysisSessionController::class, 'tasks']);
+            Route::get('/repo-analysis/sessions/{id}/artifacts', [RepoAnalysisSessionController::class, 'artifacts']);
+            Route::get('/repo-analysis/sessions/{id}/reports', [RepoAnalysisSessionController::class, 'reports']);
 
             // Chat session endpoints
             Route::get('/chat/sessions', [ChatSessionController::class, 'index']);

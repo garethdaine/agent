@@ -304,6 +304,33 @@ Registered endpoints: 26
 | POST | `agent/api/v1/org/rituals/{id}/resume` | `-` |
 | POST | `agent/api/v1/org/rituals/{id}/run` | `-` |
 
+### Repo Analysis
+
+Registered endpoints: 20
+
+| Method | URI | Route Name |
+| --- | --- | --- |
+| GET | `agent/api/v1/repo-analysis/sessions` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions` | `-` |
+| GET | `agent/api/v1/repo-analysis/sessions/{id}` | `-` |
+| PATCH | `agent/api/v1/repo-analysis/sessions/{id}` | `-` |
+| DELETE | `agent/api/v1/repo-analysis/sessions/{id}` | `-` |
+| GET | `agent/api/v1/repo-analysis/sessions/{id}/artifacts` | `-` |
+| GET | `agent/api/v1/repo-analysis/sessions/{id}/events` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions/{id}/execute` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions/{id}/generate-report` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions/{id}/pause` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions/{id}/plan` | `-` |
+| GET | `agent/api/v1/repo-analysis/sessions/{id}/reports` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions/{id}/restart-from-beginning` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions/{id}/restore` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions/{id}/resume` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions/{id}/retry` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions/{id}/retry-task` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions/{id}/start-snapshot` | `-` |
+| GET | `agent/api/v1/repo-analysis/sessions/{id}/tasks` | `-` |
+| POST | `agent/api/v1/repo-analysis/sessions/{id}/validate-coverage` | `-` |
+
 ### Runs
 
 Registered endpoints: 6

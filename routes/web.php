@@ -5,7 +5,9 @@ use App\Http\Controllers\Messenger\DeadLetterController;
 use App\Http\Controllers\Messenger\MessengerHealthController;
 use App\Http\Controllers\TaskProviderOAuthController;
 use App\Http\Controllers\Docs\DocsPageController;
+use App\Models\RepoAnalysisSession;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -84,7 +86,20 @@ Route::middleware([
     })->name('agent.monitor.index');
 
     Route::get('/tools', function () {
-        return Inertia::render('Tools/Index');
+        $user = request()->user();
+        $repoAnalysisAvailable = $user !== null
+            && (bool) config('repo_analysis.enabled', false)
+            && Gate::forUser($user)->allows('create', RepoAnalysisSession::class);
+
+        return Inertia::render('Tools/Index', [
+            'repoAnalysis' => [
+                'available' => $repoAnalysisAvailable,
+                'indexRoute' => $repoAnalysisAvailable ? route('tools.repo-analysis.index') : null,
+                'blockedMessage' => $repoAnalysisAvailable
+                    ? null
+                    : 'Repo Analysis is unavailable. Enable the feature or request access from an administrator.',
+            ],
+        ]);
     })->name('tools.index');
 
     Route::get('/tools/discovery', function () {
@@ -152,6 +167,136 @@ Route::middleware([
             'sessionId' => $id,
         ]);
     })->name('tools.discovery.wizard');
+
+    Route::get('/tools/repo-analysis', function () {
+        if (! (bool) config('repo_analysis.enabled', false)) {
+            return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
+        }
+
+        $user = request()->user();
+        if ($user === null || ! Gate::forUser($user)->allows('create', RepoAnalysisSession::class)) {
+            return response('You do not have access to Repo Analysis. Ask an administrator for access.', 403);
+        }
+
+        $query = RepoAnalysisSession::query()->withCount('reports')->latest();
+        if (! $user->hasRole('admin')) {
+            $query->where('user_id', (int) $user->id);
+        }
+
+        $sessions = $query
+            ->limit(50)
+            ->get()
+            ->map(static fn (RepoAnalysisSession $session): array => [
+                'id' => (int) $session->id,
+                'user_id' => (int) $session->user_id,
+                'name' => $session->name,
+                'project_directory' => $session->project_directory,
+                'analyzer_profile' => $session->analyzer_profile,
+                'phase' => (int) $session->phase,
+                'status' => (string) $session->status,
+                'report_count' => (int) ($session->reports_count ?? 0),
+                'updated_at' => optional($session->updated_at)?->toIso8601String(),
+                'wizard_url' => route('tools.repo-analysis.wizard', $session->id),
+                'settings_url' => route('tools.repo-analysis.settings', $session->id),
+            ])
+            ->values();
+
+        return Inertia::render('Tools/RepoAnalysis/Index', [
+            'sessions' => $sessions,
+            'viewer' => [
+                'user_id' => (int) $user->id,
+                'is_admin' => $user->hasRole('admin'),
+                'can_create' => true,
+            ],
+            'defaultProjectDirectory' => base_path(),
+        ]);
+    })->name('tools.repo-analysis.index');
+
+    Route::get('/tools/repo-analysis/create', function () {
+        if (! (bool) config('repo_analysis.enabled', false)) {
+            return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
+        }
+
+        $user = request()->user();
+        if ($user === null || ! Gate::forUser($user)->allows('create', RepoAnalysisSession::class)) {
+            return response('You do not have access to Repo Analysis. Ask an administrator for access.', 403);
+        }
+
+        return Inertia::render('Tools/RepoAnalysis/Create', [
+            'defaultProjectDirectory' => base_path(),
+        ]);
+    })->name('tools.repo-analysis.create');
+
+    Route::get('/tools/repo-analysis/{id}', function (int $id) {
+        if (! (bool) config('repo_analysis.enabled', false)) {
+            return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
+        }
+
+        $user = request()->user();
+        $session = RepoAnalysisSession::query()->findOrFail($id);
+
+        if ($user === null || ! Gate::forUser($user)->allows('view', $session)) {
+            return response('You do not have access to this Repo Analysis session. Ask an administrator if you need access.', 403);
+        }
+
+        $canMutate = Gate::forUser($user)->allows('update', $session);
+        $runningStatuses = [
+            'snapshotting',
+            'planning',
+            'executing',
+            'validating',
+            'reporting',
+        ];
+
+        $isRunning = in_array((string) $session->status, $runningStatuses, true);
+        $hasExport = $session->reports()->exists();
+
+        return Inertia::render('Tools/RepoAnalysis/Wizard', [
+            'sessionId' => (int) $session->id,
+            'initialSession' => [
+                'id' => (int) $session->id,
+                'user_id' => (int) $session->user_id,
+                'name' => $session->name,
+                'project_directory' => $session->project_directory,
+                'analyzer_profile' => $session->analyzer_profile,
+                'phase' => (int) $session->phase,
+                'status' => (string) $session->status,
+                'error_code' => $session->error_code,
+                'error_summary' => $session->error_summary,
+                'metadata' => $session->metadata_json ?? [],
+                'updated_at' => optional($session->updated_at)?->toIso8601String(),
+            ],
+            'viewer' => [
+                'user_id' => (int) $user->id,
+                'is_admin_override' => $user->hasRole('admin') && (int) $session->user_id !== (int) $user->id,
+                'can_mutate' => $canMutate,
+            ],
+            'actionVisibility' => [
+                'pause' => $canMutate && $isRunning,
+                'resume' => $canMutate && (string) $session->status === 'paused',
+                'retry' => $canMutate && (string) $session->status === 'failed',
+                'restart' => $canMutate,
+                'export' => $hasExport,
+            ],
+        ]);
+    })->name('tools.repo-analysis.wizard');
+
+    Route::get('/tools/repo-analysis/{id}/settings', function (int $id) {
+        if (! (bool) config('repo_analysis.enabled', false)) {
+            return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
+        }
+
+        $user = request()->user();
+        $session = RepoAnalysisSession::query()->findOrFail($id);
+
+        if ($user === null || ! Gate::forUser($user)->allows('update', $session)) {
+            return response('You do not have access to this Repo Analysis session. Ask an administrator if you need access.', 403);
+        }
+
+        return Inertia::render('Tools/RepoAnalysis/Settings', [
+            'sessionId' => (int) $session->id,
+        ]);
+    })->name('tools.repo-analysis.settings');
 
     // Org Layer routes (guarded by org UI feature flag)
     Route::middleware(['org.ui'])->prefix('agent/org')->group(function () {

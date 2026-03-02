@@ -5,9 +5,21 @@ import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { Search, Database, MessageSquare, Settings, Brain } from 'lucide-vue-next';
+import { computed } from 'vue';
+import { Search, Database, MessageSquare, Settings, Brain, GitBranchPlus } from 'lucide-vue-next';
 
-const tools = [
+const props = defineProps({
+    repoAnalysis: {
+        type: Object,
+        default: () => ({
+            available: false,
+            indexRoute: null,
+            blockedMessage: '',
+        }),
+    },
+});
+
+const baseTools = [
     {
         route: 'tools.discovery.index',
         category: 'Requirements Discovery',
@@ -44,6 +56,22 @@ const tools = [
         icon: Brain,
     },
 ];
+
+const tools = computed(() => {
+    const items = [...baseTools];
+
+    if (props.repoAnalysis?.available) {
+        items.splice(1, 0, {
+            route: 'tools.repo-analysis.index',
+            category: 'Repo Analysis',
+            title: 'Deterministic repository analysis',
+            description: 'Run snapshot/plan/execute/validate/report workflows with realtime operator controls.',
+            icon: GitBranchPlus,
+        });
+    }
+
+    return items;
+});
 </script>
 
 <template>

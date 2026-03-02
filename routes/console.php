@@ -42,6 +42,10 @@ Schedule::command('delegation:recompute-metrics')
 Schedule::command('nl-parse:cleanup')
     ->dailyAt('03:00');
 
+Schedule::command('repo-analysis:prune-artifacts')
+    ->dailyAt('03:40')
+    ->withoutOverlapping();
+
 // Memory consolidation (every 2 hours when enabled)
 Schedule::command('memory:consolidate')
     ->cron('0 */2 * * *')

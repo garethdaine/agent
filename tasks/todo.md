@@ -6,6 +6,309 @@
 
 ## Current — Open Items
 
+### Session 16 Task 10 — Wire Web Routes, Inertia Pages/Components, Navigation Discoverability, and Realtime UX (Completed)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- Repo Analysis backend/API, lifecycle jobs, and deterministic event sequencing exist, but there are no user-facing web routes/pages/components under Tools for Repo Analysis.
+- Tools landing currently has no Repo Analysis discoverability card/link, so operators cannot reach this flow from `/tools` without manual URL entry.
+- Existing Discovery wizard already demonstrates websocket + polling patterns, but Repo Analysis has no equivalent UI or stale-client supersede handling yet.
+- Repo Analysis feature flag defaults to disabled; UI exposure must be permission-aware and provide an actionable blocked message when feature access is unavailable.
+
+TASK
+- Ship Repo Analysis user/operator surfaces under Tools with route wiring and navigation discoverability.
+- Ensure authorized users can reach index/create/wizard/settings from Tools, open sessions from list to wizard, and see lifecycle actions based on role/state.
+- Implement ordered realtime + polling fallback event ingestion so event sequence appends correctly and stale client state is superseded by server truth.
+- Prove behavior with tests-first workflow (fail then pass) for navigation visibility, route reachability, action visibility, and sequence append ordering.
+
+ACTION
+- [x] Add failing web/UI tests first:
+  - [x] `tests/Feature/Web/Tools/RepoAnalysisNavigationTest.php` for Tools card visibility, route reachability, wizard link discoverability, and authorization visibility.
+  - [x] JS unit test for sequence merge/poll cursor behavior to prove ordered append and dedupe.
+- [x] Run targeted tests and capture red-state evidence.
+- [x] Implement minimum route/UI changes:
+  - [x] web routes and Inertia bindings for `tools.repo-analysis.{index,create,wizard,settings}`,
+  - [x] Tools index Repo Analysis card visibility with feature + authorization gating,
+  - [x] Repo Analysis pages/components under `resources/js/Pages/Tools/RepoAnalysis/*` and `resources/js/Components/RepoAnalysis/*`,
+  - [x] wizard lifecycle controls (`pause/resume/retry/restart/export`) with state/role-based visibility.
+- [x] Implement websocket subscription + polling fallback with strict sequence merge and stale-state supersede handling.
+- [x] Re-run targeted tests, then run required verification commands, and document evidence/limitations in this section.
+
+RESULT
+- Completion is proven by fail-then-pass test evidence showing:
+  - authorized users see Repo Analysis in Tools and can reach index/create/wizard/settings without manual URL entry,
+  - session list links to wizard and action controls are visible/hidden by status/ownership/admin override rules,
+  - event ingestion appends ordered by sequence with dedupe and polling cursor progression,
+  - websocket-unavailable fallback continues via polling without sequence regressions,
+  - unauthorized/disabled surface is hidden or blocked with an actionable message.
+
+Assumptions and scope boundaries
+- Assumption: Repo Analysis APIs remain at `/agent/api/v1/repo-analysis/*` and are the data source for these pages.
+- Assumption: “authorized user” means authenticated user with Repo Analysis feature enabled and `create/view` policy permission.
+- Scope boundary: this task targets web routes, Inertia pages/components, navigation discoverability, and frontend realtime/polling behavior; it does not redesign backend lifecycle semantics.
+
+Failure modes to guard
+- Malicious-caller mode: non-owner users attempt to access owner sessions via direct wizard URL; UI must not expose unauthorized actions and server errors should be surfaced with guidance.
+- Tired-maintainer mode: duplicate/out-of-order event merges from websocket + polling lead to incorrect wizard state; sequence ordering and cursor handling must remain deterministic.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Red state:
+    - `php artisan test tests/Feature/Web/Tools/RepoAnalysisNavigationTest.php` failed with missing props/routes (`repoAnalysis.available` missing; `tools.repo-analysis.*` routes undefined).
+    - `npm run test:unit -- resources/js/Pages/Tools/RepoAnalysis/__tests__/eventStream.spec.ts` failed with missing module `../eventStream`.
+  - Implemented:
+    - Web route wiring and access gating in `routes/web.php` for `tools.repo-analysis.index/create/wizard/settings`.
+    - Tools card discoverability + gating props in `resources/js/Pages/Tools/Index.vue`.
+    - New pages:
+      - `resources/js/Pages/Tools/RepoAnalysis/Index.vue`
+      - `resources/js/Pages/Tools/RepoAnalysis/Create.vue`
+      - `resources/js/Pages/Tools/RepoAnalysis/Wizard.vue`
+      - `resources/js/Pages/Tools/RepoAnalysis/Settings.vue`
+    - New components:
+      - `resources/js/Components/RepoAnalysis/TaskGraphPanel.vue`
+      - `resources/js/Components/RepoAnalysis/CoveragePanel.vue`
+      - `resources/js/Components/RepoAnalysis/ReportViewer.vue`
+      - `resources/js/Components/RepoAnalysis/ArtifactInspector.vue`
+    - Ordered merge utilities + tests:
+      - `resources/js/Pages/Tools/RepoAnalysis/eventStream.js`
+      - `resources/js/Pages/Tools/RepoAnalysis/__tests__/eventStream.spec.ts`
+    - Realtime broadcast channel/event wiring:
+      - `app/Events/RepoAnalysisSessionUpdated.php`
+      - `app/Support/RepoAnalysis/EventWriter.php`
+      - `routes/channels.php`
+    - Tools nav active-route coverage update:
+      - `resources/js/Layouts/AppLayout.vue`
+  - Green state:
+    - `php artisan test tests/Feature/Web/Tools/RepoAnalysisNavigationTest.php` => `4 passed (122 assertions)`.
+    - `npm run test:unit -- resources/js/Pages/Tools/RepoAnalysis/__tests__/eventStream.spec.ts` => `3 passed`.
+    - `php artisan test --filter=RepoAnalysis` => `63 passed (422 assertions)`.
+    - `npm run build` completed client + SSR builds successfully.
+- Conditions where this works:
+  - Repo Analysis feature flag is enabled (`repo_analysis.enabled=true`) for UI route access.
+  - User is authenticated and policy-authorized (`create/view/update`) for the session.
+  - Realtime uses `repo-analysis.{sessionId}` private channel when Echo is available; otherwise polling fallback continues.
+  - Event merge correctness assumes monotonic `sequence` values from backend contract.
+- Explicit non-goals / limitations:
+  - Composer dev check could not run end-to-end because local script calls `php artisan pail`, which is unavailable in this environment; command exited before full stack remained up.
+  - Browser login flow against local serve instance returned `419 Page Expired`, so manual click-through verification could not be completed via Playwright; route-level reachability and navigation flow are covered by passing feature tests.
+
+### Session 16 Task 4 — Implement Sequenced Event Writer and Event Read Contract (Completed)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- Repo Analysis schema/models exist (`repo_analysis_sessions`, `repo_analysis_events`) and transition service is in place, but there is no `EventWriter` for Repo Analysis.
+- There is currently no Repo Analysis events read endpoint/helper implementing incremental `since_sequence` retrieval with strict ordering.
+- Existing event writers in the codebase show two relevant patterns:
+  - deterministic, transaction-safe per-session sequencing + redaction/UTF-8 normalization (`InterrogationEventWriter`),
+  - lightweight per-scope sequence append (`DelegationEventWriter`).
+
+TASK
+- Add a Repo Analysis `EventWriter` that performs append-only event writes with:
+  - monotonic per-session sequence assignment under transaction lock,
+  - payload UTF-8 normalization + secret redaction before persistence,
+  - a broadcast hook using the same normalized payload and assigned sequence used for storage.
+- Add a Repo Analysis event read contract helper for ordered incremental fetch using `since_sequence` semantics.
+- Prove behavior with test-first coverage for sequence monotonicity, normalization/redaction, and ordered incremental retrieval including empty results.
+
+ACTION
+- [x] Add failing tests first:
+  - [x] `tests/Unit/Support/RepoAnalysis/EventWriterTest.php` for monotonic sequence assignment, stale writer safety, normalization/redaction, nested payload handling, and broadcast parity.
+  - [x] Include incremental read tests (`since_sequence` ordering and empty result behavior) via writer/read helper unit coverage.
+- [x] Run `php artisan test --filter=EventWriterTest` and capture red-state evidence.
+- [x] Implement `app/Support/RepoAnalysis/EventWriter.php` with:
+  - [x] transactional lock + sequence assignment (`max(sequence)+1` per session under lock),
+  - [x] recursive UTF-8 normalization and key/value sanitization,
+  - [x] nested secret redaction,
+  - [x] broadcast hook invocation with storage-equivalent envelope.
+- [x] Implement minimal read contract helper (model scope/service method) for `since_sequence` ordered retrieval.
+- [x] Re-run `php artisan test --filter=EventWriterTest` and confirm green.
+- [x] Record review evidence, correctness conditions, non-goals, and limitations in this section.
+
+RESULT
+- Completion is proven by fail-then-pass test evidence showing:
+  - strict per-session sequence monotonicity with no gaps/duplicates from writer behavior,
+  - malformed UTF-8 payload content normalized for stored JSON,
+  - secret values redacted including nested payload keys/values,
+  - incremental reads return strictly ordered events after `since_sequence`,
+  - incremental reads return an empty result set when no new events exist.
+
+Assumptions and scope boundaries
+- Assumption: this task is backend-only for Repo Analysis event write/read contracts and does not require full Repo Analysis controller/routing rollout yet.
+- Assumption: sequence uniqueness is guaranteed by both transactional assignment and existing DB unique constraint on `(repo_analysis_session_id, sequence)`.
+- Scope boundary: only `app/Support/RepoAnalysis/EventWriter.php`, minimal event read query helper/model usage, and targeted tests for this behavior.
+
+Failure modes to guard
+- Malicious-caller mode: payloads containing secrets in nested structures attempt to bypass redaction; payloads containing malformed UTF-8 or control characters attempt to poison event stream.
+- Tired-maintainer mode: stale writer instances or concurrent writes causing duplicate/non-monotonic sequences; broadcast payload drift from persisted payload.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Red state (`php artisan test --filter=EventWriterTest`) before implementation failed with:
+    - `Class "App\Support\RepoAnalysis\EventWriter" not found`
+    - `5 failed` in `Tests\Unit\Support\RepoAnalysis\EventWriterTest`.
+  - Implemented:
+    - `app/Support/RepoAnalysis/EventWriter.php` (transactional append, normalization/redaction, broadcast hook, `readSinceSequence` helper).
+    - `app/Models/RepoAnalysisEvent.php` query scopes for session filter, `since_sequence`, and deterministic ordering.
+    - `tests/Unit/Support/RepoAnalysis/EventWriterTest.php` for monotonic sequence, stale writer safety, nested redaction/UTF-8 normalization, broadcast parity, and ordered incremental reads.
+  - Green state (`php artisan test --filter=EventWriterTest`) passed:
+    - `Tests\Unit\Support\RepoAnalysis\EventWriterTest` => `5 passed`
+    - Overall filtered run => `20 passed, 59 assertions`.
+- Conditions where this works:
+  - Event writes go through `EventWriter::append()` so sequence assignment occurs under session row lock and per-session `max(sequence)+1`.
+  - DB uniqueness on `(repo_analysis_session_id, sequence)` remains in place as a second safety layer.
+  - Payloads are arrays; malformed UTF-8 and control characters are normalized before persistence.
+  - Redaction handles both value patterns (`token=...`, `Bearer ...`) and nested secret-like keys (`api_token`, `password`, `secret`).
+  - Incremental reads use `EventWriter::readSinceSequence()` with positive `since_sequence` and bounded limit.
+- Explicit non-goals / limitations:
+  - No Repo Analysis API controller/routes were added in this task; read contract is currently service/model-level.
+  - Broadcast integration is implemented as a callback hook, not yet wired to Laravel broadcast channels/events.
+  - True multi-process race simulation is not covered in tests; stale-writer sequencing is validated via interleaved inserts.
+
+### Session 16 Task 2 — Create Repo Analysis Schema and Eloquent Models (Completed)
+
+Pre-Execution Goal Articulation
+
+SITUATION
+- Repo Analysis configuration and Horizon defaults now exist, but dedicated persistence tables/models for sessions, events, tasks, artifacts, and reports do not yet exist.
+- Existing interrogation tables are already in production use and must remain untouched.
+- This task requires additive-only schema work plus new Eloquent models and verification through fail-then-pass tests.
+
+TASK
+- Add dedicated Repo Analysis schema and model layer so the application can persist deterministic session lifecycle, event stream, task graph state, artifacts, and reports.
+- Ensure required per-session uniqueness rules are enforced for event sequencing, task keys, and artifact keys.
+- Ensure foreign key cascade behavior is correct, session soft deletes are supported, and status/phase query indexes exist for lifecycle reads.
+
+ACTION
+- [x] Add `tests/Feature/RepoAnalysis/RepoAnalysisSchemaTest.php` first with explicit assumptions:
+  - [x] migrations are additive-only,
+  - [x] existing interrogation tables remain untouched.
+- [x] Run `php artisan test --filter=RepoAnalysisSchemaTest` and confirm red state.
+- [x] Add five new additive migrations under `database/migrations/*repo_analysis*`:
+  - [x] `repo_analysis_sessions`,
+  - [x] `repo_analysis_events`,
+  - [x] `repo_analysis_tasks`,
+  - [x] `repo_analysis_artifacts`,
+  - [x] `repo_analysis_reports`.
+- [x] Add five new models under `app/Models/RepoAnalysis*.php` with casts and relationships.
+- [x] Re-run `php artisan test --filter=RepoAnalysisSchemaTest` until green.
+- [x] Run `php artisan test --filter=RepoAnalysisSession` if model tests are added.
+
+RESULT
+- Completion is proven by fail-then-pass test evidence showing:
+  - tables and expected columns exist,
+  - unique constraints enforce per-session uniqueness for `(session, sequence)`, `(session, task_key)`, `(session, artifact_key)`,
+  - foreign keys cascade session deletion to events/tasks/artifacts/reports,
+  - session soft deletes and status/phase indexes exist,
+  - nullable error columns and JSON defaults are represented in schema/model behavior.
+
+Assumptions and scope boundaries
+- Assumption: migrations are additive-only and must not alter existing interrogation schema.
+- Assumption: Repo Analysis schema naming follows `repo_analysis_*` table conventions and `RepoAnalysis*` model naming.
+- Scope boundary: only new migrations in `database/migrations/*repo_analysis*`, new models in `app/Models/RepoAnalysis*.php`, and test coverage needed to verify this task.
+
+Failure modes to guard
+- Malicious-caller mode: duplicate sequence/task/artifact keys inserted for the same session must be rejected by DB constraints.
+- Tired-maintainer mode: nullable error fields or JSON defaults omitted, causing runtime null-handling regressions and brittle lifecycle queries.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Red state: `php artisan test --filter=RepoAnalysisSchemaTest` failed before implementation (`6 failed, 1 passed`) with missing table errors:
+    - `Failed asserting that false is true.` for `Schema::hasTable('repo_analysis_sessions')`
+    - `SQLSTATE[42P01]: Undefined table: 7 ERROR: relation "repo_analysis_sessions" does not exist`
+  - Implemented:
+    - Added `tests/Feature/RepoAnalysis/RepoAnalysisSchemaTest.php`.
+    - Added migrations:
+      - `database/migrations/2026_03_02_190000_create_repo_analysis_sessions_table.php`
+      - `database/migrations/2026_03_02_190100_create_repo_analysis_events_table.php`
+      - `database/migrations/2026_03_02_190200_create_repo_analysis_tasks_table.php`
+      - `database/migrations/2026_03_02_190300_create_repo_analysis_artifacts_table.php`
+      - `database/migrations/2026_03_02_190400_create_repo_analysis_reports_table.php`
+    - Added models:
+      - `app/Models/RepoAnalysisSession.php`
+      - `app/Models/RepoAnalysisEvent.php`
+      - `app/Models/RepoAnalysisTask.php`
+      - `app/Models/RepoAnalysisArtifact.php`
+      - `app/Models/RepoAnalysisReport.php`
+  - Green state: `php artisan test --filter=RepoAnalysisSchemaTest` passed (`7 passed, 43 assertions`).
+  - `php artisan test --filter=RepoAnalysisSession` was not run because no `RepoAnalysisSession*` model test class was added in this task.
+- Conditions where this works:
+  - Migrations run in order so `repo_analysis_sessions` exists before child tables with foreign keys.
+  - Database backend enforces unique constraints and FK cascades (validated on `pgsql_testing`).
+  - Repo Analysis writes use per-session uniqueness for event sequencing/task keys/artifact keys.
+- Explicit non-goals / limitations:
+  - No API endpoints, services, jobs, policies, or frontend surfaces were added in this task.
+  - This task does not yet enforce enum/check constraints for allowed status/event/task values.
+
+### Session 16 Task 1 — Add Repo Analysis Configuration and Queue Defaults (Completed)
+
+Pre-Execution Goal Articulation
+
+SITUATION
+- `config/repo_analysis.php` does not yet exist, so Repo Analysis defaults are not codified in runtime config.
+- `config/horizon.php` currently has no dedicated `repo-analysis` queue wait threshold or supervisor definition.
+- Existing config unit tests cover other features but not Repo Analysis defaults, safety excludes, or retention policy shape.
+
+TASK
+- Add deterministic, feature-flagged Repo Analysis configuration with safe defaults and retention settings.
+- Add bounded Horizon queue/supervisor defaults for `repo-analysis`.
+- Add and pass a dedicated unit test suite proving defaults and fallback/safety behavior.
+
+ACTION
+- [x] Add `tests/Unit/Config/RepoAnalysisConfigTest.php` first, including required assumptions docblock and failure-path checks.
+- [x] Run `php artisan test --filter=RepoAnalysisConfigTest` and confirm red state before implementation.
+- [x] Implement `config/repo_analysis.php` with feature flag default off, deterministic defaults, mandatory excludes, and retention fields.
+- [x] Update `config/horizon.php` with `repo-analysis` wait threshold and bounded supervisor config.
+- [x] Re-run `php artisan test --filter=RepoAnalysisConfigTest` and confirm green.
+- [x] Record verification evidence and completion review in this task log section.
+
+RESULT
+- Completion is proven by fail-then-pass test evidence and config assertions showing:
+  - `max_active_sessions_per_user = 2`,
+  - `narrative_synthesis_default = false`,
+  - mandatory excludes include `vendor/`, `node_modules/`, `storage/`, `bootstrap/cache/`, `.git/`,
+  - retention policy keys exist,
+  - feature flag defaults off, and fallback guards handle invalid/missing overrides safely.
+
+Assumptions and scope boundaries
+- Assumption: Redis and Horizon are available in target environments.
+- Assumption: Repo Analysis remains disabled by default unless explicitly enabled.
+- Scope boundary: only `config/repo_analysis.php`, `config/horizon.php`, and config unit tests are changed; no API/UI behavior changes.
+
+Failure modes to guard
+- Malicious-caller mode: hostile or malformed environment overrides attempt to disable mandatory excludes or set unsafe session limits.
+- Tired-maintainer mode: missing env keys or invalid override values accidentally produce null/empty config branches and runtime instability.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Red state: `php artisan test --filter=RepoAnalysisConfigTest` failed (`5 failed`) before implementation, with null config assertions and missing file error:
+    - `Failed asserting that null is false.`
+    - `require(.../config/repo_analysis.php): Failed to open stream: No such file or directory`.
+  - Implemented:
+    - `config/repo_analysis.php` with feature flag default off, bounded override fallback, mandatory excludes, and retention policy defaults.
+    - `config/horizon.php` with `redis:repo-analysis` wait threshold and `supervisor-repo-analysis` defaults + environment entries.
+  - Green state: `php artisan test --filter=RepoAnalysisConfigTest` passed (`5 passed, 35 assertions`).
+- Conditions where this works:
+  - Runtime is using this repository config set and Horizon reads `config/horizon.php`.
+  - Optional env overrides for Repo Analysis remain within defined bounds; invalid values intentionally fall back to safe defaults.
+  - Mandatory excludes remain enforced through merged defaults, even with empty/invalid exclude override input.
+- Explicit non-goals / limitations:
+  - No API routes, controllers, models, migrations, jobs, or frontend pages were changed.
+  - This task does not enable Repo Analysis by default; it only establishes configuration and queue defaults.
+
 ### Session 16 Task 1 — Draft deterministic repo analysis tool implementation spec (Completed)
 
 Pre-Execution Goal Articulation
@@ -1420,3 +1723,398 @@ Review:
   - This pass does not add WYSIWYG authoring workflows.
   - Search in docs UI currently uses docs page query/filter flow rather than a dedicated live-search component.
   - API route inventory is generated from current route registration snapshot and should be regenerated when API surface changes.
+
+### 2026-03-02 — Session 16 Task 3: Implement Atomic Session Transition Service
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- `RepoAnalysis` models and schema exist, but no lifecycle transition service exists under `app/Support/RepoAnalysis/`.
+- `repo_analysis_sessions` stores lifecycle state as `phase` (int) + `status` (string), and writes can race without guarded conditional updates.
+- Constraints: scope is transition service + focused unit tests only; no controller/UI wiring.
+
+TASK
+- Add a single source of truth transition service that enforces deterministic allowed phase/status transitions with atomic conditional updates.
+- Add unit tests proving allowed transitions, disallowed transitions, terminal-state protection, and race-safe atomic behavior.
+
+ACTION
+- [x] Create `tests/Unit/Support/RepoAnalysis/SessionStateTransitionServiceTest.php` with matrix coverage and edge/failure paths.
+- [x] Run `php artisan test --filter=SessionStateTransitionServiceTest` and capture failing red-state output.
+- [x] Implement `app/Support/RepoAnalysis/SessionStateTransitionService.php` with allowed-from matrix + atomic `UPDATE ... WHERE` transition semantics.
+- [x] Re-run `php artisan test --filter=SessionStateTransitionServiceTest` and confirm all tests pass.
+- [x] Update this plan entry with verification evidence, correctness conditions, and non-goals.
+
+RESULT
+- Completion is verified by fail-then-pass evidence from the targeted test filter and by assertions that duplicate start, invalid phase jumps, invalid resume/retry, terminal-state mutation, and competing writes are rejected.
+
+Assumptions and scope boundaries
+- Assumption: repo analysis lifecycle uses phases `0..6` and status values `setup|snapshotting|planning|executing|validating|reporting|completed|paused|failed`.
+- Assumption: terminal protection is enforced for `phase=6,status=completed`.
+- Scope boundary: this task only introduces the transition service + unit tests.
+
+Failure modes to guard
+- Malicious-caller mode: invalid lifecycle jumps (e.g., setup -> execute), unauthorized resume/retry semantics via direct API calls.
+- Tired-maintainer mode: duplicate start/retry calls or concurrent workers causing non-deterministic session state.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Red state:
+    - `php artisan test --filter=SessionStateTransitionServiceTest` failed with `Class \"App\\Support\\RepoAnalysis\\SessionStateTransitionService\" not found`.
+  - Green state:
+    - `php artisan test --filter=SessionStateTransitionServiceTest` passed (`9 passed, 34 assertions`).
+- Conditions where this works:
+  - Lifecycle transitions are guarded by a deterministic allowed-from matrix keyed by `phase:status`.
+  - Atomic transition safety depends on conditional `UPDATE` semantics (`WHERE id AND allowed-from-state`) and returns success only when exactly one row changes.
+  - `resume()` only succeeds from `paused` status and maps back to the active status for the same phase.
+  - `retry()` only succeeds from `failed` status and maps back to the active status for the same phase.
+  - Terminal state (`6:completed`) cannot be mutated because no matrix path allows transitions out of it.
+- Explicit non-goals / limitations:
+  - No controller, API endpoint, policy, event, or UI wiring was added in this task.
+  - No cross-phase pause/retry semantics were introduced beyond same-phase resume/retry restoration.
+  - No additional lifecycle statuses were introduced beyond the matrix covered by this service.
+
+### 2026-03-02 — Session 16 Task 5: Build Deterministic Snapshot Builder
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- Repo Analysis session/task/event foundations exist, but `app/Support/RepoAnalysis/SnapshotBuilder.php` does not exist yet.
+- Deterministic requirements are strict: canonical path traversal, deterministic manifest JSON, and snapshot hash stability when file contents are unchanged but mtimes differ.
+- Constraints: scope is limited to `SnapshotBuilder` and fixture-based tests; no queue/controller/UI wiring in this task.
+
+TASK
+- Implement a deterministic snapshot builder that produces a canonical manifest and snapshot hash from repository files.
+- Snapshot hash must remain identical across runs when file contents are unchanged, even if mtimes change.
+- Manifest must retain mtime metadata while excluding mtime from hash input.
+
+ACTION
+- [x] Add `tests/Unit/Support/RepoAnalysis/SnapshotBuilderTest.php` using fixture repo trees for canonical ordering, filtering, deterministic serialization, and hash behavior.
+- [x] Cover edge/failure paths in tests: symlink handling, unreadable files, oversize file skip metadata, and path escaping attempts.
+- [x] Run `php artisan test --filter=SnapshotBuilderTest` and capture initial failing red state.
+- [x] Implement `app/Support/RepoAnalysis/SnapshotBuilder.php` with deterministic traversal, excludes, hash pipeline, and size/path guards.
+- [x] Re-run `php artisan test --filter=SnapshotBuilderTest` twice and confirm matching snapshot hashes across both runs.
+
+RESULT
+- Completion is proven by fail-then-pass test evidence and by deterministic assertions on:
+  - sorted canonical paths,
+  - include/exclude behavior,
+  - `mtime` persisted in manifest but excluded from hash,
+  - stable canonical JSON serialization and stable snapshot hash across repeated test execution.
+
+Assumptions and scope boundaries
+- Assumption: default excludes include `vendor/`, `node_modules/`, `storage/`, `bootstrap/cache/`, and `.git/` from `config/repo_analysis.php`.
+- Assumption: symlink targets are not followed to avoid non-deterministic and unsafe traversal.
+- Scope boundary: this task does not add queue jobs, API endpoints, DB schema changes, or UI updates.
+
+Failure modes to guard
+- Malicious-caller mode: include/exclude/path inputs attempting traversal outside root (`../` path escape patterns).
+- Tired-maintainer mode: flaky hash outputs caused by path ordering drift or mtime-only file changes.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Red state:
+    - `php artisan test --filter=SnapshotBuilderTest` failed with `Class "App\Support\RepoAnalysis\SnapshotBuilder" not found` (`4 failed`).
+  - Green state:
+    - `php artisan test --filter=SnapshotBuilderTest` passed (`4 passed, 19 assertions`).
+    - `php artisan test --filter=SnapshotBuilderTest` (second run) passed (`4 passed, 19 assertions`).
+  - Determinism evidence:
+    - `php artisan tinker --execute='$builder = new App\\Support\\RepoAnalysis\\SnapshotBuilder; ...'` emitted identical hashes twice:
+      - `154c89a1c7ba6fa5b14398382489fb111d8fb6e394574e805505703a2d36404f`
+      - `154c89a1c7ba6fa5b14398382489fb111d8fb6e394574e805505703a2d36404f`
+- Conditions where this works:
+  - Snapshot inputs are files under a real, local project directory and traversal can read metadata/content for readable files.
+  - Canonical ordering is lexicographic on normalized relative paths; deterministic JSON key ordering is applied before encoding.
+  - `mtime` is stored in manifest file entries, while snapshot hash input strips `mtime` from included file records.
+  - Default excludes from `repo_analysis.scan.exclude_paths` are always merged with task-specific excludes.
+  - Path guard behavior marks invalid include/exclude rules containing `..` as `path_escape_attempts` and rejects symlink traversal.
+- Explicit non-goals / limitations:
+  - This task does not yet persist snapshot outputs to repo-analysis tables or wire jobs/controllers/UI.
+  - Unreadable-file behavior relies on filesystem permission semantics of the runtime OS.
+  - SnapshotBuilder currently returns arrays (manifest + JSON + hash) and does not yet expose a dedicated value object/DTO.
+
+### 2026-03-02 — Session 16 Task 6: Implement Task Graph Builder, Analyzer Registry, and Core Analyzer Contracts
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- `RepoAnalysis` currently has transition/event/snapshot services but no deterministic task graph planner and no analyzer contract/registry layer.
+- There are no analyzer implementations under `app/Support/RepoAnalysis/Analyzers/*`, so profile-based task planning and versioned analyzer execution contracts are not yet available.
+- Constraints: scope is limited to `TaskGraphBuilder`, analyzer interface/registry, and initial analyzer set. Queue jobs, controllers, and UI are out of scope for this task.
+
+TASK
+- Add deterministic DAG planning and analyzer contracts so the same profile + snapshot yields the same ordered task plan and stable `task_key` values.
+- Add initial analyzer implementations with normalized output hashing and explicit handling for missing manifests/lockfiles, parser errors, empty test suites, and mixed-stack repositories.
+- Prove correctness with unit tests covering deterministic ordering, dependency correctness, stable task keys, normalized output hashes, and unsupported profile skip behavior.
+
+ACTION
+- [x] Add unit tests for `TaskGraphBuilder` deterministic ordering/task keys/dependencies/profile-skip behavior.
+- [x] Add analyzer contract tests for normalized output hashing and required edge/failure paths.
+- [x] Run `php artisan test --filter=TaskGraphBuilderTest` as the first verification step (current branch state was already green).
+- [x] Implement `AnalyzerInterface`, `AnalyzerRegistry`, and initial analyzers:
+  - `FilesystemManifestAnalyzer`
+  - `DependencyManifestAnalyzer`
+  - `LaravelRoutesAnalyzer`
+  - `LaravelModelsMigrationsAnalyzer`
+  - `QueueJobsEventsAnalyzer`
+  - `FrontendModuleGraphAnalyzer`
+  - `TestCoverageMapAnalyzer`
+  - `RiskHotspotAnalyzer`
+- [x] Implement `TaskGraphBuilder` with deterministic task ordering, stable keys, and dependency validation.
+- [x] Re-run focused tests for graph + analyzers and verify deterministic order/hash behavior across repeated runs.
+
+RESULT
+- Completion is verified by fail-then-pass evidence from targeted tests and repeated deterministic assertions showing identical task order and output hashes for identical inputs.
+
+Assumptions and scope boundaries
+- Assumption: analyzer ordering is deterministic by configured profile order, with deterministic tie-breaking by analyzer key.
+- Assumption: `task_key` is deterministic for identical `(profile, snapshot_hash, analyzer_key, analyzer_version)` input.
+- Scope boundary: no queue orchestration changes, no API route/controller changes, and no UI changes in this task.
+
+Failure modes to guard
+- Malicious-caller mode: unknown analyzer profile or malformed snapshot input attempting to break deterministic graph generation.
+- Tired-maintainer mode: parser/manifest absence and unstable array ordering causing flaky output hashes between runs.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - `php artisan test --filter=TaskGraphBuilderTest` passed (`4 passed, 15 assertions`).
+  - `php artisan test --filter=AnalyzerContractsTest` passed (`4 passed, 8 assertions`).
+  - `php artisan test --filter='TaskGraphBuilderTest|AnalyzerContractsTest'` passed (`8 passed, 23 assertions`) on repeat run, confirming deterministic assertions stay stable across reruns.
+  - `php artisan test --filter='RepoAnalysis|TaskGraphBuilderTest|AnalyzerContractsTest'` passed (`38 passed, 176 assertions`), confirming no regression across current RepoAnalysis unit/feature coverage.
+- Conditions where this works:
+  - For identical `(profile, snapshot_hash, analyzer set + versions)`, `TaskGraphBuilder` produces stable sequence order and `task_key` values.
+  - Dependency edges are enforced by analyzer key contracts; tasks with missing dependencies are explicitly skipped with reason metadata.
+  - `AbstractAnalyzer` hash normalization sorts list/object structures before hashing, so equivalent payloads with different input order produce identical `output_hash`.
+  - `AnalyzerRegistry::forProfile()` deterministically applies profile order, deduplicates keys, and emits explicit skips for unsupported profiles/stacks.
+  - Edge handling is covered for missing manifests/lockfiles context, JSON parser errors, empty test suite warning artifact path, and mixed Laravel+frontend stack selection.
+- Explicit non-goals / limitations:
+  - This task does not add queue job wiring, API controllers/routes, persistence of analyzer outputs, or UI orchestration.
+  - Analyzer implementations are intentionally lightweight deterministic detectors; they do not execute heavyweight parsers or static-analysis engines yet.
+  - Missing-profile behavior returns skipped metadata and no tasks, but does not auto-fallback to another profile.
+
+### Session 16 Task 7 — Implement Queue Jobs for Snapshot->Plan->Execute with Retry/Drift Semantics (Completed)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- Repo Analysis foundations exist (schema/models, transition service, event writer, snapshot builder, task graph/analyzers), but pipeline jobs for deterministic execution phases are not yet implemented.
+- There is no integration coverage for queue-driven phase progression, retry-once semantics, pause behavior, resume reuse gating, or snapshot drift pause controls.
+- Constraints: implement only queue jobs in `app/Jobs/RepoAnalysis/*` and orchestration service wiring; no UI/report export screen work in this task.
+
+TASK
+- Implement deterministic queue jobs for `Snapshot (1) -> Plan (2) -> Execute (3) -> Validate (4) -> Report (5) -> Complete (6)` with policy-driven retry behavior.
+- Ensure retryable execute failures auto-retry once then pause; non-retryable execute failures pause immediately without auto-retry.
+- Ensure completed-task reuse on resume only happens when both `input_hash` and `analyzer_version` match current plan inputs.
+- Ensure snapshot drift detection pauses session and requires explicit operator decision before continuation.
+
+ACTION
+- [x] Add tests first in `tests/Integration/RepoAnalysis/RepoAnalysisExecutionPipelineTest.php` covering:
+  - [x] phase progression through snapshot/plan/execute/validate/report completion,
+  - [x] retryable failure auto-retry once then pause on second failure,
+  - [x] non-retryable failure short-circuit without retry,
+  - [x] resume reuse only when `input_hash` + `analyzer_version` match,
+  - [x] drift detection pause with operator decision required,
+  - [x] replay/idempotency, stale task state handling, queue misrouting guard.
+- [x] Run `php artisan test --filter=RepoAnalysisExecutionPipelineTest` and confirm failing red state.
+- [x] Implement orchestration service wiring and jobs:
+  - [x] `GenerateRepoSnapshotJob`
+  - [x] `PlanRepoAnalysisTasksJob`
+  - [x] `ExecuteRepoAnalysisTaskJob`
+  - [x] `ValidateRepoAnalysisCoverageJob`
+  - [x] `GenerateRepoAnalysisReportJob`
+- [x] Re-run `php artisan test --filter=RepoAnalysisExecutionPipelineTest` and confirm green.
+- [x] Record review with assumptions, correctness conditions, non-goals, and limitations.
+
+RESULT
+- Completion is verified by fail-then-pass evidence from the integration test file plus persisted state checks for paused/resumed/failed/completed outcomes and emitted diagnostics.
+
+Assumptions and scope boundaries
+- Assumption: repo-analysis jobs must always route to `repo-analysis` queue on Redis; queue retries remain disabled (`tries=1`) and retry policy is implemented in execute-task logic.
+- Assumption: deterministic analyzers and snapshot/task graph builders are already available and remain unchanged unless minimal wiring requires it.
+- Scope boundary: no API controller/UI/export UX implementation in this task.
+
+Failure modes to guard
+- Malicious-caller mode: dispatching jobs on wrong queue or forcing invalid/stale task state to bypass deterministic phase controls.
+- Tired-maintainer mode: replayed jobs duplicating artifacts/tasks/reports, stale running task never recovering, or retry policy accidentally delegated to queue-level retries.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Red state (`php artisan test --filter=RepoAnalysisExecutionPipelineTest`) failed with `Class "App\Jobs\RepoAnalysis\GenerateRepoSnapshotJob" not found` and `6 failed`.
+  - Implemented:
+    - `app/Support/RepoAnalysis/RepoAnalysisExecutionOrchestrator.php`
+    - `app/Support/RepoAnalysis/Exceptions/QueueMisroutingException.php`
+    - `app/Jobs/RepoAnalysis/GenerateRepoSnapshotJob.php`
+    - `app/Jobs/RepoAnalysis/PlanRepoAnalysisTasksJob.php`
+    - `app/Jobs/RepoAnalysis/ExecuteRepoAnalysisTaskJob.php`
+    - `app/Jobs/RepoAnalysis/ValidateRepoAnalysisCoverageJob.php`
+    - `app/Jobs/RepoAnalysis/GenerateRepoAnalysisReportJob.php`
+    - `tests/Integration/RepoAnalysis/RepoAnalysisExecutionPipelineTest.php`
+  - Green state (`php artisan test --filter=RepoAnalysisExecutionPipelineTest`) passed:
+    - `6 passed (35 assertions)`.
+- Conditions where this works:
+  - Jobs are routed on the configured `repo-analysis` queue; misrouted execution throws `QueueMisroutingException`.
+  - Snapshot payload is present in session metadata and `snapshot_hash` exists before planning/execution.
+  - Retry policy is enforced in task logic (`tries=1` at queue layer): retryable failures auto-retry once, second retryable failure pauses; non-retryable failures pause immediately.
+  - Resume reuse preserves completed task outputs only when both `input_hash` and `analyzer_version` match current deterministic plan input.
+  - Drift detection compares current snapshot hash vs stored snapshot hash at execute-phase boundary; mismatch pauses session and sets `operator_action_required=drift_decision_required`.
+  - Replay-safe updates use `updateOrCreate` for snapshot artifact and report rows to avoid duplication.
+- Explicit non-goals / limitations:
+  - This task does not add API lifecycle endpoints/UI operator controls for pause/resume/restart decisions.
+  - Drift decision handling currently only supports `continue_old_snapshot` as an in-metadata decision path; restart orchestration is not implemented in this task.
+  - Coverage validation is intentionally minimal and deterministic; it does not yet enforce full stack-specific artifact-class requirements.
+### Session 16 Task 8 — Implement Coverage Gates, Deterministic Report Composition, Export, and Retention Cleanup (Completed)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- Repo Analysis pipeline jobs exist and currently inline simplified coverage and report logic inside `ValidateRepoAnalysisCoverageJob` and `GenerateRepoAnalysisReportJob`.
+- Dedicated services for coverage gates, deterministic report composition, and versioned exports are not yet implemented for Repo Analysis.
+- Retention cleanup for task-level artifacts is not implemented or scheduled.
+- Constraints from this task: implement only `CoverageGateService`, `ReportComposer`, `ExportService`, retention cleanup command/job + scheduler registration, and add the three specified test files.
+
+TASK
+- Completion must be blocked when coverage gates fail (missing required artifact classes or critical task failures), while allowing completion with warning when test mapping is empty.
+- Report composition must be deterministic with report hash derived from ordered artifact hashes (immutable deterministic inputs), without requiring narrative.
+- Report export must write versioned files under `docs/discovery/repo-analysis/{slug}.md|json`, suffixing on collisions (`-v2`, `-v3`, ...), and enforce export path policy.
+- Retention cleanup must delete task-level artifacts older than 30 days while preserving report records and exported files.
+
+ACTION
+- [x] Add tests first:
+  - [x] `tests/Unit/Support/RepoAnalysis/CoverageGateServiceTest.php`
+  - [x] `tests/Unit/Support/RepoAnalysis/ReportComposerTest.php`
+  - [x] `tests/Feature/RepoAnalysis/RepoAnalysisExportAndRetentionTest.php`
+- [x] Run targeted tests to capture red state.
+- [x] Implement minimal services and wiring:
+  - [x] `app/Support/RepoAnalysis/CoverageGateService.php`
+  - [x] `app/Support/RepoAnalysis/ReportComposer.php`
+  - [x] `app/Support/RepoAnalysis/ExportService.php`
+  - [x] retention cleanup command/job (artifact deletion only) + schedule registration.
+  - [x] config updates for required artifact classes and export path policy.
+- [x] Update report/coverage jobs to use the new services and enforce gate blocking semantics.
+- [x] Re-run targeted tests and ensure pass.
+- [x] Verify export paths match `docs/discovery/repo-analysis/{slug}.md|json` pattern.
+
+RESULT
+- Evidence of correctness is fail-then-pass test output for the three new test classes and assertions proving:
+  - gate failure blocks completion,
+  - no-tests warning passes,
+  - deterministic report hash independent of artifact insertion order,
+  - export collision suffixing works,
+  - retention cleanup deletes only old task artifacts and preserves reports/exports.
+
+Assumptions and scope boundaries
+- Assumption: deterministic artifact hashes/content are immutable inputs to report hashing; generated timestamps are excluded from hash inputs.
+- Assumption: required artifact class policy is config-driven and defaults can be expressed in `config/repo_analysis.php`.
+- Scope boundary: no API controller/UI additions in this task.
+
+Failure modes to guard
+- Malicious-caller mode: bypassing export directory policy via crafted slug/path traversal, or forcing coverage pass despite critical failed task.
+- Tired-maintainer mode: non-deterministic report hash due to unordered artifact traversal, accidental deletion of report artifacts during retention cleanup, and unhandled export file collisions.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Red state (`php artisan test tests/Unit/Support/RepoAnalysis/CoverageGateServiceTest.php tests/Unit/Support/RepoAnalysis/ReportComposerTest.php tests/Feature/RepoAnalysis/RepoAnalysisExportAndRetentionTest.php`) failed with:
+    - `Target class [App\Support\RepoAnalysis\CoverageGateService] does not exist.`
+    - `Target class [App\Support\RepoAnalysis\ReportComposer] does not exist.`
+    - `Target class [App\Support\RepoAnalysis\ExportService] does not exist.`
+    - `The command "repo-analysis:prune-artifacts" does not exist.`
+  - Green state:
+    - `php artisan test tests/Unit/Support/RepoAnalysis/CoverageGateServiceTest.php tests/Unit/Support/RepoAnalysis/ReportComposerTest.php tests/Feature/RepoAnalysis/RepoAnalysisExportAndRetentionTest.php` passed (`8 passed, 26 assertions`).
+    - `php artisan test --filter=RepoAnalysisExecutionPipelineTest` passed (`6 passed, 35 assertions`) after job wiring changes.
+  - Export path pattern verification:
+    - `RepoAnalysisExportAndRetentionTest` asserts generated markdown/json paths match `/docs/discovery/repo-analysis/{slug}.md|json` and collision suffixes `-v2`, `-v3`.
+- Conditions where this works:
+  - Coverage gate passes only when snapshot hash exists, required artifact classes are present, and no critical failed tasks exist.
+  - No-tests repositories still pass coverage when `test_coverage_map` emits `empty_test_suite` warning.
+  - Report hash determinism holds for identical ordered `(artifact_key, content_hash)` sets regardless of insertion order.
+  - Export collision handling reserves paired markdown/json paths with deterministic suffixing and blocks path traversal via policy validation.
+  - Retention cleanup prunes only task-linked artifacts older than configured TTL (`repo_analysis.retention.task_artifacts_ttl_days`) and leaves reports/exports intact.
+- Explicit non-goals / limitations:
+  - Retention cleanup currently prunes by artifact `created_at` and does not archive before delete.
+  - Export service enforces relative export directory policy but does not currently integrate `PathPolicy` helper methods.
+  - Partial cleanup failures are counted and tolerated; failed IDs are not yet persisted in a dedicated audit artifact.
+
+### Session 16 Task 9 — Implement Repo Analysis API, Requests, Authorization, Limits, and Audit Logging (Completed)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- Repo Analysis core data model, deterministic services, queue jobs, and coverage/report services exist in the working tree.
+- `/agent/api/v1/repo-analysis/*` endpoints, repo-analysis request classes, repo-analysis policy mapping, and lifecycle mutation audit logs are not yet wired.
+- App policy registration is handled in `AppServiceProvider` (not `AuthServiceProvider`) and admin checks use `User::hasRole('admin')`.
+- Constraints: owner-only by default with admin override, dedicated Repo Analysis active-session cap fixed at `2`, test-first workflow, and non-destructive DB operations only.
+
+TASK
+- Repo Analysis API lifecycle/read surface is fully exposed and validated.
+- Owner/admin authorization, active-session cap, invalid transition handling, invalid task-id handling, and event pagination parity (`since_sequence`) are enforced.
+- Lifecycle mutations are audit-logged.
+- `RepoAnalysisApiLifecycleTest` covers red/green behavior and passes with route registration verification.
+
+ACTION
+- [x] Add feature tests first:
+  - [x] `tests/Feature/Api/V1/RepoAnalysis/RepoAnalysisApiLifecycleTest.php`
+  - [x] cover CRUD/lifecycle/read endpoints, validation failures, invalid transitions, owner/admin authz, cap enforcement, retry/restart edge cases, paused-only resume, events `since_sequence`, and lifecycle audit log writes.
+- [x] Run `php artisan test --filter=RepoAnalysisApiLifecycleTest` and capture failing output.
+- [x] Implement minimal backend changes in scope:
+  - [x] Register all `/agent/api/v1/repo-analysis/*` routes in `routes/api.php`.
+  - [x] Create `app/Http/Controllers/Api/V1/RepoAnalysisSessionController.php` with scoped lifecycle/read handlers.
+  - [x] Add request classes in `app/Http/Requests/Agent/RepoAnalysis/*`.
+  - [x] Add `app/Policies/RepoAnalysisSessionPolicy.php` and map it in `AppServiceProvider`.
+  - [x] Enforce active-session cap (`2`) at create/start path.
+  - [x] Add lifecycle mutation audit log writes via `AuditLogger`.
+- [x] Re-run `php artisan test --filter=RepoAnalysisApiLifecycleTest` and confirm pass.
+- [x] Run `php artisan route:list --path=agent/api/v1/repo-analysis` and confirm endpoint registration.
+- [x] Add review notes with assumptions, conditions for correctness, handled/not-handled paths, and limitations.
+
+RESULT
+- Completion evidence is:
+  - red-to-green transition for `RepoAnalysisApiLifecycleTest`,
+  - route-list output confirming repo-analysis API endpoints,
+  - audit-log assertions for lifecycle mutation actions.
+
+Failure modes to guard
+- Malicious-caller mode: unauthorized user calling lifecycle mutations on another owner’s session; forged task IDs in retry endpoint; repeated create/start calls to bypass active-session cap.
+- Tired-maintainer mode: route/controller mismatch, missing policy registration, inconsistent invalid-transition response codes, and unaudited lifecycle mutations.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Red state: `php artisan test --filter=RepoAnalysisApiLifecycleTest` failed with endpoint 404s before API wiring (`Expected response status code [422] but received 404` and related route misses).
+  - Green state: `php artisan test --filter=RepoAnalysisApiLifecycleTest` passed (`7 passed, 63 assertions`).
+  - Route registration: `php artisan route:list --path=agent/api/v1/repo-analysis` shows 20 repo-analysis endpoints including lifecycle (`start-snapshot`, `retry-task`, `restart-from-beginning`) and read endpoints (`events`, `tasks`, `artifacts`, `reports`).
+  - Implemented files:
+    - `app/Http/Controllers/Api/V1/RepoAnalysisSessionController.php`
+    - `app/Http/Requests/Agent/RepoAnalysis/StoreRepoAnalysisSessionRequest.php`
+    - `app/Http/Requests/Agent/RepoAnalysis/UpdateRepoAnalysisSessionRequest.php`
+    - `app/Http/Requests/Agent/RepoAnalysis/RetryRepoAnalysisTaskRequest.php`
+    - `app/Http/Requests/Agent/RepoAnalysis/RepoAnalysisEventsRequest.php`
+    - `app/Policies/RepoAnalysisSessionPolicy.php`
+    - route/policy wiring in `routes/api.php` and `app/Providers/AppServiceProvider.php`
+    - test coverage in `tests/Feature/Api/V1/RepoAnalysis/RepoAnalysisApiLifecycleTest.php`
+- Conditions where this works:
+  - Session ownership is enforced by policy with admin override via `User::hasRole('admin')`.
+  - Create/start mutations enforce dedicated repo-analysis active-session cap from `repo_analysis.user.max_active_sessions_per_user` (default `2`).
+  - Lifecycle mutation endpoints return deterministic transition conflicts (`RUN_TRANSITION_CONFLICT`) for invalid states.
+  - Retry-task endpoint rejects missing/foreign `task_id` and only requeues failed tasks.
+  - Events endpoint preserves `since_sequence` parity via ordered sequence reads and latest-sequence metadata.
+  - Lifecycle mutation endpoints write immutable `agent_audit_logs` entries via `AuditLogger`.
+- Explicit non-goals / limitations:
+  - This task does not implement websocket broadcasting route contracts for repo-analysis events; it delivers polling read parity only.
+  - Restart currently hard-resets session tasks/events/artifacts/reports before requeueing snapshot; no partial restart strategy is implemented.
+  - Mutation endpoints are exposed regardless of `repo_analysis.enabled` flag; flag-based route hiding was not added in this task.
