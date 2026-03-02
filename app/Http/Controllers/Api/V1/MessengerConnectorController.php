@@ -347,6 +347,8 @@ class MessengerConnectorController extends Controller
             $result = match ($provider) {
                 ConnectorAccount::PROVIDER_SLACK => $this->testSlackCredentials($credentials),
                 ConnectorAccount::PROVIDER_TELEGRAM => $this->testTelegramCredentials($credentials),
+                ConnectorAccount::PROVIDER_DISCORD => $this->testDiscordCredentials($credentials),
+                ConnectorAccount::PROVIDER_WHATSAPP => $this->testWhatsAppCredentials($credentials),
                 default => [
                     'ok' => false,
                     'message' => 'Connectivity testing is not yet implemented for this provider.',
@@ -510,6 +512,131 @@ class MessengerConnectorController extends Controller
                 'first_name' => $payload['result']['first_name'] ?? null,
             ],
             'derived_account_key' => $botId !== '' ? $botId : null,
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $credentials
+     * @return array{ok:bool,message:string,details:array<string,mixed>,derived_account_key:?string}
+     */
+    private function testDiscordCredentials(array $credentials): array
+    {
+        $botToken = trim((string) ($credentials['bot_token'] ?? ''));
+        $applicationId = trim((string) ($credentials['application_id'] ?? ''));
+
+        if ($botToken === '') {
+            return [
+                'ok' => false,
+                'message' => 'Missing Discord bot token.',
+                'details' => [],
+                'derived_account_key' => null,
+            ];
+        }
+
+        if ($applicationId === '') {
+            return [
+                'ok' => false,
+                'message' => 'Missing Discord application ID.',
+                'details' => [],
+                'derived_account_key' => null,
+            ];
+        }
+
+        // Validate bot token via Discord API
+        $response = Http::withHeaders([
+            'Authorization' => 'Bot '.$botToken,
+        ])->timeout(10)->get('https://discord.com/api/v10/users/@me');
+
+        if (! $response->successful()) {
+            return [
+                'ok' => false,
+                'message' => $response->status() === 401
+                    ? 'Invalid Discord bot token.'
+                    : 'Failed to reach Discord API.',
+                'details' => ['http_status' => $response->status()],
+                'derived_account_key' => null,
+            ];
+        }
+
+        $payload = $response->json();
+        $botUsername = $payload['username'] ?? null;
+
+        // Register slash commands
+        $registrar = app(\App\Services\Messenger\SlashCommandRegistrar::class);
+        $registrationResult = $registrar->register($credentials);
+
+        return [
+            'ok' => true,
+            'message' => 'Discord credentials verified and connector activated.',
+            'details' => [
+                'bot_username' => $botUsername,
+                'bot_id' => $payload['id'] ?? null,
+                'slash_commands' => [
+                    'registered' => $registrationResult->isSuccessful(),
+                    'message' => $registrationResult->getMessage(),
+                    'count' => $registrationResult->getCommandCount(),
+                ],
+            ],
+            'derived_account_key' => $applicationId,
+        ];
+    }
+
+    /**
+     * @param  array<string, string>  $credentials
+     * @return array{ok:bool,message:string,details:array<string,mixed>,derived_account_key:?string}
+     */
+    private function testWhatsAppCredentials(array $credentials): array
+    {
+        $accessToken = trim((string) ($credentials['access_token'] ?? ''));
+        $phoneNumberId = trim((string) ($credentials['phone_number_id'] ?? ''));
+
+        if ($accessToken === '') {
+            return [
+                'ok' => false,
+                'message' => 'Missing WhatsApp access token.',
+                'details' => [],
+                'derived_account_key' => null,
+            ];
+        }
+
+        if ($phoneNumberId === '') {
+            return [
+                'ok' => false,
+                'message' => 'Missing WhatsApp phone number ID.',
+                'details' => [],
+                'derived_account_key' => null,
+            ];
+        }
+
+        // Validate access token via Graph API
+        $response = Http::withToken($accessToken)
+            ->timeout(10)
+            ->get("https://graph.facebook.com/v18.0/{$phoneNumberId}");
+
+        if (! $response->successful()) {
+            $error = $response->json('error.message') ?? 'WhatsApp API rejected credentials.';
+
+            return [
+                'ok' => false,
+                'message' => $response->status() === 401
+                    ? 'Invalid WhatsApp access token.'
+                    : $error,
+                'details' => ['http_status' => $response->status()],
+                'derived_account_key' => null,
+            ];
+        }
+
+        $payload = $response->json();
+
+        return [
+            'ok' => true,
+            'message' => 'WhatsApp credentials verified and connector activated.',
+            'details' => [
+                'phone_number_id' => $payload['id'] ?? $phoneNumberId,
+                'display_phone_number' => $payload['display_phone_number'] ?? null,
+                'verified_name' => $payload['verified_name'] ?? null,
+            ],
+            'derived_account_key' => $phoneNumberId,
         ];
     }
 }

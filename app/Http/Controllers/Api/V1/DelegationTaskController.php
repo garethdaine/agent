@@ -155,9 +155,19 @@ class DelegationTaskController extends Controller
             after: ['verdict' => $newVerdict],
         );
 
-        // Fire event for pipeline continuation
-        if (class_exists(DelegationTaskVerified::class)) {
-            event(new DelegationTaskVerified($task, $verificationResult));
+        // Fire event for pipeline continuation.
+        $attempt = $verificationResult->attempt
+            ?? $task->attempts()->latest('id')->first();
+
+        if ($attempt !== null && class_exists(DelegationTaskVerified::class)) {
+            event(new DelegationTaskVerified(
+                $task,
+                $attempt,
+                passed: $newVerdict === DelegationVerificationResult::VERDICT_PASSED,
+                failedStepOrder: $newVerdict === DelegationVerificationResult::VERDICT_FAILED
+                    ? $verificationResult->step_order
+                    : null,
+            ));
         }
 
         return response()->json([

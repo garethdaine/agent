@@ -25,6 +25,12 @@ class VerifyWebhookSignature
             return $this->unauthorizedResponse('PROVIDER_INVALID', 'Unsupported provider.');
         }
 
+        // WhatsApp GET requests are verification challenges that don't have signatures.
+        // The verification is handled in the controller by checking verify_token.
+        if ($provider === ConnectorAccount::PROVIDER_WHATSAPP && $request->isMethod('get')) {
+            return $next($request);
+        }
+
         $adapter = $this->connectorManager->resolve($provider);
         $account = $this->resolveAccount($provider, $request, $adapter);
 
@@ -33,6 +39,11 @@ class VerifyWebhookSignature
                 'provider' => $provider,
                 'ip' => $request->ip(),
             ]);
+
+            // Return 404 when account identifier was explicitly provided in route
+            if ($request->route('account') || $request->route('accountKey')) {
+                return $this->notFoundResponse('ACCOUNT_NOT_FOUND', 'Connector account not found.');
+            }
 
             return $this->unauthorizedResponse('ACCOUNT_NOT_FOUND', 'Connector account not found.');
         }
@@ -83,15 +94,33 @@ class VerifyWebhookSignature
                 ->first();
         }
 
+        // Backward-compatible routes may pass connector account in path.
+        // Support both UUID id and account_key lookups.
+        $accountIdentifier = $request->route('account');
+        if (is_string($accountIdentifier) && $accountIdentifier !== '') {
+            return ConnectorAccount::query()
+                ->forProvider($provider)
+                ->where(function ($query) use ($accountIdentifier): void {
+                    $query->where('id', $accountIdentifier)
+                        ->orWhere('account_key', $accountIdentifier);
+                })
+                ->active()
+                ->first();
+        }
+
         // For Slack, extract team_id from payload
         if ($provider === ConnectorAccount::PROVIDER_SLACK) {
             $teamId = $request->input('team_id') ?? $request->input('event.team');
             if ($teamId) {
-                return ConnectorAccount::query()
+                $account = ConnectorAccount::query()
                     ->forProvider($provider)
                     ->where('account_key', $teamId)
                     ->active()
                     ->first();
+
+                if ($account !== null) {
+                    return $account;
+                }
             }
         }
 
@@ -126,11 +155,14 @@ class VerifyWebhookSignature
     {
         $windowSeconds = $account->config['replay_protection']['window_seconds'] ?? 300;
 
-        // Slack uses X-Slack-Request-Timestamp
-        $timestamp = $request->header('X-Slack-Request-Timestamp');
+        $timestamp = $this->extractTimestampHeader($request, $account);
 
         if (! $timestamp) {
             return 'missing_timestamp';
+        }
+
+        if (! is_numeric($timestamp)) {
+            return 'invalid_timestamp';
         }
 
         $requestTime = (int) $timestamp;
@@ -143,6 +175,24 @@ class VerifyWebhookSignature
         return true;
     }
 
+    private function extractTimestampHeader(Request $request, ConnectorAccount $account): ?string
+    {
+        $headers = match ($account->provider) {
+            ConnectorAccount::PROVIDER_DISCORD => ['X-Signature-Timestamp'],
+            ConnectorAccount::PROVIDER_SLACK => ['X-Slack-Request-Timestamp'],
+            default => ['X-Slack-Request-Timestamp', 'X-Signature-Timestamp'],
+        };
+
+        foreach ($headers as $header) {
+            $value = $request->header($header);
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
     private function unauthorizedResponse(string $code, string $message): JsonResponse
     {
         return response()->json([
@@ -151,5 +201,15 @@ class VerifyWebhookSignature
                 'message' => $message,
             ],
         ], 401);
+    }
+
+    private function notFoundResponse(string $code, string $message): JsonResponse
+    {
+        return response()->json([
+            'error' => [
+                'code' => $code,
+                'message' => $message,
+            ],
+        ], 404);
     }
 }

@@ -127,7 +127,7 @@ class AttemptSpawnerTest extends TestCase
         $agentJob = $run->job;
         $this->assertNotNull($agentJob);
         $this->assertEquals($this->user->id, $agentJob->user_id);
-        $this->assertEquals("Delegation: {$this->task->name}", $agentJob->name);
+        $this->assertEquals("Delegation: {$this->task->name} #1", $agentJob->name);
         $this->assertEquals($this->profile->runner_type, $agentJob->runner_type);
         $this->assertEquals($this->profile->command_template, $agentJob->command_template);
         $this->assertEquals($this->profile->working_directory, $agentJob->working_directory);

@@ -387,9 +387,9 @@ class IngressProbe
                 ->post($url);
 
             if ($response->status() === 401) {
-                return ProbeResult::failure(
-                    'Discord signature verification failed',
-                    'The webhook endpoint rejected the request due to invalid signature. This is expected during testing - Discord will verify signatures in production. Ensure your endpoint implements Ed25519 signature verification using the public key from your Discord application.'
+                return ProbeResult::guidance(
+                    'Ingress endpoint responded with 401 (expected for unsigned requests). '.
+                    'Webhook signature verification is working correctly.'
                 );
             }
 

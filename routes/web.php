@@ -2,9 +2,7 @@
 
 use App\Http\Controllers\Messenger\AccountLinkController;
 use App\Http\Controllers\Messenger\DeadLetterController;
-use App\Http\Controllers\Messenger\DiscordWebhookController;
 use App\Http\Controllers\Messenger\MessengerHealthController;
-use App\Http\Controllers\Messenger\WhatsAppWebhookController;
 use App\Http\Controllers\TaskProviderOAuthController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -22,17 +20,6 @@ Route::get('/', function () {
 // Messenger account linking routes
 Route::get('/messenger/link/{token}', [AccountLinkController::class, 'show'])
     ->name('messenger.link.show');
-
-// Discord webhook endpoint (signature verified in controller)
-Route::post('/messenger/webhooks/discord/{account}', [DiscordWebhookController::class, 'handle'])
-    ->name('messenger.webhooks.discord');
-
-// WhatsApp webhook endpoints (Cloud API v18+)
-// GET for verification (hub.mode=subscribe), POST for messages (HMAC-SHA256 verified in controller)
-Route::get('/messenger/webhooks/whatsapp/{account}', [WhatsAppWebhookController::class, 'verify'])
-    ->name('messenger.webhooks.whatsapp.verify');
-Route::post('/messenger/webhooks/whatsapp/{account}', [WhatsAppWebhookController::class, 'handle'])
-    ->name('messenger.webhooks.whatsapp');
 
 // Public messenger health endpoint for monitoring tools (no auth required)
 Route::get('/messenger/health', [MessengerHealthController::class, 'index'])
@@ -129,6 +116,15 @@ Route::middleware([
         return Inertia::render('Tools/Messenger/Index');
     })->name('tools.messenger.index');
 
+    // Memory routes
+    Route::get('/tools/memory', function () {
+        return Inertia::render('Tools/Memory/Index');
+    })->name('tools.memory.index');
+
+    Route::get('/tools/memory/settings', function () {
+        return Inertia::render('Tools/Memory/Settings');
+    })->name('tools.memory.settings');
+
     // Messenger health dashboard (authenticated)
     Route::get('/messenger/health/dashboard', [MessengerHealthController::class, 'dashboard'])
         ->name('messenger.health.dashboard');
@@ -150,6 +146,32 @@ Route::middleware([
             'sessionId' => $id,
         ]);
     })->name('tools.discovery.wizard');
+
+    // Org Layer routes (guarded by org UI feature flag)
+    Route::middleware(['org.ui'])->prefix('agent/org')->group(function () {
+        Route::get('/', fn () => Inertia::render('Agent/Org/Index'))
+            ->name('org.index');
+        Route::get('/agents', fn () => Inertia::render('Agent/Org/Agents/Index'))
+            ->name('org.agents.index');
+        Route::get('/agents/create', fn () => Inertia::render('Agent/Org/Agents/Create'))
+            ->name('org.agents.create');
+        Route::get('/agents/{id}/edit', fn (string $id) => Inertia::render('Agent/Org/Agents/Edit', ['agentId' => $id]))
+            ->name('org.agents.edit');
+        Route::get('/rituals', fn () => Inertia::render('Agent/Org/Rituals/Index'))
+            ->name('org.rituals.index');
+        Route::get('/rituals/create', fn () => Inertia::render('Agent/Org/Rituals/Create'))
+            ->name('org.rituals.create');
+        Route::get('/rituals/{id}', fn (string $id) => Inertia::render('Agent/Org/Rituals/Show', ['ritualId' => $id]))
+            ->name('org.rituals.show');
+        Route::get('/councils', fn () => Inertia::render('Agent/Org/Councils/Index'))
+            ->name('org.councils.index');
+        Route::get('/councils/create', fn () => Inertia::render('Agent/Org/Councils/Create'))
+            ->name('org.councils.create');
+        Route::get('/escalations', fn () => Inertia::render('Agent/Org/Escalations/Index'))
+            ->name('org.escalations.index');
+        Route::get('/costs', fn () => Inertia::render('Agent/Org/Costs/Index'))
+            ->name('org.costs.index');
+    });
 
     // Delegation routes (guarded by delegation UI feature flag)
     Route::middleware(['delegation.ui'])->group(function () {

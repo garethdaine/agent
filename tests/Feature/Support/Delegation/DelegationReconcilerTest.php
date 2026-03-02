@@ -10,9 +10,11 @@ use App\Models\DelegationGraph;
 use App\Models\DelegationTask;
 use App\Models\DelegationVerificationResult;
 use App\Models\User;
+use App\Support\Delegation\DelegateeAssigner;
 use App\Support\Delegation\DelegationReconciler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Mockery;
 use Tests\TestCase;
 
 class DelegationReconcilerTest extends TestCase
@@ -298,5 +300,129 @@ class DelegationReconcilerTest extends TestCase
         }
 
         Event::assertDispatchedTimes(DelegationTaskVerified::class, 3);
+    }
+
+    // ==========================================
+    // Auto-Retry with Backoff Tests
+    // ==========================================
+
+    public function test_it_retries_blocked_task_with_backoff(): void
+    {
+        $graph = DelegationGraph::factory()->running()->create([
+            'user_id' => $this->user->id,
+        ]);
+        $task = DelegationTask::factory()->blocked()->create([
+            'delegation_graph_id' => $graph->id,
+            'metadata_json' => ['retry_count' => 0],
+        ]);
+
+        // Mock DelegateeAssigner to avoid actual assignment logic
+        $assigner = Mockery::mock(DelegateeAssigner::class);
+        $assigner->shouldReceive('assign')->once()->andReturnNull();
+        $this->app->instance(DelegateeAssigner::class, $assigner);
+
+        (new DelegationReconciler)->reconcile();
+
+        $task->refresh();
+        $this->assertEquals(1, $task->metadata_json['retry_count']);
+        $this->assertNotNull($task->metadata_json['last_retry_at']);
+    }
+
+    public function test_it_marks_task_failed_after_max_retries(): void
+    {
+        $graph = DelegationGraph::factory()->running()->create([
+            'user_id' => $this->user->id,
+        ]);
+        $task = DelegationTask::factory()->blocked()->create([
+            'delegation_graph_id' => $graph->id,
+            'metadata_json' => [
+                'retry_count' => 3,
+                'last_retry_at' => now()->subHour()->toISOString(),
+            ],
+        ]);
+
+        (new DelegationReconciler)->reconcile();
+
+        $task->refresh();
+        $this->assertEquals(DelegationTask::STATUS_FAILED, $task->status);
+        $this->assertEquals('MAX_RETRIES_EXCEEDED', $task->error_code);
+    }
+
+    public function test_it_respects_backoff_timing(): void
+    {
+        $graph = DelegationGraph::factory()->running()->create([
+            'user_id' => $this->user->id,
+        ]);
+        $task = DelegationTask::factory()->blocked()->create([
+            'delegation_graph_id' => $graph->id,
+            'metadata_json' => [
+                'retry_count' => 1,
+                'last_retry_at' => now()->subSeconds(30)->toISOString(), // Only 30s ago, need 5min
+            ],
+        ]);
+
+        (new DelegationReconciler)->reconcile();
+
+        $task->refresh();
+        // Should NOT have incremented because backoff not elapsed
+        $this->assertEquals(1, $task->metadata_json['retry_count']);
+    }
+
+    public function test_it_marks_stuck_graph_as_succeeded_when_all_tasks_complete(): void
+    {
+        $graph = DelegationGraph::factory()->create([
+            'user_id' => $this->user->id,
+            'status' => DelegationGraph::STATUS_RUNNING,
+            'updated_at' => now()->subMinutes(10),
+        ]);
+        DelegationTask::factory()->succeeded()->create([
+            'delegation_graph_id' => $graph->id,
+        ]);
+
+        (new DelegationReconciler)->reconcile();
+
+        $graph->refresh();
+        $this->assertEquals(DelegationGraph::STATUS_SUCCEEDED, $graph->status);
+    }
+
+    public function test_it_marks_stuck_graph_as_failed_when_any_task_failed(): void
+    {
+        $graph = DelegationGraph::factory()->create([
+            'user_id' => $this->user->id,
+            'status' => DelegationGraph::STATUS_RUNNING,
+            'updated_at' => now()->subMinutes(10),
+        ]);
+        DelegationTask::factory()->succeeded()->create([
+            'delegation_graph_id' => $graph->id,
+        ]);
+        DelegationTask::factory()->failed()->create([
+            'delegation_graph_id' => $graph->id,
+        ]);
+
+        (new DelegationReconciler)->reconcile();
+
+        $graph->refresh();
+        $this->assertEquals(DelegationGraph::STATUS_FAILED, $graph->status);
+    }
+
+    public function test_it_marks_stuck_graph_as_partial_when_mix_of_cancelled_and_succeeded(): void
+    {
+        $graph = DelegationGraph::factory()->create([
+            'user_id' => $this->user->id,
+            'status' => DelegationGraph::STATUS_RUNNING,
+            'updated_at' => now()->subMinutes(10),
+        ]);
+        DelegationTask::factory()->succeeded()->create([
+            'delegation_graph_id' => $graph->id,
+        ]);
+        DelegationTask::factory()->create([
+            'delegation_graph_id' => $graph->id,
+            'status' => DelegationTask::STATUS_CANCELLED,
+        ]);
+
+        (new DelegationReconciler)->reconcile();
+
+        $graph->refresh();
+        $this->assertEquals(DelegationGraph::STATUS_PARTIAL, $graph->status);
     }
 }

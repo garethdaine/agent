@@ -375,7 +375,11 @@ class DiscordAdapter extends AbstractConnectorAdapter
     private function parseGatewayEvent(array $data): NormalizedMessage
     {
         $eventType = $data['t'] ?? '';
-        $eventData = $data['d'] ?? [];
+        $eventData = is_array($data['d'] ?? null) ? $data['d'] : [];
+
+        if ($eventType === 'INTERACTION_CREATE') {
+            return $this->parseInteraction($eventData);
+        }
 
         return $this->parseMessageData($eventData);
     }
@@ -411,23 +415,22 @@ class DiscordAdapter extends AbstractConnectorAdapter
      */
     private function buildInteractionContent(array $data): string
     {
-        $interactionData = $data['data'] ?? [];
+        $interactionData = is_array($data['data'] ?? null) ? $data['data'] : [];
 
         // For slash commands, build from name and options
-        if (isset($interactionData['name'])) {
-            $parts = [$interactionData['name']];
+        if (isset($interactionData['name']) && is_string($interactionData['name'])) {
+            $commandName = strtolower(trim($interactionData['name']));
+            $options = is_array($interactionData['options'] ?? null) ? $interactionData['options'] : [];
 
-            if (isset($interactionData['options']) && is_array($interactionData['options'])) {
-                foreach ($interactionData['options'] as $option) {
-                    if (isset($option['value'])) {
-                        $parts[] = $option['name'].': '.$option['value'];
-                    } elseif (isset($option['name'])) {
-                        $parts[] = $option['name'];
-                    }
-                }
+            $mapped = $this->mapKnownSlashCommand($commandName, $options);
+            if ($mapped !== null) {
+                return $mapped;
             }
 
-            return implode(' ', $parts);
+            $parts = [$commandName];
+            $this->appendInteractionOptionParts($options, $parts);
+
+            return trim(implode(' ', $parts));
         }
 
         // For button clicks, return custom_id
@@ -450,6 +453,141 @@ class DiscordAdapter extends AbstractConnectorAdapter
         }
 
         return '';
+    }
+
+    /**
+     * Map known Discord slash commands to parser-friendly text commands.
+     *
+     * @param  array<int, mixed>  $options
+     */
+    private function mapKnownSlashCommand(string $commandName, array $options): ?string
+    {
+        $subcommand = $this->extractFirstSubcommand($options);
+        if ($subcommand === null) {
+            return null;
+        }
+
+        $subcommandName = strtolower(trim($subcommand['name']));
+        $subcommandOptions = $subcommand['options'];
+
+        if ($commandName === 'jobs') {
+            if ($subcommandName === 'list') {
+                return 'list my jobs';
+            }
+
+            if ($subcommandName === 'run') {
+                $jobId = $this->extractOptionValue($subcommandOptions, 'job_id');
+
+                return $jobId !== null
+                    ? sprintf('run job %s now', $jobId)
+                    : null;
+            }
+        }
+
+        if ($commandName === 'runs') {
+            if ($subcommandName === 'active') {
+                return 'show active runs';
+            }
+
+            if ($subcommandName === 'stop') {
+                $runId = $this->extractOptionValue($subcommandOptions, 'run_id');
+
+                return $runId !== null
+                    ? sprintf('stop run %s', $runId)
+                    : null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, mixed>  $options
+     * @return array{name: string, options: array<int, mixed>}|null
+     */
+    private function extractFirstSubcommand(array $options): ?array
+    {
+        foreach ($options as $option) {
+            if (! is_array($option)) {
+                continue;
+            }
+
+            if (($option['type'] ?? null) !== 1) {
+                continue;
+            }
+
+            $name = $option['name'] ?? null;
+            if (! is_string($name) || trim($name) === '') {
+                continue;
+            }
+
+            $nestedOptions = is_array($option['options'] ?? null) ? $option['options'] : [];
+
+            return [
+                'name' => $name,
+                'options' => $nestedOptions,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, mixed>  $options
+     */
+    private function extractOptionValue(array $options, string $optionName): ?string
+    {
+        foreach ($options as $option) {
+            if (! is_array($option)) {
+                continue;
+            }
+
+            $name = $option['name'] ?? null;
+            if (! is_string($name) || strtolower(trim($name)) !== strtolower($optionName)) {
+                continue;
+            }
+
+            if (! array_key_exists('value', $option)) {
+                continue;
+            }
+
+            $value = $option['value'];
+            if (is_scalar($value)) {
+                return (string) $value;
+            }
+
+            return null;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<int, mixed>  $options
+     * @param  array<int, string>  $parts
+     */
+    private function appendInteractionOptionParts(array $options, array &$parts): void
+    {
+        foreach ($options as $option) {
+            if (! is_array($option)) {
+                continue;
+            }
+
+            $name = $option['name'] ?? null;
+            if (! is_string($name) || trim($name) === '') {
+                continue;
+            }
+
+            if (array_key_exists('value', $option) && is_scalar($option['value'])) {
+                $parts[] = sprintf('%s: %s', $name, (string) $option['value']);
+            } else {
+                $parts[] = $name;
+            }
+
+            if (is_array($option['options'] ?? null)) {
+                $this->appendInteractionOptionParts($option['options'], $parts);
+            }
+        }
     }
 
     /**

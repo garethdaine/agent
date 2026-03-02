@@ -14,6 +14,21 @@ class FeatureFlagManager
 
     public const ADVERSARIAL_REVIEW_ENABLED = 'agent.interrogation.adversarial_review_enabled';
 
+    public const MEMORY_ENABLED = 'memory.enabled';
+
+    public const MEMORY_API_ENABLED = 'memory.api_enabled';
+
+    // Org layer flag constants
+    public const ORG_ENABLED = 'agent.org.enabled';
+
+    public const ORG_PROFILES_ENABLED = 'org_profiles_enabled';
+
+    public const ORG_RITUALS_ENABLED = 'org_rituals_enabled';
+
+    public const ORG_COUNCILS_ENABLED = 'org_councils_enabled';
+
+    public const ORG_COST_ENABLED = 'org_cost_enabled';
+
     // Compliance flag constants
     public const COMPLIANCE_ENABLED = 'compliance.enabled';
 
@@ -42,6 +57,18 @@ class FeatureFlagManager
         self::ADVERSARIAL_REVIEW_ENABLED => [
             'label' => 'Adversarial Reviewer',
             'description' => 'Enable adversarial review passes during summary and plan generation.',
+        ],
+        self::MEMORY_ENABLED => [
+            'label' => 'Agent Memory',
+            'description' => 'Enable the memory system: Core Memory blocks, Working Memory buffer, and Long-term Memory with BM25 retrieval.',
+        ],
+        self::MEMORY_API_ENABLED => [
+            'label' => 'Memory API Features',
+            'description' => 'Enable LLM-powered memory features: semantic embeddings (pgvector), entity extraction, and Neo4j knowledge graph. Requires Agent Memory to be enabled and provider keys configured.',
+        ],
+        self::ORG_ENABLED => [
+            'label' => 'Org Layer',
+            'description' => 'Enable organizational AI workforce orchestration layer',
         ],
     ];
 
@@ -84,6 +111,27 @@ class FeatureFlagManager
         }
 
         return (bool) $setting->is_enabled;
+    }
+
+    /**
+     * Alias for enabled() to match common naming conventions.
+     */
+    public function isEnabled(string $key): bool
+    {
+        return $this->enabled($key);
+    }
+
+    /**
+     * Check if an org layer sub-feature is enabled.
+     * Sub-features are only enabled when the global org flag is also enabled.
+     */
+    public function isOrgFeatureEnabled(string $subFeature): bool
+    {
+        if (! $this->isEnabled(self::ORG_ENABLED) && ! config('agent.org.enabled', false)) {
+            return false;
+        }
+
+        return (bool) config("agent.org.features.{$subFeature}", false);
     }
 
     /**

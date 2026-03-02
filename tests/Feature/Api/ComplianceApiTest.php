@@ -7,6 +7,7 @@ use App\Models\AgentJobRun;
 use App\Models\InterrogationSession;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class ComplianceApiTest extends TestCase
@@ -70,13 +71,12 @@ class ComplianceApiTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonStructure([
-            'period',
-            'gate_evaluations',
-            'pass_rate',
-            'block_rate',
-            'top_block_reasons',
+            'total_jobs',
+            'total_runs',
+            'success_rate',
+            'failure_rate',
+            'active_runs',
         ]);
-        $response->assertJsonPath('period', 'last_24h');
     }
 
     public function test_run_show_includes_compliance_summary_when_present(): void
@@ -238,5 +238,106 @@ class ComplianceApiTest extends TestCase
 
         // compliance_summary is an optional addition - clients can safely ignore it
         $this->assertArrayHasKey('compliance_summary', $response->json('data'));
+    }
+
+    #[Test]
+    public function metrics_returns_real_job_and_run_counts(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        AgentJob::factory()->count(5)->create(['user_id' => $user->id]);
+        $job = AgentJob::where('user_id', $user->id)->first();
+        AgentJobRun::factory()->count(10)->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'status' => AgentJobRun::STATUS_SUCCEEDED,
+        ]);
+        AgentJobRun::factory()->count(2)->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'status' => AgentJobRun::STATUS_FAILED,
+        ]);
+
+        $response = $this->getJson('/agent/api/v1/compliance/metrics');
+
+        $response->assertOk()
+            ->assertJson([
+                'total_jobs' => 5,
+                'total_runs' => 12,
+                'active_runs' => 0,
+            ]);
+
+        $data = $response->json();
+        $this->assertEqualsWithDelta(0.8333, $data['success_rate'], 0.001);
+        $this->assertEqualsWithDelta(0.1667, $data['failure_rate'], 0.001);
+    }
+
+    #[Test]
+    public function metrics_returns_null_rates_when_no_runs(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        AgentJob::factory()->count(2)->create(['user_id' => $user->id]);
+
+        $response = $this->getJson('/agent/api/v1/compliance/metrics');
+
+        $response->assertOk()
+            ->assertJson([
+                'total_jobs' => 2,
+                'total_runs' => 0,
+                'success_rate' => null,
+                'failure_rate' => null,
+                'active_runs' => 0,
+            ]);
+    }
+
+    #[Test]
+    public function metrics_only_counts_users_own_resources(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $this->actingAs($user);
+
+        AgentJob::factory()->count(3)->create(['user_id' => $user->id]);
+        AgentJob::factory()->count(10)->create(['user_id' => $otherUser->id]);
+
+        $response = $this->getJson('/agent/api/v1/compliance/metrics');
+
+        $response->assertOk()
+            ->assertJson(['total_jobs' => 3]);
+    }
+
+    #[Test]
+    public function metrics_counts_active_runs_correctly(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $job = AgentJob::factory()->create(['user_id' => $user->id]);
+        AgentJobRun::factory()->count(2)->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'status' => AgentJobRun::STATUS_RUNNING,
+        ]);
+        AgentJobRun::factory()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'status' => AgentJobRun::STATUS_QUEUED,
+        ]);
+        AgentJobRun::factory()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'status' => AgentJobRun::STATUS_SUCCEEDED,
+        ]);
+
+        $response = $this->getJson('/agent/api/v1/compliance/metrics');
+
+        $response->assertOk()
+            ->assertJson([
+                'total_runs' => 4,
+                'active_runs' => 3,
+            ]);
     }
 }

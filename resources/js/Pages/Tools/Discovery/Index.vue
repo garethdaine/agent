@@ -220,7 +220,12 @@ onMounted(load);
                                 </TableCell>
                                 <TableCell class="text-muted-foreground">{{ session.runner_type }}</TableCell>
                                 <TableCell class="text-muted-foreground">{{ session.interrogation_type }}</TableCell>
-                                <TableCell><SessionStatusBadge :status="session.status" /></TableCell>
+                                <TableCell>
+                                    <SessionStatusBadge
+                                        :status="session.status"
+                                        :build-status="session?.build?.status || session?.metadata_json?.build?.status || ''"
+                                    />
+                                </TableCell>
                                 <TableCell class="text-xs text-muted-foreground">{{ session.updated_at || '—' }}</TableCell>
                                 <TableCell class="text-right">
                                     <div class="flex items-center justify-end gap-2">

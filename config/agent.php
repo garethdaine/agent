@@ -30,6 +30,7 @@ return [
     'allowed_task_markdown_bases' => array_values(array_unique(array_merge([
         '/Users/garethdaine/Code/agent/tasks',
         '/Users/garethdaine/Code/agent/prompts',
+        storage_path('app/memory/context'),
     ], $parseEnvCsvList('AGENT_ADDITIONAL_TASK_MARKDOWN_BASES')))),
 
     'runner_executables' => [
@@ -148,5 +149,20 @@ return [
     'roles' => [
         'admin_user_ids' => $parseEnvCsvList('AGENT_ADMIN_USER_IDS'),
         'analytics_user_ids' => $parseEnvCsvList('AGENT_ANALYTICS_USER_IDS'),
+    ],
+
+    'org' => [
+        'enabled' => env('ORG_LAYER_ENABLED', false),
+        'features' => [
+            'profiles' => env('ORG_PROFILES_ENABLED', true),
+            'rituals' => env('ORG_RITUALS_ENABLED', true),
+            'councils' => env('ORG_COUNCILS_ENABLED', true),
+            'cost_governance' => env('ORG_COST_ENABLED', true),
+        ],
+        'hierarchy_max_depth' => 3,
+        'reviewer_max_attempts' => 3,
+        'retention_days' => 90,
+        'default_notification_level' => 'escalations_only',
+        'budget_hard_stop_behavior' => 'block_undispatched',
     ],
 ];

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Messenger\Gateway\Workers;
 
 use App\Jobs\Messenger\ProcessInboundMessage;
-use App\Messenger\Gateway\DTOs\WorkerHealthMetadata;
 use App\Messenger\Gateway\Enums\WorkerHealthStatus;
 use App\Messenger\Gateway\ReconnectionStrategy;
 use App\Messenger\Gateway\Workers\DiscordGatewayWorker;
@@ -404,6 +403,15 @@ class DiscordGatewayWorkerTest extends TestCase
             };
         });
 
+        $this->loop->shouldReceive('addTimer')
+            ->atLeast()
+            ->once()
+            ->andReturnUsing(function ($delay, $callback) {
+                $callback();
+
+                return null;
+            });
+
         $worker->reconnect();
 
         // Find RESUME message (opcode 6)
@@ -417,11 +425,10 @@ class DiscordGatewayWorkerTest extends TestCase
         }
 
         // Resume should be sent with session_id and last sequence number
-        if ($resumeMessage !== null) {
-            $this->assertEquals(6, $resumeMessage['op']);
-            $this->assertEquals('resume-test-session', $resumeMessage['d']['session_id']);
-            $this->assertEquals(3, $resumeMessage['d']['seq']); // Last sequence was 3
-        }
+        $this->assertNotNull($resumeMessage, 'RESUME message (opcode 6) should be sent on reconnection');
+        $this->assertEquals(6, $resumeMessage['op']);
+        $this->assertEquals('resume-test-session', $resumeMessage['d']['session_id']);
+        $this->assertEquals(3, $resumeMessage['d']['seq']); // Last sequence was 3
     }
 
     public function test_message_create_dispatches_process_inbound_message(): void
@@ -474,6 +481,7 @@ class DiscordGatewayWorkerTest extends TestCase
                 'url' => 'wss://gateway.discord.gg',
                 'shards' => 1,
             ], 200),
+            'https://discord.com/api/v10/interactions/*/callback' => Http::response([], 200),
         ]);
 
         $worker = $this->createWorkerWithSynchronousConnection(
@@ -511,6 +519,64 @@ class DiscordGatewayWorkerTest extends TestCase
         // Verify ProcessInboundMessage job was dispatched for interaction
         Queue::assertPushed(ProcessInboundMessage::class, function ($job) {
             return $job->provider === 'discord';
+        });
+
+        Http::assertSent(function ($request) {
+            $payload = $request->data();
+
+            return str_contains($request->url(), '/interactions/111222333444555666/interaction-token/callback')
+                && ($payload['type'] ?? null) === 5;
+        });
+    }
+
+    public function test_interaction_create_autocomplete_sends_type_8_ack(): void
+    {
+        Http::fake([
+            'https://discord.com/api/v10/gateway/bot' => Http::response([
+                'url' => 'wss://gateway.discord.gg',
+                'shards' => 1,
+            ], 200),
+            'https://discord.com/api/v10/interactions/*/callback' => Http::response([], 200),
+        ]);
+
+        $worker = $this->createWorkerWithSynchronousConnection(
+            'wss://gateway.discord.gg/?v=10&encoding=json',
+            ['op' => 10, 'd' => ['heartbeat_interval' => 41250]],
+            messages: [
+                ['op' => 10, 'd' => ['heartbeat_interval' => 41250]],
+                ['op' => 0, 't' => 'READY', 's' => 1, 'd' => ['session_id' => 'test']],
+                [
+                    'op' => 0,
+                    't' => 'INTERACTION_CREATE',
+                    's' => 2,
+                    'd' => [
+                        'type' => 4, // APPLICATION_COMMAND_AUTOCOMPLETE
+                        'id' => 'auto-123',
+                        'token' => 'auto-token',
+                        'channel_id' => '123456789012345678',
+                        'member' => [
+                            'user' => [
+                                'id' => '9876543210987654321',
+                                'username' => 'TestUser',
+                            ],
+                        ],
+                        'data' => [
+                            'name' => 'jobs',
+                            'options' => [],
+                        ],
+                    ],
+                ],
+            ]
+        );
+
+        $worker->start();
+
+        Http::assertSent(function ($request) {
+            $payload = $request->data();
+
+            return str_contains($request->url(), '/interactions/auto-123/auto-token/callback')
+                && ($payload['type'] ?? null) === 8
+                && is_array($payload['data']['choices'] ?? null);
         });
     }
 
@@ -622,6 +688,8 @@ class DiscordGatewayWorkerTest extends TestCase
 
         // Worker should still be connected but not accepting new events
         // The actual draining logic prevents job dispatch
+        // Verify drain completed without error and worker health reflects status
+        $this->assertNotEquals(WorkerHealthStatus::Disconnected, $worker->health());
     }
 
     public function test_invalid_session_triggers_fresh_identify(): void
@@ -679,8 +747,8 @@ class DiscordGatewayWorkerTest extends TestCase
             $this->reconnection
         );
 
-        $worker->setWebSocketConnectorFactory(function ($loop) use ($expectedUrl, $messages, &$connectedUrl) {
-            return function (string $url) use ($expectedUrl, $messages, &$connectedUrl) {
+        $worker->setWebSocketConnectorFactory(function ($loop) use ($messages, &$connectedUrl) {
+            return function (string $url) use ($messages, &$connectedUrl) {
                 $connectedUrl = $url;
 
                 $mockConnection = Mockery::mock(WebSocket::class);
@@ -737,8 +805,8 @@ class DiscordGatewayWorkerTest extends TestCase
             $this->reconnection
         );
 
-        $worker->setWebSocketConnectorFactory(function ($loop) use ($expectedUrl, $messages, &$sentMessages) {
-            return function (string $url) use ($expectedUrl, $messages, &$sentMessages) {
+        $worker->setWebSocketConnectorFactory(function ($loop) use ($messages, &$sentMessages) {
+            return function (string $url) use ($messages, &$sentMessages) {
                 $mockConnection = Mockery::mock(WebSocket::class);
                 $mockConnection->shouldReceive('send')
                     ->andReturnUsing(function ($msg) use (&$sentMessages) {
@@ -796,8 +864,8 @@ class DiscordGatewayWorkerTest extends TestCase
             $this->reconnection
         );
 
-        $worker->setWebSocketConnectorFactory(function ($loop) use ($expectedUrl, $firstMessage, &$connectionClosed) {
-            return function (string $url) use ($expectedUrl, $firstMessage, &$connectionClosed) {
+        $worker->setWebSocketConnectorFactory(function ($loop) use ($firstMessage, &$connectionClosed) {
+            return function (string $url) use ($firstMessage, &$connectionClosed) {
                 $mockConnection = Mockery::mock(WebSocket::class);
                 $mockConnection->shouldReceive('send')->andReturnNull();
                 $mockConnection->shouldReceive('close')

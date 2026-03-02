@@ -35,6 +35,19 @@ class ChatAction extends Model
 
     public const TERMINAL_STATUSES = ['completed', 'failed', 'cancelled', 'timeout'];
 
+    // Legacy aliases preserved for backward compatibility.
+    public const PENDING = self::STATUS_PENDING;
+
+    public const EXECUTING = self::STATUS_EXECUTING;
+
+    public const COMPLETED = self::STATUS_COMPLETED;
+
+    public const FAILED = self::STATUS_FAILED;
+
+    public const CANCELLED = self::STATUS_CANCELLED;
+
+    public const TIMEOUT = self::STATUS_TIMEOUT;
+
     public const ACTION_JOBS_CREATE = 'jobs.create';
 
     public const ACTION_JOBS_UPDATE = 'jobs.update';

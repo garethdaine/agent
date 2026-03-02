@@ -345,6 +345,101 @@ class DiscordAdapterTest extends TestCase
         $this->assertEquals('111222333444555666', $normalized->providerMessageId);
     }
 
+    public function test_parse_inbound_message_extracts_gateway_interaction_create_event(): void
+    {
+        $request = new Request();
+        $request->attributes->set('connector_account', $this->account);
+        $request->merge([
+            't' => 'INTERACTION_CREATE',
+            'd' => [
+                'type' => 2, // APPLICATION_COMMAND
+                'id' => '1477967126194159657',
+                'token' => 'interaction-token',
+                'channel_id' => '123456789012345678',
+                'member' => [
+                    'user' => [
+                        'id' => '9876543210987654321',
+                        'username' => 'TestUser',
+                    ],
+                ],
+                'data' => [
+                    'name' => 'jobs',
+                    'options' => [
+                        ['name' => 'list', 'type' => 1],
+                    ],
+                ],
+            ],
+        ]);
+
+        $normalized = $this->adapter->parseInboundMessage($request);
+
+        $this->assertSame('9876543210987654321', $normalized->providerUserId);
+        $this->assertSame('123456789012345678', $normalized->channelId);
+        $this->assertSame('list my jobs', $normalized->content);
+    }
+
+    public function test_parse_inbound_message_maps_jobs_list_subcommand_to_supported_text_command(): void
+    {
+        $request = new Request();
+        $request->attributes->set('connector_account', $this->account);
+        $request->merge([
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => 'interaction-jobs-list',
+            'token' => 'interaction-token',
+            'member' => [
+                'user' => [
+                    'id' => '9876543210987654321',
+                    'username' => 'TestUser',
+                ],
+            ],
+            'channel_id' => '123456789012345678',
+            'data' => [
+                'name' => 'jobs',
+                'options' => [
+                    ['name' => 'list', 'type' => 1],
+                ],
+            ],
+        ]);
+
+        $normalized = $this->adapter->parseInboundMessage($request);
+
+        $this->assertSame('list my jobs', $normalized->content);
+    }
+
+    public function test_parse_inbound_message_maps_runs_stop_subcommand_with_nested_run_id(): void
+    {
+        $request = new Request();
+        $request->attributes->set('connector_account', $this->account);
+        $request->merge([
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => 'interaction-runs-stop',
+            'token' => 'interaction-token',
+            'member' => [
+                'user' => [
+                    'id' => '9876543210987654321',
+                    'username' => 'TestUser',
+                ],
+            ],
+            'channel_id' => '123456789012345678',
+            'data' => [
+                'name' => 'runs',
+                'options' => [
+                    [
+                        'name' => 'stop',
+                        'type' => 1,
+                        'options' => [
+                            ['name' => 'run_id', 'type' => 4, 'value' => 42],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $normalized = $this->adapter->parseInboundMessage($request);
+
+        $this->assertSame('stop run 42', $normalized->content);
+    }
+
     public function test_send_message_handles_api_error(): void
     {
         $user = User::factory()->create();

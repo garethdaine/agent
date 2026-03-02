@@ -113,18 +113,20 @@ class ComplianceFlagResolver
     }
 
     /**
-     * Get tenant-specific override from database.
+     * Get tenant-specific override for a compliance flag.
+     *
+     * Note: Tenant overrides are intentionally not supported.
+     * All tenants follow the same system-wide compliance rules
+     * to ensure consistent security and compliance posture.
      *
      * This method is protected to allow testing via anonymous class extension.
      *
-     * @param  int|null  $tenantId  The tenant ID
-     * @param  string  $key  The flag key
-     * @return mixed The tenant override value, or null if no override exists
+     * @param  int|null  $tenantId  The tenant ID (unused)
+     * @param  string  $key  The compliance flag key (unused)
+     * @return mixed Always returns null
      */
     protected function getTenantOverride(?int $tenantId, string $key): mixed
     {
-        // TODO: Implement database lookup for tenant overrides
-        // For now, return null (no override)
         return null;
     }
 

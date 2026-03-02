@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Listeners\DelegationBroadcastSubscriber;
 use App\Listeners\DelegationCoordinator;
 use App\Listeners\DelegationRecoveryHandler;
@@ -10,15 +11,20 @@ use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\InterrogationSession;
 use App\Models\NlParseAttempt;
+use App\Models\OrgAgentProfile;
+use App\Models\OrgRitualRun;
+use App\Models\OrgRitualTemplate;
 use App\Policies\AgentAuditLogPolicy;
 use App\Policies\AgentJobPolicy;
 use App\Policies\AgentJobRunPolicy;
 use App\Policies\InterrogationSessionPolicy;
 use App\Policies\NlParseAttemptPolicy;
+use App\Policies\OrgAgentProfilePolicy;
+use App\Policies\OrgRitualRunPolicy;
+use App\Policies\OrgRitualTemplatePolicy;
 use App\Support\Agent\ErrorEnvelope;
-use App\Contracts\OrchestrationPolicyServiceContract;
-use App\Support\Compliance\ComplianceFlagResolver;
 use App\Support\Compliance\ComplexityClassifier;
+use App\Support\Compliance\ComplianceFlagResolver;
 use App\Support\Compliance\LessonsManager;
 use App\Support\Compliance\OrchestrationPolicyService;
 use App\Support\Compliance\VerificationEvidenceEvaluator;
@@ -80,6 +86,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AgentAuditLog::class, AgentAuditLogPolicy::class);
         Gate::policy(InterrogationSession::class, InterrogationSessionPolicy::class);
         Gate::policy(NlParseAttempt::class, NlParseAttemptPolicy::class);
+        Gate::policy(OrgAgentProfile::class, OrgAgentProfilePolicy::class);
+        Gate::policy(OrgRitualTemplate::class, OrgRitualTemplatePolicy::class);
+        Gate::policy(OrgRitualRun::class, OrgRitualRunPolicy::class);
 
         Gate::define('view-nl-parse-telemetry', function ($user) {
             return $user->hasRole(['admin', 'analytics']);
@@ -111,6 +120,31 @@ class AppServiceProvider extends ServiceProvider
                         );
                     }),
             ];
+        });
+
+        // Memory API rate limiters
+        RateLimiter::for('memory-reads', function (Request $request) {
+            return Limit::perMinute(120)
+                ->by((string) ($request->user()?->id ?? $request->ip()))
+                ->response(function () {
+                    return ErrorEnvelope::make(
+                        'RATE_LIMITED',
+                        'Too many memory read requests. Please retry shortly.',
+                        429
+                    );
+                });
+        });
+
+        RateLimiter::for('memory-writes', function (Request $request) {
+            return Limit::perMinute(30)
+                ->by((string) ($request->user()?->id ?? $request->ip()))
+                ->response(function () {
+                    return ErrorEnvelope::make(
+                        'RATE_LIMITED',
+                        'Too many memory write requests. Please retry shortly.',
+                        429
+                    );
+                });
         });
     }
 }

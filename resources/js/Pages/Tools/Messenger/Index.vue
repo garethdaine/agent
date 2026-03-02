@@ -15,6 +15,7 @@ import TableBody from '@/Components/ui/TableBody.vue';
 import TableRow from '@/Components/ui/TableRow.vue';
 import TableHead from '@/Components/ui/TableHead.vue';
 import TableCell from '@/Components/ui/TableCell.vue';
+import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { RefreshCw, AlertCircle } from 'lucide-vue-next';
 import axios from 'axios';
@@ -99,7 +100,12 @@ const healthBadgeVariant = computed(() => {
 });
 
 const connectorCount = computed(() => connectors.value.length);
-const connectedCount = computed(() => connectors.value.filter((item) => item.status === 'connected').length);
+const connectedCount = computed(() => {
+    return connectors.value.filter((item) => {
+        const effectiveState = String(item?.runtime_state ?? item?.status ?? '').trim().toLowerCase();
+        return effectiveState === 'connected';
+    }).length;
+});
 const queueBacklog = computed(() => Number(health.value?.queue?.backlog_size ?? 0));
 const recentErrorRate = computed(() => Number(health.value?.recent_error_rate ?? 0));
 const deadLetterCount = computed(() => Number(health.value?.dead_letter_count ?? 0));
@@ -176,6 +182,16 @@ const extractApiErrorMessage = (requestError, fallback) => {
     }
 
     return fallback;
+};
+
+const isLikelyMarkdown = (content) => {
+    const text = String(content ?? '').trim();
+    if (text === '') {
+        return false;
+    }
+
+    // Markdown headings, emphasis, lists, blockquotes, links, code fences/inline code.
+    return /(^|\n)\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>\s)|\*\*[^*\n]+\*\*|`{1,3}[^`\n]+`{1,3}|\[[^\]]+\]\([^)]+\)/m.test(text);
 };
 
 const loadConnectorSchema = async () => {
@@ -758,7 +774,13 @@ onMounted(async () => {
                                     <div class="max-h-64 space-y-2 overflow-auto rounded-md border border-border bg-muted/30 p-2">
                                         <div v-for="message in sessionMessages" :key="message.id" class="rounded-md border border-border bg-card px-2 py-1.5 text-sm">
                                             <p class="font-medium">{{ message.direction }} · {{ message.created_at }}</p>
-                                            <p class="mt-1 whitespace-pre-wrap break-words text-muted-foreground">{{ message.content }}</p>
+                                            <MarkdownRenderer
+                                                v-if="isLikelyMarkdown(message.content)"
+                                                :markdown="String(message.content ?? '')"
+                                                :normalize="false"
+                                                class="messenger-message-markdown prose prose-sm mt-1 max-w-none break-words text-muted-foreground dark:prose-invert prose-headings:mb-2 prose-headings:mt-3 prose-p:my-1.5 prose-li:my-0.5 prose-code:rounded prose-code:bg-accent prose-code:px-1 prose-code:py-0.5"
+                                            />
+                                            <p v-else class="mt-1 whitespace-pre-wrap break-words text-muted-foreground">{{ message.content }}</p>
                                         </div>
                                         <p v-if="sessionMessages.length === 0" class="text-sm text-muted-foreground">No messages found for this session.</p>
                                     </div>

@@ -4,11 +4,12 @@ namespace App\Services\Messenger;
 
 use App\DTOs\Messenger\PolicyValidationResult;
 use App\Enums\Messenger\ChatActionType;
+use App\Models\AgentJob;
+use App\Models\AgentJobRun;
 use App\Models\ChatAction;
 use App\Models\ChatSession;
 use App\Models\ConnectorAccount;
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
 
 class ChatActionPolicyValidator
 {
@@ -103,14 +104,8 @@ class ChatActionPolicyValidator
             return PolicyValidationResult::denied('Unknown action type');
         }
 
-        // TODO: Integrate with existing permission system when available
-        // For now, allow all authenticated users to perform any action
-
-        // Example permission checks that would be implemented:
-        // - jobs.create requires 'create_jobs' permission
-        // - jobs.delete requires 'delete_jobs' permission
-        // - runs.stop requires 'manage_runs' permission
-
+        // Ownership-based validation only - all authenticated users can perform actions
+        // on resources they own. Role-based permissions are not implemented.
         return PolicyValidationResult::allowed();
     }
 
@@ -135,32 +130,36 @@ class ChatActionPolicyValidator
             ChatActionType::RUNS_STOP,
             ChatActionType::RUNS_RETRY,
             ChatActionType::RUNS_STEER,
+            ChatActionType::RUNS_RUN_NOW,
         ];
 
         if (! in_array($actionType, $ownershipActions, true)) {
             return PolicyValidationResult::allowed();
         }
 
-        // TODO: Implement actual ownership checks when Job/Run models are available
-        // For now, simulate ownership validation
-
         $jobId = $parameters['job_id'] ?? null;
         $runId = $parameters['run_id'] ?? null;
 
+        // Check job ownership
         if ($jobId !== null) {
-            // Would check: Job::where('id', $jobId)->where('user_id', $user->id)->exists()
-            Log::debug('ChatActionPolicyValidator: Job ownership check (placeholder)', [
-                'job_id' => $jobId,
-                'user_id' => $user->id,
-            ]);
+            $job = AgentJob::find($jobId);
+            if ($job === null) {
+                return PolicyValidationResult::denied('Resource not found');
+            }
+            if ($job->user_id !== $user->id) {
+                return PolicyValidationResult::denied('You do not own this resource');
+            }
         }
 
+        // Check run ownership via job
         if ($runId !== null) {
-            // Would check: Run::where('id', $runId)->whereHas('job', fn($q) => $q->where('user_id', $user->id))->exists()
-            Log::debug('ChatActionPolicyValidator: Run ownership check (placeholder)', [
-                'run_id' => $runId,
-                'user_id' => $user->id,
-            ]);
+            $run = AgentJobRun::with('job')->find($runId);
+            if ($run === null || $run->job === null) {
+                return PolicyValidationResult::denied('Resource not found');
+            }
+            if ($run->job->user_id !== $user->id) {
+                return PolicyValidationResult::denied('You do not own this resource');
+            }
         }
 
         return PolicyValidationResult::allowed();
@@ -186,8 +185,7 @@ class ChatActionPolicyValidator
             return PolicyValidationResult::allowed();
         }
 
-        // TODO: Integrate with existing CommandPolicy, PathPolicy, EnvPolicy
-        // when available. For now, perform basic safety checks.
+        // Perform basic safety checks for dangerous command patterns.
 
         $violations = [];
 

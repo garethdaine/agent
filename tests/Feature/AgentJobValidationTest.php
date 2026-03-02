@@ -78,8 +78,8 @@ class AgentJobValidationTest extends TestCase
         $response->assertCreated();
         $response->assertJsonPath('data.name', 'Daily Agent Job');
 
-        $this->assertDatabaseCount('agent_jobs', 1);
-        $job = AgentJob::first();
+        $this->assertEquals(1, AgentJob::query()->where('user_id', $user->id)->where('name', 'Daily Agent Job')->count());
+        $job = AgentJob::query()->where('user_id', $user->id)->where('name', 'Daily Agent Job')->firstOrFail();
 
         $this->assertSame($user->id, $job->user_id);
         $this->assertNotNull($job->last_validated_executable_path);

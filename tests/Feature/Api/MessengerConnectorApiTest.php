@@ -330,6 +330,10 @@ class MessengerConnectorApiTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.providers.slack.label', 'Slack')
-            ->assertJsonPath('data.providers.telegram.label', 'Telegram');
+            ->assertJsonPath('data.providers.telegram.label', 'Telegram')
+            ->assertJsonPath('data.providers.discord.label', 'Discord')
+            ->assertJsonPath('data.providers.whatsapp.label', 'WhatsApp')
+            ->assertJsonPath('data.providers.discord.enabled', true)
+            ->assertJsonPath('data.providers.whatsapp.enabled', true);
     }
 }

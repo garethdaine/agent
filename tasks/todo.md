@@ -1,505 +1,320 @@
-# Workflow Orchestration Instruction Rollout Plan
+# Agent Platform — Task Log
 
-## 2026-02-27 - Discovery Wizard Full Session Validation (Natural Language Scheduling)
+> Active project status: see `docs/PROJECT-STATUS.md`
+
+---
+
+## Current — Open Items
+
+### Agent Org Layer — Remove Raw JSON UX (Completed)
+
+- [x] Replace raw JSON textareas in Org Agents form with structured controls (authority overrides + output schema builder).
+- [x] Replace raw JSON textareas in Org Rituals form with structured controls (context inputs + verification + delivery targets).
+- [x] Replace raw JSON textareas in Org Councils form with structured controls (evidence/response schema + report sections).
+- [x] Preserve existing API contracts by encoding/decoding form controls to the same payload JSON shapes.
+- [x] Run targeted verification (`php artisan test` Org API slice + `npm run build`) and record outcomes.
+
+Review
+- Replaced JSON textareas with non-technical builders across Org forms:
+  - Agents: authority override rule builder + default output field/schema builder.
+  - Rituals: context input map builder, typed verification strategy rule builder, delivery target map builder.
+  - Councils: evidence/member-response schema field builders + report section list builder.
+- Preserved backend payload contracts by converting form controls into the same JSON object/array shapes in submit handlers.
+- Verification:
+  - `php artisan test tests/Feature/Http/Controllers/Api/V1/Org` (34 passed)
+  - `npm run build` (client + SSR build succeeded)
+
+### Interrogation Reasoning Text Truncation (In Progress)
+
+- [x] Reproduce the reasoning text cutoff path from streamed interrogation payload parsing.
+- [x] Update Codex adapter structured-payload selection to avoid early fragment selection.
+- [x] Add unit coverage for multi-candidate streamed JSON where early payload is partial.
+- [x] Run targeted interrogation adapter tests.
+- [x] Record review notes and residual risk.
+
+Review
+- Root cause: `CodexAdapter::decodeBestEffortJson()` returned the first structured payload candidate in streamed JSON, which can be an early partial fragment.
+- Fix: collect all structured payload candidates and select the most complete (with later-candidate tie-break), preventing partial reasoning text from winning.
+- Verification: `php artisan test tests/Unit/InterrogationCodexAdapterCommandTest.php` (11 tests passed).
+- Residual risk: if a later payload is semantically incorrect but structurally richer, it could still be selected; existing schema + command flow keep this risk low.
+
+### Discord Active Runs Formatter Crash (Completed)
+
+- [x] Reproduce Discord-side `List Active Runs Failed` error from formatter output contract.
+- [x] Patch `ChatResponseFormatter` runs rendering to support both `job_name` and nested `job.name` payload shapes.
+- [x] Extend intent/handler path for `list my active jobs` to map to jobs list with active filtering.
+- [x] Add regression coverage for nested run payload formatting.
+- [x] Run targeted messenger tests and confirm green.
+
+Review
+- Root cause: `ChatResponseFormatter::formatRunsList*()` directly accessed `$run['job_name']`, but `RunsListActiveHandler` returns runs shaped like `{ id, status, job: { name } }`.
+- Fix: formatter now safely resolves job name from either `job_name` or `job.name`, with defensive fallbacks for run fields.
+- Verification: `php artisan test tests/Feature/Messenger/ChatOrchestrationTest.php tests/Feature/Messenger/ChatActionExecutorTest.php tests/Feature/Messenger/AccountLinkTest.php`.
+- Residual risk: other action formatter contracts still have loose schema coupling; dedicated DTO alignment remains a future hardening task.
+
+### Global Notification Drawer + Header Bell (In Progress)
+
+- [x] Add backend notification persistence and API endpoints for list/mark-read/clear-all.
+- [x] Share notification summary in Inertia props for global header usage.
+- [x] Add header notification bell beside theme switcher with unread count badge.
+- [x] Implement right-side notification drawer/slideover with system-wide notification list.
+- [x] Implement per-notification "Mark as read" action.
+- [x] Implement "Clear all" delete action.
+- [x] Verify with targeted feature tests and frontend build.
+- [x] Record review notes and residual risks.
+
+Review:
+- Added `notifications` table migration for Laravel database notifications.
+- Added notification API endpoints: list, mark-one-read, mark-all-read, and clear-all.
+- Added global notification presenter + shared Inertia payload for immediate header hydration.
+- Added desktop/mobile bell trigger in app header and a right-side drawer with refresh, mark-read, mark-all-read, clear-all, and action links.
+- Verification: `php artisan test --filter=NotificationApiTest`, `php artisan test --filter=OutboundMessageFailedNotificationTest`, `npm run build`.
+- Residual risk: approval/retry events not emitted as notifications yet in all modules; drawer is ready to surface them as soon as producers persist database notifications.
+
+### Discovery Wizard Full Session Validation (Natural Language Scheduling)
 
 - [ ] Create a brand-new discovery session using `docs/discovery/natural-language-scheduling.md` as the feature brief on `https://agent.test`.
 - [ ] Drive the session end-to-end (setup → tech stack → discovery → interrogation → summary → planning → rules → tasks → build execution).
-- [ ] Capture UI parity findings at every stage/control surface against Figma reference (`https://pause-kindle-31517753.figma.site/tools/discovery/6` + wizard design system).
+- [ ] Capture UI parity findings at every stage/control surface against Figma reference.
 - [ ] Patch wizard subcomponents that still use legacy styling and do not match the Figma visual language.
 - [ ] Re-run the same session flow checks in browser after patching.
 - [ ] Record verification results and any residual gaps.
 
-## 2026-02-27 - Figma UI Parity Hotfix (Discovery + App Shell)
+### Discord `/jobs list` Slash Command Failure (Completed)
 
-- [x] Compare current Laravel UI shell and Discovery Wizard against Figma reference (`https://pause-kindle-31517753.figma.site/`).
-- [x] Fix global theme architecture:
-  - [x] class-based dark mode in Tailwind
-  - [x] system preference detection on first load
-  - [x] persistent user override (light/dark) and visible switch control in app shell.
-- [x] Fix design-token opacity compatibility so classes like `bg-primary/10`, `bg-muted/50`, `border-border/60` render correctly.
-- [x] Align AppLayout and Discovery Wizard spacing/controls to Figma shell baseline (top-nav controls, max-width consistency, button/icon treatment).
-- [x] Run build/verification checks and capture results.
-- [x] Add review notes with what changed, what was verified, and any remaining gaps.
+- [x] Reproduce and confirm why Discord slash `/jobs list` resolves to fallback intent.
+- [x] Normalize Discord slash payloads (`jobs`/`runs`) into parser-compatible command text.
+- [x] Acknowledge `INTERACTION_CREATE` in Discord Gateway mode to prevent "application did not respond".
+- [x] Add regression tests for slash-content normalization and gateway interaction ACK.
+- [x] Run targeted messenger test slices and capture outcomes.
 
-### Review (2026-02-27)
-
-- Implemented class-based theme switching with system detection and persistent local preference (`light`/`dark`/`system`) applied at document boot and at app runtime.
-- Updated design tokens to RGB-channel CSS variables and Tailwind color mapping with alpha support (`rgb(var(--token) / <alpha-value>)`), restoring missing opacity utilities used across the redesigned UI.
-- Added visible theme controls to app shell (desktop icon toggle, mobile controls, and profile-menu appearance actions).
-- Aligned discovery wizard chrome closer to Figma shell (iconized controls and removed nested max-width/padding layer that constrained layout).
+Review:
+- Root causes:
+  - Slash payload text normalization produced `jobs list` (and dropped nested option values), which missed existing parser patterns expecting phrases like `list my jobs`.
+  - Discord Gateway `INTERACTION_CREATE` events were dispatched to async processing without first acknowledging interaction callbacks, causing Discord timeout banners.
+- Fixes:
+  - Updated `DiscordAdapter::buildInteractionContent()` to map known slash command structures (`jobs list`, `jobs run job_id`, `runs active`, `runs stop run_id`) into parser-friendly canonical text and to recursively flatten nested options in fallback mode.
+  - Updated `DiscordGatewayWorker` to immediately acknowledge interactions through Discord callback API (`/interactions/{id}/{token}/callback`), returning type `5` for normal interactions and type `8` for autocomplete.
+  - Added regression tests for slash normalization and gateway ACK behavior.
 - Verification:
-  - `npm run build` passed (client + SSR bundles)
-  - built CSS now includes expected token-opacity classes, including `.bg-primary/10`, `.bg-muted/50`, and `.bg-card/95`.
-- Remaining gap:
-  - Full page-by-page pixel-parity sweep against every Figma route is still outstanding; this pass focused on shell/theme/token issues that were causing major visual drift.
-
-## Context
-
-Integrate the instruction set into both orchestration surfaces:
-
-- Scheduled and manual Agent Jobs (`AgentJob` + `ExecuteAgentRunJob` path)
-- Interrogation Builds (`GenerateInterrogationBuildTasksJob` + `ExecuteInterrogationBuildJob` path)
-
-The rollout must preserve existing run safety, queue stability, and auditability.
-
-## Goals
-
-- Enforce consistent planning, execution, and verification behavior across jobs and builds.
-- Make instruction compliance measurable (not prompt-only best effort).
-- Keep changes incremental, feature-flagged, and reversible.
-
-## Phase 1 - Shared Policy Layer (Foundation)
-
-- Add `WorkflowInstructionPolicy` service to define normalized rules from the instruction set.
-- Add `TaskComplexityClassifier` service (`simple` vs `non_trivial`) with deterministic heuristics.
-- Add config section `agent.workflow_orchestration` for rule toggles and thresholds.
-- Add feature flags:
-  - `agent.workflow_orchestration.enabled`
-  - `agent.workflow_orchestration.enforce_verification`
-  - `agent.workflow_orchestration.enforce_lessons`
-- Add run/build metadata contract for compliance state:
-  - `plan_required`, `plan_completed`
-  - `verification_required`, `verification_evidence`
-  - `elegance_review_required`, `elegance_review_completed`
-  - `lessons_required`, `lessons_updated`
-
-## Phase 2 - Plan Mode Default
-
-- Implement pre-execution policy evaluation hook for both paths:
-  - Job runs: evaluate before command launch in `ExecuteAgentRunJob`.
-  - Build tasks: evaluate before task run creation in `BuildTaskRunFactory` / `ExecuteInterrogationBuildJob`.
-- For non-trivial work, inject a mandatory planning checklist into task markdown/system prompt.
-- Add re-plan trigger rule when failure/blocker patterns are detected ("stop and re-plan").
-- Persist plan evidence in metadata (plan steps count, timestamp, source evidence).
-
-## Phase 3 - Subagent Strategy
-
-- Extend build-task generation prompt to require subagent usage for research/exploration on non-trivial tasks.
-- Add optional per-run policy hints for subagent behavior in task markdown:
-  - one task per subagent
-  - parallel exploration allowed
-- Parse execution events for subagent activity signals and store compliance evidence.
-- Add fallback path for runners without subagent support (log advisory, do not hard-fail).
-
-## Phase 4 - Self-Improvement Loop (Lessons)
-
-- Standardize lessons file path to `tasks/lessons.md`.
-- Add `LessonsManager` service:
-  - detect user correction signals
-  - append structured lesson entry (pattern, prevention rule, date, run/session id)
-  - read relevant lessons at session/build start and inject into context
-- Build flow integration:
-  - include lesson-context block in generated task markdown when applicable
-- Job flow integration:
-  - include lesson-context block in run preamble when applicable
-
-## Phase 5 - Verification Before Done
-
-- Add `VerificationEvidenceEvaluator` service to validate evidence from run output/events.
-- Define minimum evidence policy by task type:
-  - code change tasks require test or lint command evidence
-  - behavior changes require command output or diff proof
-- Jobs: block terminal `succeeded` without required evidence when enforcement flag is on.
-- Builds: block task completion and pause build with actionable remediation when evidence is missing.
-- Add explicit event payloads for verification pass/fail reasons.
-
-## Phase 6 - Demand Elegance + Autonomous Bug Fixing
-
-- Add non-trivial checkpoint requiring "elegance pass" before completion.
-- Add heuristics for hacky fix detection (temporary markers, TODO debt phrases, missing root-cause notes).
-- Bug-fix mode rules:
-  - on failure/bug tasks, require logs/errors/failing-test evidence before final success
-  - require explicit root-cause summary in completion payload
-- If elegance/root-cause checks fail, transition to blocked/failed with precise remediation guidance.
-
-## Phase 7 - Task Management Workflow Enforcement
-
-- Add task-file policy checks for:
-  - `tasks/todo.md` includes checklist and progress updates for non-trivial work
-  - review section exists in `tasks/todo.md`
-- Build mode:
-  - generated tasks include required task-management steps
-- Jobs mode:
-  - injected preamble includes task-management expectations where repository has `tasks/`
-
-## Phase 8 - API/UI/Observability
-
-- Extend session/job responses with compliance summary fields.
-- Add event and metrics dimensions:
-  - compliance gate failures by gate type
-  - verification pass rate
-  - re-plan frequency
-  - lessons update rate after corrections
-- Expose compliance state in UI:
-  - Jobs monitor
-  - Build panel and task details
-
-## Phase 9 - Testing + Rollout
-
-- Unit tests:
-  - complexity classification
-  - policy evaluation
-  - verification evidence evaluator
-  - lessons manager
-- Feature tests:
-  - job run blocked when required verification is missing
-  - build task pauses on missing plan/verification evidence
-  - lessons file updated after correction event
-- Progressive rollout:
-  - deploy with advisory-only mode
-  - enable enforcement for builds first
-  - enable enforcement for jobs after stability window
-
-## Mapping Matrix (Instruction -> Platform)
-
-- Plan Mode Default
-  - Jobs: pre-run complexity gate + mandatory plan evidence
-  - Builds: task-level plan gate + re-plan transition
-- Subagent Strategy
-  - Jobs: policy preamble + event evidence
-  - Builds: generation prompt requirement + event evidence
-- Self-Improvement Loop
-  - Jobs: lesson injection + update on corrections
-  - Builds: lesson injection + update on corrections
-- Verification Before Done
-  - Jobs: success gate tied to evidence evaluator
-  - Builds: task completion gate tied to evidence evaluator
-- Demand Elegance
-  - Jobs: elegance checkpoint metadata + blocker on failure
-  - Builds: elegance checklist in task output contract
-- Autonomous Bug Fixing
-  - Jobs: root-cause and failing-signal evidence gate
-  - Builds: same gate in task finalization path
-
-## Delivery Order Recommendation
-
-- Sprint 1: Phase 1 + Phase 2 (advisory only)
-- Sprint 2: Phase 5 + Phase 9 tests for builds
-- Sprint 3: Phase 4 + Phase 6
-- Sprint 4: jobs enforcement + UI/metrics hardening
-
-## Review
-
-- Scope reviewed: jobs and builds orchestration paths only.
-- Non-goals: messenger workflows, delegation graph subsystem, external CI providers.
-- Success criteria: all non-trivial runs/build tasks are policy-evaluated, verification-gated, and auditable.
-
-## 2026-02-25 - Monitor Log Formatting Cleanup
-
-- Reproduce unreadable monitor tail output with chunked/concatenated JSON envelopes.
-- Implement formatter support for fragmented envelope parsing with cross-entry carry-over.
-- Suppress wrapper/noise shards once structured envelopes are detected.
-- Verify output readability using fixture-style Node checks against noisy samples.
-- Verify no frontend build regressions with `npm run build`.
-
-### Review
-
-- Root cause: payload chunks contained multiple JSON envelope objects plus partial fragments; single-object parsing fell back to raw payload rendering.
-- Fix: added robust JSON window extraction + per-event-type carry buffer in `resources/js/Support/agentRunEventFormatting.js` and routed fragment parsing through existing envelope handlers.
-- Verification evidence: local Node fixtures now output only reconstructed human-readable assistant text; `npm run build` passed.
-
-## 2026-02-25 - False Positive Rate-Limit Detection (ASCII Line Snippets)
-
-- Reproduce and identify why `12->...` code-snippet output still triggered rate-limit detection.
-- Expand line-numbered snippet guard beyond unicode arrow (`→`) to include ASCII arrow markers.
-- Add regression test covering `N->` snippet format with `Too many requests` text.
-- Verify related lifecycle tests pass.
-
-### Review
-
-- Root cause: detector ignore pattern only matched `N→` snippets, while current output used `N->`.
-- Fix: updated `LINE_NUMBERED_SNIPPET_PATTERN` in `app/Support/Agent/RunEventWriter.php` to match `→`, `->`, and `=>`.
-- Verification evidence: `php artisan test tests/Feature/AgentRunnerLifecycleTest.php --filter=\"rate_limit_phrase_inside_(line_numbered_snippet|ascii_arrow_line_numbered_snippet)_does_not_trigger_detection\"` passed.
-
-## 2026-02-25 - Build Execution Stuck on Completed Run
-
-- Confirm stuck state mismatch (`task in_progress` while linked run already `succeeded`).
-- Validate build metadata pointers (`active_task_id`) and task/run mapping.
-- Restore Horizon workers for this repo with `interrogation` supervisor active.
-- Re-dispatch `ExecuteInterrogationBuildJob` for session `4` to reconcile task state.
-- Verify progression moved from task `30` to task `31`.
-
-### Review
-
-- Root cause: orchestration queue consumption gap; `interrogation` queue worker was not processing delayed `ExecuteInterrogationBuildJob` follow-up jobs.
-- Remediation: started Horizon for `/Users/garethdaine/Code/agent` (including `supervisor-interrogation`) and dispatched one reconciliation build job.
-- Verification evidence: task `30` now `completed`, `active_task_id=31`, build remains `running`.
-
-## 2026-02-25 - False Positive Rate-Limit Detection (Escaped Newline Snippets)
-
-- Reproduce false positive from tool-result/code-snippet payload containing escaped `\\n` and `N->` line markers.
-- Extend line-numbered snippet guard to match escaped newline prefixes.
-- Add regression test for escaped-newline snippet payload with `Too many requests` phrase.
-- Restart project Horizon workers to load updated detection logic.
-- Recover build state by resuming blocked task with refreshed metadata flags.
-
-### Review
-
-- Root cause: snippet-ignore pattern did not match `\\nN->` payloads embedded in JSON strings, so code excerpts triggered rate-limit keywords.
-- Fix: updated `LINE_NUMBERED_SNIPPET_PATTERN` to `/(?:^|\\n|\\\\n)\\s*\\d+\\s*(?:→|->|=>)/u` and added regression coverage.
-- Verification evidence: targeted lifecycle tests passed; build 4 resumed with `rate_limit_detected=false` and advanced to task `32` run `42`.
-
-## 2026-02-25 - False Positive Rate-Limit Detection (Double Escaped Snippets)
-
-- Reproduce nested escaped snippet form (`\\\\n 55-> ...`) reported in live build output.
-- Generalize snippet prefix matcher from fixed `\\n` to one-or-more escaped slashes before `n`.
-- Add regression test for doubly escaped snippet payload.
-- Restart Horizon workers to load patched detection logic.
-- Verify build resumed and progressed without rate-limit pause.
-
-### Review
-
-- Root cause: payload contained doubly escaped newline markers, which bypassed the prior escaped-newline guard and allowed `Too many requests` snippet text to trigger a pause.
-- Fix: changed snippet regex to `/(?:^|\\n|(?:\\\\)+n)\\s*\\d+\\s*(?:→|->|=>)/u` and added `test_rate_limit_phrase_inside_double_escaped_newline_line_numbered_snippet_does_not_trigger_detection`.
-- Verification evidence: targeted suite now passes with 4/4 snippet false-positive tests; build advanced to task `33` with `rate_limit_detected=false`.
-
-## 2026-02-25 - Preserve DB Safety Guardrail While Unblocking Build Tests
-
-- Reproduce build-time test failure caused by `DB_CONNECTION=sqlite` in interrogation build runs.
-- Update interrogation build environment to use `DB_CONNECTION=pgsql_testing` plus isolated `TEST_DB_*` values.
-- Keep command guardrail strict by allowing only `sqlite` or `pgsql_testing` and rejecting unsafe test DB names/collisions.
-- Update unit tests to assert the new guardrailed build environment contract.
-- Verify config test bootstrap succeeds under build-like env without weakening DB safety constraints.
-
-### Review
-
-- Root cause: build runs forced `DB_CONNECTION=sqlite`, while repo tests enforce `database.default=pgsql_testing` to prevent accidental primary DB mutation.
-- Fix: `BuildTaskRunFactory` now emits `DB_CONNECTION=pgsql_testing` with explicit `TEST_DB_*` variables, and `InterrogationBuildCommandGuard` enforces safe connection modes and isolated test DB naming.
-- Verification evidence:
-  - `php artisan test tests/Unit/InterrogationBuildCommandGuardTest.php tests/Unit/BuildTaskRunFactoryTest.php` (11 passed)
-  - `AGENT_JOB_SOURCE=interrogation_build APP_ENV=testing DB_CONNECTION=pgsql_testing DB_DATABASE=/tmp/interrogation-build-sentinel.sqlite TEST_DB_DATABASE=agent_test php artisan test tests/Unit/Config/AdversarialReviewerConfigTest.php` (8 passed)
-
-## 2026-02-25 - Unified Build AI Log + Duplicate Suppression
-
-- Reproduce duplicate/unreadable active build run log rendering from mixed stream envelopes.
-- Add formatter-level duplicate suppression for repeated assistant/plain payloads in short windows.
-- Add full active-run event hydration in build execution panel via `/agent/api/v1/runs/{id}/events`.
-- Render a single unified active-run transcript block for readability while preserving sequence context.
-- Verify frontend compiles and run-log behavior is readable without repeated duplicate lines.
-
-### Review
-
-- Root cause: build panel only rendered a short `log_tail` slice and mixed stream/final assistant envelopes could surface repeated human text blocks.
-- Fix:
-  - Added duplicate suppression window for repeated plain/markdown payloads in `resources/js/Support/agentRunEventFormatting.js`.
-  - Added full active-run event hydration in `resources/js/Components/Interrogation/BuildPanel.vue` using `/agent/api/v1/runs/{id}/events`.
-  - Replaced multi-card tail rendering with a single unified transcript block (`Active Run AI Log`) for current run readability.
-- Verification evidence:
-  - `npm run build` passed (client + SSR builds successful).
-  - `node --input-type=module` smoke check confirms duplicate assistant payloads collapse to a single formatted entry.
-
-## 2026-02-25 - Reconcile `process_not_found` Run Into Build Progression
-
-- Reproduce case where run transitions to failed (`process_not_found`) but build task remains `in_progress`.
-- Patch reconciliation flow to dispatch `ExecuteInterrogationBuildJob` for `interrogation_build` runs after terminal reconciliation.
-- Prevent orchestration from starting a new pending task when an earlier task is already `failed` or `blocked`.
-- Ensure dispatch failure is non-fatal and logged as a lifecycle system notice.
-- Add regression test proving reconcile queues build orchestration for interrogation build metadata.
-- Add regression test proving failed task state blocks further pending task starts.
-- Re-run targeted build orchestration unit tests to ensure no regression.
-
-### Review
-
-- Root cause: `ReconcileActiveRunsService` finalized orphaned runs but did not hand control back to build orchestration, so build task/session metadata could remain stale until a manual nudge.
-- Fix:
-  - Added `dispatchInterrogationBuildFollowUp()` in `app/Support/Agent/ReconcileActiveRunsService.php` to queue `ExecuteInterrogationBuildJob` for reconciled `interrogation_build` runs, with a guarded error path (`build_reconcile_dispatch_failed`) on dispatch exceptions.
-  - Added a preflight terminal-task guard in `ExecuteInterrogationBuildJob` so any existing `failed`/`blocked` task finalizes lifecycle before pending tasks can start.
-- Verification evidence:
-  - `php artisan test tests/Feature/AgentDispatchDueCommandTest.php --filter=interrogation_build`
-  - `php artisan test tests/Unit/ExecuteInterrogationBuildJobTest.php`
-
-## 2026-02-26 - Feature Flags Managed Via Settings Screen
-
-- Add DB-backed feature flag settings persistence and model/service layer with config/env fallback defaults.
-- Add authenticated API endpoints to read/update managed feature flags.
-- Add Tools settings page for feature flags and wire route/navigation entry points.
-- Switch runtime gates (delegation API/UI, delegation commands, adversarial reviewer checks, Inertia shared props) to resolve via settings service.
-- Update tests for new settings API and runtime flag-resolution behavior.
-- Verify with targeted PHPUnit runs and document results.
-
-### Review
-
-- Root cause: feature toggles were hard-coded to config/env reads, so runtime enable/disable required file/env updates and worker restarts.
-- Fix:
-  - Added persisted feature settings table + model (`agent_feature_settings`) and centralized resolver (`FeatureFlagManager`) with config/env fallback defaults.
-  - Added authenticated API endpoints to read/update managed feature flags (`/agent/api/v1/features/settings`).
-  - Added Tools UI page (`/tools/features/settings`) and Tools index entry for operator-driven toggle management.
-  - Rewired runtime gates to use resolver-backed flags for delegation API/UI middleware, delegation commands, adversarial reviewer gates, and shared Inertia delegation nav prop.
-  - Made delegation subscribers always registered; handlers now self-gate on runtime feature state to support live toggle changes.
-- Verification evidence:
-  - `./vendor/bin/pint`
-  - `npm run build`
-  - `APP_KEY="$(grep '^APP_KEY=' .env | cut -d= -f2-)" php artisan test tests/Feature/FeatureSettingsApiTest.php tests/Feature/DelegationUiAccessTest.php tests/Feature/AdversarialReviewerDisabledTest.php tests/Feature/Http/Controllers/Api/V1/DelegationGraphControllerTest.php tests/Unit/Support/Agent/FeatureFlagManagerTest.php tests/Unit/Listeners/DelegationBroadcastSubscriberTest.php`
-
-## 2026-02-26 - Fix Reviewer Subprocess `--cwd` Option Failure
-
-- [x] Confirm root cause and locate reviewer command construction.
-- [x] Remove unsupported reviewer CLI argument while preserving working directory behavior.
-- [x] Update unit coverage to match supported reviewer command contract.
-- [x] Run targeted tests to verify reviewer command construction and parsing still pass.
-
-### Review
-
-- Root cause: `ClaudeAdapter::buildReviewerCommand()` passed `--cwd <project_directory>` to the reviewer CLI, but reviewer subprocess execution already sets CWD via `Process::setWorkingDirectory()`. The extra CLI flag is unsupported and caused `unknown option '--cwd'`.
-- Fix: removed `--cwd` and project-directory argument from reviewer command construction while preserving subprocess working directory via `AdversarialReviewerService`.
-- Verification evidence:
-  - `php artisan test tests/Unit/ClaudeAdapterReviewerTest.php` (16 passed)
-  - `php artisan test tests/Unit/AdversarialReviewerServiceTest.php` (4 passed)
-  - `php artisan test tests/Feature/AdversarialReviewerShadowModeTest.php --filter=shadow_mode_catches_reviewer_exceptions` failed due pre-existing test DB teardown issue (`SQLSTATE[42P01] table "account_link_tokens" does not exist`), unrelated to reviewer command patch.
-
-## 2026-02-27 - Fix False-Positive Blocker Detection From Escaped Code Snippets
-
-- [x] Reproduce and confirm false positives originate from output regex detection over escaped code payloads.
-- [x] Add non-runtime snippet guard to detection path for approval, permission blocker, clarification, and rate-limit signals.
-- [x] Add regression tests for escaped code snippets containing each signal phrase.
-- [x] Run lifecycle regression tests and verify pass.
-
-### Review
-
-- Root cause: blocker/rate-limit/clarification/approval detectors matched phrases inside escaped code snippets (fixture/test code text), then terminal gating treated those metadata flags as runtime blockers.
-- Fix:
-  - Added `isLikelyNonRuntimeSnippet()` guard in `app/Support/Agent/RunEventWriter.php`.
-  - Guard now skips detection when payload is line-numbered snippet or escaped-newline payload with code-like tokens.
-  - Applied guard before all four detectors (approval, permission blocker, clarification, rate-limit).
-  - Added feature regressions in `tests/Feature/AgentRunnerLifecycleTest.php` for escaped snippet false-positive cases.
-- Verification evidence:
-  - `php artisan test tests/Feature/AgentRunnerLifecycleTest.php` (19 passed)
-
-### Review (Follow-up)
-
-- Additional root cause: UI/template source text from active-run output (Vue/JS snippets) still triggered phrase detectors even after escaped-snippet handling.
-- Follow-up fix:
-  - Added inline source-snippet heuristic in `RunEventWriter` to skip detection for multiline payloads with strong code/template signals.
-  - Added regressions for Vue-template approval phrase and JavaScript rate-limit phrase snippets.
-- Verification evidence:
-  - `php artisan test tests/Feature/AgentRunnerLifecycleTest.php` (21 passed)
-
-## 2026-02-27 - Full Natural Language Scheduling Discovery Run (Session 9)
-
-- [ ] Complete full browser walkthrough for `/tools/discovery/9` from setup to build phase completion without creating additional sessions.
-- [ ] Answer every interrogation question (no skips), verify question flow advances correctly, and capture any UI/control-surface mismatches.
-- [ ] Verify Summary stage content/surfaces and controls; revise only if required for completion fidelity.
-- [ ] Verify Planning stage content/surfaces and controls; generate/approve/regenerate/revise as needed to complete the stage.
-- [ ] Verify Build Rules + Build Tasks stages and controls; generate tasks, validate task list UI behavior, and approve tasks.
-- [ ] Verify Build Execution stage controls/surfaces and capture final session state evidence.
-- [ ] Patch any discovered UI parity mismatches against Figma design surfaces and rebuild frontend assets.
-- [ ] Document review evidence and outcomes in this file.
-
-## 2026-02-27 - Dark Mode Form Field Regression (Discovery Wizard)
-
-- [x] Locate remaining white controls in discovery summary/plan/build surfaces.
-- [x] Patch form control classes so text/select/textarea controls use `bg-input-background`.
-- [x] Fix global dark form override to use minifier-safe token syntax (`rgb(var(--input-background) / 1)`).
-- [x] Rebuild frontend assets to verify compiled CSS keeps dark input/select backgrounds.
-
-### Review
-
-- Root cause:
-  - Several Build panel inputs/textareas still relied on form-plugin defaults without explicit tokenized background classes.
-  - Base dark form override used `rgb(var(--input-background))`, which was stripped in minified output, so fallback dark background rule was not applied consistently.
-- Fix:
-  - Added `bg-input-background` to remaining Build panel editable fields and regeneration notes input surfaces.
-  - Updated Plan revision action select to explicit tokenized field styling (full-width, border, background, focus ring).
-  - Added explicit border utility on Summary amendment/interrogation focus textareas for consistent control rendering.
-  - Updated global form control base styles in `resources/css/app.css` to use `rgb(var(--token) / 1)` and tokenized border/text colors.
-- Verification evidence:
-  - `npm run build` (client + SSR) passed.
-  - Compiled CSS check confirms `.dark input...,.dark select,.dark textarea{background-color:rgb(var(--input-background) / 1);...}` is present in `public/build/assets/app-mfAROlMI.css`.
-
-## 2026-02-27 - Build Step (Phase 9) Parity Alignment
-
-- [x] Compare live build execution step against Figma reference (`pause-kindle-31517753.figma.site/tools/discovery/6`).
-- [x] Refactor execution-mode surface from table-first layout to progress-header + timeline/accordion pattern.
-- [x] Keep Tasks-phase editable table unchanged while isolating execution-phase presentation.
-- [x] Rebuild frontend assets and verify running session (`/tools/discovery/9`) renders updated execution UI.
-- [x] Monitor live execution metadata for blockers after parity patch.
-
-### Review
-
-- Root cause:
-  - Execution phase used the same dense table pattern as task management, which drifted from the Figma final-step design intent (execution overview card + progress + task timeline cards).
-- Fix:
-  - Updated `resources/js/Components/Interrogation/BuildPanel.vue` execution mode to:
-    - render `Build Execution` summary card with action controls and progress meter,
-    - render task timeline rows with status badges and expandable details,
-    - remove execution-mode duplicate task table surface.
-  - Restricted editable task table to Tasks phase only (`isTasksMode`).
-- Verification evidence:
-  - `npm run build` passed (client + SSR).
-  - Live parity screenshot after patch: `tmp/build-step-live-after-parity.png`.
-  - Reference screenshot used for comparison: `tmp/build-step-figma-reference.png`.
-  - Runtime monitor after patch showed healthy progression without blockers:
-    - `completed:2, in_progress:1, pending:9`
-    - `active_task_id:88`, `active_run_id:1727`
-    - `flags:null`, `requires_clarification:null`
-
-### Review (Follow-up)
-
-- Additional parity gap:
-  - Tasks phase (phase 8) was still table-based and visually inconsistent with the updated execution-phase card/timeline pattern.
-- Follow-up fix:
-  - Refactored phase-8 tasks list from table to expandable card/timeline rows.
-  - Added Tasks summary card with status chips and action group (`Generate`, `Approve`, `Start Build`) to align with design language.
-  - Preserved edit/delete/regenerate workflows by moving controls into expanded task-card details.
-  - Restricted phase-specific controls so rules/actions/execution views render with clear separation.
-- Verification evidence:
-  - `npm run build` passed after phase-8 refactor (client + SSR).
-
-## 2026-02-27 - Phase Stepper Active Circle Clipping
-
-- [x] Identify the stepper layout/style causing the active final-step circle to clip on the right edge.
-- [x] Patch stepper container spacing so the active ring renders fully at step 9.
-- [x] Rebuild frontend assets to verify no compile regressions.
-
-### Review
-
-- Root cause:
-  - The active step uses an outer ring (`ring-4`), and the stepper row had no horizontal breathing room, so the final node could be clipped at the container edge.
-- Fix:
-  - Added horizontal padding to the stepper scroll container in `resources/js/Components/Interrogation/PhaseStepper.vue` (`overflow-x-auto px-1`).
-- Verification evidence:
-  - `npm run build` (client + SSR) passed.
-
-## 2026-02-27 - Monitor Metrics Card Spacing Polish
-
-- [x] Audit the top monitor metrics cards (`Scheduler Health`, `Queue Lag`, `Poll Status`) for spacing/typography inconsistency.
-- [x] Refine card content padding, heading rhythm, and metric/body text spacing while preserving existing colors/states.
-- [x] Verify the updated cards render correctly at `https://agent.test/agent/monitor` and run a frontend build check.
-
-### Review
-
-- Root cause:
-  - The first styling pass increased metric typography too aggressively, which made card content feel heavier and less balanced than the original design.
-- Final fix:
-  - Kept improved card structure (`p-6`, consistent icon/label rhythm, consistent detail spacing).
-  - Reverted metric typography to compact sizes (`text-[22px]` range) with tighter leading.
-  - Added `min-h-[136px]` and `flex-col` card content layout for stable vertical spacing across all three cards.
-  - Removed inherited `pt-0` on the top monitor cards by replacing `CardContent` with explicit padded wrappers for that row only.
-- Verification evidence:
-  - Browser-verified on `https://agent.test/agent/monitor`.
-  - Screenshot: `tmp/monitor-cards-pt0-removed.png`.
-
-## 2026-02-27 - Planning Panel Top Spacing
-
-- [x] Identify where the plan panel content sits too close to the planning card header border.
-- [x] Add top margin above the plan content container in planning phase.
-- [x] Run frontend build verification.
-
-### Review
-
-- Root cause:
-  - `PlanViewer` was rendered directly inside `CardContent` (which defaults to `pt-0`), causing the plan container to sit flush against the header divider.
-- Fix:
-  - Wrapped `PlanViewer` in a `div.mt-4` inside the planning phase card.
-- Verification evidence:
-  - `npm run build` (client + SSR) passed.
-
-### Review (Structured Output Hardening)
-
-- User concern: prior issues existed with structured JSON streams from CLI output.
-- Hardening approach:
-  - Added structured-event-aware guards for non-runtime events (e.g., `type=user` with `tool_result`) to prevent false positives.
-  - Added structured rate-limit error detection (`type=error|turn.failed|result` with rate-limit indicators).
-  - Kept structured parsing opportunistic (`json_decode` best-effort); fallback heuristics still operate if parsing fails.
-- Verification evidence:
-  - `php artisan test tests/Feature/AgentRunnerLifecycleTest.php` (23 passed)
+  - `php artisan test tests/Unit/Messenger/Adapters/DiscordAdapterTest.php tests/Unit/Messenger/Gateway/Workers/DiscordGatewayWorkerTest.php` (32 passed)
+  - `php artisan test tests/Feature/Messenger/Webhooks/DiscordWebhookTest.php` (19 passed)
+
+### Agent Org Layer — AI Workforce (Next Feature)
+
+- [ ] Complete discovery session (currently in Setup).
+- [ ] Drive through interrogation, summary, planning, and build phases.
+- [ ] Implement Phase A: Foundation (org_agent_profiles, org_reporting_edges, org_cost_ledgers).
+- [ ] Implement Phase B: Ritual Runtime (org_ritual_templates, org_ritual_runs).
+- [ ] Implement Phase C: Council/QA Gates (org_council_templates, org_artifact_reviews, org_escalations).
+- [ ] Implement Phase D: Governance (cost ledger thresholds, budget enforcement).
+- [ ] Implement Phase E: Hardening (CI compatibility, multi-provider testing).
+
+### Agent Org Layer — Run 3 Amendments (Completed)
+
+- [x] Add top padding to Org Layer empty states so cards are visually aligned with other surfaces.
+- [x] Replace placeholder Org Agent create/edit pages with API-backed forms (delegatee + capability bindings).
+- [x] Replace placeholder Ritual create/show pages with API-backed forms and details.
+- [x] Make Org Agents and Rituals index pages data-driven (list existing records + actionable empty states).
+- [x] Make Councils, Escalations, and Costs pages data-driven enough to confirm implementation state.
+- [x] Verify org UI routes + org API tests + frontend build, and record review notes.
+
+Review:
+- Implemented API-backed org UI flows for agents, rituals, councils, escalations, and costs to replace static placeholders.
+- Added real create forms for org agents, rituals, and councils with validation/error handling and redirect-to-index on success.
+- Fixed UUID route parameter typing in org web routes (`agents/{id}/edit`, `rituals/{id}`) to prevent type errors with UUID IDs.
+- Standardized top spacing on empty-state cards using `pt-16 pb-12` across org surfaces.
+- Verification:
+  - `php artisan test tests/Feature/OrgUiRoutesTest.php tests/Feature/OrgFeatureGateTest.php tests/Feature/Http/Controllers/Api/V1/Org` (41 passed)
+  - `npm run build` (client + SSR build succeeded)
+
+### Agent Org Layer — Migration Sync Hotfix (Completed)
+
+- [x] Investigate `500` failures from Org API (`/org/rituals`, `/org/agents`, `/org/costs`) reported in browser console.
+- [x] Confirm root cause via Laravel logs and migration status.
+- [x] Apply pending Org migrations in runtime database.
+- [x] Re-run Org API feature test slice and confirm all green.
+
+Review:
+- Root cause: Org Layer schema migrations were pending in local runtime DB, causing `SQLSTATE[42P01]` undefined-table failures (`org_ritual_templates`, `org_agent_profiles`, `org_cost_ledgers`, etc.).
+- Fix: executed `php artisan migrate` and applied all Org migrations in batch 10.
+- Verification:
+  - `php artisan migrate:status` (Org migrations now `Ran`)
+  - `php artisan test tests/Feature/Http/Controllers/Api/V1/Org` (34 passed)
+
+### Agent Org Layer — API Resilience Hardening (Completed)
+
+- [x] Add defensive table-existence guards for Org index/summary endpoints used by page load.
+- [x] Ensure fallback responses preserve frontend payload shapes (`data: []`, cost summary defaults).
+- [x] Re-run Org route/feature/API test slices.
+
+Review:
+- Added schema guards to prevent `500` on Org page loads when runtime schema is incomplete or mismatched:
+  - `OrgAgentController@index` (requires `org_agent_profiles`, `delegatee_profiles`)
+  - `OrgRitualController@index` (requires `org_ritual_templates`)
+  - `OrgCouncilController@index` (requires `org_council_templates`)
+  - `OrgEscalationController@index` (requires `org_escalations`, `org_ritual_runs`)
+  - `OrgCostController@summary` (requires `org_cost_ledgers`; returns zeroed summary otherwise)
+- Added fail-safe `try/catch` handling on Org first-load list/summary endpoints so unexpected runtime exceptions degrade to stable empty/default responses instead of returning `500`.
+- Moved cost-summary date parsing inside guarded path to prevent pre-fallback exceptions from invalid date inputs.
+- Verification:
+  - `php artisan test tests/Feature/Http/Controllers/Api/V1/Org tests/Feature/OrgFeatureGateTest.php tests/Feature/OrgUiRoutesTest.php` (41 passed)
+  - `curl /agent/api/v1/org/costs/summary` (HTTP 200)
+  - `curl /agent/api/v1/org/costs/summary?start_date=abc&end_date=def` (HTTP 200 fallback payload)
+
+### AgentKeeper-Inspired Cognitive Continuity Integration Discovery (In Progress)
+
+- [x] Audit current memory/delegation implementation and identify exact integration seams for provider-switch continuity.
+- [x] Analyze AgentKeeper implementation patterns and extract reusable concepts only.
+- [x] Write discovery brief with architecture fit, phased rollout, API/data-model changes, risks, and acceptance criteria.
+- [x] Record review notes and residual risk.
+
+Review:
+- Added `docs/discovery/agentkeeper-cognitive-continuity-integration-brief.md` with a concrete integration design anchored to existing memory/delegation hooks (`MemoryContextBuilder`, `MemoryFormationPipeline`, `ExecuteAgentRunJob`, `AttemptSpawner`).
+- Recommendation is to adopt AgentKeeper patterns (critical fact continuity + token-budget reconstruction) as a native additive layer, not as a vendored dependency.
+- Residual risk: continuity fact auto-promotion quality and scope leakage require careful thresholding + classification/scope guards during implementation.
+
+---
+
+## Completed — Session Log
+
+### 2026-03-01 — Atom-of-Thought (AoT) Reasoning Integration Discovery Brief
+
+- [x] Review current planning, build-task generation, and run execution architecture for integration points.
+- [x] Define AoT legitimacy/risk positioning and integration recommendation specific to Agent.
+- [x] Produce implementation-ready discovery brief with rollout phases, goals, constraints, and acceptance criteria.
+
+Review:
+- Added discovery brief at `docs/discovery/atom-of-thought-reasoning-integration.md`.
+- Recommendation is AoT-lite: planning + task generation first, conditional execution usage for compound tasks, summary unchanged.
+- Proposal keeps STAR runtime primitives in place and treats AoT as additive, config-flagged, and A/B measurable.
+
+### 2026-03-01 — Agent Memory (Session 14)
+
+- [x] Complete Agent Memory v3 discovery brief with gap analysis.
+- [x] Resolve all 14 architectural decisions (Neo4j required, Docker Compose, fixed 1536d, etc.).
+- [x] Add feature flags: `memory.enabled`, `memory.api_enabled`.
+- [x] Fix FeatureFlagManager integration across MemoryEnabled middleware, MemoryCapabilityResolver, MemoryServiceProvider.
+- [x] Fix settings validation (add rate limit keys to whitelist).
+- [x] Fix settings routes (move outside MemoryEnabled middleware gate).
+- [x] Fix Vue numeric coercion (`.toFixed()` crash on string values).
+- [x] Fix broadcasting auth 403 (add `Broadcast::routes()`, fix `window.userId` → `usePage().props.auth.user.id`).
+- [x] Neo4j setup via Docker Compose verified.
+
+### 2026-02-28 — Agent Gaps (Session 13)
+
+- [x] Resolve 11 production gaps across messenger, delegation, and compliance.
+- [x] Consolidate stub handlers from parallel implementations.
+
+### 2026-02-28 — Messenger Control Plane Gaps (Session 13)
+
+- [x] Processor attachment handling fixes.
+- [x] Socket worker graceful drain.
+
+### 2026-02-28 — Messenger CP Local-First & Provider Parity (Session 11)
+
+- [x] ReactPHP/Amp gateway supervisor with reconnection strategy.
+- [x] All 4 providers with threading, signature verification, attachment handling.
+
+### 2026-02-28 — Stabilize PHPUnit Suite
+
+- [x] Resolve 33 failing tests (webhook aliases, delegation naming, DB safety).
+- [x] Resolve 13 remaining warnings/errors (deprecated metadata, migration state).
+- [x] Final result: 1651 passed, 7 skipped, 0 failed.
+
+### 2026-02-28 — Discord + WhatsApp Connector Activation
+
+- [x] Register Discord and WhatsApp adapters in `config/messenger.php`.
+- [x] Replace webhook stubs with real interaction/message handling.
+- [x] Fix middleware timestamp verification for Discord headers.
+- [x] Add feature tests for webhook dispatch and schema exposure.
+
+### 2026-02-27 — Natural Language Scheduling (Session 5) ✅
+
+- [x] Hybrid parser: rule-based + LLM fallback at <75% confidence.
+- [x] Active-hours scheduling with ISO-8601 day indexing.
+- [x] Parse attempt tracking with 90-day retention.
+- [x] Rate limits: 10/min, 60/hour on LLM path.
+
+### 2026-02-27 — Workflow Orchestration Instruction (Session 5) ✅
+
+- [x] Phase 1: Shared Policy Layer — ComplexityClassifier, OrchestrationPolicyService, ComplianceFlagResolver.
+- [x] Phase 2: Plan Mode Default — pre-execution policy evaluation, mandatory planning for non-trivial work.
+- [x] Phase 3: Subagent Strategy — build-task generation prompt requirements, event evidence parsing.
+- [x] Phase 4: Self-Improvement Loop — LessonsManager with file-based storage, trigger signals, context injection.
+- [x] Phase 5: Verification Before Done — VerificationEvidenceEvaluator, evidence by task category.
+- [x] Phase 6: Demand Elegance + Autonomous Bug Fixing — elegance checkpoint, root-cause evidence gate.
+- [x] Phase 7: Task Management Workflow Enforcement — task-file policy checks.
+- [x] Phase 8: API/UI/Observability — compliance summary fields, metrics dimensions.
+- [x] Phase 9: Testing + Rollout — unit + feature tests, progressive rollout.
+- [x] Feature flags: `compliance.enabled`, `compliance.enforcement_mode`, and 4 gate flags.
+
+### 2026-02-27 — Figma Make UI Parity (Session 6) ✅
+
+- [x] Class-based dark mode with system preference detection.
+- [x] Design tokens with RGB-channel CSS variables and alpha support.
+- [x] 20+ base UI components, DM Sans + JetBrains Mono typography.
+- [x] Lucide Vue Next icons, 1440px content max-width.
+- [x] Discovery wizard and build step parity alignment.
+- [x] Dark mode form field regression fixes.
+- [x] Phase stepper and monitor metrics polish.
+
+### 2026-02-27 — STAR Reasoning & Delegation Integration (Session 10) ✅
+
+- [x] STAR Preamble Generator (Situation/Task/Action/Result).
+- [x] A/B testing infrastructure with configurable percentage split.
+- [x] Targeted retry service with trust calibration.
+
+### 2026-02-26 — Adversarial Reviewer (Session 4) ✅
+
+- [x] AdversarialReviewerService via Claude CLI subprocess.
+- [x] Verdict types: pass, revise, needs_clarification.
+- [x] Shadow mode for safe rollout.
+
+### 2026-02-26 — Feature Flags Management ✅
+
+- [x] DB-backed FeatureFlagManager with config/env fallbacks.
+- [x] Authenticated API endpoints for read/update.
+- [x] Tools settings page UI.
+- [x] Runtime gates rewired (delegation, reviewer, memory, compliance).
+
+### 2026-02-25 — Consolidated Implementation / Delegation v1 (Session 2) ✅
+
+- [x] 9 models, 17 services, 3 controllers, 2 policies, 7 Vue pages.
+- [x] DAG execution with verification pipeline (Automated, AI Critic, Human Approval).
+- [x] Trust scoring, contract enforcement, recovery chain.
+
+### 2026-02-21 — Messenger Control Plane (Session 9) ✅
+
+- [x] 4 provider integrations (Slack, Telegram, Discord, WhatsApp).
+- [x] 7 chat-driven user flows.
+- [x] Circuit breaker, rate limiting, replay deduplication, dead-letter queue.
+
+---
+
+## Historical Fix Log
+
+### 2026-02-28 — False Positive Detection Hardening
+
+- [x] ASCII arrow snippet guard (`N->`, `N=>`).
+- [x] Escaped newline snippet guard (`\n`, `\\n`).
+- [x] Double-escaped snippet guard (`\\\\n`).
+- [x] Inline source-snippet heuristic for Vue/JS template payloads.
+- [x] Structured output handling guards for non-runtime events.
+- [x] Final lifecycle test count: 23 passed.
+
+### 2026-02-25 — Build Execution Fixes
+
+- [x] Queue worker management for `interrogation` supervisor.
+- [x] Reconcile `process_not_found` runs into build progression.
+- [x] DB safety guardrail (pgsql_testing enforcement).
+- [x] Unified build AI log with duplicate suppression.
+- [x] Monitor log formatting for fragmented JSON envelopes.
+
+### 2026-02-27 — UI Polish
+
+- [x] Dark mode form field regression (discovery wizard).
+- [x] Build step (phase 9) parity alignment.
+- [x] Phase stepper active circle clipping.
+- [x] Monitor metrics card spacing.
+- [x] Planning panel top spacing.

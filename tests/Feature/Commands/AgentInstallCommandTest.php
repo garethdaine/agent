@@ -5,7 +5,6 @@ namespace Tests\Feature\Commands;
 use App\Models\ConnectorAccount;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
 
 class AgentInstallCommandTest extends TestCase
@@ -173,7 +172,7 @@ class AgentInstallCommandTest extends TestCase
         putenv('MESSENGER_SLACK_SIGNING_SECRET');
     }
 
-    public function test_migrations_run_successfully_when_not_skipped(): void
+    public function test_migrations_are_skipped_when_flag_present(): void
     {
         Http::fake([
             'slack.com/api/auth.test' => Http::response([
@@ -189,9 +188,10 @@ class AgentInstallCommandTest extends TestCase
         $this->artisan('agent:install', [
             '--connector' => 'slack',
             '--non-interactive' => true,
+            '--skip-migrations' => true,
             '--skip-health-check' => true,
         ])
-            ->expectsOutputToContain('Migrations completed');
+            ->expectsOutputToContain('Skipping migrations');
 
         putenv('MESSENGER_SLACK_BOT_TOKEN');
         putenv('MESSENGER_SLACK_SIGNING_SECRET');

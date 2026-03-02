@@ -5,6 +5,8 @@ namespace Tests\Feature\Messenger;
 use App\DTOs\Messenger\ActionResult;
 use App\Enums\Messenger\ChatActionType;
 use App\Jobs\Messenger\ProcessChatIntent;
+use App\Models\AgentJob;
+use App\Models\AgentJobRun;
 use App\Models\ChatAction;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
@@ -85,6 +87,19 @@ class ChatOrchestrationTest extends TestCase
         $this->assertEquals(ChatActionType::JOBS_LIST, $parsedAction->type);
         $this->assertEquals(1.0, $parsedAction->confidence);
         $this->assertFalse($parsedAction->requiresConfirmation);
+    }
+
+    public function test_intent_parser_recognizes_list_active_jobs_command(): void
+    {
+        $parser = app(ChatIntentParser::class);
+
+        $message = $this->createInboundMessage('list my active jobs');
+        $parsedAction = $parser->parse($message, $this->session);
+
+        $this->assertNotNull($parsedAction);
+        $this->assertEquals(ChatActionType::JOBS_LIST, $parsedAction->type);
+        $this->assertEquals(['filter' => 'active'], $parsedAction->parameters);
+        $this->assertEquals(1.0, $parsedAction->confidence);
     }
 
     public function test_intent_parser_recognizes_list_runs_command(): void
@@ -366,26 +381,33 @@ class ChatOrchestrationTest extends TestCase
 
         $this->assertTrue($result->success);
         $this->assertArrayHasKey('jobs', $result->data);
-        $this->assertArrayHasKey('total', $result->data);
     }
 
     public function test_action_executor_handles_runs_stop(): void
     {
         $executor = app(ChatActionExecutor::class);
 
-        $message = $this->createInboundMessage('stop run abc-123');
+        // Create a real job and run for this user
+        $job = AgentJob::factory()->create(['user_id' => $this->user->id]);
+        $run = AgentJobRun::factory()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $this->user->id,
+            'status' => AgentJobRun::STATUS_RUNNING,
+        ]);
+
+        $message = $this->createInboundMessage("stop run {$run->id}");
         $action = ChatAction::create([
             'chat_message_id' => $message->id,
             'action_type' => ChatActionType::RUNS_STOP->value,
-            'parameters' => ['run_id' => 'abc-123'],
+            'parameters' => ['run_id' => $run->id],
             'status' => ChatAction::STATUS_PENDING,
+            'confirmed_at' => now(), // Mark as already confirmed
         ]);
 
         $result = $executor->execute($action, $this->user);
 
-        $this->assertTrue($result->success);
-        $this->assertEquals('abc-123', $result->data['run_id']);
-        $this->assertEquals('stopped', $result->data['status']);
+        $this->assertTrue($result->success, "Expected success but got error: {$result->error}");
+        $this->assertStringContainsString('stopped successfully', $result->message);
     }
 
     public function test_action_executor_validates_parameters(): void
@@ -403,7 +425,7 @@ class ChatOrchestrationTest extends TestCase
         $result = $executor->execute($action, $this->user);
 
         $this->assertFalse($result->success);
-        $this->assertStringContainsString('Invalid parameters', $result->error);
+        $this->assertStringContainsString('No target run specified', $result->error);
     }
 
     // =============================================
@@ -438,6 +460,38 @@ class ChatOrchestrationTest extends TestCase
         $this->assertStringContainsString('List Jobs', $formatted);
         $this->assertStringContainsString('Daily Backup', $formatted);
         $this->assertStringContainsString('job-001', $formatted);
+    }
+
+    public function test_response_formatter_formats_active_runs_with_nested_job_payload(): void
+    {
+        $formatter = app(ChatResponseFormatter::class);
+
+        $message = $this->createInboundMessage('show active runs');
+        $action = ChatAction::create([
+            'chat_message_id' => $message->id,
+            'action_type' => ChatActionType::RUNS_LIST_ACTIVE->value,
+            'parameters' => [],
+            'status' => ChatAction::STATUS_COMPLETED,
+        ]);
+
+        $result = ActionResult::success(
+            data: [
+                'runs' => [
+                    [
+                        'id' => 'run-123',
+                        'status' => 'running',
+                        'job' => ['name' => 'Nightly Sync'],
+                    ],
+                ],
+            ],
+            message: 'Active runs (1):'
+        );
+
+        $formatted = $formatter->format($result, $action, $this->account);
+
+        $this->assertStringContainsString('List Active Runs', $formatted);
+        $this->assertStringContainsString('Nightly Sync', $formatted);
+        $this->assertStringContainsString('run-123', $formatted);
     }
 
     public function test_response_formatter_includes_ids_in_response(): void

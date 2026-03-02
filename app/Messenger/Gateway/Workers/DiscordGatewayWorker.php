@@ -81,6 +81,12 @@ class DiscordGatewayWorker implements GatewayWorkerInterface
     // Required intents: GUILDS | GUILD_MESSAGES | MESSAGE_CONTENT | DIRECT_MESSAGES
     private const DEFAULT_INTENTS = 37377; // 1 | 512 | 32768 | 4096
 
+    private const INTERACTION_TYPE_APPLICATION_COMMAND_AUTOCOMPLETE = 4;
+
+    private const INTERACTION_RESPONSE_TYPE_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE = 5;
+
+    private const INTERACTION_RESPONSE_TYPE_APPLICATION_COMMAND_AUTOCOMPLETE_RESULT = 8;
+
     private ?WebSocket $connection = null;
 
     private WorkerHealthStatus $status = WorkerHealthStatus::Disconnected;
@@ -553,6 +559,8 @@ class DiscordGatewayWorker implements GatewayWorkerInterface
             return;
         }
 
+        $this->acknowledgeInteraction($data);
+
         Log::debug('Dispatching INTERACTION_CREATE to ProcessInboundMessage', [
             'account_id' => $this->account->id,
             'interaction_id' => $data['id'] ?? null,
@@ -564,6 +572,53 @@ class DiscordGatewayWorker implements GatewayWorkerInterface
             provider: $this->account->provider,
             payload: $fullPayload
         );
+    }
+
+    /**
+     * Acknowledge Discord interactions so slash commands do not show timeout banners.
+     *
+     * @param  array<string, mixed>|null  $data
+     */
+    private function acknowledgeInteraction(?array $data): void
+    {
+        if (! is_array($data)) {
+            return;
+        }
+
+        $interactionId = (string) ($data['id'] ?? '');
+        $interactionToken = (string) ($data['token'] ?? '');
+
+        if ($interactionId === '' || $interactionToken === '') {
+            return;
+        }
+
+        $interactionType = (int) ($data['type'] ?? 0);
+
+        $payload = $interactionType === self::INTERACTION_TYPE_APPLICATION_COMMAND_AUTOCOMPLETE
+            ? [
+                'type' => self::INTERACTION_RESPONSE_TYPE_APPLICATION_COMMAND_AUTOCOMPLETE_RESULT,
+                'data' => ['choices' => []],
+            ]
+            : ['type' => self::INTERACTION_RESPONSE_TYPE_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE];
+
+        $response = Http::timeout(5)->post(
+            sprintf(
+                '%s/interactions/%s/%s/callback',
+                self::DISCORD_API_BASE,
+                $interactionId,
+                $interactionToken
+            ),
+            $payload
+        );
+
+        if (! $response->successful()) {
+            Log::warning('Failed to acknowledge Discord interaction', [
+                'account_id' => $this->account->id,
+                'interaction_id' => $interactionId,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+        }
     }
 
     /**

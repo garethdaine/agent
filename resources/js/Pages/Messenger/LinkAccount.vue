@@ -85,6 +85,7 @@ const submit = () => {
                 </p>
 
                 <Button
+                    type="submit"
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >

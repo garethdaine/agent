@@ -193,3 +193,123 @@ Use this file to capture correction-driven lessons.
 - Pattern: Forcing structured parsing as a hard dependency can regress detection when CLI streams include mixed/non-JSON lines.
 - Prevention rule: Treat structured parsing as opportunistic enhancement only; preserve safe text fallback and never fail or overclassify when JSON decode fails.
 - Applied in: `app/Support/Agent/RunEventWriter.php`, `tests/Feature/AgentRunnerLifecycleTest.php`
+
+## Entry
+- Date: 2026-02-28
+- Source (job run id / interrogation session id): Discovery session 14 (`Agent Memory`) plan-generation investigation
+- Correction: User clarified that the stop happened very quickly, which contradicted the initial long-generation-content hypothesis.
+- Pattern: Timing signals (fast stop vs long expected runtime) are stronger evidence of UI/state races than model-content quality issues.
+- Prevention rule: When a workflow halts faster than normal execution duration, prioritize state-transition and async request-race analysis first, then validate content hypotheses against event timelines.
+- Applied in: `resources/js/Pages/Tools/Discovery/Wizard.vue`, `tasks/lessons.md`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User bug report on interrogation reasoning text cutoff
+- Correction: User reported reasoning text beginning was intermittently cut off in the interrogation UI.
+- Pattern: Streamed JSON outputs can contain multiple valid structured payload candidates; selecting the first structured candidate may capture an early partial fragment.
+- Prevention rule: For streamed structured outputs, collect all candidate payloads and select the most complete/final candidate (with deterministic tie-break) instead of first-match selection.
+- Applied in: `app/Support/Interrogation/Adapters/CodexAdapter.php`, `tests/Unit/InterrogationCodexAdapterCommandTest.php`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): Tooling correction while editing repo files
+- Correction: Received warning to avoid invoking `apply_patch` through shell commands.
+- Pattern: Running patch workflows through `exec_command` can bypass expected editing path and trigger avoidable tool warnings.
+- Prevention rule: Use the dedicated `apply_patch` tool directly for patch hunks; reserve `exec_command` for non-patch shell operations.
+- Applied in: Workflow rule captured in `tasks/lessons.md`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User-reported 500 on `/agent/api/v1/notifications`
+- Correction: Notifications endpoint returned `500` because `notifications` table migration was pending in runtime DB.
+- Pattern: New API endpoints that depend on newly introduced tables can crash on partially migrated environments during rollout.
+- Prevention rule: For new persistence-backed endpoints, always (1) run and verify migrations in the target environment immediately after code changes, and (2) add defensive table-existence guards so missing migrations degrade gracefully instead of returning 500.
+- Applied in: `app/Http/Controllers/Api/V1/NotificationController.php`, runtime migration execution (`php artisan migrate --force`)
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User-reported discovery status/category readability mismatch during task generation
+- Correction: Status chips and category tags displayed raw snake_case values (e.g., `Build_rules`) instead of human-readable labels.
+- Pattern: UI components consuming backend state enums directly can leak machine-friendly tokens and hide richer sub-status values available in metadata.
+- Prevention rule: Route all user-visible status/category labels through a shared display formatter (underscore/dash normalization + Title Case), and derive displayed discovery status from both top-level session status and build metadata status.
+- Applied in: `resources/js/Components/Interrogation/displayFormatting.js`, `resources/js/Components/Interrogation/SessionStatusBadge.vue`, `resources/js/Components/Interrogation/StatsPanel.vue`, `resources/js/Components/Interrogation/QuestionRenderer.vue`, `resources/js/Components/Interrogation/StatusCard.vue`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User-reported Discord error `List Active Runs Failed` with `Undefined array key "job_name"`
+- Correction: Active runs response crashed in formatter when Discord user asked for active jobs/runs.
+- Pattern: Formatter and handler payload contracts diverged (`job_name` vs nested `job.name`), and strict array-key access escalated to runtime error.
+- Prevention rule: For chat action outputs, normalize formatter inputs through defensive key resolution (or dedicated DTO mappers) and add regression tests for both flattened and nested payload shapes.
+- Applied in: `app/Services/Messenger/ChatResponseFormatter.php`, `tests/Feature/Messenger/ChatOrchestrationTest.php`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User correction on Agent Org Layer run 3 implementation completeness
+- Correction: User reported Org Layer pages were still placeholder-only (no create flows for agents/rituals and static empty states).
+- Pattern: Completing backend/API milestones without wiring end-to-end UI actions leaves features appearing unfinished even when models/services exist.
+- Prevention rule: Before marking feature slices complete, verify each surfaced nav entry has a usable create/list/detail workflow and no placeholder copy remains on primary screens.
+- Applied in: `resources/js/Pages/Agent/Org/*`, `routes/web.php`, `tasks/todo.md`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User follow-up on Org list UX (`failed to load` + table header + hoverable empty state)
+- Correction: User flagged that empty/error states were rendered inside table rows, causing header persistence and row hover effects with no records.
+- Pattern: Rendering no-data states as `TableRow` couples UX to table semantics and inherited hover styles, producing confusing UI during empty/error conditions.
+- Prevention rule: For list pages, render loading/error/empty as standalone cards and render the table only when records exist; never place empty states in `TableRow`.
+- Applied in: `resources/js/Pages/Agent/Org/Agents/Index.vue`, `resources/js/Pages/Agent/Org/Rituals/Index.vue`, `resources/js/Pages/Agent/Org/Councils/Index.vue`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User correction on Org forms UX (raw JSON inputs)
+- Correction: User stated JSON textareas across Org forms are poor UX for non-technical users and should be replaced with structured controls.
+- Pattern: Exposing raw JSON as primary input creates unnecessary cognitive load and form errors for configuration workflows that can be represented as simple lists/maps.
+- Prevention rule: In user-facing configuration screens, default to structured form controls (rows, selects, toggles, typed inputs) and handle JSON encode/decode only in adapters at load/save boundaries.
+- Applied in: `resources/js/Pages/Agent/Org/Agents/Form.vue`, `resources/js/Pages/Agent/Org/Rituals/Form.vue`, `resources/js/Pages/Agent/Org/Councils/Create.vue`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User-reported `500` on `/agent/api/v1/org/rituals`
+- Correction: Org APIs failed with undefined-table SQL errors because Org migrations were not applied in runtime DB.
+- Pattern: Shipping UI/API changes for new tables without ensuring runtime migration parity produces immediate 500s on first page load.
+- Prevention rule: After introducing new schema-backed endpoints, always run `php artisan migrate` in the active environment and confirm `php artisan migrate:status` before UI verification.
+- Applied in: runtime DB migration execution (`php artisan migrate`), verification via `php artisan migrate:status` and `php artisan test tests/Feature/Http/Controllers/Api/V1/Org`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User-reported repeat `500` on `/agent/api/v1/org/agents` during UI validation
+- Correction: User still encountered index-load failures after initial migration fix; endpoint needed resilience against schema drift and environment mismatch.
+- Pattern: Relying solely on migration correctness for first-render API endpoints makes UX brittle in partial/rolling environments.
+- Prevention rule: For first-render list/summary endpoints, add defensive `Schema::hasTable(...)` guards with stable empty/default response shapes to prevent fatal load errors.
+- Applied in: `app/Http/Controllers/Api/V1/Org/OrgAgentController.php`, `app/Http/Controllers/Api/V1/Org/OrgRitualController.php`, `app/Http/Controllers/Api/V1/Org/OrgCouncilController.php`, `app/Http/Controllers/Api/V1/Org/OrgEscalationController.php`, `app/Http/Controllers/Api/V1/Org/OrgCostController.php`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User-reported repeat `500` on `/agent/api/v1/org/councils` after schema guards
+- Correction: User still saw councils endpoint failure in browser despite migration and table checks.
+- Pattern: Environment-specific runtime faults can bypass narrow guard assumptions and still break first-load endpoints.
+- Prevention rule: For first-load list endpoints, add broad `try/catch` fail-safe returning stable empty payload shape (`data: []`) and report the exception for diagnostics.
+- Applied in: `app/Http/Controllers/Api/V1/Org/OrgCouncilController.php`, `app/Http/Controllers/Api/V1/Org/OrgAgentController.php`, `app/Http/Controllers/Api/V1/Org/OrgRitualController.php`, `app/Http/Controllers/Api/V1/Org/OrgEscalationController.php`, `app/Http/Controllers/Api/V1/Org/OrgCostController.php`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User-reported repeat `500` on `/agent/api/v1/org/escalations` while CLI checks returned `200`
+- Correction: Browser still surfaced `500` despite patched controllers and no corresponding new `local.ERROR` entries in `laravel.log`.
+- Pattern: In local Herd environments, stale PHP-FPM/opcache workers can continue serving old code paths after controller changes.
+- Prevention rule: If browser-only `500` persists but CLI endpoint checks return `200` and logs show no new error, restart Herd services (`herd restart`) before further code changes.
+- Applied in: runtime operation (`herd restart`), post-restart validation via `curl https://agent.test/agent/api/v1/org/escalations` (HTTP 200)
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User-reported `500` on `/agent/api/v1/org/costs/summary`
+- Correction: Cost summary endpoint could still throw before fallback when request date parsing failed.
+- Pattern: Parsing request inputs outside guarded error-handling paths can bypass endpoint resilience and still return `500`.
+- Prevention rule: Parse user-provided filters (especially dates) inside guarded `try/catch` paths and return stable defaults on parse failure.
+- Applied in: `app/Http/Controllers/Api/V1/Org/OrgCostController.php`
+
+## Entry
+- Date: 2026-03-01
+- Source (job run id / interrogation session id): User copy correction on org navigation/page labels
+- Correction: User requested wording update from `Org Layer` to `Agents` and `Org Agents` to `Agents`.
+- Pattern: Feature shipping copy can lag behind product naming decisions, especially when labels are duplicated across nav + page headers + action views.
+- Prevention rule: When copy is corrected, run a scoped string audit (`rg`) across navigation and related page surfaces, then update all visible occurrences in one pass.
+- Applied in: `resources/js/Layouts/AppLayout.vue`, `resources/js/Pages/Agent/Org/Index.vue`, `resources/js/Pages/Agent/Org/Agents/*`, `resources/js/Pages/Agent/Org/Councils/Create.vue`

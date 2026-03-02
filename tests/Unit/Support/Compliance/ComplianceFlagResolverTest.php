@@ -288,6 +288,33 @@ final class ComplianceFlagResolverTest extends TestCase
         $this->assertFalse($resolver->isEnabled(tenantId: null));
     }
 
+    #[Test]
+    public function get_tenant_override_always_returns_null(): void
+    {
+        $resolver = app(ComplianceFlagResolver::class);
+
+        // Use reflection to test protected method
+        $method = new \ReflectionMethod($resolver, 'getTenantOverride');
+        $method->setAccessible(true);
+
+        $this->assertNull($method->invoke($resolver, 123, 'any_key'));
+        $this->assertNull($method->invoke($resolver, 456, 'another_key'));
+        $this->assertNull($method->invoke($resolver, null, 'key'));
+    }
+
+    #[Test]
+    public function resolve_uses_global_value_ignoring_tenant(): void
+    {
+        Config::set('agent.compliance.test_flag', 'global_value');
+
+        $resolver = app(ComplianceFlagResolver::class);
+
+        // Should return global value regardless of tenant ID
+        $this->assertEquals('global_value', $resolver->resolve('compliance.test_flag', 123));
+        $this->assertEquals('global_value', $resolver->resolve('compliance.test_flag', 456));
+        $this->assertEquals('global_value', $resolver->resolve('compliance.test_flag'));
+    }
+
     /**
      * Creates a resolver with a mock that returns a specific tenant override.
      *

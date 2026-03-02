@@ -3,6 +3,7 @@
 namespace App\Jobs\Messenger;
 
 use App\DTOs\Messenger\OutboundPayload;
+use App\Models\ChatSession;
 use App\Models\ConnectorAccount;
 use App\Services\Messenger\AccountLinkTokenService;
 use App\Support\Messenger\ConnectorManager;
@@ -89,13 +90,6 @@ class SendAccountLinkPrompt implements ShouldQueue
         // Send via adapter
         $adapter = $connectorManager->resolve($account->provider);
 
-        // Create a temporary session-like object for sending
-        // We need to create a ChatSession mock since we don't have a real session yet
-        $mockSession = new \stdClass;
-        $mockSession->connectorAccount = $account;
-        $mockSession->channel_id = $this->channelId;
-        $mockSession->thread_id = $this->threadId;
-
         try {
             $response = $adapter->sendMessage(
                 $this->createTemporarySession($account),
@@ -160,17 +154,19 @@ class SendAccountLinkPrompt implements ShouldQueue
      * Since we don't have a real session yet (user is not linked),
      * we create a minimal object that the adapter can use.
      */
-    private function createTemporarySession(ConnectorAccount $account): object
+    private function createTemporarySession(ConnectorAccount $account): ChatSession
     {
-        // Create an anonymous class that mimics ChatSession for the adapter
-        return new class($account, $this->channelId, $this->threadId)
-        {
-            public function __construct(
-                public ConnectorAccount $connectorAccount,
-                public string $channel_id,
-                public ?string $thread_id
-            ) {}
-        };
+        // Build an unsaved ChatSession instance just for adapter delivery.
+        $session = new ChatSession([
+            'connector_account_id' => $account->id,
+            'channel_id' => $this->channelId,
+            'thread_id' => $this->threadId,
+            'status' => ChatSession::STATUS_ACTIVE,
+        ]);
+
+        $session->setRelation('connectorAccount', $account);
+
+        return $session;
     }
 
     public function tags(): array

@@ -10,7 +10,6 @@ use App\Messenger\Gateway\DTOs\WorkerHealthMetadata;
 use App\Messenger\Gateway\Enums\WorkerHealthStatus;
 use App\Messenger\Gateway\ReconnectionStrategy;
 use App\Models\ConnectorAccount;
-use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Closure;
 use Illuminate\Support\Facades\Http;
@@ -18,7 +17,6 @@ use Illuminate\Support\Facades\Log;
 use Ratchet\Client\WebSocket;
 use Ratchet\RFC6455\Messaging\MessageInterface;
 use React\EventLoop\LoopInterface;
-use React\Promise\Deferred;
 
 /**
  * Gateway worker for Slack Socket Mode API v2.
@@ -55,6 +53,16 @@ class SlackSocketWorker implements GatewayWorkerInterface
     private ?string $errorMessage = null;
 
     private bool $draining = false;
+
+    /**
+     * Count of in-flight operations (dispatched jobs awaiting completion).
+     */
+    private int $pendingOperations = 0;
+
+    /**
+     * Timeout in seconds for graceful drain (configurable via messenger.gateway.shutdown_timeout).
+     */
+    private int $drainTimeoutSeconds = 30;
 
     /**
      * Factory for creating WebSocket connectors (injectable for testing).
@@ -149,17 +157,47 @@ class SlackSocketWorker implements GatewayWorkerInterface
 
     /**
      * {@inheritdoc}
+     *
+     * Gracefully drains the worker by:
+     * 1. Setting the draining flag to stop accepting new events
+     * 2. Polling every 100ms to check if all pending operations have completed
+     * 3. Stopping the loop when operations complete or timeout is reached
      */
     public function drain(): void
     {
         Log::info('SlackSocketWorker draining', [
             'account_id' => $this->account->id,
+            'pending_operations' => $this->pendingOperations,
         ]);
 
         $this->draining = true;
+        $this->drainTimeoutSeconds = (int) config('messenger.gateway.shutdown_timeout', 30);
+        $startTime = time();
 
-        // In a real implementation, we would wait for in-flight messages
-        // For now, we just set the flag to stop processing new events
+        // Poll every 100ms to check if pending operations have completed
+        $timer = $this->loop->addPeriodicTimer(0.1, function ($timer) use ($startTime) {
+            // All operations completed - drain successful
+            if ($this->pendingOperations === 0) {
+                $this->loop->cancelTimer($timer);
+                Log::info('SlackSocketWorker drain completed', [
+                    'account_id' => $this->account->id,
+                ]);
+                $this->loop->stop();
+
+                return;
+            }
+
+            // Timeout exceeded - force stop with warning
+            if ((time() - $startTime) >= $this->drainTimeoutSeconds) {
+                $this->loop->cancelTimer($timer);
+                Log::warning('SlackSocketWorker drain timeout exceeded', [
+                    'account_id' => $this->account->id,
+                    'pending_operations' => $this->pendingOperations,
+                    'timeout_seconds' => $this->drainTimeoutSeconds,
+                ]);
+                $this->loop->stop();
+            }
+        });
     }
 
     /**
@@ -450,20 +488,30 @@ class SlackSocketWorker implements GatewayWorkerInterface
      * - Message creation with idempotency
      * - Dispatching to ProcessChatIntent
      *
+     * The pending operations counter is incremented before dispatch and
+     * decremented after, ensuring graceful drain waits for all dispatches.
+     *
      * @param  array<string, mixed>  $payload
      */
     private function dispatchEvent(array $payload): void
     {
-        Log::debug('Dispatching event to ProcessInboundMessage', [
-            'account_id' => $this->account->id,
-            'event_type' => $payload['event']['type'] ?? 'unknown',
-        ]);
+        $this->pendingOperations++;
 
-        ProcessInboundMessage::dispatch(
-            connectorAccountId: (string) $this->account->id,
-            provider: $this->account->provider,
-            payload: $payload
-        );
+        try {
+            Log::debug('Dispatching event to ProcessInboundMessage', [
+                'account_id' => $this->account->id,
+                'event_type' => $payload['event']['type'] ?? 'unknown',
+                'pending_operations' => $this->pendingOperations,
+            ]);
+
+            ProcessInboundMessage::dispatch(
+                connectorAccountId: (string) $this->account->id,
+                provider: $this->account->provider,
+                payload: $payload
+            );
+        } finally {
+            $this->pendingOperations--;
+        }
     }
 
     /**

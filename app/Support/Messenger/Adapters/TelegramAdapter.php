@@ -32,20 +32,21 @@ class TelegramAdapter extends AbstractConnectorAdapter
             return false;
         }
 
-        // Telegram uses a secret token header for webhook verification
-        $providedToken = $request->header('X-Telegram-Bot-Api-Secret-Token');
-
-        if (! $providedToken) {
-            return false;
-        }
-
         $expectedToken = $this->getSecretToken($account);
 
         if (! $expectedToken) {
-            $this->logError('Missing secret token for Telegram account', [
+            // Backward-compatible behavior: if no secret token is configured,
+            // fall back to account-key based routing as the only ingress guard.
+            $this->logDebug('No Telegram secret token configured; skipping header verification', [
                 'account_id' => $account->id,
             ]);
 
+            return true;
+        }
+
+        // Telegram uses a secret token header for webhook verification.
+        $providedToken = $request->header('X-Telegram-Bot-Api-Secret-Token');
+        if (! is_string($providedToken) || $providedToken === '') {
             return false;
         }
 
@@ -299,9 +300,8 @@ class TelegramAdapter extends AbstractConnectorAdapter
 
     private function getSecretToken(ConnectorAccount $account): ?string
     {
-        // Check config first, then webhook_secret, then credentials
+        // Check explicit Telegram secret token locations only.
         return $account->config['signature_verification']['secret_token']
-            ?? $account->webhook_secret
             ?? $account->credentials['secret_token']
             ?? null;
     }

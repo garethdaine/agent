@@ -61,7 +61,7 @@ class AgentJobRunFactory extends Factory
             'started_at' => $startedAt,
             'finished_at' => $finishedAt,
             'exit_code' => 0,
-            'duration_ms' => $startedAt->diffInMilliseconds($finishedAt),
+            'duration_ms' => (int) $startedAt->diffInMilliseconds($finishedAt),
         ]);
     }
 
@@ -75,7 +75,7 @@ class AgentJobRunFactory extends Factory
             'started_at' => $startedAt,
             'finished_at' => $finishedAt,
             'exit_code' => 1,
-            'duration_ms' => $startedAt->diffInMilliseconds($finishedAt),
+            'duration_ms' => (int) $startedAt->diffInMilliseconds($finishedAt),
             'error_code' => 'EXECUTION_FAILED',
             'error_summary' => 'Run failed during execution.',
         ]);

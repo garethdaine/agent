@@ -1,10 +1,12 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import axios from 'axios';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import Banner from '@/Components/Banner.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
+import NotificationDrawer from '@/Components/NotificationDrawer.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import {
     applyThemePreference,
@@ -19,6 +21,7 @@ import {
     MessageSquare,
     Wrench,
     GitBranch,
+    Building2,
     ChevronDown,
     ChevronsUpDown,
     Menu,
@@ -26,6 +29,7 @@ import {
     Check,
     Moon,
     Sun,
+    Bell,
 } from 'lucide-vue-next';
 
 defineProps({
@@ -35,10 +39,20 @@ defineProps({
 const showingNavigationDropdown = ref(false);
 const themePreference = ref(getStoredThemePreference());
 const resolvedTheme = ref('light');
+const page = usePage();
+
+const notificationDrawerOpen = ref(false);
+const notifications = ref([]);
+const unreadNotificationCount = ref(0);
+const notificationsLoading = ref(false);
+const notificationsMutating = ref(false);
+
 let mediaQueryList = null;
+let notificationPollInterval = null;
 
 const isDarkTheme = computed(() => resolvedTheme.value === 'dark');
 const isSystemTheme = computed(() => themePreference.value === 'system');
+const hasUnreadNotifications = computed(() => unreadNotificationCount.value > 0);
 
 const syncTheme = () => {
     resolvedTheme.value = applyThemePreference(themePreference.value);
@@ -74,6 +88,124 @@ const logout = () => {
     router.post(route('logout'));
 };
 
+const applyNotificationPayload = (payload) => {
+    const nextNotifications = Array.isArray(payload?.notifications) ? payload.notifications : [];
+    const nextUnreadCount = Number.isFinite(payload?.unread_count) ? payload.unread_count : 0;
+
+    notifications.value = nextNotifications;
+    unreadNotificationCount.value = nextUnreadCount;
+};
+
+const fetchNotifications = async ({ silent = false } = {}) => {
+    if (!silent) {
+        notificationsLoading.value = true;
+    } else if (notificationsLoading.value) {
+        return;
+    }
+
+    try {
+        const response = await axios.get('/agent/api/v1/notifications', {
+            params: { limit: 20 },
+        });
+
+        applyNotificationPayload(response.data?.data ?? {});
+    } catch (error) {
+        console.error('Failed to load notifications', error);
+    } finally {
+        if (!silent) {
+            notificationsLoading.value = false;
+        }
+    }
+};
+
+const toggleNotificationDrawer = async () => {
+    notificationDrawerOpen.value = !notificationDrawerOpen.value;
+
+    if (notificationDrawerOpen.value) {
+        await fetchNotifications();
+    }
+};
+
+const closeNotificationDrawer = () => {
+    notificationDrawerOpen.value = false;
+};
+
+const markNotificationAsRead = async (id) => {
+    if (notificationsMutating.value) {
+        return;
+    }
+
+    notificationsMutating.value = true;
+
+    try {
+        await axios.post(`/agent/api/v1/notifications/${id}/read`);
+        await fetchNotifications({ silent: true });
+    } catch (error) {
+        console.error('Failed to mark notification as read', error);
+    } finally {
+        notificationsMutating.value = false;
+    }
+};
+
+const markAllNotificationsRead = async () => {
+    if (notificationsMutating.value || unreadNotificationCount.value === 0) {
+        return;
+    }
+
+    notificationsMutating.value = true;
+
+    try {
+        await axios.post('/agent/api/v1/notifications/read-all');
+        await fetchNotifications({ silent: true });
+    } catch (error) {
+        console.error('Failed to mark all notifications as read', error);
+    } finally {
+        notificationsMutating.value = false;
+    }
+};
+
+const clearAllNotifications = async () => {
+    if (notificationsMutating.value || notifications.value.length === 0) {
+        return;
+    }
+
+    notificationsMutating.value = true;
+
+    try {
+        await axios.delete('/agent/api/v1/notifications');
+        applyNotificationPayload({
+            notifications: [],
+            unread_count: 0,
+        });
+    } catch (error) {
+        console.error('Failed to clear notifications', error);
+    } finally {
+        notificationsMutating.value = false;
+    }
+};
+
+const openNotificationAction = async (notification) => {
+    const targetUrl = notification?.action?.url;
+    if (!targetUrl) {
+        return;
+    }
+
+    if (!notification.read_at) {
+        await markNotificationAsRead(notification.id);
+    }
+
+    closeNotificationDrawer();
+    router.visit(targetUrl);
+};
+
+watch(
+    () => page.props.notifications,
+    (payload) => {
+        applyNotificationPayload(payload ?? {});
+    },
+    { deep: true, immediate: true },
+);
+
 onMounted(() => {
     syncTheme();
 
@@ -85,6 +217,12 @@ onMounted(() => {
             mediaQueryList.addListener(handleSystemThemeChange);
         }
     }
+
+    notificationPollInterval = window.setInterval(() => {
+        fetchNotifications({ silent: true });
+    }, 30000);
+
+    fetchNotifications({ silent: true });
 });
 
 onBeforeUnmount(() => {
@@ -94,6 +232,11 @@ onBeforeUnmount(() => {
         } else if (typeof mediaQueryList.removeListener === 'function') {
             mediaQueryList.removeListener(handleSystemThemeChange);
         }
+    }
+
+    if (notificationPollInterval !== null) {
+        window.clearInterval(notificationPollInterval);
+        notificationPollInterval = null;
     }
 });
 </script>
@@ -149,6 +292,14 @@ onBeforeUnmount(() => {
                                 >
                                     <GitBranch class="w-4 h-4 mr-1.5" />
                                     Delegation
+                                </NavLink>
+                                <NavLink
+                                    v-if="$page.props.orgLayerEnabled"
+                                    :href="route('org.index')"
+                                    :active="route().current('org.*')"
+                                >
+                                    <Building2 class="w-4 h-4 mr-1.5" />
+                                    Agents
                                 </NavLink>
                             </div>
                         </div>
@@ -215,6 +366,21 @@ onBeforeUnmount(() => {
                             >
                                 <Sun v-if="isDarkTheme" class="h-4 w-4" />
                                 <Moon v-else class="h-4 w-4" />
+                            </button>
+
+                            <button
+                                type="button"
+                                class="relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
+                                aria-label="Open notifications"
+                                @click="toggleNotificationDrawer"
+                            >
+                                <Bell class="h-4 w-4" />
+                                <span
+                                    v-if="hasUnreadNotifications"
+                                    class="absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground"
+                                >
+                                    {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
+                                </span>
                             </button>
 
                             <!-- Settings Dropdown -->
@@ -325,6 +491,14 @@ onBeforeUnmount(() => {
                             <GitBranch class="w-5 h-5" />
                             Delegation
                         </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            v-if="$page.props.orgLayerEnabled"
+                            :href="route('org.index')"
+                            :active="route().current('org.*')"
+                        >
+                            <Building2 class="w-5 h-5" />
+                            Agents
+                        </ResponsiveNavLink>
                     </div>
 
                     <!-- Responsive Settings Options -->
@@ -350,6 +524,20 @@ onBeforeUnmount(() => {
                         </div>
 
                         <div class="mt-3 px-4">
+                            <button
+                                type="button"
+                                class="inline-flex h-8 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-foreground transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/50"
+                                @click="showingNavigationDropdown = false; toggleNotificationDrawer()"
+                            >
+                                <Bell class="h-3.5 w-3.5" />
+                                Notifications
+                                <span
+                                    v-if="hasUnreadNotifications"
+                                    class="inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 text-primary-foreground"
+                                >
+                                    {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
+                                </span>
+                            </button>
                             <button
                                 type="button"
                                 class="inline-flex h-8 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-foreground transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/50"
@@ -439,5 +627,19 @@ onBeforeUnmount(() => {
                 <slot />
             </main>
         </div>
+
+        <NotificationDrawer
+            :open="notificationDrawerOpen"
+            :notifications="notifications"
+            :unread-count="unreadNotificationCount"
+            :loading="notificationsLoading"
+            :mutating="notificationsMutating"
+            @close="closeNotificationDrawer"
+            @refresh="fetchNotifications()"
+            @mark-read="markNotificationAsRead"
+            @mark-all-read="markAllNotificationsRead"
+            @clear-all="clearAllNotifications"
+            @open-action="openNotificationAction"
+        />
     </div>
 </template>

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\AgentJob;
+use App\Models\AgentJobRun;
 use App\Support\Compliance\ComplianceFlagResolver;
 use Illuminate\Http\JsonResponse;
 
@@ -23,13 +25,33 @@ class ComplianceController extends Controller
 
     public function metrics(): JsonResponse
     {
-        // TODO: Implement actual metrics collection from events/database
+        $user = auth()->user();
+
+        // Get job IDs for this user
+        $jobIds = AgentJob::where('user_id', $user->id)->pluck('id');
+
+        $totalJobs = $jobIds->count();
+
+        $totalRuns = AgentJobRun::whereIn('agent_job_id', $jobIds)->count();
+
+        $successCount = AgentJobRun::whereIn('agent_job_id', $jobIds)
+            ->where('status', AgentJobRun::STATUS_SUCCEEDED)
+            ->count();
+
+        $failCount = AgentJobRun::whereIn('agent_job_id', $jobIds)
+            ->where('status', AgentJobRun::STATUS_FAILED)
+            ->count();
+
+        $activeRuns = AgentJobRun::whereIn('agent_job_id', $jobIds)
+            ->whereIn('status', AgentJobRun::ACTIVE_STATUSES)
+            ->count();
+
         return response()->json([
-            'period' => 'last_24h',
-            'gate_evaluations' => 0,
-            'pass_rate' => null,
-            'block_rate' => null,
-            'top_block_reasons' => [],
+            'total_jobs' => $totalJobs,
+            'total_runs' => $totalRuns,
+            'success_rate' => $totalRuns > 0 ? round($successCount / $totalRuns, 4) : null,
+            'failure_rate' => $totalRuns > 0 ? round($failCount / $totalRuns, 4) : null,
+            'active_runs' => $activeRuns,
         ]);
     }
 }

@@ -1,12 +1,22 @@
 <script setup>
 import { computed } from 'vue';
+import { deriveInterrogationStatusKey, humanizeDisplayValue } from '@/Components/Interrogation/displayFormatting';
 
 const props = defineProps({
     status: {
         type: String,
         required: true,
     },
+    buildStatus: {
+        type: String,
+        default: '',
+    },
 });
+
+const statusKey = computed(() => deriveInterrogationStatusKey({
+    status: props.status,
+    buildStatus: props.buildStatus,
+}));
 
 const colorClass = computed(() => {
     const map = {
@@ -16,6 +26,7 @@ const colorClass = computed(() => {
         summarizing: 'bg-warning/10 text-warning border-warning/30',
         planning: 'bg-warning/10 text-warning border-warning/30',
         build_rules: 'bg-warning/10 text-warning border-warning/30',
+        generating_tasks: 'bg-primary/10 text-primary border-primary/30',
         build_tasks: 'bg-primary/10 text-primary border-primary/30',
         build_executing: 'bg-primary/10 text-primary border-primary/30',
         paused: 'bg-muted text-muted-foreground border-border',
@@ -23,12 +34,14 @@ const colorClass = computed(() => {
         failed: 'bg-destructive/10 text-destructive border-destructive/30',
     };
 
-    return map[props.status] ?? 'bg-muted text-muted-foreground border-border';
+    return map[statusKey.value] ?? 'bg-muted text-muted-foreground border-border';
 });
+
+const statusLabel = computed(() => humanizeDisplayValue(statusKey.value, 'Unknown'));
 </script>
 
 <template>
-    <span class="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold capitalize" :class="colorClass">
-        {{ status }}
+    <span class="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold" :class="colorClass">
+        {{ statusLabel }}
     </span>
 </template>

@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Messenger\Reliability;
 
-use App\Messenger\Exceptions\CircuitOpenException;
 use App\Messenger\Reliability\CircuitBreaker;
 use App\Models\ConnectorAccount;
 use App\Support\Messenger\MessengerHttpClient;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -14,6 +14,8 @@ use Tests\TestCase;
 
 class CircuitBreakerIntegrationTest extends TestCase
 {
+    use RefreshDatabase;
+
     private ConnectorAccount $account;
 
     protected function setUp(): void

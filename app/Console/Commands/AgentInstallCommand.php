@@ -23,13 +23,13 @@ use function Laravel\Prompts\text;
 class AgentInstallCommand extends Command
 {
     protected $signature = 'agent:install
-        {--connector=* : Providers to configure (slack, telegram)}
+        {--connector=* : Providers to configure (slack, telegram, discord, whatsapp)}
         {--mode=local : Ingress mode (local, webhook)}
         {--non-interactive : Fail on missing required values}
         {--skip-migrations : Skip running migrations}
         {--skip-health-check : Skip final health check}';
 
-    protected $description = 'Install and configure the Agent messenger control plane';
+    protected $description = 'Install and configure agent messenger integrations for Slack, Telegram, Discord, or WhatsApp';
 
     private const REQUIRED_PHP_VERSION = '8.2.0';
 
@@ -689,7 +689,7 @@ class AgentInstallCommand extends Command
      */
     private function validateDiscordCredentials(array $credentials, string $mode): array
     {
-        $validator = new DiscordCredentialValidator();
+        $validator = new DiscordCredentialValidator;
         $result = $validator->validate($credentials, $mode);
 
         if (! $result->isValid()) {
@@ -720,11 +720,15 @@ class AgentInstallCommand extends Command
     private function validateWhatsAppCredentials(array $credentials): array
     {
         // WhatsApp is webhook-only, so we always validate for webhook mode
-        $validator = new WhatsAppCredentialValidator();
+        $validator = new WhatsAppCredentialValidator;
 
-        // Add webhook_url from the domain we'd generate
-        $domain = config('app.url', 'https://example.com');
-        $credentials['webhook_url'] = $domain.'/messenger/webhooks/whatsapp/pending';
+        // Add webhook_url from the domain we'd generate.
+        // Force an https URL for validation to avoid local/test APP_URL http://... failures.
+        $baseUrl = (string) config('app.url', 'https://example.com');
+        if (! str_starts_with($baseUrl, 'https://')) {
+            $baseUrl = preg_replace('/^http:\/\//i', 'https://', $baseUrl) ?: 'https://example.com';
+        }
+        $credentials['webhook_url'] = rtrim($baseUrl, '/').'/messenger/webhooks/whatsapp/pending';
 
         $result = $validator->validate($credentials, ConnectorAccount::MODE_WEBHOOK);
 

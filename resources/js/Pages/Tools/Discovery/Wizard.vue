@@ -61,6 +61,8 @@ const submittedQuestionCount = ref(0);
 const localPlanGenerationPending = ref(false);
 const localPlanRevisionPending = ref(false);
 const planRevisionQueuedAfterSequence = ref(0);
+const planIdleRecoveryAttempted = ref(false);
+const latestSessionLoadRequestId = ref(0);
 const actionState = ref({
     approvePlan: false,
     revisePlan: false,
@@ -284,6 +286,28 @@ watch(
 );
 
 watch(
+    [() => session.value?.phase, planGenerationStatus, hasMeaningfulPlan],
+    async ([phase, generationStatus, hasPlan]) => {
+        const inPlanning = Number(phase ?? 0) === PHASE.PLANNING;
+        const isIdleWithoutPlan = inPlanning && generationStatus === 'idle' && !hasPlan;
+
+        if (!isIdleWithoutPlan) {
+            planIdleRecoveryAttempted.value = false;
+            return;
+        }
+
+        if (planIdleRecoveryAttempted.value) {
+            return;
+        }
+
+        // Recovery guard for rare stale-session windows where generation has completed
+        // but the local session payload still reflects placeholder plan content.
+        planIdleRecoveryAttempted.value = true;
+        await loadSession(true);
+    }
+);
+
+watch(
     [() => session.value?.phase, () => session.value?.status, planRevisionStatus],
     ([phase, status, revisionStatus]) => {
         if (phase !== PHASE.PLANNING || status === 'failed' || status === 'paused' || revisionStatus === 'idle' || revisionStatus === 'failed') {
@@ -385,12 +409,19 @@ const loadLinearProviderContext = async ({ force = false } = {}) => {
 };
 
 const loadSession = async (includeEvents = true) => {
+    const requestId = latestSessionLoadRequestId.value + 1;
+    latestSessionLoadRequestId.value = requestId;
+
     try {
         const { data } = await axios.get(`/agent/api/v1/interrogation/sessions/${props.sessionId}`, {
             params: {
                 include_events: includeEvents ? 1 : 0,
             },
         });
+
+        if (requestId !== latestSessionLoadRequestId.value) {
+            return;
+        }
 
         session.value = data.data;
 
@@ -417,9 +448,15 @@ const loadSession = async (includeEvents = true) => {
             }
         }
     } catch (e) {
+        if (requestId !== latestSessionLoadRequestId.value) {
+            return;
+        }
+
         error.value = e?.response?.data?.error?.message ?? 'Failed to load session.';
     } finally {
-        loading.value = false;
+        if (requestId === latestSessionLoadRequestId.value) {
+            loading.value = false;
+        }
     }
 };
 
@@ -693,8 +730,10 @@ const confirmSummary = async () => {
 
     try {
         await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/confirm-summary`);
+        localPlanGenerationPending.value = true;
         await loadSession(false);
     } catch (e) {
+        localPlanGenerationPending.value = false;
         error.value = e?.response?.data?.error?.message ?? 'Failed to confirm summary.';
     } finally {
         busy.value = false;
@@ -1201,7 +1240,11 @@ onBeforeUnmount(() => {
                     <p class="mt-1 text-xs text-muted-foreground">{{ session?.project_directory || 'Loading...' }}</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <SessionStatusBadge v-if="session" :status="session.status" />
+                    <SessionStatusBadge
+                        v-if="session"
+                        :status="session.status"
+                        :build-status="session?.build?.status || session?.metadata_json?.build?.status || ''"
+                    />
                     <Button
                         v-if="session && !session.deleted_at
                             && (['failed', 'paused', 'setup'].includes(session.status)

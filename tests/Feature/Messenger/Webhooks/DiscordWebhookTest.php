@@ -5,17 +5,21 @@ declare(strict_types=1);
 namespace Tests\Feature\Messenger\Webhooks;
 
 use App\Jobs\Messenger\ProcessInboundMessage;
+use App\Models\AgentJob;
 use App\Models\ConnectorAccount;
+use App\Models\MessengerIdentityLink;
+use App\Models\User;
+use App\Models\UserChatPreference;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 /**
- * Feature tests for DiscordWebhookController.
+ * Feature tests for Discord webhook handling via unified API route.
  *
  * Assumptions:
  * - sodium PHP extension is available for Ed25519 verification
- * - Discord interaction endpoint URL pattern: /messenger/webhooks/discord/{account}
+ * - Unified webhook endpoint URL: /agent/api/v1/connectors/discord/webhook
  * - Discord sends signature in X-Signature-Ed25519 header
  * - Discord sends timestamp in X-Signature-Timestamp header
  *
@@ -71,6 +75,10 @@ class DiscordWebhookTest extends TestCase
         ]);
     }
 
+    // =========================================================================
+    // Signature Verification Tests
+    // =========================================================================
+
     public function test_ed25519_signature_verification_passes_valid_signature(): void
     {
         $timestamp = (string) time();
@@ -79,7 +87,7 @@ class DiscordWebhookTest extends TestCase
         $signature = $this->generateSignature($timestamp, $body);
 
         $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
+            route('agent.api.connectors.discord.webhook'),
             ['type' => 1],
             [
                 'X-Signature-Ed25519' => $signature,
@@ -94,13 +102,12 @@ class DiscordWebhookTest extends TestCase
     public function test_ed25519_signature_verification_rejects_invalid_signature(): void
     {
         $timestamp = (string) time();
-        $body = json_encode(['type' => 1]);
 
         // Generate an invalid signature
         $invalidSignature = str_repeat('00', 64);
 
         $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
+            route('agent.api.connectors.discord.webhook'),
             ['type' => 1],
             [
                 'X-Signature-Ed25519' => $invalidSignature,
@@ -114,7 +121,7 @@ class DiscordWebhookTest extends TestCase
     public function test_ed25519_signature_verification_rejects_missing_signature(): void
     {
         $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
+            route('agent.api.connectors.discord.webhook'),
             ['type' => 1],
             [
                 'X-Signature-Timestamp' => (string) time(),
@@ -131,7 +138,7 @@ class DiscordWebhookTest extends TestCase
         $signature = $this->generateSignature($timestamp, $body);
 
         $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
+            route('agent.api.connectors.discord.webhook'),
             ['type' => 1],
             [
                 'X-Signature-Ed25519' => $signature,
@@ -141,6 +148,10 @@ class DiscordWebhookTest extends TestCase
         $response->assertStatus(401);
     }
 
+    // =========================================================================
+    // Interaction Type Tests
+    // =========================================================================
+
     public function test_ping_type_returns_pong_response(): void
     {
         $timestamp = (string) time();
@@ -148,7 +159,7 @@ class DiscordWebhookTest extends TestCase
         $signature = $this->generateSignature($timestamp, $body);
 
         $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
+            route('agent.api.connectors.discord.webhook'),
             ['type' => 1],
             [
                 'X-Signature-Ed25519' => $signature,
@@ -190,7 +201,7 @@ class DiscordWebhookTest extends TestCase
         $signature = $this->generateSignature($timestamp, $bodyJson);
 
         $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
+            route('agent.api.connectors.discord.webhook'),
             $body,
             [
                 'X-Signature-Ed25519' => $signature,
@@ -237,7 +248,7 @@ class DiscordWebhookTest extends TestCase
         $signature = $this->generateSignature($timestamp, $bodyJson);
 
         $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
+            route('agent.api.connectors.discord.webhook'),
             $body,
             [
                 'X-Signature-Ed25519' => $signature,
@@ -275,7 +286,7 @@ class DiscordWebhookTest extends TestCase
         $signature = $this->generateSignature($timestamp, $bodyJson);
 
         $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
+            route('agent.api.connectors.discord.webhook'),
             $body,
             [
                 'X-Signature-Ed25519' => $signature,
@@ -287,100 +298,6 @@ class DiscordWebhookTest extends TestCase
         // Indicates "thinking" state while processing async
         $response->assertStatus(200);
         $response->assertJson(['type' => 5]);
-    }
-
-    public function test_invalid_account_returns_404(): void
-    {
-        $timestamp = (string) time();
-        $body = json_encode(['type' => 1]);
-        $signature = $this->generateSignature($timestamp, $body);
-
-        $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => '00000000-0000-0000-0000-000000000000']),
-            ['type' => 1],
-            [
-                'X-Signature-Ed25519' => $signature,
-                'X-Signature-Timestamp' => $timestamp,
-            ]
-        );
-
-        $response->assertStatus(404);
-    }
-
-    public function test_bot_messages_are_ignored(): void
-    {
-        $body = [
-            'type' => 2, // APPLICATION_COMMAND
-            'id' => '111222333444555666',
-            'token' => 'interaction-token-abc123',
-            'channel_id' => '123456789012345678',
-            'member' => [
-                'user' => [
-                    'id' => '9876543210987654321',
-                    'username' => 'AnotherBot',
-                    'bot' => true, // This is a bot
-                ],
-            ],
-            'data' => [
-                'name' => 'agent',
-                'options' => [],
-            ],
-        ];
-
-        $timestamp = (string) time();
-        $bodyJson = json_encode($body);
-        $signature = $this->generateSignature($timestamp, $bodyJson);
-
-        $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
-            $body,
-            [
-                'X-Signature-Ed25519' => $signature,
-                'X-Signature-Timestamp' => $timestamp,
-            ]
-        );
-
-        $response->assertStatus(200);
-
-        // Bot messages should not be processed
-        Queue::assertNothingPushed();
-    }
-
-    public function test_dm_interaction_uses_user_field(): void
-    {
-        // In DMs, there's no 'member' field, just 'user'
-        $body = [
-            'type' => 2, // APPLICATION_COMMAND
-            'id' => '111222333444555666',
-            'token' => 'interaction-token-abc123',
-            'channel_id' => '123456789012345678',
-            'user' => [ // DM uses 'user' instead of 'member'
-                'id' => '9876543210987654321',
-                'username' => 'TestUser',
-            ],
-            'data' => [
-                'name' => 'agent',
-                'options' => [],
-            ],
-        ];
-
-        $timestamp = (string) time();
-        $bodyJson = json_encode($body);
-        $signature = $this->generateSignature($timestamp, $bodyJson);
-
-        $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
-            $body,
-            [
-                'X-Signature-Ed25519' => $signature,
-                'X-Signature-Timestamp' => $timestamp,
-            ]
-        );
-
-        $response->assertStatus(200);
-        $response->assertJson(['type' => 5]);
-
-        Queue::assertPushed(ProcessInboundMessage::class);
     }
 
     public function test_autocomplete_returns_type_8_with_choices(): void
@@ -414,7 +331,7 @@ class DiscordWebhookTest extends TestCase
         $signature = $this->generateSignature($timestamp, $bodyJson);
 
         $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
+            route('agent.api.connectors.discord.webhook'),
             $body,
             [
                 'X-Signature-Ed25519' => $signature,
@@ -462,7 +379,7 @@ class DiscordWebhookTest extends TestCase
         $signature = $this->generateSignature($timestamp, $bodyJson);
 
         $response = $this->postJson(
-            route('messenger.webhooks.discord', ['account' => $this->account->id]),
+            route('agent.api.connectors.discord.webhook'),
             $body,
             [
                 'X-Signature-Ed25519' => $signature,
@@ -473,6 +390,460 @@ class DiscordWebhookTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson(['type' => 5]); // DEFERRED
 
+        Queue::assertPushed(ProcessInboundMessage::class);
+    }
+
+    // =========================================================================
+    // Bot Message Filtering Tests
+    // =========================================================================
+
+    public function test_bot_messages_are_ignored(): void
+    {
+        $body = [
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => '111222333444555666',
+            'token' => 'interaction-token-abc123',
+            'channel_id' => '123456789012345678',
+            'member' => [
+                'user' => [
+                    'id' => '9876543210987654321',
+                    'username' => 'AnotherBot',
+                    'bot' => true, // This is a bot
+                ],
+            ],
+            'data' => [
+                'name' => 'agent',
+                'options' => [],
+            ],
+        ];
+
+        $timestamp = (string) time();
+        $bodyJson = json_encode($body);
+        $signature = $this->generateSignature($timestamp, $bodyJson);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.discord.webhook'),
+            $body,
+            [
+                'X-Signature-Ed25519' => $signature,
+                'X-Signature-Timestamp' => $timestamp,
+            ]
+        );
+
+        $response->assertStatus(200);
+
+        // Bot messages should not be processed
+        Queue::assertNothingPushed();
+    }
+
+    public function test_dm_interaction_uses_user_field(): void
+    {
+        // In DMs, there's no 'member' field, just 'user'
+        $body = [
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => '111222333444555666',
+            'token' => 'interaction-token-abc123',
+            'channel_id' => '123456789012345678',
+            'user' => [ // DM uses 'user' instead of 'member'
+                'id' => '9876543210987654321',
+                'username' => 'TestUser',
+            ],
+            'data' => [
+                'name' => 'agent',
+                'options' => [],
+            ],
+        ];
+
+        $timestamp = (string) time();
+        $bodyJson = json_encode($body);
+        $signature = $this->generateSignature($timestamp, $bodyJson);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.discord.webhook'),
+            $body,
+            [
+                'X-Signature-Ed25519' => $signature,
+                'X-Signature-Timestamp' => $timestamp,
+            ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson(['type' => 5]);
+
+        Queue::assertPushed(ProcessInboundMessage::class);
+    }
+
+    // =========================================================================
+    // Legacy Route Removal Tests
+    // =========================================================================
+
+    public function test_legacy_discord_web_route_returns_404(): void
+    {
+        $timestamp = (string) time();
+        $body = json_encode(['type' => 1]);
+        $signature = $this->generateSignature($timestamp, $body);
+
+        $response = $this->postJson(
+            '/messenger/webhooks/discord/'.$this->account->id,
+            ['type' => 1],
+            [
+                'X-Signature-Ed25519' => $signature,
+                'X-Signature-Timestamp' => $timestamp,
+            ]
+        );
+
+        $response->assertStatus(404);
+    }
+
+    // =========================================================================
+    // Job Handler Integration Tests
+    // =========================================================================
+
+    public function test_slash_command_routes_to_jobs_list_handler(): void
+    {
+        $user = User::factory()->create();
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $user->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => '9876543210987654321',
+        ]);
+        AgentJob::factory()->count(2)->create(['user_id' => $user->id]);
+
+        $body = [
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => '111222333444555666',
+            'token' => 'interaction-token-jobs-list',
+            'channel_id' => '123456789012345678',
+            'member' => [
+                'user' => [
+                    'id' => '9876543210987654321',
+                    'username' => 'TestUser',
+                ],
+            ],
+            'data' => [
+                'name' => 'jobs',
+                'options' => [
+                    ['name' => 'list', 'type' => 1],
+                ],
+            ],
+        ];
+
+        $timestamp = (string) time();
+        $bodyJson = json_encode($body);
+        $signature = $this->generateSignature($timestamp, $bodyJson);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.discord.webhook'),
+            $body,
+            [
+                'X-Signature-Ed25519' => $signature,
+                'X-Signature-Timestamp' => $timestamp,
+            ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson(['type' => 5]); // DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+
+        Queue::assertPushed(ProcessInboundMessage::class, function ($job) {
+            return $job->provider === 'discord'
+                && $job->connectorAccountId === $this->account->id;
+        });
+    }
+
+    // =========================================================================
+    // Authorization Denial Tests
+    // =========================================================================
+
+    public function test_denies_unauthorized_job_action_for_non_owner(): void
+    {
+        // Create job owner and attacker
+        $owner = User::factory()->create();
+        $attacker = User::factory()->create();
+
+        // Link attacker's Discord account
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $attacker->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => 'U_ATTACKER_12345',
+        ]);
+
+        // Create job owned by someone else
+        $job = AgentJob::factory()->create(['user_id' => $owner->id]);
+
+        $body = [
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => '111222333444555667',
+            'token' => 'interaction-token-delete-job',
+            'channel_id' => '123456789012345678',
+            'member' => [
+                'user' => [
+                    'id' => 'U_ATTACKER_12345',
+                    'username' => 'AttackerUser',
+                ],
+            ],
+            'data' => [
+                'name' => 'jobs',
+                'options' => [
+                    [
+                        'name' => 'delete',
+                        'type' => 1,
+                        'options' => [
+                            ['name' => 'job_id', 'type' => 4, 'value' => $job->id],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $timestamp = (string) time();
+        $bodyJson = json_encode($body);
+        $signature = $this->generateSignature($timestamp, $bodyJson);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.discord.webhook'),
+            $body,
+            [
+                'X-Signature-Ed25519' => $signature,
+                'X-Signature-Timestamp' => $timestamp,
+            ]
+        );
+
+        $response->assertStatus(200);
+
+        // Job should still exist (not deleted)
+        $this->assertDatabaseHas('agent_jobs', ['id' => $job->id]);
+    }
+
+    public function test_allows_job_action_for_owner(): void
+    {
+        $user = User::factory()->create();
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $user->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => 'U_OWNER_12345',
+        ]);
+
+        AgentJob::factory()->create(['user_id' => $user->id, 'name' => 'My Test Job']);
+
+        $body = [
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => '111222333444555668',
+            'token' => 'interaction-token-list-jobs',
+            'channel_id' => '123456789012345678',
+            'member' => [
+                'user' => [
+                    'id' => 'U_OWNER_12345',
+                    'username' => 'OwnerUser',
+                ],
+            ],
+            'data' => [
+                'name' => 'jobs',
+                'options' => [
+                    ['name' => 'list', 'type' => 1],
+                ],
+            ],
+        ];
+
+        $timestamp = (string) time();
+        $bodyJson = json_encode($body);
+        $signature = $this->generateSignature($timestamp, $bodyJson);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.discord.webhook'),
+            $body,
+            [
+                'X-Signature-Ed25519' => $signature,
+                'X-Signature-Timestamp' => $timestamp,
+            ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson(['type' => 5]);
+
+        Queue::assertPushed(ProcessInboundMessage::class);
+    }
+
+    // =========================================================================
+    // Confirmation Workflow Tests
+    // =========================================================================
+
+    public function test_requests_confirmation_for_delete_when_preference_enabled(): void
+    {
+        $user = User::factory()->create();
+        UserChatPreference::create([
+            'user_id' => $user->id,
+            'require_confirmation_for_delete' => true,
+            'require_confirmation_for_stop' => true,
+            'require_confirmation_for_steer' => false,
+        ]);
+
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $user->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => 'U_CONFIRM_USER',
+        ]);
+
+        $job = AgentJob::factory()->create(['user_id' => $user->id]);
+
+        $body = [
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => '111222333444555669',
+            'token' => 'interaction-token-delete-confirm',
+            'channel_id' => '123456789012345678',
+            'member' => [
+                'user' => [
+                    'id' => 'U_CONFIRM_USER',
+                    'username' => 'ConfirmUser',
+                ],
+            ],
+            'data' => [
+                'name' => 'jobs',
+                'options' => [
+                    [
+                        'name' => 'delete',
+                        'type' => 1,
+                        'options' => [
+                            ['name' => 'job_id', 'type' => 4, 'value' => $job->id],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $timestamp = (string) time();
+        $bodyJson = json_encode($body);
+        $signature = $this->generateSignature($timestamp, $bodyJson);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.discord.webhook'),
+            $body,
+            [
+                'X-Signature-Ed25519' => $signature,
+                'X-Signature-Timestamp' => $timestamp,
+            ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson(['type' => 5]); // DEFERRED
+
+        // Job should not be deleted yet (waiting for confirmation)
+        $this->assertDatabaseHas('agent_jobs', ['id' => $job->id]);
+
+        Queue::assertPushed(ProcessInboundMessage::class);
+    }
+
+    public function test_skips_confirmation_when_preference_disabled(): void
+    {
+        $user = User::factory()->create();
+        UserChatPreference::create([
+            'user_id' => $user->id,
+            'require_confirmation_for_delete' => false,
+            'require_confirmation_for_stop' => false,
+            'require_confirmation_for_steer' => false,
+        ]);
+
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $user->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => 'U_NO_CONFIRM_USER',
+        ]);
+
+        $job = AgentJob::factory()->create(['user_id' => $user->id]);
+
+        $body = [
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => '111222333444555670',
+            'token' => 'interaction-token-delete-no-confirm',
+            'channel_id' => '123456789012345678',
+            'member' => [
+                'user' => [
+                    'id' => 'U_NO_CONFIRM_USER',
+                    'username' => 'NoConfirmUser',
+                ],
+            ],
+            'data' => [
+                'name' => 'jobs',
+                'options' => [
+                    [
+                        'name' => 'delete',
+                        'type' => 1,
+                        'options' => [
+                            ['name' => 'job_id', 'type' => 4, 'value' => $job->id],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $timestamp = (string) time();
+        $bodyJson = json_encode($body);
+        $signature = $this->generateSignature($timestamp, $bodyJson);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.discord.webhook'),
+            $body,
+            [
+                'X-Signature-Ed25519' => $signature,
+                'X-Signature-Timestamp' => $timestamp,
+            ]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson(['type' => 5]);
+
+        Queue::assertPushed(ProcessInboundMessage::class);
+    }
+
+    // =========================================================================
+    // Outbound Message Tests
+    // =========================================================================
+
+    public function test_queues_outbound_message_on_successful_action(): void
+    {
+        $user = User::factory()->create();
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $user->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => 'U_OUTBOUND_USER',
+        ]);
+
+        AgentJob::factory()->count(1)->create(['user_id' => $user->id]);
+
+        $body = [
+            'type' => 2, // APPLICATION_COMMAND
+            'id' => '111222333444555671',
+            'token' => 'interaction-token-outbound',
+            'channel_id' => '123456789012345678',
+            'member' => [
+                'user' => [
+                    'id' => 'U_OUTBOUND_USER',
+                    'username' => 'OutboundUser',
+                ],
+            ],
+            'data' => [
+                'name' => 'jobs',
+                'options' => [
+                    ['name' => 'list', 'type' => 1],
+                ],
+            ],
+        ];
+
+        $timestamp = (string) time();
+        $bodyJson = json_encode($body);
+        $signature = $this->generateSignature($timestamp, $bodyJson);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.discord.webhook'),
+            $body,
+            [
+                'X-Signature-Ed25519' => $signature,
+                'X-Signature-Timestamp' => $timestamp,
+            ]
+        );
+
+        $response->assertStatus(200);
+
+        // Discord uses deferred responses, so outbound is handled via follow-up
         Queue::assertPushed(ProcessInboundMessage::class);
     }
 

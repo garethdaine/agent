@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { isAnswerableQuestionEvent, normalizeQuestionCategory } from '@/Components/Interrogation/questionPresentation';
+import { deriveInterrogationStatusKey, humanizeDisplayValue } from '@/Components/Interrogation/displayFormatting';
 
 const props = defineProps({
     session: {
@@ -63,8 +64,14 @@ const elapsedLabel = computed(() => {
     return `${minutes}m`;
 });
 
+const statusKey = computed(() => deriveInterrogationStatusKey({
+    status: props.session?.status ?? '',
+    buildStatus: props.session?.build?.status ?? props.session?.metadata_json?.build?.status ?? '',
+}));
+
+const statusLabel = computed(() => humanizeDisplayValue(statusKey.value, 'Unknown'));
+
 const statusClass = computed(() => {
-    const status = String(props.session?.status ?? '').toLowerCase();
     const map = {
         setup: 'bg-muted text-muted-foreground',
         discovering: 'bg-primary/10 text-primary',
@@ -72,6 +79,7 @@ const statusClass = computed(() => {
         summarizing: 'bg-warning/10 text-warning',
         planning: 'bg-warning/10 text-warning',
         build_rules: 'bg-warning/10 text-warning',
+        generating_tasks: 'bg-primary/10 text-primary',
         build_tasks: 'bg-primary/10 text-primary',
         build_executing: 'bg-primary/10 text-primary',
         paused: 'bg-muted text-muted-foreground',
@@ -79,7 +87,7 @@ const statusClass = computed(() => {
         failed: 'bg-destructive/10 text-destructive',
     };
 
-    return map[status] ?? 'bg-muted text-muted-foreground';
+    return map[statusKey.value] ?? 'bg-muted text-muted-foreground';
 });
 
 const categoryClass = (index) => {
@@ -92,6 +100,8 @@ const categoryClass = (index) => {
 
     return classes[index % classes.length];
 };
+
+const categoryLabel = (value) => humanizeDisplayValue(value, 'General');
 </script>
 
 <template>
@@ -104,7 +114,7 @@ const categoryClass = (index) => {
             <div class="flex justify-between"><dt class="text-muted-foreground">Elapsed</dt><dd class="font-medium text-foreground">{{ elapsedLabel }}</dd></div>
             <div class="flex justify-between items-center">
                 <dt class="text-muted-foreground">Status</dt>
-                <dd class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize" :class="statusClass">{{ session.status }}</dd>
+                <dd class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium" :class="statusClass">{{ statusLabel }}</dd>
             </div>
         </dl>
 
@@ -127,7 +137,7 @@ const categoryClass = (index) => {
                     class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
                     :class="categoryClass(index)"
                 >
-                    {{ category }}
+                    {{ categoryLabel(category) }}
                 </span>
             </div>
             <p v-else class="mt-1 text-xs text-muted-foreground">No categories yet</p>

@@ -221,9 +221,14 @@ class ChatResponseFormatter
         $output = '';
         foreach ($runs as $run) {
             $progress = isset($run['progress']) ? " ({$run['progress']}%)" : '';
-            $output .= "**{$run['job_name']}** (Run ID: `{$run['id']}`)\n";
-            $output .= "  Status: {$run['status']}{$progress}\n";
-            $output .= "  Started: {$run['started_at']}\n";
+            $jobName = $run['job_name'] ?? ($run['job']['name'] ?? 'Unknown');
+            $runId = $run['id'] ?? 'N/A';
+            $status = $run['status'] ?? 'unknown';
+            $startedAt = $run['started_at'] ?? 'N/A';
+
+            $output .= "**{$jobName}** (Run ID: `{$runId}`)\n";
+            $output .= "  Status: {$status}{$progress}\n";
+            $output .= "  Started: {$startedAt}\n";
             $output .= "\n";
         }
 
@@ -244,7 +249,9 @@ class ChatResponseFormatter
         $output = '';
         foreach ($runs as $run) {
             $progress = isset($run['progress']) ? " - {$run['progress']}%" : '';
-            $output .= "• **{$run['job_name']}**{$progress} - `{$run['id']}`\n";
+            $jobName = $run['job_name'] ?? ($run['job']['name'] ?? 'Unknown');
+            $runId = $run['id'] ?? 'N/A';
+            $output .= "• **{$jobName}**{$progress} - `{$runId}`\n";
         }
 
         return $output;

@@ -3,8 +3,10 @@
 namespace App\Jobs\Messenger;
 
 use App\DTOs\Messenger\OutboundPayload;
+use App\Messenger\Reliability\DeadLetterManager;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
+use App\Notifications\OutboundMessageFailedNotification;
 use App\Support\Messenger\ConnectorManager;
 use DateTime;
 use Illuminate\Bus\Queueable;
@@ -14,6 +16,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class SendOutboundMessage implements ShouldQueue
 {
@@ -22,9 +25,10 @@ class SendOutboundMessage implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public int $tries = 0; // Unlimited retries within duration
+    public int $tries = 3;
 
-    public int $maxExceptions = 3;
+    /** @var array<int> */
+    public array $backoff = [30, 120, 480]; // 30s, 2min, 8min
 
     /**
      * @param  array<string>  $attachmentIds
@@ -44,8 +48,8 @@ class SendOutboundMessage implements ShouldQueue
      */
     public function retryUntil(): DateTime
     {
-        // Retry for up to 1 hour by default
-        return now()->addHour();
+        // Retry for up to 15 minutes
+        return now()->addMinutes(15);
     }
 
     public function handle(ConnectorManager $connectorManager): void
@@ -134,15 +138,62 @@ class SendOutboundMessage implements ShouldQueue
     /**
      * Handle a job failure.
      */
-    public function failed(\Throwable $exception): void
+    public function failed(Throwable $exception): void
     {
         Log::error('SendOutboundMessage: Job failed permanently', [
             'session_id' => $this->sessionId,
             'error' => $exception->getMessage(),
         ]);
 
-        // TODO: Move to dead letter queue and notify admin
-        // MoveToDeadLetter::dispatch('outbound_message', [...]);
+        try {
+            $session = ChatSession::with(['connectorAccount', 'user'])->find($this->sessionId);
+        } catch (Throwable $e) {
+            // Invalid session ID format (e.g., non-UUID string)
+            Log::warning('SendOutboundMessage: Could not look up session for dead-letter', [
+                'session_id' => $this->sessionId,
+                'lookup_error' => $e->getMessage(),
+            ]);
+
+            return;
+        }
+
+        if (! $session || ! $session->connectorAccount) {
+            return;
+        }
+
+        // Store in dead-letter queue
+        app(DeadLetterManager::class)->moveToDeadLetter(
+            connector: $session->connectorAccount,
+            payload: [
+                'session_id' => $this->sessionId,
+                'content' => $this->content,
+                'thread_id' => $this->threadId,
+                'reply_to_message_id' => $this->replyToMessageId,
+                'attachment_ids' => $this->attachmentIds,
+            ],
+            error: $exception->getMessage(),
+            attempts: $this->attempts()
+        );
+
+        // Notify session owner
+        $this->notifyOwner($session, $exception);
+    }
+
+    private function notifyOwner(ChatSession $session, Throwable $exception): void
+    {
+        $owner = $session->user;
+
+        if (! $owner) {
+            return;
+        }
+
+        $channel = $owner->getNotificationChannel();
+        $notification = new OutboundMessageFailedNotification(
+            sessionId: $this->sessionId,
+            reason: $exception->getMessage()
+        );
+
+        $owner->notify($notification);
     }
 
     /**

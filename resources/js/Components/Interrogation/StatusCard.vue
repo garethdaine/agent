@@ -1,6 +1,7 @@
 <script setup>
 import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import { computed } from 'vue';
+import { humanizeDisplayValue } from '@/Components/Interrogation/displayFormatting';
 
 const props = defineProps({
     session: {
@@ -25,12 +26,14 @@ const displayMessage = computed(() => {
 
     return `${raw.slice(0, 1200).trimEnd()}\n\n… [truncated]`;
 });
+
+const statusLabel = computed(() => humanizeDisplayValue(props.session?.status ?? '', 'Unknown'));
 </script>
 
 <template>
     <div class="rounded-lg border border-primary/30 bg-primary/5 p-4">
         <p class="text-xs font-semibold uppercase tracking-wider text-primary">Discovery Status</p>
-        <h3 class="mt-1 text-base font-semibold text-foreground capitalize">{{ session.status }}</h3>
+        <h3 class="mt-1 text-base font-semibold text-foreground">{{ statusLabel }}</h3>
         <MarkdownRenderer
             :markdown="displayMessage"
             class="prose prose-sm mt-2 max-w-none text-foreground dark:prose-invert prose-p:my-2 prose-headings:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-strong:text-foreground prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"

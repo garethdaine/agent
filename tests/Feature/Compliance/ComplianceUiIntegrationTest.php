@@ -78,7 +78,7 @@ class ComplianceUiIntegrationTest extends TestCase
             ->getJson('/agent/api/v1/compliance/metrics');
 
         $response->assertOk()
-            ->assertJsonStructure(['period']);
+            ->assertJsonStructure(['total_jobs']);
     }
 
     public function test_compliance_metrics_returns_structure_for_dashboard(): void
@@ -90,11 +90,11 @@ class ComplianceUiIntegrationTest extends TestCase
 
         $response->assertOk()
             ->assertJsonStructure([
-                'period',
-                'gate_evaluations',
-                'pass_rate',
-                'block_rate',
-                'top_block_reasons',
+                'total_jobs',
+                'total_runs',
+                'success_rate',
+                'failure_rate',
+                'active_runs',
             ]);
     }
 

@@ -34,6 +34,32 @@ class AgentJob extends Model
         ];
     }
 
+    /**
+     * Backward-compatible alias for legacy payloads/tests using `command`.
+     */
+    public function setCommandAttribute(?string $value): void
+    {
+        $this->attributes['command_template'] = $value;
+    }
+
+    public function getCommandAttribute(): ?string
+    {
+        return $this->attributes['command_template'] ?? null;
+    }
+
+    /**
+     * Backward-compatible alias for legacy payloads/tests using `schedule`.
+     */
+    public function setScheduleAttribute(?string $value): void
+    {
+        $this->attributes['cron_expression'] = $value;
+    }
+
+    public function getScheduleAttribute(): ?string
+    {
+        return $this->attributes['cron_expression'] ?? null;
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

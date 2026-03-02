@@ -123,12 +123,48 @@ class AiCriticCompletedJob implements ShouldQueue
 
     /**
      * Get the output from the AgentJobRun.
+     *
+     * Uses a fallback chain to find output:
+     * 1. Canonical stdout file storage (storage/app/runs/{run_id}/stdout.log)
+     * 2. metadata_json['output']
+     * 3. Run artifacts (if relationship exists)
      */
     private function getRunOutput(AgentJobRun $run): string
     {
-        // In a real implementation, this would fetch the actual output
-        // from the run's stdout or output files. For now, return from metadata.
-        return $run->metadata_json['output'] ?? '';
+        // 1. Try canonical stdout file storage
+        $stdoutPath = storage_path("app/runs/{$run->id}/stdout.log");
+        if (file_exists($stdoutPath)) {
+            $content = file_get_contents($stdoutPath);
+            if (! empty(trim($content))) {
+                return $content;
+            }
+        }
+
+        // 2. Fall back to metadata_json['output']
+        if (! empty($run->metadata_json['output'])) {
+            return $run->metadata_json['output'];
+        }
+
+        // 3. Fall back to run artifacts
+        if (method_exists($run, 'artifacts')) {
+            $artifacts = $run->artifacts()
+                ->whereIn('type', ['text', 'log', 'output'])
+                ->get();
+
+            if ($artifacts->isNotEmpty()) {
+                $combined = $artifacts
+                    ->pluck('content')
+                    ->filter()
+                    ->implode("\n");
+
+                if (! empty(trim($combined))) {
+                    return $combined;
+                }
+            }
+        }
+
+        // 4. No output found
+        return '';
     }
 
     /**

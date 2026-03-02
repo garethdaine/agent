@@ -102,6 +102,9 @@ return [
         'redis:messenger-high' => 10,
         'redis:messenger-default' => 30,
         'redis:delegation' => 60,
+        'redis:memory-working' => 5,
+        'redis:memory-formation' => 60,
+        'redis:org-rituals' => 60,
     ],
 
     /*
@@ -257,6 +260,48 @@ return [
             'timeout' => 900,
             'nice' => 0,
         ],
+        'supervisor-memory-working' => [
+            'connection' => 'redis',
+            'queue' => ['memory-working'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(8, (int) env('HORIZON_MEMORY_WORKING_MAX_PROCESSES', 3))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 0,
+            'backoff' => 0,
+            'timeout' => 5,
+            'nice' => 0,
+        ],
+        'supervisor-memory-formation' => [
+            'connection' => 'redis',
+            'queue' => ['memory-formation'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(8, (int) env('HORIZON_MEMORY_FORMATION_MAX_PROCESSES', 3))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 5,
+            'backoff' => [10, 30, 60, 120, 300],
+            'timeout' => 300,
+            'nice' => 0,
+        ],
+        'supervisor-org-rituals' => [
+            'connection' => 'redis',
+            'queue' => ['org-rituals'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(4, (int) env('HORIZON_ORG_RITUALS_MAX_PROCESSES', 2))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'backoff' => [10, 30, 60],
+            'timeout' => 600,
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [
@@ -281,6 +326,21 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-memory-working' => [
+                'maxProcesses' => max(1, min(8, (int) env('HORIZON_MEMORY_WORKING_MAX_PROCESSES', 3))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-memory-formation' => [
+                'maxProcesses' => max(1, min(8, (int) env('HORIZON_MEMORY_FORMATION_MAX_PROCESSES', 3))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-org-rituals' => [
+                'maxProcesses' => max(1, min(4, (int) env('HORIZON_ORG_RITUALS_MAX_PROCESSES', 2))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
         ],
 
         'local' => [
@@ -297,6 +357,15 @@ return [
                 'maxProcesses' => max(1, min(8, (int) env('HORIZON_DELEGATION_MAX_PROCESSES', 2))),
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
+            ],
+            'supervisor-memory-working' => [
+                //
+            ],
+            'supervisor-memory-formation' => [
+                //
+            ],
+            'supervisor-org-rituals' => [
+                //
             ],
         ],
     ],

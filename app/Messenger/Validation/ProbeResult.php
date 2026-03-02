@@ -65,6 +65,22 @@ readonly class ProbeResult
     }
 
     /**
+     * Create a non-blocking guidance result.
+     *
+     * Unlike failure, this indicates the response was expected behavior
+     * (e.g., signature verification rejecting unsigned test requests)
+     * and provides guidance without marking the probe as failed.
+     */
+    public static function guidance(string $message, array $metadata = []): self
+    {
+        return new self(
+            success: true,
+            diagnostic: $message,
+            metadata: $metadata
+        );
+    }
+
+    /**
      * Check if the probe passed.
      */
     public function passed(): bool

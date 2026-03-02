@@ -15,11 +15,18 @@ class DelegateeProfileFactory extends Factory
 
     public function definition(): array
     {
+        $runnerType = fake()->randomElement(['claude', 'codex', 'custom']);
+        $commandTemplate = match ($runnerType) {
+            'claude' => '{{runner}} -p {{task_markdown_path}}',
+            'codex' => '{{runner}} exec {{task_markdown_path}}',
+            default => '{{runner}} {{task_markdown_path}}',
+        };
+
         return [
             'user_id' => User::factory(),
             'name' => fake()->words(2, true),
-            'runner_type' => fake()->randomElement(['claude', 'codex', 'cursor']),
-            'command_template' => '/usr/bin/env {{runner}} --config {{config}}',
+            'runner_type' => $runnerType,
+            'command_template' => $commandTemplate,
             'working_directory' => '/tmp/delegatee',
             'env_json' => null,
             'config_json' => null,

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Contracts\OrchestrationPolicyServiceContract;
+use App\Jobs\Memory\MemoryFormationJob;
 use App\Models\AgentJobRun;
 use App\Support\Agent\CommandTemplateRenderer;
 use App\Support\Agent\Duration;
@@ -15,6 +16,7 @@ use App\Support\Agent\StarPreambleGenerator;
 use App\Support\Agent\TargetedRetryService;
 use App\Support\Agent\UsageLimitState;
 use App\Support\Compliance\DTOs\PolicyEvaluationResult;
+use App\Support\Memory\MemoryContextBuilder;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -134,6 +136,29 @@ class ExecuteAgentRunJob implements ShouldQueue
             $run->job->last_validated_executable_path = $runtimeCheck['resolved_executable_path'];
             $run->job->save();
 
+            // Memory Context Injection (before STAR so STAR can prepend to memory-wrapped task)
+            $memoryContextApplied = false;
+            if (config('memory.enabled')) {
+                try {
+                    $contextBuilder = app(MemoryContextBuilder::class);
+                    $contextPath = $contextBuilder->buildContext($run);
+                    if ($contextPath !== null) {
+                        // Transiently override task path (not persisted to DB)
+                        // Store original path for STAR preamble to read from
+                        $originalTaskPath = $run->job->task_markdown_path;
+                        $run->job->task_markdown_path = $contextPath;
+                        $memoryContextApplied = true;
+                    }
+                } catch (\Throwable $e) {
+                    // Log but never block execution
+                    Log::warning('Memory context injection failed', [
+                        'run_id' => $run->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            $this->updateMetadata($run, ['memory_context_applied' => $memoryContextApplied]);
+
             // STAR Preamble Injection
             $starGenerator = app(StarPreambleGenerator::class);
             $starApplied = false;
@@ -234,7 +259,7 @@ class ExecuteAgentRunJob implements ShouldQueue
                 : null;
 
             // Initialize reasoning parser before the monitoring loop
-            $reasoningParser = new ReasoningStepParser();
+            $reasoningParser = new ReasoningStepParser;
 
             while ($process->isRunning()) {
                 $stdout = $process->getIncrementalOutput();
@@ -456,6 +481,11 @@ class ExecuteAgentRunJob implements ShouldQueue
             }
         }
 
+        // Memory API URL injection (programmatic, bypasses EnvPolicy)
+        if (config('memory.enabled')) {
+            $env['MEMORY_API_BASE_URL'] = config('app.url').'/agent/api/v1/memory';
+        }
+
         return $env;
     }
 
@@ -559,6 +589,19 @@ class ExecuteAgentRunJob implements ShouldQueue
 
         // Automatic targeted retry on STAR-structured failures
         $this->attemptTargetedRetry($run, $status);
+
+        // Memory integration: dispatch formation job (async, non-blocking)
+        if (config('memory.enabled')) {
+            try {
+                MemoryFormationJob::dispatch($run->id)->onQueue('memory-formation');
+            } catch (\Throwable $e) {
+                // Log but never block finalization
+                Log::warning('Failed to dispatch memory formation job', [
+                    'run_id' => $run->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     private function attemptTargetedRetry(AgentJobRun $run, string $status): void

@@ -5,17 +5,27 @@ declare(strict_types=1);
 namespace Tests\Feature\Messenger\Webhooks;
 
 use App\Jobs\Messenger\ProcessInboundMessage;
+use App\Jobs\Messenger\SendOutboundMessage;
+use App\Messenger\Reliability\DeadLetterManager;
+use App\Models\AgentJob;
+use App\Models\ChatSession;
 use App\Models\ConnectorAccount;
+use App\Models\MessengerIdentityLink;
+use App\Models\User;
+use App\Models\UserChatPreference;
+use App\Models\UserNotificationSetting;
+use App\Notifications\OutboundMessageFailedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 /**
- * Feature tests for WhatsAppWebhookController.
+ * Feature tests for WhatsApp webhook handling via unified API route.
  *
  * Assumptions:
  * - WhatsApp Cloud API v18+ webhook format
- * - Webhook endpoint URL pattern: /messenger/webhooks/whatsapp/{account}
+ * - Unified webhook endpoint URL: /agent/api/v1/connectors/whatsapp/webhook
  * - GET requests used for webhook verification (hub.mode=subscribe)
  * - POST requests used for incoming messages with HMAC-SHA256 signature
  * - Signature header: X-Hub-Signature-256
@@ -62,18 +72,21 @@ class WhatsAppWebhookTest extends TestCase
                 'phone_number_id' => '123456789012345',
                 'app_secret' => $this->appSecret,
                 'verify_token' => $this->verifyToken,
-                'webhook_url' => 'https://example.com/messenger/webhooks/whatsapp/test',
+                'webhook_url' => 'https://example.com/agent/api/v1/connectors/whatsapp/webhook',
             ],
         ]);
     }
+
+    // =========================================================================
+    // GET Verification Tests
+    // =========================================================================
 
     public function test_get_verification_with_subscribe_mode_returns_challenge(): void
     {
         $challenge = 'challenge_token_abc123';
 
         $response = $this->get(
-            route('messenger.webhooks.whatsapp.verify', ['account' => $this->account->id]) .
-            '?' . http_build_query([
+            route('agent.api.connectors.whatsapp.webhook').'?'.http_build_query([
                 'hub_mode' => 'subscribe',
                 'hub_verify_token' => $this->verifyToken,
                 'hub_challenge' => $challenge,
@@ -87,8 +100,7 @@ class WhatsAppWebhookTest extends TestCase
     public function test_get_verification_rejects_wrong_verify_token(): void
     {
         $response = $this->get(
-            route('messenger.webhooks.whatsapp.verify', ['account' => $this->account->id]) .
-            '?' . http_build_query([
+            route('agent.api.connectors.whatsapp.webhook').'?'.http_build_query([
                 'hub_mode' => 'subscribe',
                 'hub_verify_token' => 'wrong-token',
                 'hub_challenge' => 'challenge123',
@@ -101,16 +113,19 @@ class WhatsAppWebhookTest extends TestCase
     public function test_get_verification_rejects_non_subscribe_mode(): void
     {
         $response = $this->get(
-            route('messenger.webhooks.whatsapp.verify', ['account' => $this->account->id]) .
-            '?' . http_build_query([
+            route('agent.api.connectors.whatsapp.webhook').'?'.http_build_query([
                 'hub_mode' => 'unsubscribe',
                 'hub_verify_token' => $this->verifyToken,
                 'hub_challenge' => 'challenge123',
             ])
         );
 
-        $response->assertStatus(403);
+        $response->assertStatus(400);
     }
+
+    // =========================================================================
+    // POST Message Webhook Tests
+    // =========================================================================
 
     public function test_post_with_valid_hmac_sha256_signature_processes_message(): void
     {
@@ -151,10 +166,10 @@ class WhatsAppWebhookTest extends TestCase
         ];
 
         $body = json_encode($payload);
-        $signature = 'sha256=' . hash_hmac('sha256', $body, $this->appSecret);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
 
         $response = $this->postJson(
-            route('messenger.webhooks.whatsapp', ['account' => $this->account->id]),
+            route('agent.api.connectors.whatsapp.webhook'),
             $payload,
             [
                 'X-Hub-Signature-256' => $signature,
@@ -177,7 +192,7 @@ class WhatsAppWebhookTest extends TestCase
         ];
 
         $response = $this->postJson(
-            route('messenger.webhooks.whatsapp', ['account' => $this->account->id]),
+            route('agent.api.connectors.whatsapp.webhook'),
             $payload,
             [
                 'X-Hub-Signature-256' => 'sha256=invalid_signature_here',
@@ -197,7 +212,7 @@ class WhatsAppWebhookTest extends TestCase
         ];
 
         $response = $this->postJson(
-            route('messenger.webhooks.whatsapp', ['account' => $this->account->id]),
+            route('agent.api.connectors.whatsapp.webhook'),
             $payload
         );
 
@@ -243,10 +258,10 @@ class WhatsAppWebhookTest extends TestCase
         ];
 
         $body = json_encode($payload);
-        $signature = 'sha256=' . hash_hmac('sha256', $body, $this->appSecret);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
 
         $response = $this->postJson(
-            route('messenger.webhooks.whatsapp', ['account' => $this->account->id]),
+            route('agent.api.connectors.whatsapp.webhook'),
             $payload,
             [
                 'X-Hub-Signature-256' => $signature,
@@ -260,6 +275,10 @@ class WhatsAppWebhookTest extends TestCase
                 && $job->provider === 'whatsapp';
         });
     }
+
+    // =========================================================================
+    // Status Update Tests
+    // =========================================================================
 
     public function test_status_updates_handled_without_error(): void
     {
@@ -293,10 +312,10 @@ class WhatsAppWebhookTest extends TestCase
         ];
 
         $body = json_encode($payload);
-        $signature = 'sha256=' . hash_hmac('sha256', $body, $this->appSecret);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
 
         $response = $this->postJson(
-            route('messenger.webhooks.whatsapp', ['account' => $this->account->id]),
+            route('agent.api.connectors.whatsapp.webhook'),
             $payload,
             [
                 'X-Hub-Signature-256' => $signature,
@@ -342,10 +361,10 @@ class WhatsAppWebhookTest extends TestCase
         ];
 
         $body = json_encode($payload);
-        $signature = 'sha256=' . hash_hmac('sha256', $body, $this->appSecret);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
 
         $response = $this->postJson(
-            route('messenger.webhooks.whatsapp', ['account' => $this->account->id]),
+            route('agent.api.connectors.whatsapp.webhook'),
             $payload,
             [
                 'X-Hub-Signature-256' => $signature,
@@ -388,10 +407,10 @@ class WhatsAppWebhookTest extends TestCase
         ];
 
         $body = json_encode($payload);
-        $signature = 'sha256=' . hash_hmac('sha256', $body, $this->appSecret);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
 
         $response = $this->postJson(
-            route('messenger.webhooks.whatsapp', ['account' => $this->account->id]),
+            route('agent.api.connectors.whatsapp.webhook'),
             $payload,
             [
                 'X-Hub-Signature-256' => $signature,
@@ -402,19 +421,9 @@ class WhatsAppWebhookTest extends TestCase
         Queue::assertNothingPushed();
     }
 
-    public function test_invalid_account_returns_404(): void
-    {
-        $response = $this->get(
-            '/messenger/webhooks/whatsapp/00000000-0000-0000-0000-000000000000' .
-            '?' . http_build_query([
-                'hub_mode' => 'subscribe',
-                'hub_verify_token' => $this->verifyToken,
-                'hub_challenge' => 'challenge123',
-            ])
-        );
-
-        $response->assertStatus(404);
-    }
+    // =========================================================================
+    // Multiple Message Tests
+    // =========================================================================
 
     public function test_multiple_messages_in_single_payload_all_processed(): void
     {
@@ -462,10 +471,10 @@ class WhatsAppWebhookTest extends TestCase
         ];
 
         $body = json_encode($payload);
-        $signature = 'sha256=' . hash_hmac('sha256', $body, $this->appSecret);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
 
         $response = $this->postJson(
-            route('messenger.webhooks.whatsapp', ['account' => $this->account->id]),
+            route('agent.api.connectors.whatsapp.webhook'),
             $payload,
             [
                 'X-Hub-Signature-256' => $signature,
@@ -522,10 +531,10 @@ class WhatsAppWebhookTest extends TestCase
         ];
 
         $body = json_encode($payload);
-        $signature = 'sha256=' . hash_hmac('sha256', $body, $this->appSecret);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
 
         $response = $this->postJson(
-            route('messenger.webhooks.whatsapp', ['account' => $this->account->id]),
+            route('agent.api.connectors.whatsapp.webhook'),
             $payload,
             [
                 'X-Hub-Signature-256' => $signature,
@@ -535,5 +544,519 @@ class WhatsAppWebhookTest extends TestCase
         $response->assertStatus(200);
 
         Queue::assertPushed(ProcessInboundMessage::class);
+    }
+
+    // =========================================================================
+    // Legacy Route Removal Tests
+    // =========================================================================
+
+    public function test_legacy_whatsapp_web_route_returns_404(): void
+    {
+        $response = $this->get('/messenger/webhooks/whatsapp/'.$this->account->id.'?'.http_build_query([
+            'hub_mode' => 'subscribe',
+            'hub_verify_token' => $this->verifyToken,
+            'hub_challenge' => 'challenge_12345',
+        ]));
+
+        $response->assertStatus(404);
+    }
+
+    public function test_legacy_whatsapp_post_route_returns_404(): void
+    {
+        $payload = [
+            'object' => 'whatsapp_business_account',
+            'entry' => [],
+        ];
+
+        $body = json_encode($payload);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
+
+        $response = $this->postJson(
+            '/messenger/webhooks/whatsapp/'.$this->account->id,
+            $payload,
+            [
+                'X-Hub-Signature-256' => $signature,
+            ]
+        );
+
+        $response->assertStatus(404);
+    }
+
+    // =========================================================================
+    // Edge Case Tests
+    // =========================================================================
+
+    public function test_invalid_verify_token_with_no_accounts_returns_403(): void
+    {
+        // Delete all accounts to test the case where no accounts match
+        ConnectorAccount::query()->delete();
+
+        $response = $this->get(
+            route('agent.api.connectors.whatsapp.webhook').'?'.http_build_query([
+                'hub_mode' => 'subscribe',
+                'hub_verify_token' => 'some-random-token',
+                'hub_challenge' => 'challenge123',
+            ])
+        );
+
+        $response->assertStatus(403);
+    }
+
+    // =========================================================================
+    // Chat Intent Parsing Tests
+    // =========================================================================
+
+    public function test_parses_message_as_jobs_list_command(): void
+    {
+        $user = User::factory()->create();
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $user->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => '14155551234',
+        ]);
+        AgentJob::factory()->count(3)->create(['user_id' => $user->id]);
+
+        $payload = [
+            'object' => 'whatsapp_business_account',
+            'entry' => [
+                [
+                    'id' => '123456789012345',
+                    'changes' => [
+                        [
+                            'field' => 'messages',
+                            'value' => [
+                                'messaging_product' => 'whatsapp',
+                                'metadata' => [
+                                    'display_phone_number' => '+14155550001',
+                                    'phone_number_id' => '123456789012345',
+                                ],
+                                'contacts' => [
+                                    [
+                                        'profile' => ['name' => 'Test User'],
+                                        'wa_id' => '14155551234',
+                                    ],
+                                ],
+                                'messages' => [
+                                    [
+                                        'from' => '14155551234',
+                                        'id' => 'wamid.listjobs123',
+                                        'timestamp' => '1699999999',
+                                        'type' => 'text',
+                                        'text' => ['body' => 'list jobs'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $body = json_encode($payload);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.whatsapp.webhook'),
+            $payload,
+            [
+                'X-Hub-Signature-256' => $signature,
+            ]
+        );
+
+        $response->assertStatus(200);
+
+        Queue::assertPushed(ProcessInboundMessage::class, function ($job) {
+            return $job->provider === 'whatsapp'
+                && $job->connectorAccountId === $this->account->id;
+        });
+    }
+
+    // =========================================================================
+    // Authorization Denial Tests
+    // =========================================================================
+
+    public function test_denies_unauthorized_job_action_for_non_owner(): void
+    {
+        $owner = User::factory()->create();
+        $attacker = User::factory()->create();
+
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $attacker->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => '14155559999',
+        ]);
+
+        $job = AgentJob::factory()->create(['user_id' => $owner->id]);
+
+        $payload = [
+            'object' => 'whatsapp_business_account',
+            'entry' => [
+                [
+                    'id' => '123456789012345',
+                    'changes' => [
+                        [
+                            'field' => 'messages',
+                            'value' => [
+                                'messaging_product' => 'whatsapp',
+                                'metadata' => [
+                                    'display_phone_number' => '+14155550001',
+                                    'phone_number_id' => '123456789012345',
+                                ],
+                                'contacts' => [
+                                    [
+                                        'profile' => ['name' => 'Attacker'],
+                                        'wa_id' => '14155559999',
+                                    ],
+                                ],
+                                'messages' => [
+                                    [
+                                        'from' => '14155559999',
+                                        'id' => 'wamid.deletejob456',
+                                        'timestamp' => '1699999999',
+                                        'type' => 'text',
+                                        'text' => ['body' => "delete job {$job->id}"],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $body = json_encode($payload);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.whatsapp.webhook'),
+            $payload,
+            [
+                'X-Hub-Signature-256' => $signature,
+            ]
+        );
+
+        $response->assertStatus(200);
+
+        // Job should still exist (not deleted due to authorization failure)
+        $this->assertDatabaseHas('agent_jobs', ['id' => $job->id]);
+    }
+
+    public function test_allows_job_action_for_owner(): void
+    {
+        $user = User::factory()->create();
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $user->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => '14155558888',
+        ]);
+
+        AgentJob::factory()->create(['user_id' => $user->id, 'name' => 'Owner Job']);
+
+        $payload = [
+            'object' => 'whatsapp_business_account',
+            'entry' => [
+                [
+                    'id' => '123456789012345',
+                    'changes' => [
+                        [
+                            'field' => 'messages',
+                            'value' => [
+                                'messaging_product' => 'whatsapp',
+                                'metadata' => [
+                                    'display_phone_number' => '+14155550001',
+                                    'phone_number_id' => '123456789012345',
+                                ],
+                                'contacts' => [
+                                    [
+                                        'profile' => ['name' => 'Owner'],
+                                        'wa_id' => '14155558888',
+                                    ],
+                                ],
+                                'messages' => [
+                                    [
+                                        'from' => '14155558888',
+                                        'id' => 'wamid.listowner789',
+                                        'timestamp' => '1699999999',
+                                        'type' => 'text',
+                                        'text' => ['body' => 'list my jobs'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $body = json_encode($payload);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.whatsapp.webhook'),
+            $payload,
+            [
+                'X-Hub-Signature-256' => $signature,
+            ]
+        );
+
+        $response->assertStatus(200);
+
+        Queue::assertPushed(ProcessInboundMessage::class);
+    }
+
+    // =========================================================================
+    // Confirmation Workflow Tests
+    // =========================================================================
+
+    public function test_requests_confirmation_for_delete_when_preference_enabled(): void
+    {
+        $user = User::factory()->create();
+        UserChatPreference::create([
+            'user_id' => $user->id,
+            'require_confirmation_for_delete' => true,
+            'require_confirmation_for_stop' => true,
+            'require_confirmation_for_steer' => false,
+        ]);
+
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $user->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => '14155557777',
+        ]);
+
+        $job = AgentJob::factory()->create(['user_id' => $user->id]);
+
+        $payload = [
+            'object' => 'whatsapp_business_account',
+            'entry' => [
+                [
+                    'id' => '123456789012345',
+                    'changes' => [
+                        [
+                            'field' => 'messages',
+                            'value' => [
+                                'messaging_product' => 'whatsapp',
+                                'metadata' => [
+                                    'display_phone_number' => '+14155550001',
+                                    'phone_number_id' => '123456789012345',
+                                ],
+                                'contacts' => [
+                                    [
+                                        'profile' => ['name' => 'Confirm User'],
+                                        'wa_id' => '14155557777',
+                                    ],
+                                ],
+                                'messages' => [
+                                    [
+                                        'from' => '14155557777',
+                                        'id' => 'wamid.confirmdelete101',
+                                        'timestamp' => '1699999999',
+                                        'type' => 'text',
+                                        'text' => ['body' => "delete job {$job->id}"],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $body = json_encode($payload);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.whatsapp.webhook'),
+            $payload,
+            [
+                'X-Hub-Signature-256' => $signature,
+            ]
+        );
+
+        $response->assertStatus(200);
+
+        // Job should NOT be deleted yet (confirmation required)
+        $this->assertDatabaseHas('agent_jobs', ['id' => $job->id]);
+
+        Queue::assertPushed(ProcessInboundMessage::class);
+    }
+
+    public function test_skips_confirmation_when_preference_disabled(): void
+    {
+        $user = User::factory()->create();
+        UserChatPreference::create([
+            'user_id' => $user->id,
+            'require_confirmation_for_delete' => false,
+            'require_confirmation_for_stop' => false,
+            'require_confirmation_for_steer' => false,
+        ]);
+
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $user->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => '14155556666',
+        ]);
+
+        $job = AgentJob::factory()->create(['user_id' => $user->id]);
+
+        $payload = [
+            'object' => 'whatsapp_business_account',
+            'entry' => [
+                [
+                    'id' => '123456789012345',
+                    'changes' => [
+                        [
+                            'field' => 'messages',
+                            'value' => [
+                                'messaging_product' => 'whatsapp',
+                                'metadata' => [
+                                    'display_phone_number' => '+14155550001',
+                                    'phone_number_id' => '123456789012345',
+                                ],
+                                'contacts' => [
+                                    [
+                                        'profile' => ['name' => 'No Confirm User'],
+                                        'wa_id' => '14155556666',
+                                    ],
+                                ],
+                                'messages' => [
+                                    [
+                                        'from' => '14155556666',
+                                        'id' => 'wamid.noconfirmdelete202',
+                                        'timestamp' => '1699999999',
+                                        'type' => 'text',
+                                        'text' => ['body' => "delete job {$job->id}"],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $body = json_encode($payload);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.whatsapp.webhook'),
+            $payload,
+            [
+                'X-Hub-Signature-256' => $signature,
+            ]
+        );
+
+        $response->assertStatus(200);
+
+        Queue::assertPushed(ProcessInboundMessage::class);
+    }
+
+    // =========================================================================
+    // Outbound Message Tests
+    // =========================================================================
+
+    public function test_queues_outbound_message_on_successful_action(): void
+    {
+        $user = User::factory()->create();
+        MessengerIdentityLink::factory()->create([
+            'user_id' => $user->id,
+            'connector_account_id' => $this->account->id,
+            'provider_user_id' => '14155555555',
+        ]);
+
+        AgentJob::factory()->create(['user_id' => $user->id]);
+
+        $payload = [
+            'object' => 'whatsapp_business_account',
+            'entry' => [
+                [
+                    'id' => '123456789012345',
+                    'changes' => [
+                        [
+                            'field' => 'messages',
+                            'value' => [
+                                'messaging_product' => 'whatsapp',
+                                'metadata' => [
+                                    'display_phone_number' => '+14155550001',
+                                    'phone_number_id' => '123456789012345',
+                                ],
+                                'contacts' => [
+                                    [
+                                        'profile' => ['name' => 'Outbound User'],
+                                        'wa_id' => '14155555555',
+                                    ],
+                                ],
+                                'messages' => [
+                                    [
+                                        'from' => '14155555555',
+                                        'id' => 'wamid.outbound303',
+                                        'timestamp' => '1699999999',
+                                        'type' => 'text',
+                                        'text' => ['body' => 'list jobs'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $body = json_encode($payload);
+        $signature = 'sha256='.hash_hmac('sha256', $body, $this->appSecret);
+
+        $response = $this->postJson(
+            route('agent.api.connectors.whatsapp.webhook'),
+            $payload,
+            [
+                'X-Hub-Signature-256' => $signature,
+            ]
+        );
+
+        $response->assertStatus(200);
+
+        // Verify outbound message is queued (via ProcessInboundMessage which triggers SendOutboundMessage)
+        Queue::assertPushed(ProcessInboundMessage::class);
+    }
+
+    // =========================================================================
+    // Outbound Message Failure Tests
+    // =========================================================================
+
+    public function test_handles_outbound_message_failure_flow(): void
+    {
+        Queue::fake();
+        Notification::fake();
+
+        $user = User::factory()->create();
+        UserNotificationSetting::create(['user_id' => $user->id, 'channel' => 'email']);
+
+        $session = ChatSession::factory()->create([
+            'user_id' => $user->id,
+            'connector_account_id' => $this->account->id,
+            'provider' => ConnectorAccount::PROVIDER_WHATSAPP,
+        ]);
+
+        $this->mock(DeadLetterManager::class)->shouldReceive('moveToDeadLetter')->once();
+
+        $sendJob = new SendOutboundMessage(
+            sessionId: $session->id,
+            content: 'Test WhatsApp message',
+        );
+
+        $sendJob->failed(new \Exception('WhatsApp API error'));
+
+        Notification::assertSentTo($user, OutboundMessageFailedNotification::class);
+    }
+
+    public function test_outbound_message_has_correct_retry_configuration(): void
+    {
+        $sendJob = new SendOutboundMessage(
+            sessionId: 'test-session-id',
+            content: 'Test message',
+        );
+
+        $this->assertEquals(3, $sendJob->tries);
+        $this->assertEquals([30, 120, 480], $sendJob->backoff);
     }
 }

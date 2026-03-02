@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\Org\OrgDispatchDueRitualsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -40,3 +41,21 @@ Schedule::command('delegation:recompute-metrics')
 
 Schedule::command('nl-parse:cleanup')
     ->dailyAt('03:00');
+
+// Memory consolidation (every 2 hours when enabled)
+Schedule::command('memory:consolidate')
+    ->cron('0 */2 * * *')
+    ->withoutOverlapping()
+    ->when(fn () => config('memory.enabled'));
+
+// Memory pruning (daily at 03:30 with --force when enabled)
+Schedule::command('memory:prune --force')
+    ->dailyAt('03:30')
+    ->withoutOverlapping()
+    ->when(fn () => config('memory.enabled'));
+
+// Org ritual scheduling (every minute when org layer enabled)
+Schedule::job(new OrgDispatchDueRitualsJob)
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->when(fn () => config('agent.org.enabled'));

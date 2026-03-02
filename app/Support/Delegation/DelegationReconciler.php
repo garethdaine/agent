@@ -8,6 +8,7 @@ use App\Models\DelegationAttempt;
 use App\Models\DelegationGraph;
 use App\Models\DelegationTask;
 use App\Models\DelegationVerificationResult;
+use Carbon\Carbon;
 
 /**
  * Scheduled reconciliation service for the Delegation Engine.
@@ -22,6 +23,10 @@ use App\Models\DelegationVerificationResult;
  */
 class DelegationReconciler
 {
+    private const BACKOFF_DELAYS = [60, 300, 900]; // 1 min, 5 min, 15 min in seconds
+
+    private const MAX_RETRIES = 3;
+
     /**
      * Run all reconciliation tasks.
      */
@@ -74,11 +79,11 @@ class DelegationReconciler
     }
 
     /**
-     * Retry assignment for blocked tasks.
+     * Retry assignment for blocked tasks with exponential backoff.
      *
      * Tasks become blocked when no matching delegatee profile is available.
-     * This method attempts to re-assign them in case new profiles have become
-     * available since the initial assignment attempt.
+     * This method attempts to re-assign them using backoff delays of 1/5/15 minutes.
+     * After 3 failed retries, the task is marked as permanently failed.
      */
     private function retryBlockedTasks(): void
     {
@@ -87,12 +92,41 @@ class DelegationReconciler
             ->whereHas('graph', fn ($q) => $q->whereIn('status', DelegationGraph::ACTIVE_STATUSES))
             ->get();
 
-        // TODO: Integrate with DelegateeAssigner when available
-        // For now, this serves as a placeholder for the reconciliation loop
         foreach ($blockedTasks as $task) {
-            // The actual assignment would be handled by DelegateeAssigner
-            // which is called from DelegationCoordinator
-            // This method just identifies tasks that need retry
+            $metadata = $task->metadata_json ?? [];
+            $retryCount = $metadata['retry_count'] ?? 0;
+            $lastRetryAt = isset($metadata['last_retry_at'])
+                ? Carbon::parse($metadata['last_retry_at'])
+                : null;
+
+            // Mark permanently failed after max retries
+            if ($retryCount >= self::MAX_RETRIES) {
+                $task->update([
+                    'status' => DelegationTask::STATUS_FAILED,
+                    'finished_at' => now(),
+                    'error_code' => 'MAX_RETRIES_EXCEEDED',
+                    'error_summary' => 'Failed after '.self::MAX_RETRIES.' retry attempts',
+                ]);
+
+                continue;
+            }
+
+            // Check if backoff period has elapsed
+            $requiredDelay = self::BACKOFF_DELAYS[$retryCount] ?? 900;
+            if ($lastRetryAt !== null && $lastRetryAt->addSeconds($requiredDelay)->isFuture()) {
+                continue;
+            }
+
+            // Attempt re-assignment via DelegateeAssigner
+            app(DelegateeAssigner::class)->assign($task);
+
+            // Update retry metadata
+            $task->update([
+                'metadata_json' => array_merge($metadata, [
+                    'retry_count' => $retryCount + 1,
+                    'last_retry_at' => now()->toISOString(),
+                ]),
+            ]);
         }
     }
 
@@ -100,7 +134,10 @@ class DelegationReconciler
      * Handle stuck running graphs.
      *
      * Detects graphs that are in RUNNING status but have no active tasks
-     * and no incomplete work. These may indicate missed completion events.
+     * and no incomplete work. Transitions them to appropriate terminal states:
+     * - SUCCEEDED: all tasks succeeded
+     * - FAILED: any task failed
+     * - PARTIAL: mix of succeeded and cancelled (no failures)
      */
     private function handleStuckGraphs(): void
     {
@@ -116,15 +153,49 @@ class DelegationReconciler
                 ]);
             })
             ->where('updated_at', '<', now()->subMinutes(5))
+            ->with('tasks')
             ->get();
 
-        // These graphs may have missed completion events
-        // In a full implementation, we would fire the completion check
-        // For now, log for manual intervention
         foreach ($stuckGraphs as $graph) {
-            // TODO: Implement automatic completion detection
-            // This would analyze task states and determine if graph should
-            // transition to succeeded, failed, or partial
+            $tasks = $graph->tasks;
+
+            // Skip if no tasks (edge case)
+            if ($tasks->isEmpty()) {
+                continue;
+            }
+
+            // Check for any incomplete work (tasks not in terminal states)
+            $hasIncomplete = $tasks->whereNotIn('status', [
+                DelegationTask::STATUS_SUCCEEDED,
+                DelegationTask::STATUS_FAILED,
+                DelegationTask::STATUS_CANCELLED,
+            ])->isNotEmpty();
+
+            if ($hasIncomplete) {
+                continue; // Not actually stuck, has pending work
+            }
+
+            // Determine terminal state based on task outcomes
+            $allSucceeded = $tasks->every(fn ($t) => $t->status === DelegationTask::STATUS_SUCCEEDED);
+            $anyFailed = $tasks->contains(fn ($t) => $t->status === DelegationTask::STATUS_FAILED);
+
+            if ($allSucceeded) {
+                $graph->update([
+                    'status' => DelegationGraph::STATUS_SUCCEEDED,
+                    'finished_at' => now(),
+                ]);
+            } elseif ($anyFailed) {
+                $graph->update([
+                    'status' => DelegationGraph::STATUS_FAILED,
+                    'finished_at' => now(),
+                ]);
+            } else {
+                // Mix of succeeded and cancelled (no failures)
+                $graph->update([
+                    'status' => DelegationGraph::STATUS_PARTIAL,
+                    'finished_at' => now(),
+                ]);
+            }
         }
     }
 

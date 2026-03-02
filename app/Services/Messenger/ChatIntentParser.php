@@ -45,10 +45,17 @@ class ChatIntentParser
         $normalized = strtolower(trim($content));
 
         // Simple list commands
-        if (preg_match('/^(list|show|get)\s*(my\s+)?(jobs?|cron)$/i', $normalized)) {
+        if (preg_match('/^(list|show|get)\s*(my\s+)?((active|enabled|disabled|paused)\s+)?(jobs?|cron)$/i', $normalized, $matches)) {
+            $filterKeyword = strtolower(trim((string) ($matches[3] ?? '')));
+            $parameters = [];
+
+            if ($filterKeyword !== '') {
+                $parameters['filter'] = $filterKeyword;
+            }
+
             return new ParsedAction(
                 type: ChatActionType::JOBS_LIST,
-                parameters: [],
+                parameters: $parameters,
                 confidence: 1.0,
                 requiresConfirmation: false,
                 rawIntent: $content,
@@ -66,7 +73,7 @@ class ChatIntentParser
         }
 
         // Stop run commands
-        if (preg_match('/^stop\s+(?:run\s+)?([a-f0-9-]+)$/i', $normalized, $matches)) {
+        if (preg_match('/^stop\s+(?:run\s+)?([a-z0-9_-]+)$/i', $normalized, $matches)) {
             return new ParsedAction(
                 type: ChatActionType::RUNS_STOP,
                 parameters: ['run_id' => $matches[1]],
@@ -77,7 +84,7 @@ class ChatIntentParser
         }
 
         // Retry run commands
-        if (preg_match('/^retry\s+(?:run\s+)?([a-f0-9-]+)$/i', $normalized, $matches)) {
+        if (preg_match('/^retry\s+(?:run\s+)?([a-z0-9_-]+)$/i', $normalized, $matches)) {
             return new ParsedAction(
                 type: ChatActionType::RUNS_RETRY,
                 parameters: ['run_id' => $matches[1]],
@@ -88,7 +95,7 @@ class ChatIntentParser
         }
 
         // Run now commands
-        if (preg_match('/^run\s+(?:job\s+)?([a-f0-9-]+)(?:\s+now)?$/i', $normalized, $matches)) {
+        if (preg_match('/^run\s+(?:job\s+)?([a-z0-9_-]+)(?:\s+now)?$/i', $normalized, $matches)) {
             return new ParsedAction(
                 type: ChatActionType::RUNS_RUN_NOW,
                 parameters: ['job_id' => $matches[1]],

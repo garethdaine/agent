@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\DelegationAttemptCompleted;
+use App\Models\DelegateeProfile;
 use App\Models\DelegationAttempt;
 use App\Models\DelegationTask;
 use App\Notifications\DelegationEscalationNotification;
@@ -104,7 +105,11 @@ class DelegationRecoveryHandler
         // 2. If retry limit exceeded or non-transient: try re-delegation
         // 3. If re-delegation limit exceeded: escalate
 
-        if ($errorType === 'transient' && $sameProfileAttempts < $retryLimit) {
+        if (
+            $errorType === 'transient'
+            && $redelegationCount === 0
+            && $sameProfileAttempts < $retryLimit
+        ) {
             // Retry on same delegatee
             $this->retryOnSameDelegatee($task, $attempt->profile);
 
@@ -201,9 +206,17 @@ class DelegationRecoveryHandler
 
         // If the same profile was assigned, we need to try to find another
         if ($result->profile->id === $excludeProfileId) {
-            // The assigner returned the same profile - we could enhance the assigner
-            // to support exclusions, but for now, check if we have alternatives
-            return false;
+            $alternative = $this->findAlternativeProfile($task, $excludeProfileId);
+            if ($alternative === null) {
+                return false;
+            }
+
+            $result = (object) [
+                'profile' => $alternative,
+                'reasoning' => [
+                    'strategy' => 'exclude_previous_profile_fallback',
+                ],
+            ];
         }
 
         // Update task with new assignment
@@ -219,6 +232,26 @@ class DelegationRecoveryHandler
         $this->spawner->spawn($task, $result->profile);
 
         return true;
+    }
+
+    private function findAlternativeProfile(DelegationTask $task, int $excludeProfileId): ?DelegateeProfile
+    {
+        $requiredCapability = $task->contract_json['required_capability'] ?? null;
+
+        $query = DelegateeProfile::query()
+            ->where('user_id', $task->graph->user_id)
+            ->where('is_active', true)
+            ->where('id', '!=', $excludeProfileId);
+
+        if (is_string($requiredCapability) && $requiredCapability !== '') {
+            $query->whereHas('capabilities', function ($capabilityQuery) use ($requiredCapability): void {
+                $capabilityQuery
+                    ->where('slug', $requiredCapability)
+                    ->where('is_active', true);
+            });
+        }
+
+        return $query->orderByDesc('id')->first();
     }
 
     /**

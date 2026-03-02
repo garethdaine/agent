@@ -5,7 +5,7 @@ import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { Search, Database, MessageSquare, Settings } from 'lucide-vue-next';
+import { Search, Database, MessageSquare, Settings, Brain } from 'lucide-vue-next';
 
 const tools = [
     {
@@ -35,6 +35,13 @@ const tools = [
         title: 'Feature flag settings',
         description: 'Enable or disable runtime feature flags without changing env/config files.',
         icon: Settings,
+    },
+    {
+        route: 'tools.memory.settings',
+        category: 'Agent Memory',
+        title: 'Memory settings & diagnostics',
+        description: 'Configure memory providers, view usage, and manage memory retention.',
+        icon: Brain,
     },
 ];
 </script>

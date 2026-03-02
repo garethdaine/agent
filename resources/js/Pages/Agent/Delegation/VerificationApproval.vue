@@ -169,7 +169,7 @@ onMounted(load);
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-foreground mb-2">Notes (optional)</label>
-                                <Textarea v-model="notes" rows="4" placeholder="Add any notes about your decision..." />
+                                <Textarea v-model="notes" :rows="4" placeholder="Add any notes about your decision..." />
                             </div>
                         </CardContent>
                     </Card>

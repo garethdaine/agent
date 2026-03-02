@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Messenger\Gateway;
 
 use App\Messenger\Gateway\Contracts\GatewayWorkerInterface;
-use App\Messenger\Gateway\Enums\WorkerHealthStatus;
 use App\Messenger\Gateway\Workers\DiscordGatewayWorker;
 use App\Messenger\Gateway\Workers\SlackSocketWorker;
 use App\Messenger\Gateway\Workers\TelegramPollingWorker;
 use App\Models\ConnectorAccount;
 use Closure;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
@@ -46,8 +46,6 @@ class MessengerGatewayManager
 
     /**
      * Factory for creating workers (injectable for testing).
-     *
-     * @var Closure|null
      */
     private ?Closure $workerFactory = null;
 
@@ -325,10 +323,30 @@ class MessengerGatewayManager
      */
     public function checkCredentialChanges(): void
     {
+        $localConnectors = ConnectorAccount::localMode()->get()->keyBy('id');
+
+        // Add workers for newly-created local-mode connectors.
+        foreach ($localConnectors as $accountId => $account) {
+            if (isset($this->workers[$accountId])) {
+                continue;
+            }
+
+            try {
+                $this->addWorker($account);
+            } catch (\Throwable $e) {
+                Log::error('Failed to add worker for new local connector', [
+                    'connector_id' => $accountId,
+                    'provider' => $account->provider,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         foreach (array_keys($this->workers) as $accountId) {
-            $account = ConnectorAccount::find($accountId);
+            /** @var ConnectorAccount|null $account */
+            $account = $localConnectors->get($accountId);
             if (! $account) {
-                // Account was deleted, remove worker
+                // Account was deleted or switched out of local mode.
                 $this->removeWorker($accountId);
 
                 continue;
@@ -351,6 +369,8 @@ class MessengerGatewayManager
      */
     public function performHealthCheck(): void
     {
+        Cache::put('messenger_gateway_heartbeat', now(), 300);
+
         foreach ($this->workers as $accountId => $worker) {
             try {
                 $status = $worker->health();
@@ -391,17 +411,17 @@ class MessengerGatewayManager
             ConnectorAccount::PROVIDER_SLACK => new SlackSocketWorker(
                 $account,
                 $this->loop,
-                new ReconnectionStrategy(),
+                new ReconnectionStrategy,
             ),
             ConnectorAccount::PROVIDER_TELEGRAM => new TelegramPollingWorker(
                 $account,
                 $this->loop,
-                new ReconnectionStrategy(),
+                new ReconnectionStrategy,
             ),
             ConnectorAccount::PROVIDER_DISCORD => new DiscordGatewayWorker(
                 $account,
                 $this->loop,
-                new ReconnectionStrategy(),
+                new ReconnectionStrategy,
             ),
             default => throw new RuntimeException(
                 "No worker implementation for provider: {$account->provider}"

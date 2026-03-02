@@ -3,7 +3,10 @@
 namespace App\Http\Middleware;
 
 use App\Support\Agent\FeatureFlagManager;
+use App\Support\Notifications\NotificationPresenter;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
 
@@ -38,6 +41,40 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
             'delegationEnabled' => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::DELEGATION_UI_ENABLED),
+            'orgLayerEnabled' => app(FeatureFlagManager::class)->isEnabled(FeatureFlagManager::ORG_ENABLED)
+                || config('agent.org.enabled', false),
+            'notifications' => fn () => $this->notificationPayload($request),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function notificationPayload(Request $request): array
+    {
+        $user = $request->user();
+
+        if ($user === null || ! Schema::hasTable('notifications')) {
+            return [
+                'notifications' => [],
+                'unread_count' => 0,
+            ];
+        }
+
+        /** @var NotificationPresenter $presenter */
+        $presenter = app(NotificationPresenter::class);
+
+        $notifications = $user->notifications()
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->map(fn (DatabaseNotification $notification): array => $presenter->present($notification))
+            ->values()
+            ->all();
+
+        return [
+            'notifications' => $notifications,
+            'unread_count' => $user->unreadNotifications()->count(),
         ];
     }
 }

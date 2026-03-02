@@ -14,12 +14,20 @@ use App\Http\Controllers\Api\V1\InterrogationSessionController;
 use App\Http\Controllers\Api\V1\InterrogationSettingsController;
 use App\Http\Controllers\Api\V1\InterrogationTaskProviderController;
 use App\Http\Controllers\Api\V1\InterrogationTechStackController;
+use App\Http\Controllers\Api\V1\Memory\MemoryCoreBlockController;
+use App\Http\Controllers\Api\V1\Memory\MemoryDiagnosticsController;
+use App\Http\Controllers\Api\V1\Memory\MemoryRetrievalController;
+use App\Http\Controllers\Api\V1\Memory\MemorySettingsController;
+use App\Http\Controllers\Api\V1\Memory\MemoryWorkingController;
 use App\Http\Controllers\Api\V1\Messenger\MessengerHealthController;
 use App\Http\Controllers\Api\V1\Messenger\MessengerMetricsController;
 use App\Http\Controllers\Api\V1\Messenger\WebhookController;
 use App\Http\Controllers\Api\V1\MessengerConnectorController;
+use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\Org;
 use App\Http\Controllers\Internal\NlScheduleController;
 use App\Http\Middleware\AgentApiVersionHeader;
+use App\Http\Middleware\Memory\MemoryEnabled;
 use App\Http\Middleware\Messenger\CorrelationId;
 use App\Http\Middleware\Messenger\ReplayProtection;
 use App\Http\Middleware\Messenger\VerifyWebhookSignature;
@@ -60,6 +68,10 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/health/messenger', [MessengerHealthController::class, 'index']);
 
             Route::get('/messenger/metrics', [MessengerMetricsController::class, 'index']);
+            Route::get('/notifications', [NotificationController::class, 'index']);
+            Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->middleware('throttle:agent-mutations');
+            Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->middleware('throttle:agent-mutations');
+            Route::delete('/notifications', [NotificationController::class, 'clearAll'])->middleware('throttle:agent-mutations');
             Route::get('/backups/settings', [AgentBackupSettingsController::class, 'show']);
             Route::put('/backups/settings', [AgentBackupSettingsController::class, 'update'])->middleware('throttle:agent-mutations');
             Route::post('/backups/run-now', [AgentBackupSettingsController::class, 'runNow'])->middleware('throttle:agent-mutations');
@@ -145,6 +157,104 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::post('/messenger/connectors/{id}/test', [MessengerConnectorController::class, 'test'])
                 ->middleware('throttle:agent-mutations');
 
+            // Memory settings routes — always accessible so users can configure
+            // provider keys and view capabilities before enabling the full system.
+            Route::prefix('memory')->group(function (): void {
+                Route::get('/settings', [MemorySettingsController::class, 'index'])
+                    ->middleware('throttle:memory-reads');
+                Route::put('/settings', [MemorySettingsController::class, 'update'])
+                    ->middleware('throttle:memory-writes');
+                Route::post('/settings/test-connection', [MemorySettingsController::class, 'testConnection'])
+                    ->middleware('throttle:memory-writes');
+                Route::get('/settings/capabilities', [MemorySettingsController::class, 'capabilities'])
+                    ->middleware('throttle:memory-reads');
+            });
+
+            // Memory operational routes — gated by MemoryEnabled middleware
+            Route::prefix('memory')->middleware([MemoryEnabled::class])->group(function (): void {
+                // Core Blocks
+                Route::get('/core-blocks', [MemoryCoreBlockController::class, 'index'])
+                    ->middleware('throttle:memory-reads');
+                Route::get('/core-blocks/{key}', [MemoryCoreBlockController::class, 'show'])
+                    ->middleware('throttle:memory-reads');
+                Route::put('/core-blocks/{key}', [MemoryCoreBlockController::class, 'update'])
+                    ->middleware('throttle:memory-writes');
+                Route::delete('/core-blocks/{key}', [MemoryCoreBlockController::class, 'destroy'])
+                    ->middleware('throttle:memory-writes');
+
+                // Retrieval
+                Route::post('/retrieve', [MemoryRetrievalController::class, 'retrieve'])
+                    ->middleware('throttle:memory-reads');
+
+                // Working Memory
+                Route::post('/working/append', [MemoryWorkingController::class, 'append'])
+                    ->middleware('throttle:memory-writes');
+                Route::get('/working/{runId}', [MemoryWorkingController::class, 'show'])
+                    ->middleware('throttle:memory-reads');
+
+                // Diagnostics
+                Route::get('/stats', [MemoryDiagnosticsController::class, 'stats'])
+                    ->middleware('throttle:memory-reads');
+            });
+
+            // Org layer routes (gated by feature flag)
+            Route::prefix('org')
+                ->middleware(['org'])
+                ->group(function (): void {
+                    Route::get('/agents', [Org\OrgAgentController::class, 'index']);
+                    Route::post('/agents', [Org\OrgAgentController::class, 'store'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::get('/agents/{id}', [Org\OrgAgentController::class, 'show']);
+                    Route::put('/agents/{id}', [Org\OrgAgentController::class, 'update'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::delete('/agents/{id}', [Org\OrgAgentController::class, 'destroy'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::post('/agents/{id}/restore', [Org\OrgAgentController::class, 'restore'])
+                        ->middleware('throttle:agent-mutations');
+
+                    // Ritual templates
+                    Route::get('/rituals', [Org\OrgRitualController::class, 'index']);
+                    Route::post('/rituals', [Org\OrgRitualController::class, 'store'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::get('/rituals/{id}', [Org\OrgRitualController::class, 'show']);
+                    Route::put('/rituals/{id}', [Org\OrgRitualController::class, 'update'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::delete('/rituals/{id}', [Org\OrgRitualController::class, 'destroy'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::post('/rituals/{id}/restore', [Org\OrgRitualController::class, 'restore'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::post('/rituals/{id}/run', [Org\OrgRitualController::class, 'run'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::post('/rituals/{id}/pause', [Org\OrgRitualController::class, 'pause'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::post('/rituals/{id}/resume', [Org\OrgRitualController::class, 'resume'])
+                        ->middleware('throttle:agent-mutations');
+
+                    // Ritual runs
+                    Route::get('/ritual-runs', [Org\OrgRitualRunController::class, 'index']);
+                    Route::get('/ritual-runs/{id}', [Org\OrgRitualRunController::class, 'show']);
+                    Route::post('/ritual-runs/{id}/retry', [Org\OrgRitualRunController::class, 'retry'])
+                        ->middleware('throttle:agent-mutations');
+
+                    // Council templates
+                    Route::get('/councils', [Org\OrgCouncilController::class, 'index']);
+                    Route::post('/councils', [Org\OrgCouncilController::class, 'store'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::get('/councils/{id}', [Org\OrgCouncilController::class, 'show']);
+                    Route::put('/councils/{id}', [Org\OrgCouncilController::class, 'update'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::delete('/councils/{id}', [Org\OrgCouncilController::class, 'destroy'])
+                        ->middleware('throttle:agent-mutations');
+
+                    // Cost governance
+                    Route::get('/costs/summary', [Org\OrgCostController::class, 'summary']);
+
+                    // Escalations
+                    Route::get('/escalations', [Org\OrgEscalationController::class, 'index']);
+                    Route::post('/escalations/{id}/resolve', [Org\OrgEscalationController::class, 'resolve'])
+                        ->middleware('throttle:agent-mutations');
+                });
+
             // Delegation routes (gated by feature flag)
             Route::prefix('delegation')->middleware(['delegation'])->group(function (): void {
                 // Graphs - CRUD
@@ -191,7 +301,9 @@ Route::middleware([AgentApiVersionHeader::class])
                 Route::post('/discord/webhook', [WebhookController::class, 'handleDiscord'])
                     ->defaults('provider', 'discord')
                     ->name('agent.api.connectors.discord.webhook');
-                Route::post('/whatsapp/webhook', [WebhookController::class, 'handleWhatsApp'])
+                // WhatsApp requires both GET (verification) and POST (events)
+                // GET verification doesn't have signature, so exclude signature middleware
+                Route::match(['get', 'post'], '/whatsapp/webhook', [WebhookController::class, 'handleWhatsApp'])
                     ->defaults('provider', 'whatsapp')
                     ->name('agent.api.connectors.whatsapp.webhook');
             });

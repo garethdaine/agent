@@ -4,6 +4,10 @@ const STRUCTURED_ENVELOPE_MARKER_PATTERN = /"type"\s*:\s*"(?:stream_event|assist
 const ENVELOPE_CARRY_LIMIT = 32_768;
 const DEDUPE_WINDOW_EVENTS = 80;
 const DEDUPE_MIN_CHARS = 24;
+const ESCAPED_LINE_BREAK_PATTERN = /\\r\\n|\\n|\\r/g;
+const LINE_NUMBERED_SNIPPET_LINE_PATTERN = /^\s*(\d+)\s*(?:→|->|=>)\s?(.*)$/u;
+const LINE_NUMBERED_PREFIX_PATTERN = /^\s*\d+\s*\|\s?/u;
+const LINE_NUMBERED_PREFIX_CAPTURE_PATTERN = /^\s*(\d+)\s*\|\s?/u;
 
 const stringifyPayload = (payload) => {
     if (typeof payload === 'string') {
@@ -45,6 +49,126 @@ const parseJson = (raw) => {
     } catch {
         return null;
     }
+};
+
+const parseChunkedTextPayload = (raw) => {
+    const parsed = parseJson(raw);
+    if (!isRecord(parsed) || typeof parsed.text !== 'string' || typeof parsed.continuation !== 'boolean') {
+        return null;
+    }
+
+    return {
+        text: parsed.text,
+        continuation: parsed.continuation,
+    };
+};
+
+const decodeEscapedLineBreaks = (value) => {
+    if (typeof value !== 'string' || value === '') {
+        return value;
+    }
+
+    const escapedBreaks = value.match(ESCAPED_LINE_BREAK_PATTERN);
+    if (!Array.isArray(escapedBreaks) || escapedBreaks.length === 0) {
+        return value;
+    }
+
+    const looksLikeStructuredEscapedBlock = /\\n\s{0,4}(?:\d+\s*(?:→|->|=>)|#{1,6}\s|[-*]\s|\d+\.\s)/u.test(value);
+    if (escapedBreaks.length < 2 && !looksLikeStructuredEscapedBlock && !value.includes('→\\n')) {
+        return value;
+    }
+
+    return value
+        .replace(/\\r\\n/g, '\n')
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '\n')
+        .replace(/\\t/g, '\t')
+        .replace(/\\"/g, '"');
+};
+
+const normalizeLineNumberedSnippet = (value) => {
+    if (typeof value !== 'string' || value.trim() === '') {
+        return value;
+    }
+
+    const lines = value.split('\n');
+    let transformed = 0;
+
+    const normalizedLines = lines.map((line) => {
+        const match = line.match(LINE_NUMBERED_SNIPPET_LINE_PATTERN);
+        if (!match) {
+            return line;
+        }
+
+        transformed += 1;
+        const lineNumber = String(match[1] ?? '').trim();
+        const content = String(match[2] ?? '').replace(/\s+$/g, '');
+
+        return content === '' ? `${lineNumber} |` : `${lineNumber} | ${content}`;
+    });
+
+    if (transformed < 3) {
+        return value;
+    }
+
+    const cleanedLines = normalizedLines.filter((line) => line.trim() !== '→');
+    return cleanedLines.join('\n');
+};
+
+const stripLineNumberPrefixes = (value) => {
+    if (typeof value !== 'string' || value.trim() === '') {
+        return value;
+    }
+
+    const lines = value.split('\n');
+    let transformed = 0;
+
+    const stripped = lines.map((line) => {
+        if (!LINE_NUMBERED_PREFIX_PATTERN.test(line)) {
+            return line;
+        }
+
+        transformed += 1;
+        return line.replace(LINE_NUMBERED_PREFIX_PATTERN, '');
+    });
+
+    if (transformed < 3) {
+        return value;
+    }
+
+    return stripped.join('\n');
+};
+
+const summarizeReadExcerptPayload = (value, eventType) => {
+    if (eventType !== 'stdout' || typeof value !== 'string' || value.trim() === '') {
+        return null;
+    }
+
+    const lines = value.split('\n');
+    const lineNumbers = lines
+        .map((line) => {
+            const match = line.match(LINE_NUMBERED_PREFIX_CAPTURE_PATTERN);
+            return match ? Number(match[1]) : null;
+        })
+        .filter((lineNumber) => Number.isFinite(lineNumber));
+
+    if (lineNumbers.length < 8) {
+        return null;
+    }
+
+    const markdownCandidate = stripLineNumberPrefixes(value);
+    if (!looksLikeMarkdown(markdownCandidate)) {
+        return null;
+    }
+
+    const firstLine = Math.min(...lineNumbers);
+    const lastLine = Math.max(...lineNumbers);
+
+    if (Number.isFinite(firstLine) && Number.isFinite(lastLine) && lastLine >= firstLine) {
+        return `Read excerpt omitted (${lineNumbers.length} lines, source lines ${firstLine}-${lastLine})`;
+    }
+
+    return `Read excerpt omitted (${lineNumbers.length} lines)`;
 };
 
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -280,16 +404,16 @@ const normalizeOutputPayload = (eventType, rawPayload) => {
         return rawPayload;
     }
 
+    let normalizedPayload = rawPayload;
     const parsed = parseJson(rawPayload);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        return rawPayload;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && typeof parsed.text === 'string') {
+        normalizedPayload = parsed.text;
     }
 
-    if (typeof parsed.text === 'string') {
-        return parsed.text;
-    }
+    normalizedPayload = decodeEscapedLineBreaks(normalizedPayload);
+    normalizedPayload = normalizeLineNumberedSnippet(normalizedPayload);
 
-    return rawPayload;
+    return normalizedPayload;
 };
 
 const looksLikeMarkdown = (value) => {
@@ -437,8 +561,29 @@ const flushTextBuffer = (formattedEntries, streamTextBuffers, streamBufferKey, {
         return;
     }
 
-    const payload = partial ? `${text} …` : text;
-    const markdown = looksLikeMarkdown(text);
+    const normalizedText = normalizeOutputPayload(buffer.eventType, text);
+    const readExcerptSummary = summarizeReadExcerptPayload(normalizedText, buffer.eventType);
+
+    if (readExcerptSummary !== null) {
+        formattedEntries.push(makeFormattedEntry({
+            key: partial ? `${buffer.key}:partial` : buffer.key,
+            prefix: buffer.prefix,
+            payload: readExcerptSummary,
+            tone: 'structured',
+            format: 'pre',
+        }));
+
+        if (state && state.lastTextBySession instanceof Map) {
+            state.lastTextBySession.set(buffer.sessionId, readExcerptSummary);
+        }
+
+        streamTextBuffers.delete(streamBufferKey);
+        return;
+    }
+
+    const markdownPayload = stripLineNumberPrefixes(normalizedText);
+    const payload = partial ? `${markdownPayload} …` : markdownPayload;
+    const markdown = looksLikeMarkdown(markdownPayload);
 
     formattedEntries.push(makeFormattedEntry({
         key: partial ? `${buffer.key}:partial` : buffer.key,
@@ -752,6 +897,63 @@ const handleStructuredEnvelopeFragments = (context, normalizedPayload, formatted
     return handled || hasIncompleteJson || existingCarry !== '' || hasStructuredEnvelopeMarkers(rawPayload);
 };
 
+const stitchChunkedOutputEntries = (entries) => {
+    if (!Array.isArray(entries) || entries.length === 0) {
+        return [];
+    }
+
+    const stitched = [];
+    let pending = null;
+
+    const flushPending = () => {
+        if (!pending) {
+            return;
+        }
+
+        stitched.push(pending);
+        pending = null;
+    };
+
+    entries.forEach((entry) => {
+        const rawPayload = stringifyPayload(entry?.payload);
+        const chunk = parseChunkedTextPayload(rawPayload);
+
+        if (!chunk) {
+            flushPending();
+            stitched.push(entry);
+            return;
+        }
+
+        if (!chunk.continuation) {
+            flushPending();
+            pending = {
+                ...entry,
+                payload: chunk.text,
+            };
+
+            return;
+        }
+
+        if (!pending || String(pending?.event_type ?? '') !== String(entry?.event_type ?? '')) {
+            flushPending();
+            stitched.push({
+                ...entry,
+                payload: chunk.text,
+            });
+            return;
+        }
+
+        pending = {
+            ...pending,
+            payload: `${String(pending.payload ?? '')}${chunk.text}`,
+        };
+    });
+
+    flushPending();
+
+    return stitched;
+};
+
 export const formatAgentRunEventEntry = (entry) => {
     const context = buildEntryContext(entry);
 
@@ -796,11 +998,25 @@ export const formatAgentRunEventEntry = (entry) => {
         });
     }
 
-    if ((context.eventType === 'stdout' || context.eventType === 'stderr') && looksLikeMarkdown(normalizedPayload)) {
+    const readExcerptSummary = summarizeReadExcerptPayload(normalizedPayload, context.eventType);
+    if (readExcerptSummary !== null) {
         return makeFormattedEntry({
             key: context.key,
             prefix: context.prefix,
-            payload: normalizedPayload,
+            payload: readExcerptSummary,
+            tone: 'structured',
+            format: 'pre',
+            reasoningStep: context.reasoningStep,
+        });
+    }
+
+    const markdownCandidate = stripLineNumberPrefixes(normalizedPayload);
+
+    if ((context.eventType === 'stdout' || context.eventType === 'stderr') && looksLikeMarkdown(markdownCandidate)) {
+        return makeFormattedEntry({
+            key: context.key,
+            prefix: context.prefix,
+            payload: markdownCandidate,
             tone: context.eventType === 'stderr' ? 'stderr' : 'markdown',
             format: 'markdown',
             reasoningStep: context.reasoningStep,
@@ -822,6 +1038,7 @@ export const formatAgentRunEventEntries = (entries) => {
         return [];
     }
 
+    const stitchedEntries = stitchChunkedOutputEntries(entries);
     const formattedEntries = [];
     const state = {
         streamTextBuffers: new Map(),
@@ -829,7 +1046,7 @@ export const formatAgentRunEventEntries = (entries) => {
         envelopeCarryByType: new Map(),
     };
 
-    entries.forEach((entry) => {
+    stitchedEntries.forEach((entry) => {
         const context = buildEntryContext(entry);
 
         if (context.eventType === 'lifecycle') {

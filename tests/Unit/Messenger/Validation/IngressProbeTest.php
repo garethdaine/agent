@@ -37,7 +37,7 @@ class IngressProbeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->probe = new IngressProbe();
+        $this->probe = new IngressProbe;
     }
 
     // =========================================================================
@@ -292,8 +292,11 @@ class IngressProbeTest extends TestCase
         $this->assertStringContainsString('PONG', $result->diagnostic);
     }
 
-    public function test_discord_ping_pong_fails_with_signature_error(): void
+    public function test_discord_ping_pong_returns_guidance_for_signature_error(): void
     {
+        // Discord 401 is expected behavior for unsigned test requests.
+        // The endpoint correctly rejects unsigned requests, which means
+        // signature verification is working. This is non-blocking guidance.
         Http::fake([
             'https://example.com/webhook/discord*' => Http::response([
                 'code' => 0,
@@ -306,8 +309,11 @@ class IngressProbeTest extends TestCase
             ['public_key' => str_repeat('a', 64)]
         );
 
-        $this->assertFalse($result->success);
-        $this->assertStringContainsString('signature', strtolower($result->diagnostic));
+        // 401 should return success=true with guidance, not failure
+        $this->assertTrue($result->success);
+        $this->assertNotNull($result->diagnostic);
+        $this->assertStringContainsString('401', $result->diagnostic);
+        $this->assertStringContainsString('verification', strtolower($result->diagnostic));
     }
 
     // =========================================================================

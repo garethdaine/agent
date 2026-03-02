@@ -25,12 +25,16 @@ class ConnectorAccountFactory extends Factory
             'id' => Str::uuid()->toString(),
             'provider' => $provider,
             'name' => $this->faker->company().' Workspace',
-            'credentials' => $this->getDefaultCredentials($provider),
+            'credentials' => fn (array $attributes) => $this->getDefaultCredentials(
+                (string) ($attributes['provider'] ?? $provider)
+            ),
             'webhook_secret' => Str::random(32),
             'connection_mode' => ConnectorAccount::MODE_WEBHOOK,
             'status' => ConnectorAccount::STATUS_CONNECTED,
             'runtime_state' => WorkerHealthStatus::Disconnected,
-            'config' => $this->getDefaultConfig($provider),
+            'config' => fn (array $attributes) => $this->getDefaultConfig(
+                (string) ($attributes['provider'] ?? $provider)
+            ),
             'account_key' => Str::random(16),
         ];
     }
@@ -68,6 +72,20 @@ class ConnectorAccountFactory extends Factory
                 'public_key' => Str::random(64),
             ],
             'config' => $this->getDefaultConfig(ConnectorAccount::PROVIDER_DISCORD),
+        ]);
+    }
+
+    public function whatsapp(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'provider' => ConnectorAccount::PROVIDER_WHATSAPP,
+            'credentials' => [
+                'access_token' => 'EAAx'.Str::random(100),
+                'phone_number_id' => (string) $this->faker->numberBetween(100000000000000, 999999999999999),
+                'app_secret' => Str::random(32),
+                'verify_token' => Str::random(24),
+            ],
+            'config' => $this->getDefaultConfig(ConnectorAccount::PROVIDER_WHATSAPP),
         ]);
     }
 
@@ -112,6 +130,12 @@ class ConnectorAccountFactory extends Factory
             ConnectorAccount::PROVIDER_DISCORD => [
                 'bot_token' => 'MTEyMzQ1Njc4OTAxMjM0NTY3OA.GxYmZc.'.Str::random(35),
                 'application_id' => (string) $this->faker->numberBetween(1000000000000000000, 9999999999999999999),
+            ],
+            ConnectorAccount::PROVIDER_WHATSAPP => [
+                'access_token' => 'EAAx'.Str::random(100),
+                'phone_number_id' => (string) $this->faker->numberBetween(100000000000000, 999999999999999),
+                'app_secret' => Str::random(32),
+                'verify_token' => Str::random(24),
             ],
             default => [],
         };
@@ -159,6 +183,17 @@ class ConnectorAccountFactory extends Factory
                 ],
                 'threading_mode' => 'native',
                 'threading_fallback' => 'edit',
+            ]),
+            ConnectorAccount::PROVIDER_WHATSAPP => array_merge($baseConfig, [
+                'signature_verification' => [
+                    'scheme' => 'hmac_sha256',
+                ],
+                'replay_protection' => [
+                    'strategy' => 'event_id',
+                    'dedupe_ttl_seconds' => 3600,
+                ],
+                'threading_mode' => 'reply_to',
+                'threading_fallback' => 'quote',
             ]),
             default => $baseConfig,
         };

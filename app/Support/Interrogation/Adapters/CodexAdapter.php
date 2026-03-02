@@ -809,44 +809,106 @@ class CodexAdapter implements InterrogationRunnerAdapter
             return null;
         }
 
-        foreach ($candidates as $candidate) {
-            if ($this->looksLikeStructuredPayload($candidate)) {
-                return $candidate;
-            }
+        $structuredCandidates = [];
 
-            if (is_array($candidate['structured_output'] ?? null) && $this->looksLikeStructuredPayload($candidate['structured_output'])) {
-                return $candidate['structured_output'];
-            }
-
-            if (is_array($candidate['result'] ?? null) && $this->looksLikeStructuredPayload($candidate['result'])) {
-                return $candidate['result'];
-            }
+        foreach ($candidates as $position => $candidate) {
+            $this->collectStructuredPayloadCandidate($structuredCandidates, $candidate, $position * 10);
+            $this->collectStructuredPayloadCandidate($structuredCandidates, $candidate['structured_output'] ?? null, ($position * 10) + 1);
+            $this->collectStructuredPayloadCandidate($structuredCandidates, $candidate['result'] ?? null, ($position * 10) + 2);
 
             $item = $candidate['item'] ?? null;
-            if (is_array($item)) {
-                if (is_array($item['structured_output'] ?? null) && $this->looksLikeStructuredPayload($item['structured_output'])) {
-                    return $item['structured_output'];
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $this->collectStructuredPayloadCandidate($structuredCandidates, $item['structured_output'] ?? null, ($position * 10) + 3);
+            $this->collectStructuredPayloadCandidate($structuredCandidates, $item['result'] ?? null, ($position * 10) + 4);
+
+            foreach (['text', 'message', 'content'] as $offset => $field) {
+                $text = $item[$field] ?? null;
+                if (! is_string($text) || trim($text) === '') {
+                    continue;
                 }
 
-                if (is_array($item['result'] ?? null) && $this->looksLikeStructuredPayload($item['result'])) {
-                    return $item['result'];
-                }
-
-                foreach (['text', 'message', 'content'] as $field) {
-                    $text = $item[$field] ?? null;
-                    if (! is_string($text) || trim($text) === '') {
-                        continue;
-                    }
-
-                    $parsedText = json_decode(trim($text), true);
-                    if (is_array($parsedText) && $this->looksLikeStructuredPayload($parsedText)) {
-                        return $parsedText;
-                    }
-                }
+                $parsedText = json_decode(trim($text), true);
+                $this->collectStructuredPayloadCandidate(
+                    $structuredCandidates,
+                    $parsedText,
+                    ($position * 10) + 5 + $offset
+                );
             }
         }
 
+        if ($structuredCandidates !== []) {
+            return $this->bestStructuredPayload($structuredCandidates);
+        }
+
         return $candidates[array_key_last($candidates)] ?? null;
+    }
+
+    /**
+     * @param  array<int, array{payload:array<string, mixed>,position:int}>  $bucket
+     */
+    private function collectStructuredPayloadCandidate(array &$bucket, mixed $value, int $position): void
+    {
+        if (! is_array($value) || ! $this->looksLikeStructuredPayload($value)) {
+            return;
+        }
+
+        $bucket[] = [
+            'payload' => $value,
+            'position' => $position,
+        ];
+    }
+
+    /**
+     * @param  array<int, array{payload:array<string, mixed>,position:int}>  $structuredCandidates
+     * @return array<string, mixed>
+     */
+    private function bestStructuredPayload(array $structuredCandidates): array
+    {
+        usort($structuredCandidates, function (array $left, array $right): int {
+            $scoreComparison = $this->structuredPayloadScore($left['payload']) <=> $this->structuredPayloadScore($right['payload']);
+            if ($scoreComparison !== 0) {
+                return $scoreComparison;
+            }
+
+            return $left['position'] <=> $right['position'];
+        });
+
+        $best = end($structuredCandidates);
+
+        return is_array($best['payload'] ?? null) ? $best['payload'] : [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function structuredPayloadScore(array $payload): int
+    {
+        $score = 0;
+
+        foreach (['question_text', 'question', 'summary_markdown', 'summary', 'plan_markdown', 'plan', 'tasks'] as $key) {
+            if (! array_key_exists($key, $payload)) {
+                continue;
+            }
+
+            $score += 10;
+
+            if (is_string($payload[$key])) {
+                $score += min(300, mb_strlen(trim((string) $payload[$key])));
+            } elseif (is_array($payload[$key])) {
+                $score += min(120, count($payload[$key]) * 6);
+            }
+        }
+
+        foreach (['question_id', 'answer_type', 'options', 'reasoning', 'category', 'progress_estimate', 'is_complete', 'cli_session_id'] as $key) {
+            if (array_key_exists($key, $payload)) {
+                $score += 3;
+            }
+        }
+
+        return $score;
     }
 
     /**

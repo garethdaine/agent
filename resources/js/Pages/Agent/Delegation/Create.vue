@@ -137,7 +137,7 @@ const create = async () => {
 
                         <div class="space-y-2">
                             <label class="block text-sm font-medium text-foreground">Description (optional)</label>
-                            <Textarea v-model="description" rows="2" placeholder="Description of what this graph does..." />
+                            <Textarea v-model="description" :rows="2" placeholder="Description of what this graph does..." />
                         </div>
 
                         <div class="flex gap-4 border-b border-border">

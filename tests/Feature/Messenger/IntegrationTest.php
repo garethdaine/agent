@@ -3,7 +3,7 @@
 namespace Tests\Feature\Messenger;
 
 use App\Jobs\Messenger\ProcessInboundMessage;
-use App\Jobs\Messenger\SendOutboundMessage;
+use App\Jobs\Messenger\SendAccountLinkPrompt;
 use App\Models\AgentJob;
 use App\Models\ChatAction;
 use App\Models\ChatMessage;
@@ -279,7 +279,7 @@ class IntegrationTest extends TestCase
     {
         // 1. Simulate: Webhook from unknown Slack user
         Queue::fake();
-        Bus::fake([SendOutboundMessage::class]);
+        Bus::fake([SendAccountLinkPrompt::class]);
 
         $timestamp = now()->timestamp;
         $eventPayload = [
@@ -322,7 +322,7 @@ class IntegrationTest extends TestCase
         });
 
         // 2. Assert: Link prompt dispatched
-        Bus::assertDispatched(SendOutboundMessage::class);
+        Bus::assertDispatched(SendAccountLinkPrompt::class);
     }
 
     public function test_account_link_flow_end_to_end(): void
@@ -420,8 +420,14 @@ class IntegrationTest extends TestCase
         $job = AgentJob::create([
             'user_id' => $this->user->id,
             'name' => 'Job To Delete',
-            'command' => 'php artisan test:command',
-            'schedule' => '0 * * * *',
+            'cron_expression' => '0 * * * *',
+            'timezone' => 'UTC',
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => 'php artisan test:command',
+            'task_markdown_path' => '/tmp/integration-job.md',
+            'working_directory' => '/tmp',
             'is_enabled' => true,
         ]);
 
@@ -499,8 +505,14 @@ class IntegrationTest extends TestCase
         $job = AgentJob::create([
             'user_id' => $this->user->id,
             'name' => 'Job To Delete (Timeout)',
-            'command' => 'php artisan test:command',
-            'schedule' => '0 * * * *',
+            'cron_expression' => '0 * * * *',
+            'timezone' => 'UTC',
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => 'php artisan test:command',
+            'task_markdown_path' => '/tmp/integration-job-timeout.md',
+            'working_directory' => '/tmp',
             'is_enabled' => true,
         ]);
 
@@ -570,8 +582,14 @@ class IntegrationTest extends TestCase
         $job = AgentJob::create([
             'user_id' => $otherUser->id,
             'name' => 'Other User Job',
-            'command' => 'php artisan other:command',
-            'schedule' => '0 * * * *',
+            'cron_expression' => '0 * * * *',
+            'timezone' => 'UTC',
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => 'php artisan other:command',
+            'task_markdown_path' => '/tmp/integration-other-job.md',
+            'working_directory' => '/tmp',
             'is_enabled' => true,
         ]);
 
@@ -701,8 +719,14 @@ class IntegrationTest extends TestCase
         $job = AgentJob::create([
             'user_id' => $this->user->id,
             'name' => 'Audited Job',
-            'command' => 'php artisan audit:test',
-            'schedule' => '0 * * * *',
+            'cron_expression' => '0 * * * *',
+            'timezone' => 'UTC',
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => 'php artisan audit:test',
+            'task_markdown_path' => '/tmp/integration-audit-job.md',
+            'working_directory' => '/tmp',
             'is_enabled' => true,
         ]);
 

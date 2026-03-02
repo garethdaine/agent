@@ -86,6 +86,45 @@ class AuditLogger
     }
 
     /**
+     * Record an action initiated by the memory system.
+     *
+     * @param  array<int, string>  $changedFields
+     * @param  array<string, mixed>|null  $before
+     * @param  array<string, mixed>|null  $after
+     */
+    public function recordMemoryAction(
+        int $userId,
+        string $action,
+        string $targetType,
+        string|int $targetId,
+        array $changedFields = [],
+        ?array $before = null,
+        ?array $after = null,
+        string $outcome = 'success',
+        ?string $errorCode = null,
+        ?string $errorMessage = null,
+    ): AgentAuditLog {
+        return $this->record(
+            userId: $userId,
+            actorType: 'memory',
+            actorId: null,
+            action: $action,
+            targetType: $targetType,
+            targetId: (string) $targetId,
+            changedFields: $changedFields,
+            before: $before,
+            after: $after,
+            requestId: null,
+            ipAddress: null,
+            userAgent: null,
+            hostname: gethostname() ?: null,
+            outcome: $outcome,
+            errorCode: $errorCode,
+            errorMessage: $errorMessage,
+        );
+    }
+
+    /**
      * Record an action initiated through the messenger control plane.
      *
      * @param  array<int, string>  $changedFields
@@ -135,7 +174,7 @@ class AuditLogger
     private function record(
         ?int $userId,
         string $actorType,
-        ?int $actorId,
+        string|int|null $actorId,
         string $action,
         string $targetType,
         string $targetId,
@@ -153,7 +192,7 @@ class AuditLogger
         $entry = AgentAuditLog::query()->create([
             'user_id' => $userId,
             'actor_type' => $actorType,
-            'actor_id' => $actorId,
+            'actor_id' => $actorId !== null ? (string) $actorId : null,
             'action' => $action,
             'target_type' => $targetType,
             'target_id' => $targetId,

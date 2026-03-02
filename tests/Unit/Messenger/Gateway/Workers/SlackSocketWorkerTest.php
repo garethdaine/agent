@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Messenger\Gateway\Workers;
 
 use App\Jobs\Messenger\ProcessInboundMessage;
-use App\Messenger\Gateway\DTOs\WorkerHealthMetadata;
 use App\Messenger\Gateway\Enums\WorkerHealthStatus;
 use App\Messenger\Gateway\ReconnectionStrategy;
 use App\Messenger\Gateway\Workers\SlackSocketWorker;
@@ -470,8 +469,8 @@ class SlackSocketWorkerTest extends TestCase
             $this->reconnection
         );
 
-        $worker->setWebSocketConnectorFactory(function ($loop) use ($expectedUrl, $messages, &$connectedUrl) {
-            return function (string $url) use ($expectedUrl, $messages, &$connectedUrl) {
+        $worker->setWebSocketConnectorFactory(function ($loop) use ($messages, &$connectedUrl) {
+            return function (string $url) use ($messages, &$connectedUrl) {
                 $connectedUrl = $url;
 
                 $mockConnection = Mockery::mock(WebSocket::class);
@@ -494,7 +493,8 @@ class SlackSocketWorkerTest extends TestCase
                     });
 
                 // Return a promise that resolves immediately
-                return new class($mockConnection) {
+                return new class($mockConnection)
+                {
                     private $connection;
 
                     public function __construct($connection)
@@ -531,8 +531,8 @@ class SlackSocketWorkerTest extends TestCase
             $this->reconnection
         );
 
-        $worker->setWebSocketConnectorFactory(function ($loop) use ($expectedUrl, $messages, &$sentMessages) {
-            return function (string $url) use ($expectedUrl, $messages, &$sentMessages) {
+        $worker->setWebSocketConnectorFactory(function ($loop) use ($messages, &$sentMessages) {
+            return function (string $url) use ($messages, &$sentMessages) {
                 $mockConnection = Mockery::mock(WebSocket::class);
                 $mockConnection->shouldReceive('send')
                     ->andReturnUsing(function ($msg) use (&$sentMessages) {
@@ -552,7 +552,8 @@ class SlackSocketWorkerTest extends TestCase
                         }
                     });
 
-                return new class($mockConnection) {
+                return new class($mockConnection)
+                {
                     private $connection;
 
                     public function __construct($connection)
@@ -589,8 +590,8 @@ class SlackSocketWorkerTest extends TestCase
             $this->reconnection
         );
 
-        $worker->setWebSocketConnectorFactory(function ($loop) use ($expectedUrl, $firstMessage, &$connectionClosed) {
-            return function (string $url) use ($expectedUrl, $firstMessage, &$connectionClosed) {
+        $worker->setWebSocketConnectorFactory(function ($loop) use ($firstMessage, &$connectionClosed) {
+            return function (string $url) use ($firstMessage, &$connectionClosed) {
                 $mockConnection = Mockery::mock(WebSocket::class);
                 $mockConnection->shouldReceive('send')->andReturnNull();
                 $mockConnection->shouldReceive('close')
@@ -608,7 +609,8 @@ class SlackSocketWorkerTest extends TestCase
                         }
                     });
 
-                return new class($mockConnection) {
+                return new class($mockConnection)
+                {
                     private $connection;
 
                     public function __construct($connection)
@@ -648,8 +650,8 @@ class SlackSocketWorkerTest extends TestCase
         // We'll use Queue::fake to track dispatched jobs
         Queue::fake();
 
-        $worker->setWebSocketConnectorFactory(function ($loop) use ($expectedUrl, $messages, &$messagesProcessed) {
-            return function (string $url) use ($expectedUrl, $messages, &$messagesProcessed) {
+        $worker->setWebSocketConnectorFactory(function ($loop) use ($messages, &$messagesProcessed) {
+            return function (string $url) use ($messages, &$messagesProcessed) {
                 $mockConnection = Mockery::mock(WebSocket::class);
                 $mockConnection->shouldReceive('send')
                     ->andReturnUsing(function ($msg) use (&$messagesProcessed) {
@@ -672,7 +674,8 @@ class SlackSocketWorkerTest extends TestCase
                         }
                     });
 
-                return new class($mockConnection) {
+                return new class($mockConnection)
+                {
                     private $connection;
 
                     public function __construct($connection)
@@ -708,6 +711,211 @@ class SlackSocketWorkerTest extends TestCase
         // In a real scenario, messages would be received from the WebSocket
         // Since we're testing that drain stops processing, we verify via
         // the messagesProcessed counter which only increments when ack is sent
+    }
+
+    public function test_drain_waits_for_pending_operations(): void
+    {
+        Http::fake([
+            'https://slack.com/api/apps.connections.open' => Http::response([
+                'ok' => true,
+                'url' => 'wss://wss-primary.slack.com/link/?ticket=abc123',
+            ], 200),
+        ]);
+
+        // Set up a loop that tracks periodic timer behavior
+        $periodicTimerCallbacks = [];
+        $periodicTimerCancelled = false;
+        $loopStopped = false;
+
+        $this->loop = Mockery::mock(LoopInterface::class);
+        $this->loop->shouldReceive('addTimer')->andReturnNull();
+        $this->loop->shouldReceive('futureTick')->andReturnNull();
+        $this->loop->shouldReceive('addPeriodicTimer')
+            ->andReturnUsing(function ($interval, $callback) use (&$periodicTimerCallbacks) {
+                $timer = Mockery::mock('React\EventLoop\TimerInterface');
+                $periodicTimerCallbacks[] = ['timer' => $timer, 'callback' => $callback];
+
+                return $timer;
+            });
+        $this->loop->shouldReceive('cancelTimer')
+            ->andReturnUsing(function () use (&$periodicTimerCancelled) {
+                $periodicTimerCancelled = true;
+            });
+        $this->loop->shouldReceive('stop')
+            ->andReturnUsing(function () use (&$loopStopped) {
+                $loopStopped = true;
+            });
+
+        $worker = $this->createWorkerWithSynchronousConnection(
+            'wss://wss-primary.slack.com/link/?ticket=abc123',
+            ['type' => 'hello']
+        );
+
+        $worker->start();
+        $this->assertEquals(WorkerHealthStatus::Connected, $worker->health());
+
+        // Set pending operations via reflection
+        $this->setProperty($worker, 'pendingOperations', 1);
+
+        // Start draining
+        $worker->drain();
+
+        // Verify periodic timer was set up
+        $this->assertNotEmpty($periodicTimerCallbacks, 'Periodic timer should be set up for drain polling');
+
+        // Simulate: first poll check with pending operations still > 0
+        // (nothing should happen yet)
+        $periodicTimerCallbacks[0]['callback']($periodicTimerCallbacks[0]['timer']);
+        $this->assertFalse($loopStopped, 'Loop should not stop while operations pending');
+
+        // Clear pending operations
+        $this->setProperty($worker, 'pendingOperations', 0);
+
+        // Simulate: second poll check with pending operations = 0
+        $periodicTimerCallbacks[0]['callback']($periodicTimerCallbacks[0]['timer']);
+
+        // Now the timer should be cancelled and loop stopped
+        $this->assertTrue($periodicTimerCancelled, 'Timer should be cancelled when drain completes');
+        $this->assertTrue($loopStopped, 'Loop should stop when drain completes');
+    }
+
+    public function test_drain_times_out_after_configured_period(): void
+    {
+        // Set a very short timeout for testing
+        config(['messenger.gateway.shutdown_timeout' => 1]);
+
+        Http::fake([
+            'https://slack.com/api/apps.connections.open' => Http::response([
+                'ok' => true,
+                'url' => 'wss://wss-primary.slack.com/link/?ticket=abc123',
+            ], 200),
+        ]);
+
+        $periodicTimerCallbacks = [];
+        $loopStopped = false;
+        $timerCancelled = false;
+
+        $this->loop = Mockery::mock(LoopInterface::class);
+        $this->loop->shouldReceive('addTimer')->andReturnNull();
+        $this->loop->shouldReceive('futureTick')->andReturnNull();
+        $this->loop->shouldReceive('addPeriodicTimer')
+            ->andReturnUsing(function ($interval, $callback) use (&$periodicTimerCallbacks) {
+                $timer = Mockery::mock('React\EventLoop\TimerInterface');
+                $periodicTimerCallbacks[] = ['timer' => $timer, 'callback' => $callback];
+
+                return $timer;
+            });
+        $this->loop->shouldReceive('cancelTimer')
+            ->andReturnUsing(function () use (&$timerCancelled) {
+                $timerCancelled = true;
+            });
+        $this->loop->shouldReceive('stop')
+            ->andReturnUsing(function () use (&$loopStopped) {
+                $loopStopped = true;
+            });
+
+        \Log::shouldReceive('info')->andReturnNull();
+        \Log::shouldReceive('debug')->andReturnNull();
+        \Log::shouldReceive('warning')
+            ->once()
+            ->withArgs(function ($message, $context) {
+                return str_contains($message, 'drain timeout');
+            });
+
+        $worker = $this->createWorkerWithSynchronousConnection(
+            'wss://wss-primary.slack.com/link/?ticket=abc123',
+            ['type' => 'hello']
+        );
+
+        $worker->start();
+
+        // Set pending operations that will never complete
+        $this->setProperty($worker, 'pendingOperations', 999);
+
+        // Start draining
+        $worker->drain();
+
+        // Verify periodic timer was set up
+        $this->assertNotEmpty($periodicTimerCallbacks);
+
+        // Simulate time passing by manipulating the start time
+        // We need to simulate the timeout condition
+        // Since we can't actually wait, we'll simulate multiple poll cycles
+        // that span more than the timeout period
+
+        // First call - not timed out yet
+        $periodicTimerCallbacks[0]['callback']($periodicTimerCallbacks[0]['timer']);
+        $this->assertFalse($loopStopped, 'Should not stop before timeout');
+
+        // Simulate timeout by sleeping (this is a simple approach for testing)
+        // In real tests, we'd mock time() but for simplicity we'll sleep
+        sleep(2); // Sleep longer than the 1-second timeout
+
+        // Call again - should now be timed out
+        $periodicTimerCallbacks[0]['callback']($periodicTimerCallbacks[0]['timer']);
+
+        $this->assertTrue($timerCancelled, 'Timer should be cancelled on timeout');
+        $this->assertTrue($loopStopped, 'Loop should stop on timeout');
+    }
+
+    public function test_dispatch_event_increments_and_decrements_pending_operations(): void
+    {
+        Http::fake([
+            'https://slack.com/api/apps.connections.open' => Http::response([
+                'ok' => true,
+                'url' => 'wss://wss-primary.slack.com/link/?ticket=abc123',
+            ], 200),
+        ]);
+
+        $worker = $this->createWorkerWithSynchronousConnection(
+            'wss://wss-primary.slack.com/link/?ticket=abc123',
+            ['type' => 'hello'],
+            messages: [
+                ['type' => 'hello'],
+                [
+                    'type' => 'events_api',
+                    'envelope_id' => 'test-envelope',
+                    'payload' => [
+                        'event' => ['type' => 'message'],
+                    ],
+                ],
+            ]
+        );
+
+        // Initially no pending operations
+        $this->assertEquals(0, $this->getProperty($worker, 'pendingOperations'));
+
+        $worker->start();
+
+        // After synchronous dispatch completes, counter should be back to 0
+        // (incremented then decremented within dispatchEvent)
+        $this->assertEquals(0, $this->getProperty($worker, 'pendingOperations'));
+
+        // Verify a job was actually dispatched
+        Queue::assertPushed(ProcessInboundMessage::class);
+    }
+
+    /**
+     * Set a private/protected property on an object.
+     */
+    private function setProperty(object $object, string $property, mixed $value): void
+    {
+        $reflection = new \ReflectionClass($object);
+        $prop = $reflection->getProperty($property);
+        $prop->setAccessible(true);
+        $prop->setValue($object, $value);
+    }
+
+    /**
+     * Get a private/protected property from an object.
+     */
+    private function getProperty(object $object, string $property): mixed
+    {
+        $reflection = new \ReflectionClass($object);
+        $prop = $reflection->getProperty($property);
+        $prop->setAccessible(true);
+
+        return $prop->getValue($object);
     }
 
     protected function tearDown(): void

@@ -4,9 +4,10 @@ namespace Tests\Unit\Support\Delegation;
 
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
-use App\Support\Delegation\DTOs\TrustScore;
+use App\Models\User;
 use App\Support\Delegation\TrustScoreCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class TrustScoreCalculatorTest extends TestCase
@@ -18,7 +19,7 @@ class TrustScoreCalculatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->calculator = new TrustScoreCalculator();
+        $this->calculator = new TrustScoreCalculator;
     }
 
     public function test_calculate_returns_score_within_bounds(): void
@@ -53,10 +54,10 @@ class TrustScoreCalculatorTest extends TestCase
                     'reasoning_summary' => [
                         'all_completed' => true,
                         'steps' => [
-                            'task' => ['completed' => true]
-                        ]
-                    ]
-                ]
+                            'task' => ['completed' => true],
+                        ],
+                    ],
+                ],
             ]);
         }
 
@@ -77,7 +78,7 @@ class TrustScoreCalculatorTest extends TestCase
                 'agent_job_id' => $job->id,
                 'user_id' => $job->user_id,
                 'status' => AgentJobRun::STATUS_SUCCEEDED,
-                'metadata_json' => ['reasoning_summary' => ['all_completed' => true]]
+                'metadata_json' => ['reasoning_summary' => ['all_completed' => true]],
             ]);
         }
 
@@ -88,7 +89,7 @@ class TrustScoreCalculatorTest extends TestCase
                 'agent_job_id' => $otherJob->id,
                 'user_id' => $otherJob->user_id,
                 'status' => AgentJobRun::STATUS_SUCCEEDED,
-                'metadata_json' => ['reasoning_summary' => ['all_completed' => true]]
+                'metadata_json' => ['reasoning_summary' => ['all_completed' => true]],
             ]);
         }
 
@@ -107,12 +108,78 @@ class TrustScoreCalculatorTest extends TestCase
                 'agent_job_id' => $job->id,
                 'user_id' => $job->user_id,
                 'status' => AgentJobRun::STATUS_SUCCEEDED,
-                'metadata_json' => ['reasoning_summary' => ['all_completed' => true]]
+                'metadata_json' => ['reasoning_summary' => ['all_completed' => true]],
             ]);
         }
 
         $score = $this->calculator->calculate('claude');
 
         $this->assertEquals('low', $score->confidence);
+    }
+
+    #[Test]
+    public function it_calculates_star_metrics_from_run_history(): void
+    {
+        $user = User::factory()->create();
+        $job = AgentJob::factory()->create(['user_id' => $user->id]);
+
+        // 8 successful, 2 failed = 80% success
+        AgentJobRun::factory()->count(8)->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'status' => AgentJobRun::STATUS_SUCCEEDED,
+            'metadata_json' => ['reasoning_summary' => ['all_completed' => true]],
+        ]);
+        AgentJobRun::factory()->count(2)->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'status' => AgentJobRun::STATUS_FAILED,
+            'metadata_json' => ['reasoning_summary' => ['all_completed' => false]],
+        ]);
+
+        $calculator = app(TrustScoreCalculator::class);
+        $metrics = $calculator->calculateForUser($user);
+
+        $this->assertEqualsWithDelta(0.8, $metrics->firstPassSuccessRate, 0.01);
+    }
+
+    #[Test]
+    public function it_returns_zero_metrics_for_user_with_no_runs(): void
+    {
+        $user = User::factory()->create();
+
+        $calculator = app(TrustScoreCalculator::class);
+        $metrics = $calculator->calculateForUser($user);
+
+        $this->assertEquals(0, $metrics->sampleSize);
+        $this->assertEquals(0, $metrics->firstPassSuccessRate);
+    }
+
+    #[Test]
+    public function it_extracts_star_component_correctness_from_metadata(): void
+    {
+        $user = User::factory()->create();
+        $job = AgentJob::factory()->create(['user_id' => $user->id]);
+
+        AgentJobRun::factory()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'status' => AgentJobRun::STATUS_SUCCEEDED,
+            'metadata_json' => [
+                'reasoning_summary' => [
+                    'all_completed' => true,
+                    'situation_correct' => true,
+                    'task_correct' => true,
+                    'action_correct' => false,
+                    'result_correct' => true,
+                ],
+            ],
+        ]);
+
+        $calculator = app(TrustScoreCalculator::class);
+        $metrics = $calculator->calculateForUser($user);
+
+        $this->assertEquals(1.0, $metrics->situationCorrectRate);
+        $this->assertEquals(0.0, $metrics->actionCorrectRate);
     }
 }

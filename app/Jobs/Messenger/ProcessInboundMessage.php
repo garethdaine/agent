@@ -3,9 +3,11 @@
 namespace App\Jobs\Messenger;
 
 use App\DTOs\Messenger\NormalizedMessage;
+use App\Exceptions\AttachmentRejectionException;
 use App\Models\ChatMessage;
 use App\Models\ConnectorAccount;
 use App\Models\MessengerIdentityLink;
+use App\Services\Messenger\AttachmentHandler;
 use App\Services\Messenger\ChatSessionManager;
 use App\Support\Messenger\ConnectorManager;
 use App\Support\Messenger\IdempotencyKeyGenerator;
@@ -39,8 +41,10 @@ class ProcessInboundMessage implements ShouldQueue
 
     public function handle(
         ConnectorManager $connectorManager,
-        ChatSessionManager $sessionManager
+        ChatSessionManager $sessionManager,
+        ?AttachmentHandler $attachmentHandler = null
     ): void {
+        $attachmentHandler ??= app(AttachmentHandler::class);
         $account = ConnectorAccount::find($this->connectorAccountId);
 
         if (! $account) {
@@ -97,9 +101,20 @@ class ProcessInboundMessage implements ShouldQueue
 
         // Generate idempotency key
         $idempotencyKey = app(IdempotencyKeyGenerator::class)->generate(
-            $this->payload,
+            $normalizedMessage,
             $account
         );
+
+        // Fast-path dedupe check. This avoids transaction-abort side effects
+        // in PostgreSQL test transactions when relying solely on unique violations.
+        if (ChatMessage::query()->where('idempotency_key', $idempotencyKey)->exists()) {
+            Log::debug('ProcessInboundMessage: Duplicate message, skipping', [
+                'idempotency_key' => $idempotencyKey,
+                'account_id' => $account->id,
+            ]);
+
+            return;
+        }
 
         // Create chat message with idempotency check
         try {
@@ -108,7 +123,6 @@ class ProcessInboundMessage implements ShouldQueue
                 'connector_account_id' => $account->id,
                 'direction' => ChatMessage::DIRECTION_INBOUND,
                 'content' => $normalizedMessage->content,
-                'attachment_ids' => $this->extractAttachmentIds($normalizedMessage),
                 'idempotency_key' => $idempotencyKey,
                 'provider_event_id' => $normalizedMessage->providerEventId,
                 'provider_message_id' => $normalizedMessage->providerMessageId,
@@ -121,6 +135,9 @@ class ProcessInboundMessage implements ShouldQueue
                 'account_id' => $account->id,
                 'user_id' => $user->id,
             ]);
+
+            // Process attachments after message creation
+            $this->processAttachments($normalizedMessage, $message, $attachmentHandler);
 
             // Dispatch intent processing job
             ProcessChatIntent::dispatch(
@@ -243,20 +260,66 @@ class ProcessInboundMessage implements ShouldQueue
     }
 
     /**
-     * @return array<string>|null
+     * Process attachments by downloading and storing them locally.
+     *
+     * Each attachment is processed independently - a failure in one does not
+     * block others from being processed.
      */
-    private function extractAttachmentIds(NormalizedMessage $message): ?array
-    {
-        if (empty($message->attachments)) {
-            return null;
+    private function processAttachments(
+        NormalizedMessage $normalizedMessage,
+        ChatMessage $message,
+        AttachmentHandler $attachmentHandler
+    ): void {
+        if (empty($normalizedMessage->attachments)) {
+            return;
         }
 
-        // For now, just return the provider file IDs
-        // Attachment processing will be handled separately
-        return array_map(
-            fn ($attachment) => $attachment->providerFileId,
-            $message->attachments
-        );
+        foreach ($normalizedMessage->attachments as $attachment) {
+            // Skip attachments without a download URL
+            if (empty($attachment->downloadUrl)) {
+                Log::warning('ProcessInboundMessage: Attachment missing download URL', [
+                    'message_id' => $message->id,
+                    'provider_file_id' => $attachment->providerFileId,
+                ]);
+
+                continue;
+            }
+
+            try {
+                // Convert NormalizedAttachment to the format expected by AttachmentHandler
+                $attachmentData = [
+                    'url' => $attachment->downloadUrl,
+                    'filename' => $attachment->filename,
+                    'mime_type' => $attachment->mimeType,
+                    'size' => $attachment->sizeBytes,
+                    'provider_file_id' => $attachment->providerFileId,
+                ];
+
+                $attachmentHandler->processInbound([$attachmentData], $message);
+
+                Log::info('ProcessInboundMessage: Attachment processed', [
+                    'message_id' => $message->id,
+                    'provider_file_id' => $attachment->providerFileId,
+                    'filename' => $attachment->filename,
+                ]);
+            } catch (AttachmentRejectionException $e) {
+                // Attachment was rejected (size, MIME type, etc.)
+                Log::warning('ProcessInboundMessage: Attachment rejected', [
+                    'message_id' => $message->id,
+                    'provider_file_id' => $attachment->providerFileId,
+                    'filename' => $attachment->filename,
+                    'reason' => $e->getMessage(),
+                ]);
+            } catch (\Throwable $e) {
+                // Download or storage failure
+                Log::error('ProcessInboundMessage: Attachment processing failed', [
+                    'message_id' => $message->id,
+                    'provider_file_id' => $attachment->providerFileId,
+                    'filename' => $attachment->filename,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     private function isDuplicateKeyException(QueryException $e): bool

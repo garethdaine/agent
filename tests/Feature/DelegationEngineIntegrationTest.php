@@ -61,7 +61,7 @@ class DelegationEngineIntegrationTest extends TestCase
 
         // Start graph
         $startResponse = $this->actingAs($user)->postJson("/agent/api/v1/delegation/graphs/{$graphId}/start");
-        $startResponse->assertOk();
+        $startResponse->assertStatus(202);
 
         $graph->refresh();
         $this->assertEquals(DelegationGraph::STATUS_RUNNING, $graph->status);

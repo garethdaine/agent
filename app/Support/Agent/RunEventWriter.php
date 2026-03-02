@@ -2,6 +2,7 @@
 
 namespace App\Support\Agent;
 
+use App\Jobs\Memory\MemoryWorkingBufferJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentRunEvent;
 use Carbon\CarbonImmutable;
@@ -64,6 +65,19 @@ class RunEventWriter
         }
 
         $this->persistRunStats();
+
+        // Memory integration: buffer to Working Memory (fire-and-forget)
+        if (config('memory.enabled')) {
+            try {
+                MemoryWorkingBufferJob::dispatch(
+                    $this->run->id,
+                    $eventType,
+                    $rawPayload
+                )->onQueue('memory-working');
+            } catch (\Throwable $e) {
+                // Silent failure - never block the 250ms poll loop
+            }
+        }
     }
 
     /**

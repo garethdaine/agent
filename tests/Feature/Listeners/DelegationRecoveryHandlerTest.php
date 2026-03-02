@@ -149,12 +149,12 @@ class DelegationRecoveryHandlerTest extends TestCase
         $attempt2->update(['status' => DelegationAttempt::STATUS_FAILED, 'error_code' => 'TIMEOUT']);
         $handler->handle(new DelegationAttemptCompleted($attempt2->fresh()));
 
-        // Should retry on same delegatee (attempt 3 - last retry)
+        // Retry limit reached; should re-delegate on attempt 3
         $attempt3 = DelegationAttempt::where('delegation_task_id', $task->id)
             ->where('attempt_number', 3)
             ->first();
         $this->assertNotNull($attempt3);
-        $this->assertEquals($this->profile->id, $attempt3->delegatee_profile_id);
+        $this->assertNotEquals($this->profile->id, $attempt3->delegatee_profile_id);
     }
 
     public function test_re_delegates_after_retry_limit(): void

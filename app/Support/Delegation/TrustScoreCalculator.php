@@ -3,6 +3,7 @@
 namespace App\Support\Delegation;
 
 use App\Models\AgentJobRun;
+use App\Models\User;
 use App\Support\Delegation\DTOs\StarMetrics;
 use App\Support\Delegation\DTOs\TrustScore;
 use Illuminate\Support\Facades\Cache;
@@ -11,11 +12,115 @@ class TrustScoreCalculator
 {
     public function calculate(string $runnerType, ?int $jobId = null): TrustScore
     {
-        $cacheKey = "trust_score:{$runnerType}:" . ($jobId ?? 'all');
+        $cacheKey = "trust_score:{$runnerType}:".($jobId ?? 'all');
 
         return Cache::remember($cacheKey, 300, function () use ($runnerType, $jobId) {
             return $this->computeScore($runnerType, $jobId);
         });
+    }
+
+    /**
+     * Calculate StarMetrics for a specific user based on their job run history.
+     */
+    public function calculateForUser(User $user): StarMetrics
+    {
+        $windowSize = config('agent.trust.window_size', 50);
+
+        $runs = AgentJobRun::query()
+            ->join('agent_jobs', 'agent_job_runs.agent_job_id', '=', 'agent_jobs.id')
+            ->where('agent_jobs.user_id', $user->id)
+            ->orderByDesc('agent_job_runs.created_at')
+            ->limit($windowSize)
+            ->get(['agent_job_runs.*']);
+
+        return $this->aggregateMetricsWithStarComponents($runs);
+    }
+
+    /**
+     * Aggregate metrics including STAR component correctness from run metadata.
+     */
+    private function aggregateMetricsWithStarComponents($runs): StarMetrics
+    {
+        $total = $runs->count();
+
+        if ($total === 0) {
+            return new StarMetrics(0, 0, 0, 0, 0, 0, 0, [], 0);
+        }
+
+        $starCompleted = 0;
+        $successful = 0;
+        $retrySuccessful = 0;
+        $retryAttempted = 0;
+        $failureModes = ['type_1' => 0, 'type_2' => 0, 'type_3' => 0];
+
+        // STAR component tracking
+        $situationCorrectCount = 0;
+        $taskCorrectCount = 0;
+        $actionCorrectCount = 0;
+        $resultCorrectCount = 0;
+        $runsWithStarData = 0;
+
+        foreach ($runs as $run) {
+            $metadata = $run->metadata_json ?? [];
+            $summary = $metadata['reasoning_summary'] ?? [];
+
+            if ($summary['all_completed'] ?? false) {
+                $starCompleted++;
+            }
+
+            if ($run->status === AgentJobRun::STATUS_SUCCEEDED) {
+                $successful++;
+                if (isset($metadata['retry_of_run_id'])) {
+                    $retrySuccessful++;
+                }
+            }
+
+            if (isset($metadata['retry_of_run_id'])) {
+                $retryAttempted++;
+            }
+
+            if (isset($metadata['failure_mode_hint']['type'])) {
+                $type = 'type_'.$metadata['failure_mode_hint']['type'];
+                $failureModes[$type] = ($failureModes[$type] ?? 0) + 1;
+            }
+
+            // Extract STAR component correctness from metadata
+            if (isset($summary['situation_correct']) || isset($summary['task_correct'])
+                || isset($summary['action_correct']) || isset($summary['result_correct'])) {
+                $runsWithStarData++;
+
+                if ($summary['situation_correct'] ?? false) {
+                    $situationCorrectCount++;
+                }
+                if ($summary['task_correct'] ?? false) {
+                    $taskCorrectCount++;
+                }
+                if ($summary['action_correct'] ?? false) {
+                    $actionCorrectCount++;
+                }
+                if ($summary['result_correct'] ?? false) {
+                    $resultCorrectCount++;
+                }
+            }
+        }
+
+        // Calculate STAR rates from runs that have STAR data, or 0 if none
+        $situationCorrectRate = $runsWithStarData > 0 ? $situationCorrectCount / $runsWithStarData : 0.0;
+        $taskCorrectRate = $runsWithStarData > 0 ? $taskCorrectCount / $runsWithStarData : 0.0;
+        $actionCorrectRate = $runsWithStarData > 0 ? $actionCorrectCount / $runsWithStarData : 0.0;
+        $resultCorrectRate = $runsWithStarData > 0 ? $resultCorrectCount / $runsWithStarData : 0.0;
+
+        return new StarMetrics(
+            starCompletionRate: $starCompleted / $total,
+            situationCorrectRate: $situationCorrectRate,
+            taskCorrectRate: $taskCorrectRate,
+            actionCorrectRate: $actionCorrectRate,
+            resultCorrectRate: $resultCorrectRate,
+            firstPassSuccessRate: ($successful - $retrySuccessful) / max(1, $total - $retryAttempted),
+            recoveryRate: $retryAttempted > 0 ? $retrySuccessful / $retryAttempted : 0,
+            failureModeDistribution: array_map(fn ($c) => $c / max(1, $total), $failureModes),
+            sampleSize: $total
+        );
     }
 
     public function getMetrics(string $runnerType, ?int $jobId = null): StarMetrics
@@ -74,54 +179,8 @@ class TrustScoreCalculator
 
     private function aggregateMetrics($runs): StarMetrics
     {
-        $total = $runs->count();
-
-        if ($total === 0) {
-            return new StarMetrics(0, 0, 0, 0, 0, 0, 0, [], 0);
-        }
-
-        $starCompleted = 0;
-        $successful = 0;
-        $retrySuccessful = 0;
-        $retryAttempted = 0;
-        $failureModes = ['type_1' => 0, 'type_2' => 0, 'type_3' => 0];
-
-        foreach ($runs as $run) {
-            $metadata = $run->metadata_json ?? [];
-            $summary = $metadata['reasoning_summary'] ?? [];
-
-            if ($summary['all_completed'] ?? false) {
-                $starCompleted++;
-            }
-
-            if ($run->status === AgentJobRun::STATUS_SUCCEEDED) {
-                $successful++;
-                if (isset($metadata['retry_of_run_id'])) {
-                    $retrySuccessful++;
-                }
-            }
-
-            if (isset($metadata['retry_of_run_id'])) {
-                $retryAttempted++;
-            }
-
-            if (isset($metadata['failure_mode_hint']['type'])) {
-                $type = 'type_' . $metadata['failure_mode_hint']['type'];
-                $failureModes[$type] = ($failureModes[$type] ?? 0) + 1;
-            }
-        }
-
-        return new StarMetrics(
-            starCompletionRate: $starCompleted / $total,
-            situationCorrectRate: 0.8, // Placeholder - requires deeper analysis
-            taskCorrectRate: 0.8,
-            actionCorrectRate: 0.8,
-            resultCorrectRate: 0.8,
-            firstPassSuccessRate: ($successful - $retrySuccessful) / max(1, $total - $retryAttempted),
-            recoveryRate: $retryAttempted > 0 ? $retrySuccessful / $retryAttempted : 0,
-            failureModeDistribution: array_map(fn ($c) => $c / max(1, $total), $failureModes),
-            sampleSize: $total
-        );
+        // Delegate to the unified implementation that handles STAR component extraction
+        return $this->aggregateMetricsWithStarComponents($runs);
     }
 
     private function buildTrustScore(StarMetrics $metrics, string $source): TrustScore

@@ -224,7 +224,7 @@ export const formatReasoning = (reasoningText) => {
 
     const normalized = normalizeSpace(fullText);
 
-    const sentenceMatch = normalized.match(/(.{20,240}?[.?!])(\s|$)/);
+    const sentenceMatch = normalized.match(/^(.{1,240}?[.?!])(?:\s|$)/);
     const summary = sentenceMatch?.[1]
         ? sentenceMatch[1]
         : (normalized.length <= 220 ? normalized : `${normalized.slice(0, 220).trimEnd()}...`);

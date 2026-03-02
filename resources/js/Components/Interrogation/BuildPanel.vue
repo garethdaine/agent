@@ -3,7 +3,7 @@ import MarkdownEditor from '@/Components/Markdown/MarkdownEditor.vue';
 import { formatInterrogationError } from '@/Components/Interrogation/errorFormatting';
 import { formatAgentRunEventEntries } from '@/Support/agentRunEventFormatting';
 import axios from 'axios';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
 const props = defineProps({
     mode: {
@@ -90,6 +90,7 @@ const activeRunEventsLoading = ref(false);
 const activeRunEventsError = ref('');
 const activeRunEventsBootstrapComplete = ref(false);
 const activeRunEventsPollTimer = ref(null);
+const activeRunLogContainer = ref(null);
 
 const TERMINAL_RUN_STATUSES = new Set(['succeeded', 'failed', 'killed', 'timed_out', 'skipped']);
 const ACTIVE_RUN_POLL_MS = 2000;
@@ -516,6 +517,47 @@ const activeRunUnifiedLog = computed(() => {
 });
 
 const hasActiveRunUnifiedLog = computed(() => String(activeRunUnifiedLog.value).trim() !== '');
+
+const scrollActiveRunLogToBottom = () => {
+    const container = activeRunLogContainer.value;
+    if (!container) {
+        return;
+    }
+
+    container.scrollTop = container.scrollHeight;
+};
+
+watch(
+    activeRunEventsAfterSequence,
+    async (nextSequence, previousSequence) => {
+        if (!hasActiveRunUnifiedLog.value) {
+            return;
+        }
+
+        if (!Number.isFinite(nextSequence) || nextSequence <= 0) {
+            return;
+        }
+
+        if (nextSequence === previousSequence) {
+            return;
+        }
+
+        await nextTick();
+        scrollActiveRunLogToBottom();
+    }
+);
+
+watch(
+    activeRunId,
+    async (nextRunId, previousRunId) => {
+        if (nextRunId === previousRunId || !hasActiveRunUnifiedLog.value) {
+            return;
+        }
+
+        await nextTick();
+        scrollActiveRunLogToBottom();
+    }
+);
 
 onBeforeUnmount(() => {
     clearActiveRunEventsPollTimer();
@@ -1068,7 +1110,11 @@ const submitTaskRegeneration = (task) => {
             <p v-if="activeRunEventsError" class="mt-2 rounded border border-destructive/30 bg-destructive/10 px-2 py-1 text-[11px] text-destructive">
                 {{ activeRunEventsError }}
             </p>
-            <div v-if="hasActiveRunUnifiedLog" class="mt-2 max-h-72 overflow-auto rounded border border-border bg-gray-950 p-3 text-xs text-gray-100 ">
+            <div
+                v-if="hasActiveRunUnifiedLog"
+                ref="activeRunLogContainer"
+                class="mt-2 max-h-72 overflow-auto rounded border border-border bg-gray-950 p-3 text-xs text-gray-100 "
+            >
                 <pre class="whitespace-pre-wrap break-words font-mono leading-relaxed">{{ activeRunUnifiedLog }}</pre>
             </div>
         </div>

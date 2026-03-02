@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import { choiceOptionsFromQuestion, displayQuestionMarkdown, formatReasoning, normalizeQuestionCategory } from '@/Components/Interrogation/questionPresentation';
+import { humanizeDisplayValue } from '@/Components/Interrogation/displayFormatting';
 
 const props = defineProps({
     question: {
@@ -16,7 +17,8 @@ const showFullReasoning = ref(false);
 const options = computed(() => choiceOptionsFromQuestion(props.question));
 const promptMarkdown = computed(() => displayQuestionMarkdown(props.question?.question_text ?? '', options.value));
 const reasoning = computed(() => formatReasoning(props.question?.reasoning ?? ''));
-const categoryLabel = computed(() => normalizeQuestionCategory(props.question?.category ?? '') || 'general');
+const categoryKey = computed(() => normalizeQuestionCategory(props.question?.category ?? '') || 'general');
+const categoryLabel = computed(() => humanizeDisplayValue(categoryKey.value, 'General'));
 </script>
 
 <template>

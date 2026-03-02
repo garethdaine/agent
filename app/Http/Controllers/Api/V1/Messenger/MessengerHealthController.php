@@ -19,7 +19,7 @@ class MessengerHealthController extends Controller
     public function index(): JsonResponse
     {
         $connectors = ConnectorAccount::query()
-            ->select('id', 'provider', 'name', 'status')
+            ->select('id', 'provider', 'name', 'status', 'connection_mode', 'runtime_state')
             ->get();
 
         $status = $this->determineOverallStatus($connectors);
@@ -34,6 +34,8 @@ class MessengerHealthController extends Controller
                 'provider' => $connector->provider,
                 'name' => $connector->name,
                 'status' => $connector->status,
+                'runtime_state' => $connector->runtime_state?->value,
+                'effective_state' => $this->effectiveConnectorState($connector),
             ])->values(),
             'queue' => [
                 'backlog_size' => $queueBacklog,
@@ -52,8 +54,12 @@ class MessengerHealthController extends Controller
             return 'unknown';
         }
 
-        $hasError = $connectors->contains('status', ConnectorAccount::STATUS_ERROR);
-        $allConnected = $connectors->every(fn ($c) => $c->status === ConnectorAccount::STATUS_CONNECTED);
+        $states = $connectors
+            ->map(fn (ConnectorAccount $connector) => $this->effectiveConnectorState($connector))
+            ->values();
+
+        $hasError = $states->contains(ConnectorAccount::STATUS_ERROR);
+        $allConnected = $states->every(fn (string $state) => $state === ConnectorAccount::STATUS_CONNECTED);
 
         if ($hasError) {
             return 'degraded';
@@ -64,6 +70,18 @@ class MessengerHealthController extends Controller
         }
 
         return 'degraded';
+    }
+
+    private function effectiveConnectorState(ConnectorAccount $connector): string
+    {
+        if ($connector->isLocalMode()) {
+            $runtimeState = $connector->runtime_state?->value;
+            if (is_string($runtimeState) && trim($runtimeState) !== '') {
+                return $runtimeState;
+            }
+        }
+
+        return (string) $connector->status;
     }
 
     private function getQueueBacklogSize(): int

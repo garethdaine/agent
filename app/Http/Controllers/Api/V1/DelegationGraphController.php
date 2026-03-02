@@ -303,11 +303,22 @@ class DelegationGraphController extends Controller
             }
         }
 
+        $isValid = count($allErrors) === 0;
+        if ($isValid) {
+            $this->stateTransitionService->transition(
+                graphId: (int) $graph->id,
+                fromStatuses: [DelegationGraph::STATUS_DRAFT, DelegationGraph::STATUS_VALIDATING],
+                toStatus: DelegationGraph::STATUS_READY,
+            );
+            $graph->refresh();
+        }
+
         return response()->json([
             'data' => [
-                'valid' => count($allErrors) === 0,
+                'valid' => $isValid,
                 'errors' => $allErrors,
                 'warnings' => $allWarnings,
+                'status' => $graph->status,
             ],
         ]);
     }

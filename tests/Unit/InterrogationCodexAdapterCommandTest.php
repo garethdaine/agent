@@ -187,6 +187,59 @@ class InterrogationCodexAdapterCommandTest extends TestCase
         $this->assertSame('choice', $parsed['answer_type'] ?? null);
     }
 
+    public function test_parse_question_response_prefers_most_complete_structured_payload_from_stream(): void
+    {
+        $adapter = new CodexAdapter;
+
+        $partialPayload = [
+            'question_id' => 'q-flags',
+            'question_text' => 'How should org feature flags roll out?',
+            'answer_type' => 'freetext',
+            'options' => [],
+            'reasoning' => 'uires "regression tests proving no behavior change when org feature flags are disabled".',
+            'category' => 'architecture',
+            'progress_estimate' => 42,
+            'is_complete' => false,
+            'cli_session_id' => 'session-1',
+        ];
+
+        $fullPayload = [
+            'question_id' => 'q-flags',
+            'question_text' => 'How should org feature flags roll out?',
+            'answer_type' => 'freetext',
+            'options' => [],
+            'reasoning' => 'Requires "regression tests proving no behavior change when org feature flags are disabled" and mentions "feature flags and warn-only rollout mode."',
+            'category' => 'architecture',
+            'progress_estimate' => 42,
+            'is_complete' => false,
+            'cli_session_id' => 'session-1',
+        ];
+
+        $output = implode("\n", [
+            json_encode([
+                'type' => 'item.completed',
+                'item' => [
+                    'type' => 'agent_message',
+                    'text' => json_encode($partialPayload, JSON_UNESCAPED_SLASHES),
+                ],
+            ], JSON_UNESCAPED_SLASHES) ?: '{}',
+            json_encode([
+                'type' => 'item.completed',
+                'item' => [
+                    'type' => 'agent_message',
+                    'text' => json_encode($fullPayload, JSON_UNESCAPED_SLASHES),
+                ],
+            ], JSON_UNESCAPED_SLASHES) ?: '{}',
+            json_encode(['type' => 'turn.completed'], JSON_UNESCAPED_SLASHES) ?: '{}',
+        ]);
+
+        $parsed = $adapter->parseQuestionResponse($output);
+
+        $this->assertIsArray($parsed);
+        $this->assertSame('q-flags', $parsed['question_id'] ?? null);
+        $this->assertSame('Requires "regression tests proving no behavior change when org feature flags are disabled" and mentions "feature flags and warn-only rollout mode."', $parsed['reasoning'] ?? null);
+    }
+
     public function test_parse_stream_event_suppresses_known_codex_state_warnings(): void
     {
         $adapter = new CodexAdapter;

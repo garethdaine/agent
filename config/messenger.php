@@ -28,6 +28,8 @@ return [
     'adapters' => [
         'slack' => \App\Support\Messenger\Adapters\SlackAdapter::class,
         'telegram' => \App\Support\Messenger\Adapters\TelegramAdapter::class,
+        'discord' => \App\Support\Messenger\Adapters\DiscordAdapter::class,
+        'whatsapp' => \App\Support\Messenger\Adapters\WhatsAppAdapter::class,
     ],
 
     /*

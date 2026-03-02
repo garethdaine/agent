@@ -26,6 +26,8 @@ use Illuminate\Support\Facades\Bus;
  */
 class AttemptSpawner
 {
+    private const ALLOWED_RUNNER_TYPES = ['claude', 'codex', 'custom'];
+
     public function __construct(
         private readonly ContractEnforcer $enforcer
     ) {}
@@ -62,11 +64,20 @@ class AttemptSpawner
         // Create transient AgentJob from DelegateeProfile config
         // Note: cron_expression, timezone, max_runtime_seconds, task_markdown_path are required
         // For delegation jobs, we use placeholder values since they run once, not on schedule
+        $runnerType = in_array($profile->runner_type, self::ALLOWED_RUNNER_TYPES, true)
+            ? $profile->runner_type
+            : 'custom';
+
+        $commandTemplate = $profile->command_template;
+        if ($runnerType === 'custom' && ! str_contains($commandTemplate, '{{task_markdown_path}}')) {
+            $commandTemplate = trim($commandTemplate).' {{task_markdown_path}}';
+        }
+
         $job = AgentJob::create([
             'user_id' => $task->graph->user_id,
-            'name' => "Delegation: {$task->name}",
-            'runner_type' => $profile->runner_type,
-            'command_template' => $profile->command_template,
+            'name' => sprintf('Delegation: %s #%d', $task->name, $attemptNumber),
+            'runner_type' => $runnerType,
+            'command_template' => $commandTemplate,
             'working_directory' => $profile->working_directory,
             'env_json' => $profile->env_json,
             // Required fields - use sensible defaults for delegation jobs
