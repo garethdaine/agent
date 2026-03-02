@@ -19,6 +19,14 @@ Use this file to capture correction-driven lessons.
 - Applied in: `app/Support/Documentation/DocsGenerationService.php`, `app/Console/Commands/DocsGenerateCommand.php`, `scripts/docs/sync.sh`, `tests/Feature/Documentation/DocsGenerateCommandTest.php`, `docs/README.md`
 
 ## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User correction on docs readability (markdown/table rendering in light mode)
+- Correction: User reported docs markdown and especially table rendering was poor in light mode due contrast/styling issues.
+- Pattern: Using `prose-invert` unconditionally on documentation content breaks light-theme readability and leaves large markdown tables without explicit contrast/overflow treatment.
+- Prevention rule: For theme-aware markdown views, use `prose-slate` for light mode + `dark:prose-invert` only for dark mode, and provide explicit table styles (borders, zebra rows, overflow, code-cell contrast) for data-dense docs.
+- Applied in: `resources/js/Pages/Docs/Index.vue`, `resources/js/Pages/Docs/Show.vue`, `resources/css/app.css`
+
+## Entry
 - Date: 2026-02-25
 - Source (job run id / interrogation session id): Interrogation session 4 / build 4
 - Correction: User reported run monitor output was still unreadable and cluttered with raw JSON fragments.
@@ -417,3 +425,11 @@ Use this file to capture correction-driven lessons.
 - Pattern: Completing schema/ingestion backends without validating actual UI navigation, search, markdown rendering, and tooltip link behavior can ship a technically "done" but practically unusable docs feature.
 - Prevention rule: For docs features, always run an end-user acceptance pass before completion: verify sidebar+content layout, working search, markdown rendering, tooltip Learn More navigation, and broad content coverage after sync.
 - Applied in: `app/Http/Controllers/Docs/DocsPageController.php`, `app/Support/Documentation/DocsRuntimeBootstrapService.php`, `app/Support/Documentation/TooltipRegistryService.php`, `resources/js/Pages/Docs/Index.vue`, `resources/js/Pages/Docs/Show.vue`, `resources/js/Components/HelpHint.vue`, `docs/product/**`, `docs/api/reference/**`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User report that blocked build tasks showed `Run #... · succeeded`, clarification excerpts rendered as raw JSON, and clarification action was not obvious in execution UI.
+- Correction: Build state presentation mixed raw run terminal status with task-level blocked state and displayed unsanitized machine payloads, producing contradictory/opaque UX during clarification pauses.
+- Pattern: In orchestration UIs, exposing low-level run metadata directly (without normalization + effective state mapping) causes misleading statuses and unusable operator prompts.
+- Prevention rule: When run/task state can diverge, always surface an effective status derived from task + policy flags; sanitize structured excerpts before rendering; place required operator actions inline with blocker messages.
+- Applied in: `app/Http/Controllers/Api/V1/InterrogationSessionController.php`, `app/Support/Agent/RunEventWriter.php`, `resources/js/Components/Interrogation/BuildPanel.vue`, `tests/Feature/InterrogationApiWorkflowTest.php`, `tests/Feature/AgentRunnerLifecycleTest.php`

@@ -10,6 +10,8 @@ use App\Jobs\ExecuteInterrogationSummaryJob;
 use App\Jobs\GenerateInterrogationBuildTasksJob;
 use App\Jobs\RegenerateInterrogationBuildTaskJob;
 use App\Jobs\SyncInterrogationTasksToTaskProviderJob;
+use App\Models\AgentJob;
+use App\Models\AgentJobRun;
 use App\Models\ConnectedProvider;
 use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationEvent;
@@ -1758,6 +1760,10 @@ class InterrogationApiWorkflowTest extends TestCase
         ])->assertStatus(202)
             ->assertJsonPath('data.task_id', $buildTask->id);
 
+        $session->refresh();
+        $this->assertFalse((bool) data_get($session->metadata_json, 'build.clarification_required'));
+        $this->assertNull(data_get($session->metadata_json, 'build.clarification_excerpt'));
+
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/resume-build')
             ->assertStatus(202)
             ->assertJsonPath('data.build_status', 'running');
@@ -1832,6 +1838,76 @@ class InterrogationApiWorkflowTest extends TestCase
         $this->assertDatabaseMissing('interrogation_build_tasks', [
             'id' => $createdTaskId,
         ]);
+    }
+
+    public function test_show_build_state_normalizes_structured_clarification_excerpt_and_exposes_effective_run_status(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build clarification visibility session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_BUILD_EXECUTING,
+            'phase' => InterrogationSession::PHASE_BUILD_EXECUTION,
+            'approved_at' => now('UTC'),
+            'metadata_json' => [
+                'build' => [
+                    'status' => 'paused',
+                    'pause_reason' => 'clarification',
+                    'clarification_required' => true,
+                    'task_count' => 1,
+                ],
+            ],
+        ]);
+
+        $job = AgentJob::factory()->for($user)->create();
+        $run = AgentJobRun::factory()->for($job, 'job')->create([
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'status' => AgentJobRun::STATUS_SUCCEEDED,
+            'metadata_json' => [
+                'clarification_required' => true,
+                'clarification_excerpt' => json_encode([
+                    'type' => 'item.completed',
+                    'item' => [
+                        'type' => 'agent_message',
+                        'text' => 'I need clarification on whether we should keep legacy event names.',
+                    ],
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ],
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Clarification task',
+            'description' => 'Needs clarification before progressing.',
+            'instructions_markdown' => 'Request clarification from the operator.',
+            'status' => InterrogationBuildTask::STATUS_BLOCKED,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $session->metadata_json = [
+            ...((array) ($session->metadata_json ?? [])),
+            'build' => [
+                ...((array) data_get($session->metadata_json, 'build', [])),
+                'active_task_id' => (int) $task->id,
+                'active_run_id' => (int) $run->id,
+            ],
+        ];
+        $session->save();
+
+        $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id)
+            ->assertOk()
+            ->assertJsonPath('data.build.flags.clarification_required', true)
+            ->assertJsonPath('data.build.flags.clarification_excerpt', 'I need clarification on whether we should keep legacy event names.')
+            ->assertJsonPath('data.build.active_run.status', AgentJobRun::STATUS_SUCCEEDED)
+            ->assertJsonPath('data.build.active_run.effective_status', 'blocked_clarification');
     }
 
     public function test_regenerate_single_build_task_queues_job_with_amend_notes(): void

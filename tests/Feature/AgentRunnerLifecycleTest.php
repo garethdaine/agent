@@ -571,6 +571,76 @@ SH;
         $this->assertStringContainsString('Could you clarify', (string) ($metadata['clarification_excerpt'] ?? ''));
     }
 
+    public function test_clarification_request_output_normalizes_structured_json_excerpt(): void
+    {
+        $clarifyExec = $this->sandboxBase.'/bin/clarification-json-runner';
+        $script = <<<'SH'
+#!/bin/sh
+echo '{"type":"item.completed","item":{"id":"item_80","type":"agent_message","text":"Could you clarify whether we should proceed with legacy event aliases?"}}'
+exit 0
+SH;
+        file_put_contents($clarifyExec, $script);
+        chmod($clarifyExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $clarifyExec,
+            'codex' => $clarifyExec,
+            'custom' => $clarifyExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $clarifyExec.' -p {{task_markdown_path}}',
+            'codex' => $clarifyExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/clarify-json.md';
+        file_put_contents($taskFile, "# Clarify JSON\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Clarification JSON Metadata',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertTrue((bool) ($metadata['clarification_required'] ?? false));
+        $this->assertSame(
+            'Could you clarify whether we should proceed with legacy event aliases?',
+            (string) ($metadata['clarification_excerpt'] ?? '')
+        );
+    }
+
     public function test_clarification_phrase_inside_escaped_code_snippet_does_not_trigger_detection(): void
     {
         $snippetExec = $this->sandboxBase.'/bin/clarification-escaped-snippet-runner';

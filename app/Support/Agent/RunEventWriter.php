@@ -6,6 +6,7 @@ use App\Jobs\Memory\MemoryWorkingBufferJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentRunEvent;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Str;
 
 class RunEventWriter
 {
@@ -368,16 +369,81 @@ class RunEventWriter
             return;
         }
 
+        $normalizedExcerpt = $this->normalizeClarificationExcerpt($excerpt);
         $now = CarbonImmutable::now('UTC')->toIso8601String();
         $metadata['clarification_required'] = true;
         $metadata['clarification_detected_at'] = $now;
-        $metadata['clarification_excerpt'] = substr(trim($excerpt), 0, 1000);
+        $metadata['clarification_excerpt'] = substr($normalizedExcerpt, 0, 1000);
         $this->run->metadata_json = $metadata;
 
         $this->appendLifecycle([
             'type' => 'clarification_requested',
             'at' => $now,
         ]);
+    }
+
+    private function normalizeClarificationExcerpt(string $excerpt): string
+    {
+        $normalized = trim($excerpt);
+        if ($normalized === '') {
+            return '';
+        }
+
+        $decoded = null;
+        if (Str::startsWith($normalized, '{') || Str::startsWith($normalized, '[')) {
+            $decoded = json_decode($normalized, true);
+        }
+
+        if (is_array($decoded)) {
+            $candidate = $this->extractClarificationText($decoded);
+            if ($candidate !== null) {
+                $normalized = $candidate;
+            }
+        }
+
+        if (preg_match('/\\\\n/', $normalized) === 1 && ! str_contains($normalized, "\n")) {
+            $normalized = str_replace('\\n', "\n", $normalized);
+        }
+
+        return trim($normalized);
+    }
+
+    private function extractClarificationText(mixed $payload): ?string
+    {
+        if (is_string($payload)) {
+            $value = trim($payload);
+            return $value === '' ? null : $value;
+        }
+
+        if (! is_array($payload)) {
+            return null;
+        }
+
+        foreach (['text', 'message', 'excerpt', 'question', 'prompt', 'detail', 'content'] as $key) {
+            if (is_string($payload[$key] ?? null) && trim((string) $payload[$key]) !== '') {
+                return trim((string) $payload[$key]);
+            }
+        }
+
+        foreach (['item', 'payload', 'data', 'result', 'response', 'error'] as $key) {
+            $candidate = $this->extractClarificationText($payload[$key] ?? null);
+            if ($candidate !== null) {
+                return $candidate;
+            }
+        }
+
+        foreach ($payload as $key => $child) {
+            if (in_array((string) $key, ['id', 'type', 'status', 'event_type', 'role'], true)) {
+                continue;
+            }
+
+            $candidate = $this->extractClarificationText($child);
+            if ($candidate !== null && preg_match('/\s/', $candidate) === 1) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     private function markRateLimitDetected(string $excerpt): void

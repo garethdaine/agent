@@ -173,6 +173,26 @@ const taskStatusLabel = (value) => {
     return normalized === '' ? 'pending' : normalized;
 };
 
+const humanizeStatus = (value) => String(value ?? '')
+    .trim()
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+
+const activeRunDisplayStatus = computed(() => {
+    const effectiveStatus = humanizeStatus(activeRun.value?.effective_status);
+    if (effectiveStatus !== '') {
+        return effectiveStatus;
+    }
+
+    const runStatus = humanizeStatus(activeRun.value?.status);
+    if (runStatus !== '') {
+        return runStatus;
+    }
+
+    return 'unknown';
+});
+
 const taskStatusBadgeClass = (value) => {
     const normalized = normalizeTaskStatus(value);
 
@@ -1169,7 +1189,7 @@ const submitTaskRegeneration = (task) => {
                             <p v-if="task.description" class="text-muted-foreground">{{ task.description }}</p>
                             <p v-if="task.last_error" class="mt-1 text-destructive">{{ task.last_error }}</p>
                             <p v-if="activeTask?.id === task.id && activeRun" class="mt-1 text-muted-foreground">
-                                Run #{{ activeRun.id }} · {{ activeRun.status }}
+                                Run #{{ activeRun.id }} · {{ activeRunDisplayStatus }}
                             </p>
                         </div>
                     </div>
@@ -1190,7 +1210,23 @@ const submitTaskRegeneration = (task) => {
         <div v-if="isExecutionMode && flags.clarification_required" class="mt-4 rounded border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
             <p class="font-semibold">Clarification requested by the AI.</p>
             <p v-if="flags.clarification_excerpt" class="mt-1 whitespace-pre-wrap">{{ flags.clarification_excerpt }}</p>
-            <p class="mt-1">Submit clarification below, then click Resume Build.</p>
+            <p class="mt-1">Submit clarification, then click Resume Build.</p>
+            <textarea
+                v-model="clarification"
+                rows="3"
+                class="mt-2 w-full rounded border border-primary/40 bg-input-background text-sm text-foreground"
+                placeholder="Reply to the clarification request..."
+            />
+            <div class="mt-2 flex justify-end">
+                <button
+                    type="button"
+                    class="rounded bg-primary px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="disabled || actions.clarifyBuild || clarification.trim() === ''"
+                    @click="submitClarification"
+                >
+                    {{ actions.clarifyBuild ? 'Submitting...' : 'Submit Clarification' }}
+                </button>
+            </div>
         </div>
 
         <div v-if="isExecutionMode && flags.rate_limit_detected" class="mt-4 rounded border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
@@ -1319,7 +1355,7 @@ const submitTaskRegeneration = (task) => {
             </div>
         </div>
 
-        <div v-if="isExecutionMode" class="mt-4 rounded border border-border p-3 ">
+        <div v-if="isExecutionMode && !flags.clarification_required" class="mt-4 rounded border border-border p-3 ">
             <p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Clarification</p>
             <textarea
                 v-model="clarification"

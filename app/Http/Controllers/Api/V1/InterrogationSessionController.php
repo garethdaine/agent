@@ -1764,6 +1764,8 @@ class InterrogationSessionController extends Controller
         $build = $this->buildMetadata($session);
         $build['last_clarification_at'] = CarbonImmutable::now('UTC')->toIso8601String();
         $build['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+        $build['clarification_required'] = false;
+        $build['clarification_excerpt'] = null;
 
         if ($targetTask->status === InterrogationBuildTask::STATUS_IN_PROGRESS) {
             $targetTask->status = InterrogationBuildTask::STATUS_BLOCKED;
@@ -2845,6 +2847,12 @@ class InterrogationSessionController extends Controller
 
         $runMetadata = is_array($activeRun?->metadata_json) ? $activeRun->metadata_json : [];
 
+        $clarificationExcerpt = $this->normalizeClarificationExcerpt(
+            is_string($runMetadata['clarification_excerpt'] ?? null)
+                ? $runMetadata['clarification_excerpt']
+                : (is_string($build['clarification_excerpt'] ?? null) ? $build['clarification_excerpt'] : null)
+        );
+
         $flags = [
             'approval_required' => (bool) (($runMetadata['approval_required'] ?? null) ?? ($build['approval_required'] ?? false)),
             'approval_excerpt' => is_string($runMetadata['approval_excerpt'] ?? null)
@@ -2855,9 +2863,7 @@ class InterrogationSessionController extends Controller
                 ? $runMetadata['permission_blocker_excerpt']
                 : (is_string($build['permission_excerpt'] ?? null) ? $build['permission_excerpt'] : null),
             'clarification_required' => (bool) (($runMetadata['clarification_required'] ?? null) ?? ($build['clarification_required'] ?? false)),
-            'clarification_excerpt' => is_string($runMetadata['clarification_excerpt'] ?? null)
-                ? $runMetadata['clarification_excerpt']
-                : (is_string($build['clarification_excerpt'] ?? null) ? $build['clarification_excerpt'] : null),
+            'clarification_excerpt' => $clarificationExcerpt,
             'rate_limit_detected' => (bool) (($runMetadata['rate_limit_detected'] ?? null) ?? ($build['rate_limit_detected'] ?? false)),
             'rate_limit_reset_at' => (string) ($runMetadata['rate_limit_reset_at'] ?? $runMetadata['rate_limit_hold_until'] ?? $build['rate_limit_reset_at'] ?? ''),
             'rate_limit_excerpt' => is_string($runMetadata['rate_limit_excerpt'] ?? null)
@@ -2872,12 +2878,18 @@ class InterrogationSessionController extends Controller
             $flags['rate_limit_reset_at'] = null;
         }
 
+        $activeRunPayload = null;
+        if ($activeRun !== null) {
+            $activeRunPayload = $this->transformBuildRun($activeRun);
+            $activeRunPayload['effective_status'] = $this->effectiveBuildRunStatus($activeRun, $activeTask, $flags);
+        }
+
         return [
             'status' => $status,
             'summary' => $summary,
             'tasks' => $tasks->map(fn (InterrogationBuildTask $task): array => $this->transformBuildTask($task))->values(),
             'active_task' => $activeTask !== null ? $this->transformBuildTask($activeTask) : null,
-            'active_run' => $activeRun !== null ? $this->transformBuildRun($activeRun) : null,
+            'active_run' => $activeRunPayload,
             'project_rules' => $this->normalizedProjectRules((array) ($build['project_rules'] ?? [])),
             'flags' => $flags,
             'issues' => $normalizedIssues,
@@ -2934,6 +2946,101 @@ class InterrogationSessionController extends Controller
             'metadata_json' => $run->metadata_json,
             'log_tail' => $this->runLogTail($run),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $flags
+     */
+    private function effectiveBuildRunStatus(AgentJobRun $run, ?InterrogationBuildTask $activeTask, array $flags): string
+    {
+        $runStatus = Str::lower(trim((string) $run->status));
+        $taskStatus = Str::lower(trim((string) ($activeTask?->status ?? '')));
+
+        if ($taskStatus !== InterrogationBuildTask::STATUS_BLOCKED) {
+            return $runStatus !== '' ? $runStatus : (string) $run->status;
+        }
+
+        if (($flags['clarification_required'] ?? false) === true) {
+            return 'blocked_clarification';
+        }
+
+        if (($flags['permission_required'] ?? false) === true) {
+            return 'blocked_permission';
+        }
+
+        if (($flags['rate_limit_detected'] ?? false) === true) {
+            return 'blocked_rate_limit';
+        }
+
+        return 'blocked';
+    }
+
+    private function normalizeClarificationExcerpt(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $excerpt = trim($value);
+        if ($excerpt === '') {
+            return null;
+        }
+
+        $decoded = null;
+        if (Str::startsWith($excerpt, '{') || Str::startsWith($excerpt, '[')) {
+            $decoded = json_decode($excerpt, true);
+        }
+
+        if (is_array($decoded)) {
+            $candidate = $this->extractClarificationText($decoded);
+            if (is_string($candidate) && trim($candidate) !== '') {
+                $excerpt = trim($candidate);
+            }
+        }
+
+        if (preg_match('/\\\\n/', $excerpt) === 1 && ! Str::contains($excerpt, "\n")) {
+            $excerpt = str_replace('\\n', "\n", $excerpt);
+        }
+
+        return trim(Str::limit($excerpt, 1000, ''));
+    }
+
+    private function extractClarificationText(mixed $payload): ?string
+    {
+        if (is_string($payload)) {
+            $value = trim($payload);
+            return $value === '' ? null : $value;
+        }
+
+        if (! is_array($payload)) {
+            return null;
+        }
+
+        foreach (['text', 'message', 'excerpt', 'question', 'prompt', 'detail', 'content'] as $key) {
+            if (is_string($payload[$key] ?? null) && trim((string) $payload[$key]) !== '') {
+                return trim((string) $payload[$key]);
+            }
+        }
+
+        foreach (['item', 'payload', 'data', 'result', 'response', 'error'] as $key) {
+            $candidate = $this->extractClarificationText($payload[$key] ?? null);
+            if ($candidate !== null) {
+                return $candidate;
+            }
+        }
+
+        foreach ($payload as $key => $child) {
+            if (in_array((string) $key, ['id', 'type', 'status', 'event_type', 'role'], true)) {
+                continue;
+            }
+
+            $candidate = $this->extractClarificationText($child);
+            if ($candidate !== null && preg_match('/\s/', $candidate) === 1) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**
