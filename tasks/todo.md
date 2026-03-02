@@ -2132,3 +2132,13 @@ Review
 - Updated Repo Analysis wizard panels: Task Graph now shows DAG dependency context, Coverage Gate now binds to real `coverage_validated` events and displays pass/blocker summary, Artifacts now include type descriptions and payload summaries.
 - Added regression checks in `ReportComposerTest` and export markdown assertions in `RepoAnalysisExportAndRetentionTest`.
 - Verification: `php artisan test --filter=RepoAnalysis --stop-on-failure` (64 tests, all passing).
+
+## 2026-03-02 Repo Analysis UX Follow-up
+- [x] Add full report rendering in Repo Analysis UI (not metadata-only cards).
+- [x] Auto-start analysis for newly created sessions without requiring manual "Run Next Step".
+- [x] Verify with focused tests and push.
+
+### Review
+- ReportViewer now shows full report content directly in-app (overview, dependency summary, backend/frontend surfaces, testing, risk hotspots, coverage gate, glossary) plus raw payload JSON.
+- Create flow now routes to wizard with one-time `autostart=1`; wizard consumes that flag and immediately starts snapshot when session is in setup phase.
+- Verification: `php artisan test --filter=RepoAnalysis --stop-on-failure` and `npm run build` both pass.

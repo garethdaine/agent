@@ -466,3 +466,11 @@ Use this file to capture correction-driven lessons.
   - UI labels like `Task Graph`, `Coverage Gate`, and `Artifacts` must include inline definitions and actionable summaries.
   - Realtime panels must bind to actual emitted event types (verify event names in code + UI together).
   - Before sign-off, run one end-to-end sample and validate report usefulness for a human unfamiliar with the codebase.
+
+## 2026-03-02 - Discovery/report tools need immediate operator UX, not just backend correctness
+- Trigger: User requested full in-app report visibility and no manual first-step click after session creation.
+- Mistake pattern: Shipping backend/report improvements while leaving workflow friction in the UI (hidden detail and extra required action).
+- Prevention rules:
+  - If a report is generated, expose complete report context directly in-app, with export as secondary.
+  - New long-running sessions created from a wizard should auto-enter phase 1 when safe, rather than requiring a redundant first click.
+  - Validate create -> wizard UX end-to-end before marking repo-analysis changes complete.

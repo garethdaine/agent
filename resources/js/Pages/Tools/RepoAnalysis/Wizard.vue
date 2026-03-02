@@ -63,6 +63,8 @@ const actionBusy = ref({
 });
 const pollingTimer = ref(null);
 const optimisticExpectedStatus = ref(null);
+const autoStartRequested = ref(false);
+const autoStartAttempted = ref(false);
 
 const activeStatusByPhase = {
     1: 'snapshotting',
@@ -288,6 +290,34 @@ const runNextStep = async () => {
     }
 };
 
+const maybeAutoStart = async () => {
+    if (!autoStartRequested.value || autoStartAttempted.value) {
+        return;
+    }
+
+    if (!props.viewer?.can_mutate) {
+        autoStartAttempted.value = true;
+
+        return;
+    }
+
+    const phase = Number(session.value?.phase ?? 0);
+    const status = String(session.value?.status ?? '');
+    if (phase !== 0 || status !== 'setup') {
+        autoStartAttempted.value = true;
+
+        return;
+    }
+
+    autoStartAttempted.value = true;
+
+    await postLifecycle('start-snapshot', {
+        busyKey: 'runNext',
+        expectedStatus: 'snapshotting',
+        successNotice: 'Snapshot auto-started.',
+    });
+};
+
 const retryTask = async (taskId) => {
     await postLifecycle('retry-task', {
         payload: { task_id: taskId },
@@ -317,7 +347,20 @@ const exportLatestReport = async () => {
 };
 
 onMounted(async () => {
+    if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        autoStartRequested.value = params.get('autostart') === '1';
+
+        if (autoStartRequested.value) {
+            params.delete('autostart');
+            const query = params.toString();
+            const cleanedUrl = `${window.location.pathname}${query ? `?${query}` : ''}`;
+            window.history.replaceState({}, '', cleanedUrl);
+        }
+    }
+
     await refreshAll();
+    await maybeAutoStart();
     subscribeRealtime();
     schedulePoll();
 });

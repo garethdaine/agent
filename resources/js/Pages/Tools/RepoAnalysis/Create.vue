@@ -38,7 +38,7 @@ const submit = async () => {
         const sessionId = data?.data?.id;
 
         if (sessionId) {
-            router.visit(route('tools.repo-analysis.wizard', sessionId));
+            router.visit(`${route('tools.repo-analysis.wizard', sessionId)}?autostart=1`);
             return;
         }
 
