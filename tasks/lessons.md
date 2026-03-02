@@ -353,3 +353,11 @@ Use this file to capture correction-driven lessons.
 - Pattern: Adding strict guardrails that terminate sessions can regress UX when the expected behavior is graceful recovery and continued interrogation.
 - Prevention rule: For runtime quality guards in interrogation/planning flows, default to non-terminal recovery (retry, reset session state, continue with warning) and reserve terminal failure for unrecoverable parse/runtime exceptions only.
 - Applied in: `app/Jobs/ExecuteInterrogationRoundJob.php`, `tests/Unit/ExecuteInterrogationRoundJobTest.php`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User-reported repeated re-asks persisted after non-terminal duplicate warning
+- Correction: Warning-only handling still surfaced repeated questions to the user, causing continued interrogation loops.
+- Pattern: Detecting duplicates without a concrete forward-progress action (auto-resolve/advance/complete) can leave the loop intact even when sessions no longer fail.
+- Prevention rule: Any duplicate-question detection must enforce a progression strategy: auto-resolve from prior confirmed answer, or auto-advance to next step when saturation is detected; warning-only is insufficient.
+- Applied in: `app/Jobs/ExecuteInterrogationRoundJob.php`, `config/agent.php`, `tests/Unit/ExecuteInterrogationRoundJobTest.php`

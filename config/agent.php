@@ -64,6 +64,7 @@ return [
         'codex_plan_min_concrete_references' => (int) env('AGENT_INTERROGATION_CODEX_PLAN_MIN_CONCRETE_REFERENCES', 6),
         'codex_plan_quality_retries' => (int) env('AGENT_INTERROGATION_CODEX_PLAN_QUALITY_RETRIES', 1),
         'plan_payload_retry_attempts' => (int) env('AGENT_INTERROGATION_PLAN_PAYLOAD_RETRY_ATTEMPTS', 2),
+        'duplicate_recovery_max_depth' => (int) env('AGENT_INTERROGATION_DUPLICATE_RECOVERY_MAX_DEPTH', 4),
         'plan_guard_min_markdown_chars' => (int) env('AGENT_INTERROGATION_PLAN_GUARD_MIN_MARKDOWN_CHARS', 220),
         'adversarial_review_enabled' => (bool) env('AGENT_ADVERSARIAL_REVIEW_ENABLED', false),
         'summary_review_max_retries' => (int) env('AGENT_SUMMARY_REVIEW_MAX_RETRIES', 3),

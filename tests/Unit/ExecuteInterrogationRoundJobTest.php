@@ -526,6 +526,8 @@ class ExecuteInterrogationRoundJobTest extends TestCase
 
     public function test_round_does_not_fail_when_duplicate_question_persists_after_repairs(): void
     {
+        Queue::fake();
+
         $session = $this->interrogatingSession();
         $session->cli_session_id = 'codex-session-dup';
         $session->save();
@@ -611,16 +613,30 @@ class ExecuteInterrogationRoundJobTest extends TestCase
             InterrogationEvent::query()
                 ->where('interrogation_session_id', $session->id)
                 ->where('event_type', InterrogationEvent::TYPE_SYSTEM)
-                ->where('payload->notice', 'duplicate_question_warning')
+                ->where('payload->notice', 'duplicate_question_auto_resolved')
                 ->exists()
         );
-        $this->assertTrue(
+        $this->assertFalse(
             InterrogationEvent::query()
                 ->where('interrogation_session_id', $session->id)
                 ->where('event_type', InterrogationEvent::TYPE_QUESTION)
                 ->where('payload->question_id', 'q-visibility-repeat')
                 ->exists()
         );
+        $this->assertTrue(
+            InterrogationEvent::query()
+                ->where('interrogation_session_id', $session->id)
+                ->where('event_type', InterrogationEvent::TYPE_ANSWER)
+                ->where('payload->question_id', 'q-visibility-repeat')
+                ->where('payload->auto_resolved_duplicate', true)
+                ->exists()
+        );
+
+        Queue::assertPushed(ExecuteInterrogationRoundJob::class, function (ExecuteInterrogationRoundJob $job) use ($session): bool {
+            return (int) $job->sessionId === (int) $session->id
+                && $job->isSystemMessage === true
+                && $job->duplicateRecoveryDepth === 1;
+        });
     }
 
     private function interrogatingSession(): InterrogationSession

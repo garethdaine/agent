@@ -109,8 +109,9 @@ Review
 - Added duplicate-intent detection in round execution using answered-question history, text similarity, option similarity, selected-answer overlap, and topic overlap.
 - Added parity continuity prompting for interrogation rounds so both runners receive resolved-decision context in every turn (not only implicit CLI resume state).
 - Added automatic repair flow: request a materially different unresolved question; if duplicate persists on resumed Codex thread, retry with `cli_session_id` cleared and a context-recovery prompt.
-- Replaced hard failure on persistent duplicate output with non-terminal warning + continued interrogation, so sessions do not fail in the UI.
-- Added unit coverage in `tests/Unit/ExecuteInterrogationRoundJobTest.php` for duplicate repair, resume-reset recovery, and persistent-duplicate non-failure behavior.
+- Replaced hard failure on persistent duplicate output with non-terminal auto-resolution: duplicate question is auto-answered from prior confirmed answer and interrogation auto-advances to next unresolved question.
+- Added bounded auto-recovery depth (`agent.interrogation.duplicate_recovery_max_depth`, default `4`) to prevent endless self-recursion.
+- Added unit coverage in `tests/Unit/ExecuteInterrogationRoundJobTest.php` for duplicate repair, resume-reset recovery, and persistent-duplicate auto-resolution behavior.
 - Verification:
   - `php artisan test tests/Unit/ExecuteInterrogationRoundJobTest.php`
   - `php artisan test tests/Unit/QuestionPayloadGuardTest.php tests/Unit/InterrogationCodexAdapterCommandTest.php`

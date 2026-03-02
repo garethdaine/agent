@@ -39,6 +39,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
         public bool $isSystemMessage = false,
         /** @var array<string, mixed>|null */
         public ?array $answerPayload = null,
+        public int $duplicateRecoveryDepth = 0,
     ) {
         $this->onConnection('redis');
         $this->onQueue('interrogation');
@@ -372,6 +373,68 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                                 'at' => CarbonImmutable::now('UTC')->toIso8601String(),
                             ]);
                         }
+
+                        $recoveryDuplicateContext = $this->detectDuplicateAnsweredQuestion($session, $question, $questionPayloadGuard);
+                        if ($recoveryDuplicateContext !== null) {
+                            $maxDepth = max(1, (int) config('agent.interrogation.duplicate_recovery_max_depth', 4));
+                            $priorAnswerPayload = is_array($recoveryDuplicateContext['previous_answer_payload'] ?? null)
+                                ? $recoveryDuplicateContext['previous_answer_payload']
+                                : (is_array($duplicateContext['previous_answer_payload'] ?? null)
+                                    ? $duplicateContext['previous_answer_payload']
+                                    : null);
+
+                            if ($priorAnswerPayload !== null && $this->duplicateRecoveryDepth < $maxDepth) {
+                                $autoAnswer = $this->cloneAnswerPayloadForDuplicate($question, $priorAnswerPayload);
+                                $writer->appendAnswer($autoAnswer);
+                                $writer->appendSystem([
+                                    'notice' => 'duplicate_question_auto_resolved',
+                                    'message' => 'A repeated question was auto-resolved from a previously confirmed answer.',
+                                    'details' => [
+                                        'duplicate_question_id' => (string) ($question['question_id'] ?? ''),
+                                        'source_question_id' => (string) ($recoveryDuplicateContext['previous_question_id'] ?? ''),
+                                        'depth' => $this->duplicateRecoveryDepth + 1,
+                                    ],
+                                    'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                                ]);
+
+                                ExecuteInterrogationRoundJob::dispatch(
+                                    (int) $session->id,
+                                    'A duplicate question was auto-resolved from prior decisions. Ask the next single unresolved question only.',
+                                    true,
+                                    null,
+                                    $this->duplicateRecoveryDepth + 1,
+                                );
+
+                                if (is_string($session->cli_session_id) && trim($session->cli_session_id) !== '') {
+                                    $session->cli_session_id = null;
+                                    $session->save();
+                                }
+
+                                return;
+                            }
+
+                            if ($this->canAcceptCompletion($session, $questionPayloadGuard)) {
+                                $writer->appendSystem([
+                                    'notice' => 'interrogation_complete',
+                                    'message' => 'Interrogation advanced to summary after repeated duplicate questions with no new unresolved decisions.',
+                                ]);
+
+                                $moved = $transitions->transitionPhase(
+                                    (int) $session->id,
+                                    InterrogationSession::PHASE_INTERROGATION,
+                                    InterrogationSession::PHASE_SUMMARY,
+                                    InterrogationSession::STATUS_SUMMARIZING,
+                                    [InterrogationSession::STATUS_INTERROGATING],
+                                );
+
+                                if ($moved) {
+                                    $session->refresh();
+                                    ExecuteInterrogationSummaryJob::dispatch((int) $session->id);
+                                }
+
+                                return;
+                            }
+                        }
                     }
                 }
             }
@@ -622,6 +685,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                     'previous_question_id' => $priorQuestionId,
                     'previous_question_text' => $priorQuestionText,
                     'previous_answer' => $this->summarizeAnswerPayload($answerPayload),
+                    'previous_answer_payload' => $answerPayload,
                 ];
             }
 
@@ -634,6 +698,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                     'previous_question_id' => $priorQuestionId,
                     'previous_question_text' => $priorQuestionText,
                     'previous_answer' => $this->summarizeAnswerPayload($answerPayload),
+                    'previous_answer_payload' => $answerPayload,
                     'text_similarity' => $textSimilarity,
                 ];
             }
@@ -644,6 +709,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                     'previous_question_id' => $priorQuestionId,
                     'previous_question_text' => $priorQuestionText,
                     'previous_answer' => $this->summarizeAnswerPayload($answerPayload),
+                    'previous_answer_payload' => $answerPayload,
                     'text_similarity' => $textSimilarity,
                 ];
             }
@@ -658,6 +724,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                     'previous_question_id' => $priorQuestionId,
                     'previous_question_text' => $priorQuestionText,
                     'previous_answer' => $this->summarizeAnswerPayload($answerPayload),
+                    'previous_answer_payload' => $answerPayload,
                     'selected_option_similarity' => $selectedOptionSimilarity,
                 ];
             }
@@ -674,6 +741,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                     'previous_question_id' => $priorQuestionId,
                     'previous_question_text' => $priorQuestionText,
                     'previous_answer' => $this->summarizeAnswerPayload($answerPayload),
+                    'previous_answer_payload' => $answerPayload,
                     'shared_topics' => $sharedTopics,
                     'text_similarity' => $textSimilarity,
                     'option_similarity' => $optionSimilarity,
@@ -1030,5 +1098,36 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
         }
 
         return $this->buildRoundPromptWithAnsweredContext($session, $base, $questionPayloadGuard);
+    }
+
+    /**
+     * @param  array<string, mixed>  $question
+     * @param  array<string, mixed>  $priorAnswerPayload
+     * @return array<string, mixed>
+     */
+    private function cloneAnswerPayloadForDuplicate(array $question, array $priorAnswerPayload): array
+    {
+        $questionId = trim((string) ($question['question_id'] ?? ''));
+        $answerType = strtolower(trim((string) ($priorAnswerPayload['answer_type'] ?? 'freetext')));
+        if ($answerType === '' || $answerType === 'skip') {
+            $answerType = 'freetext';
+        }
+
+        $selectedOptions = array_values(array_filter(
+            (array) ($priorAnswerPayload['selected_options'] ?? []),
+            static fn ($value): bool => is_string($value) && trim($value) !== ''
+        ));
+
+        return [
+            'question_id' => $questionId !== '' ? $questionId : null,
+            'answer_type' => $answerType,
+            'answer_text' => (string) ($priorAnswerPayload['answer_text'] ?? ''),
+            'selected_option' => (string) ($priorAnswerPayload['selected_option'] ?? ''),
+            'selected_options' => $selectedOptions,
+            'skip_reason' => '',
+            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            'auto_resolved_duplicate' => true,
+            'source_question_id' => (string) ($priorAnswerPayload['question_id'] ?? ''),
+        ];
     }
 }
