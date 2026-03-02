@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import { Head } from '@inertiajs/vue3';
 import Card from '@/Components/ui/Card.vue';
 import CardHeader from '@/Components/ui/CardHeader.vue';
@@ -78,7 +79,14 @@ onMounted(loadMetrics);
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="font-semibold text-xl text-foreground leading-tight">Dashboard</h2>
+                <div class="flex items-center gap-2">
+                    <h2 class="font-semibold text-xl text-foreground leading-tight">Dashboard</h2>
+                    <HelpHint
+                        ui-key="dashboard.overview"
+                        short-text="Understand dashboard metrics, scheduler health, and safe interpretation."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
                 <div class="flex items-center gap-2">
                     <select
                         v-model="windowKey"

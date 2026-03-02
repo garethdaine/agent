@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -u
+
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+SHARED_SCRIPT="${PROJECT_ROOT}/scripts/docs/sync.sh"
+
+if [[ ! -x "${SHARED_SCRIPT}" ]]; then
+    echo "[docs-sync] WARNING: shared sync script missing or not executable at ${SHARED_SCRIPT}; skipping docs sync hook." >&2
+    exit 0
+fi
+
+exec "${SHARED_SCRIPT}" --mode=commit --source=repo
+

@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import Card from '@/Components/ui/Card.vue';
 import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
@@ -84,7 +85,14 @@ onMounted(load);
                     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                         <Brain class="h-5 w-5 text-primary" />
                     </div>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Agent Memory</h2>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Agent Memory</h2>
+                        <HelpHint
+                            ui-key="memory.diagnostics"
+                            short-text="Interpret mode, diagnostics, and provider usage before changing memory settings."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('tools.memory.settings')">

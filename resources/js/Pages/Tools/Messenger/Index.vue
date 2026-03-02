@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import Card from '@/Components/ui/Card.vue';
 import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
@@ -479,7 +480,14 @@ onMounted(async () => {
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Messenger Control Plane</h2>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Messenger Control Plane</h2>
+                    <HelpHint
+                        ui-key="messenger.control-plane"
+                        short-text="Use connector health, session activity, and dead-letter workflows safely."
+                        learn-more-href="/docs/api-contracts"
+                    />
+                </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('messenger.dead-letters.index')">
                         <Button variant="outline" size="sm">

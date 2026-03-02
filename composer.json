@@ -14,12 +14,14 @@
         "laravel/pennant": "^1.19",
         "laravel/reverb": "^1.7",
         "laravel/sanctum": "^4.0",
+        "laravel/scout": "^10.24",
         "laravel/tinker": "^2.10.1",
         "laudis/neo4j-php-client": "^3.0",
         "phpoffice/phpspreadsheet": "^5.4",
         "ratchet/pawl": "^0.4.3",
         "spatie/laravel-backup": "^10.0",
-        "tightenco/ziggy": "^2.0"
+        "tightenco/ziggy": "^2.0",
+        "typesense/typesense-php": "^6.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

@@ -153,28 +153,6 @@ class BuildTaskRunFactoryTest extends TestCase
         $this->assertStringContainsString('Architecture Constraints', $markdown);
     }
 
-    public function test_factory_sets_isolated_codex_home_for_codex_runner(): void
-    {
-        Queue::fake();
-
-        $user = User::factory()->create();
-        $session = $this->makeSession($user, ['build' => ['status' => 'running']], 'codex');
-        $task = $this->makeTask($session, 1);
-
-        $factory = app(BuildTaskRunFactory::class);
-        $run = $factory->create($session, $task);
-
-        $job = AgentJob::query()->findOrFail((int) $run->agent_job_id);
-        $codexHome = (string) data_get($job->env_json, 'CODEX_HOME', '');
-
-        $this->assertNotSame('', $codexHome);
-        $this->assertStringContainsString('/storage/framework/interrogation-codex/session-'.$session->id, $codexHome);
-        $this->assertDirectoryExists($codexHome);
-        $this->assertFalse((bool) data_get($job->env_json, 'CODEX_THREAD_ID', true));
-        $this->assertFalse((bool) data_get($job->env_json, 'CODEX_SESSION_ID', true));
-        $this->assertFalse((bool) data_get($job->env_json, 'CODEX_INTERNAL_ORIGINATOR_OVERRIDE', true));
-    }
-
     /**
      * @param  array<string, mixed>  $metadata
      */

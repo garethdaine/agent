@@ -426,7 +426,7 @@ class RunEventWriter
             'code' => 'MCP_SERVER_UNAVAILABLE',
             'title' => 'MCP server unavailable',
             'detail' => sprintf('Could not connect to %s (connection refused).', $endpoint),
-            'suggested_action' => 'Start/restart the MCP server or update MCP endpoint config.',
+            'suggested_action' => 'Start/restart the MCP server on port 3333 or update MCP endpoint config.',
             'endpoint' => $endpoint,
             'count' => $count,
             'last_detected_at' => $now,

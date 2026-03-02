@@ -463,7 +463,7 @@ class ExecuteAgentRunJob implements ShouldQueue
     }
 
     /**
-     * @return array<string, string|bool>
+     * @return array<string, string>
      */
     private function mergedEnvironment(AgentJobRun $run): array
     {
@@ -476,17 +476,7 @@ class ExecuteAgentRunJob implements ShouldQueue
         }
 
         foreach ((array) ($run->job->env_json ?? []) as $key => $value) {
-            if (! is_string($key)) {
-                continue;
-            }
-
-            if (is_bool($value) && $value === false) {
-                // Symfony Process treats false as "unset inherited variable".
-                $env[$key] = false;
-                continue;
-            }
-
-            if (is_scalar($value)) {
+            if (is_string($key) && is_scalar($value)) {
                 $env[$key] = (string) $value;
             }
         }

@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import Card from '@/Components/ui/Card.vue';
 import Table from '@/Components/ui/Table.vue';
@@ -114,7 +115,14 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Agent Jobs</h2>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Agent Jobs</h2>
+                    <HelpHint
+                        ui-key="jobs.overview"
+                        short-text="Review scheduling, runner selection, and safe execution controls."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
                 <Link :href="route('agent.jobs.create')">
                     <Button>
                         <Plus class="h-4 w-4 mr-2" />

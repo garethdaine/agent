@@ -29,6 +29,10 @@ class SearchDocsRequest extends FormRequest
             $input['section'] = trim($this->query('section'));
         }
 
+        if (is_string($this->query('route'))) {
+            $input['route'] = trim($this->query('route'));
+        }
+
         $this->merge($input);
     }
 
@@ -38,9 +42,10 @@ class SearchDocsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'q' => ['nullable', 'string', 'max:160'],
+            'q' => ['required', 'string', 'min:1', 'max:160'],
             'domain' => ['nullable', 'string', 'in:product_doc,api_doc,tooltip'],
             'section' => ['nullable', 'string', 'max:80'],
+            'route' => ['nullable', 'string', 'max:160'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
         ];
     }

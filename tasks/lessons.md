@@ -372,8 +372,24 @@ Use this file to capture correction-driven lessons.
 
 ## Entry
 - Date: 2026-03-02
-- Source (job run id / interrogation session id): User-reported Codex build tasks still "completed" quickly with planning/checklist-only behavior and no feature files changed
-- Correction: Build-run evidence gate was too permissive (counted non-implementation mutations like `tasks/todo.md`) and build runner env still inherited Codex desktop thread/session vars.
-- Pattern: Autonomous run quality degrades when runner subprocesses inherit interactive desktop context and when execution evidence does not distinguish implementation mutations from housekeeping edits.
-- Prevention rule: For Codex build runs, scrub thread/session origin env vars (`CODEX_THREAD_ID`, `CODEX_SESSION_ID`, `CODEX_INTERNAL_ORIGINATOR_OVERRIDE`) and require both implementation-path mutation evidence (`app|database|config|routes|resources|tests|scripts`) plus verification command evidence before completing tasks.
-- Applied in: `app/Support/Interrogation/BuildTaskRunFactory.php`, `app/Jobs/ExecuteAgentRunJob.php`, `app/Jobs/ExecuteInterrogationBuildJob.php`, `tests/Unit/ExecuteInterrogationBuildJobTest.php`, `tests/Unit/BuildTaskRunFactoryTest.php`
+- Source (job run id / interrogation session id): User correction on Codex authentication model for build runs
+- Correction: User explicitly requires authenticated Codex CLI subscription flow (like Claude CLI), not OpenAI API credentials injection.
+- Pattern: Auth troubleshooting can drift into API-key fallback patterns that violate product/runtime requirements.
+- Prevention rule: For Codex runner fixes, preserve CLI-auth flow and avoid introducing OpenAI credential dependencies unless user explicitly requests API auth mode.
+- Applied in: build/interrogation runner auth handling decisions for session `15`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User report for build task 2 false failure on run `#2099`
+- Correction: Evidence gate treated command execution as the only implementation proof and missed Codex `item.type=file_change` events that represent real repository edits.
+- Pattern: Execution-audit gates become brittle when they bind to one telemetry shape (commands) while the runner can emit equivalent mutation evidence in other structured event types.
+- Prevention rule: Build evidence evaluators must aggregate both mutation commands and structured file change events, and keep verification-command requirements explicit.
+- Applied in: `app/Jobs/ExecuteInterrogationBuildJob.php`, `tests/Unit/ExecuteInterrogationBuildJobTest.php`, `tasks/todo.md`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User report for rerun false-negative on run `#2102`
+- Correction: Evidence policy must support strict verification-only revalidation when implementation already exists, otherwise reruns incorrectly fail and cause redundant overwrite attempts.
+- Pattern: Per-run mutation-only completion gates break idempotent build retries after prior successful implementation in the same workspace.
+- Prevention rule: Completion evidence must allow either (a) implementation mutation + verification or (b) zero-mutation revalidation with successful verification commands and explicit already-implemented signal.
+- Applied in: `app/Jobs/ExecuteInterrogationBuildJob.php`, `tests/Unit/ExecuteInterrogationBuildJobTest.php`, `tasks/todo.md`

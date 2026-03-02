@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Documentation;
 
 use App\Models\User;
+use App\Support\Documentation\DocsCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
+use Mockery;
 use Tests\TestCase;
 
 class DocsNavigationTest extends TestCase
@@ -46,6 +48,15 @@ class DocsNavigationTest extends TestCase
 
     public function test_authenticated_user_can_open_docs_slug_page(): void
     {
+        $indexTemplate = file_get_contents(resource_path('js/Pages/Docs/Index.vue'));
+
+        $this->assertIsString($indexTemplate);
+        $this->assertStringContainsString(
+            "route('docs.show', { slug: entry.slug })",
+            $indexTemplate,
+            'Docs index must link to the docs.show route using the entry slug.'
+        );
+
         $user = User::factory()->create();
 
         $this->actingAs($user)
@@ -54,6 +65,26 @@ class DocsNavigationTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Docs/Show')
                 ->where('entry.slug', 'overview')
+            );
+    }
+
+    public function test_docs_index_handles_empty_dataset_without_error(): void
+    {
+        $catalog = Mockery::mock(DocsCatalog::class);
+        $catalog->shouldReceive('search')
+            ->once()
+            ->with('', '', '', 50)
+            ->andReturn([]);
+        $this->app->instance(DocsCatalog::class, $catalog);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('docs.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Docs/Index')
+                ->where('entries', [])
             );
     }
 
@@ -72,4 +103,3 @@ class DocsNavigationTest extends TestCase
         $this->get(route('docs.show', ['slug' => 'overview']))->assertRedirect('/login');
     }
 }
-

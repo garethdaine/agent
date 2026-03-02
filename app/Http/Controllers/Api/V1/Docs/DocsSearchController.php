@@ -6,25 +6,47 @@ namespace App\Http\Controllers\Api\V1\Docs;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Docs\SearchDocsRequest;
-use App\Support\Documentation\DocsCatalog;
+use App\Support\Agent\ErrorEnvelope;
+use App\Support\Documentation\DocsSearchService;
+use App\Support\Documentation\DocsSearchUnavailableException;
+use App\Support\Documentation\DocsTelemetryService;
 use Illuminate\Http\JsonResponse;
 
 class DocsSearchController extends Controller
 {
     public function __construct(
-        private readonly DocsCatalog $catalog
+        private readonly DocsSearchService $searchService,
+        private readonly DocsTelemetryService $telemetry,
     ) {}
 
     public function index(SearchDocsRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
-        $results = $this->catalog->search(
-            $validated['q'] ?? null,
-            $validated['domain'] ?? null,
-            $validated['section'] ?? null,
-            (int) ($validated['limit'] ?? 20)
-        );
+        try {
+            $results = $this->searchService->search(
+                (string) $validated['q'],
+                $validated['domain'] ?? null,
+                $validated['section'] ?? null,
+                $validated['route'] ?? null,
+                (int) ($validated['limit'] ?? 20)
+            );
+        } catch (DocsSearchUnavailableException $exception) {
+            $this->telemetry->recordSearchUnavailable(
+                query: (string) ($validated['q'] ?? ''),
+                routeName: isset($validated['route']) ? (string) $validated['route'] : null,
+                throwable: $exception->getPrevious() ?? $exception,
+                context: [
+                    'source' => 'api',
+                ],
+            );
+
+            return ErrorEnvelope::make(
+                'SEARCH_UNAVAILABLE',
+                'search temporarily unavailable',
+                503
+            );
+        }
 
         return response()->json([
             'data' => $results,

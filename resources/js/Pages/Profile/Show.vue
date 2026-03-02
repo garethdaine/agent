@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue';
 import LogoutOtherBrowserSessionsForm from '@/Pages/Profile/Partials/LogoutOtherBrowserSessionsForm.vue';
 import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthenticationForm.vue';
@@ -15,9 +16,16 @@ defineProps({
 <template>
     <AppLayout title="Profile">
         <template #header>
-            <h2 class="font-semibold text-xl text-foreground leading-tight">
-                Profile
-            </h2>
+            <div class="flex items-center gap-2">
+                <h2 class="font-semibold text-xl text-foreground leading-tight">
+                    Profile
+                </h2>
+                <HelpHint
+                    ui-key="profile.security"
+                    short-text="Manage account profile, password, two-factor auth, and active sessions."
+                    learn-more-href="/docs/overview"
+                />
+            </div>
         </template>
 
         <div>

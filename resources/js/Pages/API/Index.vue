@@ -1,6 +1,7 @@
 <script setup>
 import ApiTokenManager from '@/Pages/API/Partials/ApiTokenManager.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 
 defineProps({
     tokens: Array,
@@ -12,9 +13,16 @@ defineProps({
 <template>
     <AppLayout title="API Tokens">
         <template #header>
-            <h2 class="font-semibold text-xl text-foreground leading-tight">
-                API Tokens
-            </h2>
+            <div class="flex items-center gap-2">
+                <h2 class="font-semibold text-xl text-foreground leading-tight">
+                    API Tokens
+                </h2>
+                <HelpHint
+                    ui-key="api.tokens"
+                    short-text="Create and rotate API tokens with least-privilege permissions."
+                    learn-more-href="/docs/api-contracts"
+                />
+            </div>
         </template>
 
         <div>

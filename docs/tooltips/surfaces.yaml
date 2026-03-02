@@ -1,0 +1,192 @@
+- ui_key: dashboard.overview
+  short_text: Dashboard metrics and operational context.
+  severity: info
+  learn_more_slug: dashboard-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - dashboard
+  setting_keys:
+    - dashboard.default_range
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: jobs.overview
+  short_text: Agent job lifecycle and scheduling basics.
+  severity: info
+  learn_more_slug: jobs-list-api
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - agent.jobs.index
+  setting_keys:
+    - jobs.default_page_size
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: monitor.run-states
+  short_text: Run-state transitions and monitor guidance.
+  severity: info
+  learn_more_slug: monitor-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - agent.monitor.index
+  setting_keys:
+    - monitor.poll_interval_seconds
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: messenger.control-plane
+  short_text: Connector health and control-plane operations.
+  severity: info
+  learn_more_slug: messenger-control-plane
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - tools.messenger.index
+  setting_keys:
+    - messenger.health_poll_interval_seconds
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: discovery.sessions
+  short_text: Discovery session workflow and progress.
+  severity: info
+  learn_more_slug: requirements-discovery-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - tools.discovery.index
+  setting_keys:
+    - discovery.default_provider
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: backups.settings
+  short_text: Backup policy and retention behavior.
+  severity: info
+  learn_more_slug: backups-settings
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - tools.backups.settings
+  setting_keys:
+    - backups.retention_days
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: features.settings
+  short_text: Feature-flag refresh and rollout controls.
+  severity: info
+  learn_more_slug: feature-flags-settings
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - tools.features.settings
+  setting_keys:
+    - features.flags_refresh_minutes
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: memory.diagnostics
+  short_text: Memory retrieval diagnostics and checks.
+  severity: info
+  learn_more_slug: memory-diagnostics
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - tools.memory.index
+  setting_keys:
+    - memory.retrieval_limit
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: delegation.graphs
+  short_text: Delegation graph construction and execution.
+  severity: info
+  learn_more_slug: delegation-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - agent.delegation.index
+  setting_keys:
+    - delegation.max_parallel_tasks
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: org.overview
+  short_text: Org workflows for rituals and councils.
+  severity: info
+  learn_more_slug: org-layer-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - org.index
+  setting_keys:
+    - org.default_execution_window_minutes
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: profile.security
+  short_text: Account profile and security behavior.
+  severity: info
+  learn_more_slug: profile-security-account
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - profile.show
+  setting_keys:
+    - profile.session_timeout_minutes
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: api.tokens
+  short_text: API token usage and lifecycle.
+  severity: info
+  learn_more_slug: api-token-integration-flows
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  setting_keys:
+    - api.tokens.default_expiration_days
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: integrations.account-link
+  short_text: Messenger account-link integration flow.
+  severity: info
+  learn_more_slug: api-token-integration-flows
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - messenger.link.show
+  setting_keys:
+    - api.tokens.default_expiration_days
+  metadata:
+    owner: docs-team
+    locale: en

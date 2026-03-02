@@ -278,6 +278,163 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         $this->assertSame(InterrogationBuildTask::STATUS_COMPLETED, (string) $task->status);
     }
 
+    public function test_codex_success_with_file_change_events_and_verification_evidence_completes_task(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ], 'codex');
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'source' => 'interrogation_build',
+            ],
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 1,
+            'payload' => '{"type":"item.completed","item":{"id":"item_71","type":"file_change","changes":[{"path":"/Users/garethdaine/Code/agent/app/Support/Documentation/Ingestion/DocsContractValidator.php","kind":"add"}],"status":"completed"}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 2,
+            'payload' => '{"type":"item.started","item":{"id":"item_111","type":"command_execution","command":"/bin/zsh -lc \'php artisan test --filter=Documentation\'","aggregated_output":"","exit_code":null,"status":"in_progress"}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'File-change codex task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_COMPLETED, (string) $task->status);
+    }
+
+    public function test_codex_success_with_verification_only_and_already_implemented_signal_completes_task(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ], 'codex');
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'source' => 'interrogation_build',
+            ],
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 1,
+            'payload' => '{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"The requested docs contract is already implemented in this workspace; I will verify it via targeted tests and command checks."}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 2,
+            'payload' => '{"type":"item.completed","item":{"id":"item_2","type":"command_execution","command":"/bin/zsh -lc \'php artisan test --filter=DocsContractValidationTest\'","aggregated_output":"ok","exit_code":0,"status":"completed"}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Verification-only revalidation task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 2,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_COMPLETED, (string) $task->status);
+        $this->assertTrue((bool) data_get($session->metadata_json, 'build.execution_evidence.has_revalidation_execution'));
+    }
+
+    public function test_codex_success_with_verification_only_without_already_implemented_signal_still_fails(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ], 'codex');
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'source' => 'interrogation_build',
+            ],
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 1,
+            'payload' => '{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"I verified some checks and am ready to proceed."}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 2,
+            'payload' => '{"type":"item.completed","item":{"id":"item_2","type":"command_execution","command":"/bin/zsh -lc \'php artisan test --filter=DocsContractValidationTest\'","aggregated_output":"ok","exit_code":0,"status":"completed"}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Verification-only without signal task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 2,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_FAILED, (string) $task->status);
+        $this->assertFalse((bool) data_get($session->metadata_json, 'build.execution_evidence.has_revalidation_execution'));
+    }
+
     public function test_job_preserves_failed_permission_blocker_context_for_build_retry_and_visibility(): void
     {
         Queue::fake();

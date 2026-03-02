@@ -376,36 +376,6 @@ class BuildTaskRunFactory
             'CACHE_STORE' => 'array',
             'SESSION_DRIVER' => 'array',
             'QUEUE_CONNECTION' => 'sync',
-            ...$this->codexEnvironmentOverrides($session),
         ];
-    }
-
-    /**
-     * @return array<string, string|bool>
-     */
-    private function codexEnvironmentOverrides(InterrogationSession $session): array
-    {
-        if (strtolower((string) $session->runner_type) !== 'codex') {
-            return [];
-        }
-
-        return [
-            'CODEX_HOME' => $this->isolatedCodexHomeForSession((int) $session->id),
-            // Prevent Codex desktop thread/session context leakage into autonomous build runs.
-            'CODEX_THREAD_ID' => false,
-            'CODEX_SESSION_ID' => false,
-            'CODEX_INTERNAL_ORIGINATOR_OVERRIDE' => false,
-        ];
-    }
-
-    private function isolatedCodexHomeForSession(int $sessionId): string
-    {
-        $directory = storage_path('framework/interrogation-codex/session-'.$sessionId);
-
-        if (! is_dir($directory) && ! @mkdir($directory, 0775, true) && ! is_dir($directory)) {
-            throw new RuntimeException('Unable to create isolated Codex home directory: '.$directory);
-        }
-
-        return $directory;
     }
 }

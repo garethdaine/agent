@@ -28,9 +28,6 @@ class InterrogationCodexAdapterCommandTest extends TestCase
             $this->assertFalse($env['CODEX_INTERNAL_ORIGINATOR_OVERRIDE'] ?? null);
             $this->assertSame('yes', $env['SAFE_KEEP'] ?? null);
             $this->assertSame('42', $env['INTERROGATION_SESSION_ID'] ?? null);
-            $this->assertIsString($env['CODEX_HOME'] ?? null);
-            $this->assertStringContainsString('/storage/framework/interrogation-codex/session-42', (string) ($env['CODEX_HOME'] ?? ''));
-            $this->assertDirectoryExists((string) ($env['CODEX_HOME'] ?? ''));
         } finally {
             $_ENV = $originalEnv;
         }

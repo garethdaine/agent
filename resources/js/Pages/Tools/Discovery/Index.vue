@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import SessionStatusBadge from '@/Components/Interrogation/SessionStatusBadge.vue';
 import Card from '@/Components/ui/Card.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
@@ -121,7 +122,14 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Requirements Discovery</h2>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Requirements Discovery</h2>
+                    <HelpHint
+                        ui-key="discovery.sessions"
+                        short-text="Find guidance for setup, interview flow, planning, and build handoff."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('tools.discovery.settings')">
                         <Button variant="outline" size="sm">

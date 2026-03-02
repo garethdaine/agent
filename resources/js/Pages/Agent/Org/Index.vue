@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import Card from '@/Components/ui/Card.vue';
 import CardHeader from '@/Components/ui/CardHeader.vue';
@@ -14,7 +15,14 @@ import { Users, Calendar, Scale, AlertTriangle, DollarSign } from 'lucide-vue-ne
         <Head title="Agents" />
 
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-foreground">Agents</h2>
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Agents</h2>
+                <HelpHint
+                    ui-key="org.overview"
+                    short-text="Navigate agents, rituals, councils, escalations, and cost governance."
+                    learn-more-href="/docs/overview"
+                />
+            </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">

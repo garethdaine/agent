@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import Card from '@/Components/ui/Card.vue';
@@ -71,7 +72,14 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Delegation Graphs</h2>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Delegation Graphs</h2>
+                    <HelpHint
+                        ui-key="delegation.graphs"
+                        short-text="Understand graph lifecycle, task states, and verification checkpoints."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
                 <Link :href="route('agent.delegation.create')">
                     <Button>
                         <Plus class="mr-2 h-4 w-4" />

@@ -306,6 +306,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         if ($runStatus === AgentJobRun::STATUS_SUCCEEDED) {
             if ($this->shouldEnforceCodexExecutionEvidence($session, $run)) {
                 $evidence = $this->collectCodexExecutionEvidence($run);
+                $build['execution_evidence'] = $evidence;
 
                 if (! $evidence['has_actionable_execution']) {
                     $task->status = InterrogationBuildTask::STATUS_FAILED;
@@ -318,7 +319,6 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                     $build['active_task_id'] = (int) $task->id;
                     $build['active_run_id'] = (int) $run->id;
                     $build['failed_at'] = CarbonImmutable::now('UTC')->toIso8601String();
-                    $build['execution_evidence'] = $evidence;
                     $this->saveBuildMetadata($session, $build);
 
                     $writer->appendError([
@@ -468,8 +468,13 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $commandCount = 0;
         $mutationCommandCount = 0;
         $implementationMutationCommandCount = 0;
+        $fileChangeCount = 0;
+        $implementationFileChangeCount = 0;
         $verificationCommandCount = 0;
+        $verificationSuccessfulCommandCount = 0;
+        $verificationFailedCommandCount = 0;
         $latestAgentMessage = null;
+        $agentMessages = [];
 
         foreach ($events as $event) {
             $payload = (string) $event->payload;
@@ -494,7 +499,19 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 }
             }
 
-            $patchPathMatchCount = preg_match_all('/\*\*\*\s+(?:Add|Update|Delete)\s+File:\s+((?:app|database|config|routes|resources|tests|scripts)\/[^\n]+)/i', $payload, $patchMatches);
+            foreach ($this->extractVerificationCommandCompletionStatsFromRunEventPayload($payload) as $stats) {
+                $verificationSuccessfulCommandCount += (int) ($stats['success'] ?? 0);
+                $verificationFailedCommandCount += (int) ($stats['failed'] ?? 0);
+            }
+
+            foreach ($this->extractChangedPathsFromRunEventPayload($payload) as $changedPath) {
+                $fileChangeCount++;
+                if ($this->isImplementationPath($changedPath)) {
+                    $implementationFileChangeCount++;
+                }
+            }
+
+            $patchPathMatchCount = preg_match_all('/\*\*\*\s+(?:Add|Update|Delete)\s+File:\s+((?:app|database|config|routes|resources|tests|scripts|docs)\/[^\n]+)/i', $payload, $patchMatches);
             if (is_int($patchPathMatchCount) && $patchPathMatchCount > 0) {
                 $implementationMutationCommandCount += $patchPathMatchCount;
                 $mutationCommandCount += $patchPathMatchCount;
@@ -505,16 +522,41 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 $messages = (array) $messageMatches[1];
                 if ($messages !== []) {
                     $latestAgentMessage = stripcslashes((string) end($messages));
+                    foreach ($messages as $message) {
+                        if (is_string($message)) {
+                            $agentMessages[] = stripcslashes($message);
+                        }
+                    }
                 }
             }
         }
 
+        $implementationMutationCount = $implementationMutationCommandCount + $implementationFileChangeCount;
+        $hasVerificationCompletionEvidence = ($verificationSuccessfulCommandCount + $verificationFailedCommandCount) > 0;
+        $hasVerificationEvidence = $verificationCommandCount > 0 && (
+            ($hasVerificationCompletionEvidence && $verificationSuccessfulCommandCount > 0 && $verificationFailedCommandCount === 0)
+            || (! $hasVerificationCompletionEvidence)
+        );
+        $hasAlreadyImplementedSignal = $this->hasAlreadyImplementedSignal($agentMessages, $latestAgentMessage);
+        $hasRevalidationExecution = $implementationMutationCount === 0
+            && $hasVerificationEvidence
+            && $hasAlreadyImplementedSignal;
+
         return [
             'command_count' => $commandCount,
             'mutation_command_count' => $mutationCommandCount,
+            'file_change_count' => $fileChangeCount,
             'implementation_mutation_command_count' => $implementationMutationCommandCount,
+            'implementation_file_change_count' => $implementationFileChangeCount,
+            'implementation_mutation_count' => $implementationMutationCount,
             'verification_command_count' => $verificationCommandCount,
-            'has_actionable_execution' => $implementationMutationCommandCount > 0 && $verificationCommandCount > 0,
+            'verification_successful_command_count' => $verificationSuccessfulCommandCount,
+            'verification_failed_command_count' => $verificationFailedCommandCount,
+            'verification_completion_evidence' => $hasVerificationCompletionEvidence,
+            'has_verification_evidence' => $hasVerificationEvidence,
+            'already_implemented_signal' => $hasAlreadyImplementedSignal,
+            'has_revalidation_execution' => $hasRevalidationExecution,
+            'has_actionable_execution' => ($implementationMutationCount > 0 && $hasVerificationEvidence) || $hasRevalidationExecution,
             'latest_agent_message' => $latestAgentMessage,
         ];
     }
@@ -584,16 +626,154 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             return true;
         }
 
-        if (preg_match('/(?:^|[\s"\'`])(?:\.\/)?(app|database|config|routes|resources|tests|scripts)\/[^\s"\'`]+/i', $command) === 1) {
+        if (preg_match('/(?:^|[\s"\'`])(?:\.\/)?(app|database|config|routes|resources|tests|scripts|docs)\/[^\s"\'`]+/i', $command) === 1) {
             return true;
         }
 
-        return preg_match('/\/(app|database|config|routes|resources|tests|scripts)\//i', $command) === 1;
+        return preg_match('/\/(app|database|config|routes|resources|tests|scripts|docs)\//i', $command) === 1;
     }
 
     private function isVerificationCommand(string $command): bool
     {
         return preg_match('/\b(php\s+artisan\s+test|composer\s+test|phpunit|pest|npm\s+test|vitest|jest|pytest)\b/i', $command) === 1;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractChangedPathsFromRunEventPayload(string $payload): array
+    {
+        $paths = [];
+
+        foreach (preg_split('/\R/', $payload) ?: [] as $line) {
+            $line = trim((string) $line);
+            if ($line === '') {
+                continue;
+            }
+
+            $decoded = json_decode($line, true);
+            if (! is_array($decoded)) {
+                continue;
+            }
+
+            $item = is_array($decoded['item'] ?? null) ? $decoded['item'] : null;
+            if (! is_array($item) || (string) ($item['type'] ?? '') !== 'file_change') {
+                continue;
+            }
+
+            $changes = is_array($item['changes'] ?? null) ? $item['changes'] : [];
+            foreach ($changes as $change) {
+                if (! is_array($change)) {
+                    continue;
+                }
+
+                $path = $change['path'] ?? null;
+                if (is_string($path) && trim($path) !== '') {
+                    $paths[] = stripcslashes($path);
+                }
+            }
+        }
+
+        if ($paths !== []) {
+            return $paths;
+        }
+
+        $matchCount = preg_match_all('/"type":"file_change".*?"path":"((?:\\\\.|[^"\\\\])*)"/s', $payload, $matches);
+        if (! is_int($matchCount) || $matchCount < 1) {
+            return [];
+        }
+
+        $fallback = [];
+        foreach ((array) ($matches[1] ?? []) as $rawPath) {
+            if (! is_string($rawPath) || trim($rawPath) === '') {
+                continue;
+            }
+
+            $fallback[] = stripcslashes($rawPath);
+        }
+
+        return $fallback;
+    }
+
+    private function isImplementationPath(string $path): bool
+    {
+        $normalized = str_replace('\\', '/', $path);
+
+        return preg_match('/(?:^|\/)(app|database|config|routes|resources|tests|scripts|docs)\//i', $normalized) === 1;
+    }
+
+    /**
+     * @return array<int, array{success:int,failed:int}>
+     */
+    private function extractVerificationCommandCompletionStatsFromRunEventPayload(string $payload): array
+    {
+        $stats = [];
+
+        foreach (preg_split('/\R/', $payload) ?: [] as $line) {
+            $line = trim((string) $line);
+            if ($line === '') {
+                continue;
+            }
+
+            $decoded = json_decode($line, true);
+            if (! is_array($decoded)) {
+                continue;
+            }
+
+            $item = is_array($decoded['item'] ?? null) ? $decoded['item'] : null;
+            if (! is_array($item) || (string) ($item['type'] ?? '') !== 'command_execution') {
+                continue;
+            }
+
+            if ((string) ($item['status'] ?? '') !== 'completed') {
+                continue;
+            }
+
+            $command = $item['command'] ?? null;
+            if (! is_string($command) || ! $this->isVerificationCommand($command)) {
+                continue;
+            }
+
+            $exitCode = $item['exit_code'] ?? null;
+            if (is_int($exitCode) && $exitCode === 0) {
+                $stats[] = ['success' => 1, 'failed' => 0];
+
+                continue;
+            }
+
+            $stats[] = ['success' => 0, 'failed' => 1];
+        }
+
+        return $stats;
+    }
+
+    /**
+     * @param  array<int, string>  $agentMessages
+     */
+    private function hasAlreadyImplementedSignal(array $agentMessages, ?string $latestAgentMessage): bool
+    {
+        $signals = [
+            ...$agentMessages,
+            is_string($latestAgentMessage) ? $latestAgentMessage : null,
+        ];
+
+        foreach ($signals as $message) {
+            if (! is_string($message) || trim($message) === '') {
+                continue;
+            }
+
+            $hasExistingToken = preg_match('/\b(already|existing|preexisting|pre-existing)\b/i', $message) === 1;
+            $hasImplementedToken = preg_match('/\b(implemented|present|in place|done|complete|completed|exists)\b/i', $message) === 1;
+            if ($hasExistingToken && $hasImplementedToken) {
+                return true;
+            }
+
+            if (preg_match('/\b(no (?:code|implementation) changes needed|nothing to implement)\b/i', $message) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function persistActivePointers(InterrogationSession $session, InterrogationBuildTask $task, AgentJobRun $run): void

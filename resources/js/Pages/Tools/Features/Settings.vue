@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import Card from '@/Components/ui/Card.vue';
 import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
@@ -76,7 +77,14 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Feature Settings</h2>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Feature Settings</h2>
+                    <HelpHint
+                        ui-key="features.settings"
+                        short-text="Review feature-flag impact before enabling flags in production workflows."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
                 <Link :href="route('tools.index')">
                     <Button variant="outline" size="sm">
                         <ArrowLeft class="h-4 w-4" />

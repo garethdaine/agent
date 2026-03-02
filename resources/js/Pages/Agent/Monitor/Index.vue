@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import Card from '@/Components/ui/Card.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
@@ -620,7 +621,14 @@ onBeforeUnmount(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Run Monitor</h2>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Run Monitor</h2>
+                    <HelpHint
+                        ui-key="monitor.run-states"
+                        short-text="Track run states, approvals, and recovery actions for active executions."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('agent.jobs.index')">
                         <Button variant="outline" size="sm">Jobs</Button>

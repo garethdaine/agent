@@ -2,6 +2,7 @@
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import Button from '@/Components/ui/Button.vue';
 import { computed } from 'vue';
 import { AlertTriangle, Link2 } from 'lucide-vue-next';
@@ -56,9 +57,16 @@ const submit = () => {
                 <Link2 class="mx-auto h-12 w-12 text-indigo-500" />
             </div>
 
-            <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Link Your {{ providerLabel }} Account
-            </h2>
+            <div class="flex items-center justify-center gap-2">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    Link Your {{ providerLabel }} Account
+                </h2>
+                <HelpHint
+                    ui-key="integrations.account-link"
+                    short-text="Account linking ties this messenger identity to your authenticated user."
+                    learn-more-href="/docs/api-contracts"
+                />
+            </div>
 
             <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
                 You're about to link your {{ providerLabel }} account to this Agent installation.

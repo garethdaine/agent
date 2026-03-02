@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\DelegationTaskController;
 use App\Http\Controllers\Api\V1\Docs\DocsCoverageController;
 use App\Http\Controllers\Api\V1\Docs\DocsFragmentController;
 use App\Http\Controllers\Api\V1\Docs\DocsSearchController;
+use App\Http\Controllers\Docs\DiagnosticsController;
 use App\Http\Controllers\Api\V1\InterrogationSessionController;
 use App\Http\Controllers\Api\V1\InterrogationSettingsController;
 use App\Http\Controllers\Api\V1\InterrogationTaskProviderController;
@@ -86,6 +87,8 @@ Route::middleware([AgentApiVersionHeader::class])
                 Route::get('/fragments/{uiKey}', [DocsFragmentController::class, 'show']);
                 Route::get('/coverage', [DocsCoverageController::class, 'index'])
                     ->middleware('can:view-docs-coverage');
+                Route::get('/diagnostics', DiagnosticsController::class)
+                    ->middleware('can:view-docs-diagnostics');
             });
 
             Route::prefix('compliance')->group(function (): void {

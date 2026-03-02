@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import Card from '@/Components/ui/Card.vue';
 import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
@@ -102,7 +103,14 @@ onMounted(load);
         <Head title="Backup Settings" />
 
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-foreground">Database Backup Settings</h2>
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Database Backup Settings</h2>
+                <HelpHint
+                    ui-key="backups.settings"
+                    short-text="Confirm schedule, retention, and manual run behavior before enabling backups."
+                    learn-more-href="/docs/overview"
+                />
+            </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">

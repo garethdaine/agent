@@ -6,6 +6,7 @@ use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Listeners\DelegationBroadcastSubscriber;
 use App\Listeners\DelegationCoordinator;
 use App\Listeners\DelegationRecoveryHandler;
+use App\Listeners\Documentation\DocumentationTelemetrySubscriber;
 use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
@@ -28,6 +29,14 @@ use App\Support\Compliance\ComplianceFlagResolver;
 use App\Support\Compliance\LessonsManager;
 use App\Support\Compliance\OrchestrationPolicyService;
 use App\Support\Compliance\VerificationEvidenceEvaluator;
+use App\Support\Documentation\AgentSystemDocsTelemetryStore;
+use App\Support\Documentation\DocsReindexExecutor;
+use App\Support\Documentation\DocsSearchIndexClient;
+use App\Support\Documentation\DocsSyncSleeper;
+use App\Support\Documentation\DocsTelemetryStore;
+use App\Support\Documentation\ScoutDocsReindexExecutor;
+use App\Support\Documentation\ScoutDocsSearchIndexClient;
+use App\Support\Documentation\SystemDocsSyncSleeper;
 use App\Support\Interrogation\Adapters\ClaudeAdapter;
 use App\Support\Interrogation\AdversarialReviewerService;
 use App\Support\Interrogation\InterrogationBuildCommandGuard;
@@ -62,6 +71,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(VerificationEvidenceEvaluator::class);
 
         $this->app->singleton(OrchestrationPolicyServiceContract::class, OrchestrationPolicyService::class);
+        $this->app->singleton(DocsSearchIndexClient::class, ScoutDocsSearchIndexClient::class);
+        $this->app->singleton(DocsReindexExecutor::class, ScoutDocsReindexExecutor::class);
+        $this->app->singleton(DocsSyncSleeper::class, SystemDocsSyncSleeper::class);
+        $this->app->singleton(DocsTelemetryStore::class, AgentSystemDocsTelemetryStore::class);
 
         $this->app->singleton(ComplianceFlagResolver::class);
 
@@ -80,6 +93,7 @@ class AppServiceProvider extends ServiceProvider
         $events->subscribe(DelegationCoordinator::class);
         $events->subscribe(DelegationRecoveryHandler::class);
         $events->subscribe(DelegationBroadcastSubscriber::class);
+        $events->subscribe(DocumentationTelemetrySubscriber::class);
 
         Gate::policy(AgentJob::class, AgentJobPolicy::class);
         Gate::policy(AgentJobRun::class, AgentJobRunPolicy::class);
@@ -95,6 +109,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('view-docs-coverage', function ($user) {
+            return $user->hasRole(['admin', 'analytics']);
+        });
+
+        Gate::define('view-docs-diagnostics', function ($user) {
             return $user->hasRole(['admin', 'analytics']);
         });
 
