@@ -445,7 +445,7 @@ onUnmounted(() => {
                 />
 
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    <CoveragePanel :events="events" />
+                    <CoveragePanel :events="events" :session="session" />
                     <ArtifactInspector :artifacts="artifacts" />
                 </div>
 

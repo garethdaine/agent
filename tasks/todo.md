@@ -2118,3 +2118,17 @@ Review
   - This task does not implement websocket broadcasting route contracts for repo-analysis events; it delivers polling read parity only.
   - Restart currently hard-resets session tasks/events/artifacts/reports before requeueing snapshot; no partial restart strategy is implemented.
   - Mutation endpoints are exposed regardless of `repo_analysis.enabled` flag; flag-based route hiding was not added in this task.
+
+## 2026-03-02 Repo Analysis Report Clarity Follow-up
+- [x] Investigate why repo-analysis output is unclear and verify websocket/polling behavior.
+- [x] Upgrade report composition/export to produce a detailed human-readable repository report.
+- [x] Clarify Repo Analysis UI semantics for Task Graph, Coverage Gate, and Artifacts.
+- [x] Add/adjust automated tests for new report and UI behavior.
+- [x] Run focused repo-analysis tests and verify pass.
+- [x] Commit and push.
+
+### Review
+- Upgraded ReportComposer + ExportService so exported markdown now includes repository profile sections (overview, dependencies, structure, backend, frontend, testing, risk hotspots, coverage gate, glossary, limitations, deterministic parsing warnings).
+- Updated Repo Analysis wizard panels: Task Graph now shows DAG dependency context, Coverage Gate now binds to real `coverage_validated` events and displays pass/blocker summary, Artifacts now include type descriptions and payload summaries.
+- Added regression checks in `ReportComposerTest` and export markdown assertions in `RepoAnalysisExportAndRetentionTest`.
+- Verification: `php artisan test --filter=RepoAnalysis --stop-on-failure` (64 tests, all passing).

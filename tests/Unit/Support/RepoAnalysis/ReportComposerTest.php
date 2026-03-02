@@ -70,6 +70,27 @@ class ReportComposerTest extends TestCase
         $this->assertNotSame($first['report_hash'], $second['report_hash']);
     }
 
+    public function test_compose_includes_repository_profile_glossary_for_human_readability(): void
+    {
+        $session = $this->createSession();
+
+        $composed = app(ReportComposer::class)->compose($session->fresh(), [
+            'passed' => true,
+            'task_count' => 4,
+            'completed_task_count' => 4,
+        ]);
+
+        $this->assertIsArray($composed['payload_json']['repository_profile'] ?? null);
+        $this->assertSame(
+            'Deterministic analyzer DAG generated in phase 2, with dependency-ordered tasks executed in phase 3.',
+            data_get($composed, 'payload_json.repository_profile.glossary.task_graph')
+        );
+        $this->assertSame(
+            true,
+            data_get($composed, 'payload_json.repository_profile.coverage_gate.passed')
+        );
+    }
+
     /**
      * @param  array<int, array{artifact_key: string, artifact_type: string, content_hash: string}>  $artifacts
      */
@@ -101,4 +122,3 @@ class ReportComposerTest extends TestCase
         ]);
     }
 }
-

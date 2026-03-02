@@ -457,3 +457,12 @@ Use this file to capture correction-driven lessons.
 - Pattern: If transport and presentation layers do not carry a structured display type, UI falls back to plain text and degrades operator readability.
 - Prevention rule: Include explicit `displayFormat` metadata (`markdown|json|text`) on formatted timeline entries and render by type; pretty-print parsed JSON (including concatenated JSON objects) before display.
 - Applied in: `resources/js/Support/agentRunEventFormatting.js`, `resources/js/Components/Interrogation/BuildPanel.vue`
+
+## 2026-03-02 - Repo analysis output must prioritize human-readable context
+- Trigger: User reported repo-analysis output was unusable (hash lists / unclear panels) after a full run.
+- Mistake pattern: Building deterministic pipeline artifacts without transforming them into clear repository narratives (architecture, stack, data model, dependencies, feature surfaces).
+- Prevention rules:
+  - Every discovery/report tool must ship a narrative export layer, not only raw artifact dumps.
+  - UI labels like `Task Graph`, `Coverage Gate`, and `Artifacts` must include inline definitions and actionable summaries.
+  - Realtime panels must bind to actual emitted event types (verify event names in code + UI together).
+  - Before sign-off, run one end-to-end sample and validate report usefulness for a human unfamiliar with the codebase.

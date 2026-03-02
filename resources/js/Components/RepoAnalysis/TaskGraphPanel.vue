@@ -27,6 +27,15 @@ defineProps({
 });
 
 const emit = defineEmits(['retry-task']);
+
+const dependencySummary = (task) => {
+    const dependencies = Array.isArray(task?.depends_on_json) ? task.depends_on_json.filter(Boolean) : [];
+    if (dependencies.length === 0) {
+        return 'none';
+    }
+
+    return dependencies.slice(0, 3).join(', ') + (dependencies.length > 3 ? ` +${dependencies.length - 3} more` : '');
+};
 </script>
 
 <template>
@@ -35,11 +44,15 @@ const emit = defineEmits(['retry-task']);
             <CardTitle>Task Graph</CardTitle>
         </CardHeader>
         <CardContent>
+            <p class="mb-3 text-xs text-muted-foreground">
+                Deterministic analyzer DAG planned in phase 2. Each row is one analyzer task with dependency ordering.
+            </p>
             <Table>
                 <TableHeader>
                     <TableRow>
                         <TableHead>Task</TableHead>
                         <TableHead>Analyzer</TableHead>
+                        <TableHead>Depends On</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Attempts</TableHead>
                         <TableHead />
@@ -47,11 +60,12 @@ const emit = defineEmits(['retry-task']);
                 </TableHeader>
                 <TableBody>
                     <TableRow v-if="loading">
-                        <TableCell colspan="5" class="text-center text-muted-foreground">Loading tasks…</TableCell>
+                        <TableCell colspan="6" class="text-center text-muted-foreground">Loading tasks…</TableCell>
                     </TableRow>
                     <TableRow v-for="task in tasks" :key="task.id">
                         <TableCell class="font-medium">{{ task.task_key }}</TableCell>
                         <TableCell class="text-xs text-muted-foreground">{{ task.analyzer_name }}</TableCell>
+                        <TableCell class="text-xs text-muted-foreground">{{ dependencySummary(task) }}</TableCell>
                         <TableCell class="text-xs">{{ task.status }}</TableCell>
                         <TableCell class="text-xs text-muted-foreground">{{ task.attempt_count ?? 0 }}</TableCell>
                         <TableCell class="text-right">
@@ -66,7 +80,7 @@ const emit = defineEmits(['retry-task']);
                         </TableCell>
                     </TableRow>
                     <TableRow v-if="!loading && tasks.length === 0">
-                        <TableCell colspan="5" class="text-center text-muted-foreground">No planned tasks yet.</TableCell>
+                        <TableCell colspan="6" class="text-center text-muted-foreground">No planned tasks yet.</TableCell>
                     </TableRow>
                 </TableBody>
             </Table>

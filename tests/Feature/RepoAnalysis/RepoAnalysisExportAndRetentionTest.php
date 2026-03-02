@@ -55,6 +55,8 @@ class RepoAnalysisExportAndRetentionTest extends TestCase
             '#/docs/discovery/repo-analysis/collision-session\.json$#',
             $first['json_export_path']
         );
+        $this->assertStringContainsString('## Repository Profile', File::get($first['markdown_export_path']));
+        $this->assertStringContainsString('### Repo Analysis Glossary', File::get($first['markdown_export_path']));
 
         $this->assertMatchesRegularExpression(
             '#/docs/discovery/repo-analysis/collision-session-v2\.md$#',
@@ -203,10 +205,35 @@ class RepoAnalysisExportAndRetentionTest extends TestCase
                 'session_id' => $session->id,
                 'snapshot_hash' => $session->snapshot_hash,
                 'artifacts' => [],
+                'repository_profile' => [
+                    'overview' => [
+                        'project_directory' => $session->project_directory,
+                        'snapshot_hash' => $session->snapshot_hash,
+                        'snapshot_file_count' => 0,
+                        'inferred_stack' => ['Laravel'],
+                        'language_breakdown' => ['PHP' => 10],
+                    ],
+                    'glossary' => [
+                        'task_graph' => 'Deterministic analyzer DAG generated in phase 2, with dependency-ordered tasks executed in phase 3.',
+                        'coverage_gate' => 'Phase 4 validation gate.',
+                        'artifacts' => 'Versioned outputs for analysis stages.',
+                    ],
+                    'coverage_gate' => [
+                        'passed' => true,
+                        'task_count' => 1,
+                        'completed_task_count' => 1,
+                        'required_artifact_classes' => [],
+                        'missing_artifact_classes' => [],
+                        'blocking_failure_codes' => [],
+                        'warning_codes' => [],
+                    ],
+                    'limitations' => [
+                        'Static deterministic scan only.',
+                    ],
+                ],
             ],
             'metadata_json' => [],
             'generated_at' => now('UTC'),
         ]);
     }
 }
-
