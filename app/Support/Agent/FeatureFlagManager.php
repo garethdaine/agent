@@ -18,6 +18,8 @@ class FeatureFlagManager
 
     public const MEMORY_API_ENABLED = 'memory.api_enabled';
 
+    public const REPO_ANALYSIS_ENABLED = 'repo_analysis.enabled';
+
     // Org layer flag constants
     public const ORG_ENABLED = 'agent.org.enabled';
 
@@ -65,6 +67,10 @@ class FeatureFlagManager
         self::MEMORY_API_ENABLED => [
             'label' => 'Memory API Features',
             'description' => 'Enable LLM-powered memory features: semantic embeddings (pgvector), entity extraction, and Neo4j knowledge graph. Requires Agent Memory to be enabled and provider keys configured.',
+        ],
+        self::REPO_ANALYSIS_ENABLED => [
+            'label' => 'Repo Analysis',
+            'description' => 'Enable the Repo Analysis tool, API lifecycle routes, and Tools navigation entry.',
         ],
         self::ORG_ENABLED => [
             'label' => 'Org Layer',

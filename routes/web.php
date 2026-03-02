@@ -3,6 +3,7 @@
 use App\Http\Controllers\Messenger\AccountLinkController;
 use App\Http\Controllers\Messenger\DeadLetterController;
 use App\Http\Controllers\Messenger\MessengerHealthController;
+use App\Support\Agent\FeatureFlagManager;
 use App\Http\Controllers\TaskProviderOAuthController;
 use App\Http\Controllers\Docs\DocsPageController;
 use App\Models\RepoAnalysisSession;
@@ -88,7 +89,7 @@ Route::middleware([
     Route::get('/tools', function () {
         $user = request()->user();
         $repoAnalysisAvailable = $user !== null
-            && (bool) config('repo_analysis.enabled', false)
+            && app(FeatureFlagManager::class)->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)
             && Gate::forUser($user)->allows('create', RepoAnalysisSession::class);
 
         return Inertia::render('Tools/Index', [
@@ -169,7 +170,7 @@ Route::middleware([
     })->name('tools.discovery.wizard');
 
     Route::get('/tools/repo-analysis', function () {
-        if (! (bool) config('repo_analysis.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)) {
             return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
         }
 
@@ -213,7 +214,7 @@ Route::middleware([
     })->name('tools.repo-analysis.index');
 
     Route::get('/tools/repo-analysis/create', function () {
-        if (! (bool) config('repo_analysis.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)) {
             return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
         }
 
@@ -228,7 +229,7 @@ Route::middleware([
     })->name('tools.repo-analysis.create');
 
     Route::get('/tools/repo-analysis/{id}', function (int $id) {
-        if (! (bool) config('repo_analysis.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)) {
             return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
         }
 
@@ -282,7 +283,7 @@ Route::middleware([
     })->name('tools.repo-analysis.wizard');
 
     Route::get('/tools/repo-analysis/{id}/settings', function (int $id) {
-        if (! (bool) config('repo_analysis.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)) {
             return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
         }
 

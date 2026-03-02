@@ -17,6 +17,7 @@ class FeatureSettingsApiTest extends TestCase
         config()->set('delegation.enabled', false);
         config()->set('delegation.ui_enabled', true);
         config()->set('agent.interrogation.adversarial_review_enabled', false);
+        config()->set('repo_analysis.enabled', false);
 
         $user = User::factory()->create();
         $this->actingAs($user);
@@ -35,6 +36,12 @@ class FeatureSettingsApiTest extends TestCase
             'default_enabled' => true,
             'is_overridden' => false,
         ]);
+        $response->assertJsonFragment([
+            'key' => FeatureFlagManager::REPO_ANALYSIS_ENABLED,
+            'is_enabled' => false,
+            'default_enabled' => false,
+            'is_overridden' => false,
+        ]);
     }
 
     public function test_feature_settings_can_be_updated_and_persisted(): void
@@ -42,6 +49,7 @@ class FeatureSettingsApiTest extends TestCase
         config()->set('delegation.enabled', false);
         config()->set('delegation.ui_enabled', false);
         config()->set('agent.interrogation.adversarial_review_enabled', false);
+        config()->set('repo_analysis.enabled', false);
 
         $user = User::factory()->create();
         $this->actingAs($user);
@@ -51,6 +59,7 @@ class FeatureSettingsApiTest extends TestCase
                 FeatureFlagManager::DELEGATION_ENABLED => true,
                 FeatureFlagManager::DELEGATION_UI_ENABLED => true,
                 FeatureFlagManager::ADVERSARIAL_REVIEW_ENABLED => true,
+                FeatureFlagManager::REPO_ANALYSIS_ENABLED => true,
             ],
         ])->assertOk()
             ->assertJsonFragment([
@@ -62,10 +71,20 @@ class FeatureSettingsApiTest extends TestCase
                 'key' => FeatureFlagManager::ADVERSARIAL_REVIEW_ENABLED,
                 'is_enabled' => true,
                 'is_overridden' => true,
+            ])
+            ->assertJsonFragment([
+                'key' => FeatureFlagManager::REPO_ANALYSIS_ENABLED,
+                'is_enabled' => true,
+                'is_overridden' => true,
             ]);
 
         $this->assertDatabaseHas('agent_feature_settings', [
             'key' => FeatureFlagManager::DELEGATION_ENABLED,
+            'is_enabled' => true,
+            'updated_by_user_id' => $user->id,
+        ]);
+        $this->assertDatabaseHas('agent_feature_settings', [
+            'key' => FeatureFlagManager::REPO_ANALYSIS_ENABLED,
             'is_enabled' => true,
             'updated_by_user_id' => $user->id,
         ]);
