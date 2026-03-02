@@ -1,13 +1,14 @@
 ---
 slug: backups-settings
 title: Backup Settings
-summary: Configure backup retention, schedule, and execution behavior.
+summary: Configure backup policy, retention windows, and on-demand execution for platform resilience.
 section: backups
 audience: operator
 status: published
-version: "1.0.0"
+version: "1.1.0"
 tags:
   - backups
+  - resilience
   - operations
 owner: docs-team
 route_names:
@@ -21,15 +22,28 @@ reviewed_at: 2026-03-02
 ---
 # Backup Settings
 
+Backup settings define how frequently data snapshots are created and how long artifacts are retained.
+
+## Interface Coverage
+
+- **Policy form**: retention, include/exclude domains, execution preferences.
+- **Run now** action for immediate backup verification.
+- **Status output** with latest run result and failure details.
+
 ## Settings
 
-Configure `backups.retention_days` to define how long historical archives are preserved.
+`backups.retention_days` controls retention horizon for backup artifacts.
 
 ## Example
 
-Set retention to 30 days and trigger a manual backup run to confirm policy behavior.
+Set retention to 30 days, trigger `Run now`, and verify successful artifact creation plus policy compliance.
 
 ## Troubleshooting
 
-If backups fail, verify storage permissions and inspect backup job error output.
+- Backup run failures typically indicate storage permission or connectivity issues.
+- Missing artifacts often indicate path misconfiguration or cleanup policy conflicts.
+- Slow backups may indicate oversized domains or I/O saturation.
 
+## Related Docs
+
+- [Org Layer Overview](/docs/org-layer-overview)

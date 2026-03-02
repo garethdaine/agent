@@ -1,14 +1,15 @@
 ---
 slug: monitor-overview
 title: Monitor Overview
-summary: Run-state monitoring and operational diagnostics.
+summary: Real-time and historical run-state diagnostics for active and completed runs.
 section: monitor
 audience: operator
 status: published
-version: "1.0.0"
+version: "1.1.0"
 tags:
   - monitor
-  - operations
+  - run-lifecycle
+  - diagnostics
 owner: docs-team
 route_names:
   - agent.monitor.index
@@ -21,14 +22,34 @@ reviewed_at: 2026-03-02
 ---
 # Monitor Overview
 
+Monitor provides run-level observability: lifecycle transitions, stdout/stderr streams, and failure metadata.
+
+## Interface Coverage
+
+- **Run list**: active and recent runs with status and elapsed duration.
+- **Run detail panel**: lifecycle timeline, consolidated logs, and structured error notices.
+- **Filters**: job, status, trigger type, and time window.
+
 ## Settings
 
-Configure `monitor.poll_interval_seconds` to tune refresh cadence for active runs.
+`monitor.poll_interval_seconds` defines UI polling cadence when websocket updates are unavailable.
+
+## Configuration Notes
+
+- Streaming quality depends on queue health and event writer throughput.
+- Lifecycle events are deduplicated and normalized before display.
 
 ## Example
 
-Filter monitor rows by run state to isolate long-running or failed executions.
+Filter by `failed` status, open the latest failed run, inspect stderr and structured blocker notices, then retry after remediation.
 
 ## Troubleshooting
 
-If state changes do not stream, verify websocket connectivity and queue consumers.
+- Missing logs: verify event ingestion and run event persistence.
+- Delayed status updates: verify websocket transport or polling fallback.
+- Repeated “blocked” notices: inspect permission/rate-limit/clarification metadata.
+
+## Related Docs
+
+- [Dashboard Overview](/docs/dashboard-overview)
+- [Agent Jobs Overview](/docs/jobs-overview)

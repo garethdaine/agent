@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { Link } from '@inertiajs/vue3';
 
 const props = defineProps({
     uiKey: {
@@ -39,6 +40,7 @@ const props = defineProps({
 const fetchedFragment = ref(null);
 const isOpen = ref(false);
 const openedByFocus = ref(false);
+const rootRef = ref(null);
 
 const normalizedInline = computed(() => normalizeFragment({
     ui_key: props.uiKey,
@@ -93,6 +95,8 @@ const canRender = computed(() => {
 });
 
 onMounted(async () => {
+    document.addEventListener('pointerdown', onPointerDownOutside);
+
     if (canRender.value) {
         return;
     }
@@ -131,6 +135,10 @@ onMounted(async () => {
     }
 });
 
+onBeforeUnmount(() => {
+    document.removeEventListener('pointerdown', onPointerDownOutside);
+});
+
 function show() {
     if (canRender.value) {
         isOpen.value = true;
@@ -141,6 +149,31 @@ function show() {
 function hide() {
     isOpen.value = false;
     openedByFocus.value = false;
+}
+
+function onBlur(event) {
+    const next = event?.relatedTarget;
+
+    if (next && rootRef.value && rootRef.value.contains(next)) {
+        return;
+    }
+
+    if (openedByFocus.value) {
+        hide();
+    }
+}
+
+function onPointerDownOutside(event) {
+    if (!isOpen.value) {
+        return;
+    }
+
+    const target = event?.target;
+    if (target && rootRef.value && rootRef.value.contains(target)) {
+        return;
+    }
+
+    hide();
 }
 
 function toggle() {
@@ -206,7 +239,11 @@ function createTimeoutSignal(timeoutMs) {
 </script>
 
 <template>
-    <span v-if="canRender" class="relative inline-flex items-center">
+    <span
+        v-if="canRender"
+        ref="rootRef"
+        class="relative inline-flex items-center"
+    >
         <button
             type="button"
             class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
@@ -214,7 +251,7 @@ function createTimeoutSignal(timeoutMs) {
             :aria-controls="tooltipId"
             :aria-expanded="isOpen ? 'true' : 'false'"
             @focus="show"
-            @blur="hide"
+            @blur="onBlur"
             @click="toggle"
             @keydown.esc.prevent="hide"
         >
@@ -236,10 +273,22 @@ function createTimeoutSignal(timeoutMs) {
                 {{ resolvedFragment.long_text }}
             </p>
 
-            <a
-                v-if="learnMoreUrl"
+            <Link
+                v-if="learnMoreUrl && learnMoreUrl.startsWith('/')"
                 :href="learnMoreUrl"
                 class="mt-2 inline-flex text-xs font-semibold underline"
+                @click="hide"
+            >
+                Learn more
+            </Link>
+
+            <a
+                v-else-if="learnMoreUrl"
+                :href="learnMoreUrl"
+                class="mt-2 inline-flex text-xs font-semibold underline"
+                target="_blank"
+                rel="noopener noreferrer"
+                @click="hide"
             >
                 Learn more
             </a>

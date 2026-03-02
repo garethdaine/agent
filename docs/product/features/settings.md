@@ -1,14 +1,15 @@
 ---
 slug: feature-flags-settings
 title: Feature Flag Settings
-summary: Manage runtime feature toggles and safe rollout behavior.
+summary: Operate runtime feature toggles safely with rollout controls and validation paths.
 section: features
 audience: operator
 status: published
-version: "1.0.0"
+version: "1.1.0"
 tags:
   - feature-flags
   - rollout
+  - control-plane
 owner: docs-team
 route_names:
   - tools.features.settings
@@ -21,15 +22,28 @@ reviewed_at: 2026-03-02
 ---
 # Feature Flag Settings
 
+Feature flags allow staged release, quick rollback, and controlled exposure by route/surface.
+
+## Interface Coverage
+
+- **Flags list** with enabled state and metadata.
+- **Toggle interactions** for safe state changes.
+- **Audit-oriented feedback** for runtime updates.
+
 ## Settings
 
-Use `features.flags_refresh_minutes` to configure refresh interval for cached flag values.
+`features.flags_refresh_minutes` controls cache refresh cadence for flag values.
 
 ## Example
 
-Enable a non-critical flag in staging first, then promote to production after validation.
+Enable a non-critical feature in staging, validate target surface behavior, then enable in production.
 
 ## Troubleshooting
 
-If toggles appear stale, clear cache and confirm feature settings API writes are successful.
+- If toggles appear stale, clear cache and confirm write persistence.
+- If UI does not react, verify feature gate checks in target controller/component.
+- If rollout causes regressions, disable flag and review affected route logs.
 
+## Related Docs
+
+- [Requirements Discovery Overview](/docs/requirements-discovery-overview)

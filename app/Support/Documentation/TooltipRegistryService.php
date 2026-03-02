@@ -13,6 +13,7 @@ class TooltipRegistryService
         private readonly DocsTelemetryService $telemetry,
         private readonly FeatureFlagManager $featureFlags,
         private readonly DocsCatalog $catalog,
+        private readonly DocsRuntimeBootstrapService $runtimeBootstrap,
     ) {}
 
     /**
@@ -21,6 +22,8 @@ class TooltipRegistryService
      */
     public function resolve(string $uiKey, ?string $locale = null, array $context = []): ?array
     {
+        $this->runtimeBootstrap->ensureRuntimeDocsAvailable();
+
         $normalizedUiKey = trim($uiKey);
         $normalizedLocale = trim((string) ($locale ?? config('documentation.locale.default', 'en')));
         $normalizedLocale = $normalizedLocale !== '' ? $normalizedLocale : 'en';

@@ -16,7 +16,7 @@
 - ui_key: jobs.overview
   short_text: Agent job lifecycle and scheduling basics.
   severity: info
-  learn_more_slug: jobs-list-api
+  learn_more_slug: jobs-overview
   links:
     - label: Laravel Docs
       url: https://laravel.com/docs/12.x

@@ -401,3 +401,11 @@ Use this file to capture correction-driven lessons.
 - Pattern: A feature can be fully implemented in backend sync/search layers yet still appear incomplete when UI read path remains on legacy in-memory stubs.
 - Prevention rule: After adding runtime data pipelines, verify each user-facing read endpoint/page is wired to runtime models/services, not bootstrap stubs.
 - Applied in: `app/Http/Controllers/Docs/DocsPageController.php`, `resources/js/Pages/Docs/Show.vue`, `tests/Feature/Documentation/DocsNavigationTest.php`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User correction that docs experience remained shallow (no sidebar/search, minimal content, broken Learn More behavior).
+- Correction: Prior implementation satisfied structural contracts but not end-user documentation UX/coverage expectations.
+- Pattern: Completing schema/ingestion backends without validating actual UI navigation, search, markdown rendering, and tooltip link behavior can ship a technically "done" but practically unusable docs feature.
+- Prevention rule: For docs features, always run an end-user acceptance pass before completion: verify sidebar+content layout, working search, markdown rendering, tooltip Learn More navigation, and broad content coverage after sync.
+- Applied in: `app/Http/Controllers/Docs/DocsPageController.php`, `app/Support/Documentation/DocsRuntimeBootstrapService.php`, `app/Support/Documentation/TooltipRegistryService.php`, `resources/js/Pages/Docs/Index.vue`, `resources/js/Pages/Docs/Show.vue`, `resources/js/Components/HelpHint.vue`, `docs/product/**`, `docs/api/reference/**`

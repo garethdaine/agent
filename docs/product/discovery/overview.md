@@ -1,14 +1,15 @@
 ---
 slug: requirements-discovery-overview
 title: Requirements Discovery Overview
-summary: Run guided discovery sessions and progress through approved implementation phases.
+summary: Guided discovery sessions for requirement capture, planning, and build orchestration.
 section: discovery
 audience: operator
 status: published
-version: "1.0.0"
+version: "1.1.0"
 tags:
   - discovery
   - planning
+  - orchestration
 owner: docs-team
 route_names:
   - tools.discovery.index
@@ -21,15 +22,35 @@ reviewed_at: 2026-03-02
 ---
 # Requirements Discovery Overview
 
+Requirements Discovery transforms feature intent into approved plans and executable build task sequences.
+
+## Interface Coverage
+
+- **Session list** with phase/progress/status.
+- **Question workflow** for requirement clarification.
+- **Summary and plan review** with revision support.
+- **Build panel** for task execution orchestration.
+
 ## Settings
 
-Set `discovery.default_provider` to control which task provider preselects in new sessions.
+`discovery.default_provider` controls which task provider is preselected for new sessions.
+
+## Configuration Notes
+
+- Sessions rely on queue processing and provider connectivity.
+- Build execution metadata tracks blockers (permissions, rate limits, clarification).
 
 ## Example
 
-Start a new session, answer generated prompts, and approve the generated plan.
+Open a new discovery session, answer generated questions, approve the summary and plan, then start build execution.
 
 ## Troubleshooting
 
-If a session stalls, check provider connectivity and queued job worker availability.
+- Stalled phase progression: confirm queue workers and provider auth state.
+- Repeated duplicate prompts: inspect round repair logic and question history.
+- Build tasks marked failed without code changes: inspect execution evidence metadata.
 
+## Related Docs
+
+- [Agent Jobs Overview](/docs/jobs-overview)
+- [Org Layer Overview](/docs/org-layer-overview)

@@ -7,6 +7,7 @@ namespace Tests\Feature\Documentation;
 use App\Models\DocumentationEntry;
 use App\Models\User;
 use App\Support\Documentation\DocsCatalog;
+use App\Support\Documentation\DocsRuntimeBootstrapService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use Mockery;
@@ -53,7 +54,7 @@ class DocsNavigationTest extends TestCase
 
         $this->assertIsString($indexTemplate);
         $this->assertStringContainsString(
-            "route('docs.show', { slug: entry.slug })",
+            'docsShowHref(entry.slug)',
             $indexTemplate,
             'Docs index must link to the docs.show route using the entry slug.'
         );
@@ -90,7 +91,8 @@ class DocsNavigationTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Docs/Index')
-                ->where('entries.0.slug', (string) $entry->slug)
+                ->where('entries', fn ($entries): bool => collect($entries)
+                    ->contains(fn (array $item): bool => (string) ($item['slug'] ?? '') === (string) $entry->slug))
             );
 
         $this->actingAs($user)
@@ -105,11 +107,19 @@ class DocsNavigationTest extends TestCase
 
     public function test_docs_index_handles_empty_dataset_without_error(): void
     {
+        $bootstrap = Mockery::mock(DocsRuntimeBootstrapService::class);
+        $bootstrap->shouldReceive('ensureRuntimeDocsAvailable')->once();
+        $this->app->instance(DocsRuntimeBootstrapService::class, $bootstrap);
+
         $catalog = Mockery::mock(DocsCatalog::class);
         $catalog->shouldReceive('search')
             ->once()
-            ->with('', '', '', 50)
+            ->with('', '', '', 200)
             ->andReturn([]);
+        $catalog->shouldReceive('findEntry')
+            ->once()
+            ->with('')
+            ->andReturn(null);
         $this->app->instance(DocsCatalog::class, $catalog);
 
         $user = User::factory()->create();

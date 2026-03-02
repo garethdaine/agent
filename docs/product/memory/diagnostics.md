@@ -1,14 +1,15 @@
 ---
 slug: memory-diagnostics
 title: Memory Diagnostics
-summary: Observe memory retrieval quality and operational memory health.
+summary: Monitor retrieval quality, memory pipeline behavior, and provider health signals.
 section: memory
 audience: operator
 status: published
-version: "1.0.0"
+version: "1.1.0"
 tags:
   - memory
   - diagnostics
+  - retrieval
 owner: docs-team
 route_names:
   - tools.memory.index
@@ -21,15 +22,33 @@ reviewed_at: 2026-03-02
 ---
 # Memory Diagnostics
 
+Memory Diagnostics helps operators evaluate retrieval relevance, provider behavior, and pipeline health.
+
+## Interface Coverage
+
+- **Diagnostics cards** for retrieval latency and success/error counts.
+- **Settings editor** for key retrieval controls.
+- **Test connection** workflow for provider readiness.
+
 ## Settings
 
-Configure `memory.retrieval_limit` to cap retrieval result size per request.
+`memory.retrieval_limit` caps number of retrieval snippets returned per request.
+
+## Configuration Notes
+
+- Provider credentials and embedding/index availability directly impact retrieval quality.
+- Missing context often reflects low-quality source memory, not only retrieval settings.
 
 ## Example
 
-Run a retrieval test and compare returned snippets after changing the retrieval limit.
+Lower retrieval limit to reduce noise, run retrieval tests, then compare answer quality and latency.
 
 ## Troubleshooting
 
-If retrievals return empty data, verify provider credentials and embedding index freshness.
+- Empty retrievals: verify provider credentials and source memory density.
+- High latency: inspect provider round-trip and index health.
+- Irrelevant snippets: tune classification and ingestion quality.
 
+## Related Docs
+
+- [Monitor Overview](/docs/monitor-overview)

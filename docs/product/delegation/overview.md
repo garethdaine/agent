@@ -1,14 +1,15 @@
 ---
 slug: delegation-overview
 title: Delegation Overview
-summary: Build and operate delegation graphs for multi-agent execution.
+summary: Design, validate, and run delegation graphs with controlled verification and retry behavior.
 section: delegation
 audience: operator
 status: published
-version: "1.0.0"
+version: "1.1.0"
 tags:
   - delegation
-  - workflow
+  - orchestration
+  - verification
 owner: docs-team
 route_names:
   - agent.delegation.index
@@ -21,15 +22,28 @@ reviewed_at: 2026-03-02
 ---
 # Delegation Overview
 
+Delegation orchestrates multi-step graph execution with dependency ordering, assignment, and verification checkpoints.
+
+## Interface Coverage
+
+- **Graph list** with status and health indicators.
+- **Task graph view** with dependencies and verification state.
+- **Attempt timeline** for retries and outcomes.
+
 ## Settings
 
-Set `delegation.max_parallel_tasks` to constrain concurrent task execution in graphs.
+`delegation.max_parallel_tasks` defines concurrency bounds for delegated graph execution.
 
 ## Example
 
-Create a graph with dependent nodes and run validation before execution.
+Create a graph with dependent tasks, assign capabilities, run execution, and inspect verification results per node.
 
 ## Troubleshooting
 
-If graph execution pauses unexpectedly, inspect verification checkpoints and throttling limits.
+- Frequent retry loops: inspect failure mode and verification policy thresholds.
+- Tasks stuck pending: verify dependency completion and queue worker health.
+- Assignment failures: ensure delegatee capabilities match task requirements.
 
+## Related Docs
+
+- [Requirements Discovery Overview](/docs/requirements-discovery-overview)

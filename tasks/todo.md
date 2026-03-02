@@ -1297,3 +1297,42 @@ Review:
   - Runtime counts: `entries=12, fragments=14, links=61`
   - `php artisan test tests/Feature/Documentation/DocsNavigationTest.php tests/Feature/Documentation/DocsAuthorizationTest.php` => `16 passed`.
 - Note: `php artisan docs:openapi:ingest` still fails until OpenAPI operations include `x-linked-doc-slugs` metadata for each operation.
+
+### 2026-03-02 — Docs UX and Coverage Remediation (User Correction)
+
+Pre-Execution Goal Articulation (STAR):
+- Situation: Docs runtime contract existed, but user-facing docs experience remained poor (minimal content, no practical search/sidebar workflow, broken Learn More behavior in helper tooltips).
+- Task: Deliver a usable internal docs center with rich product/API docs coverage, sidebar navigation + right-hand markdown reader, working search/filter flow, and reliable Learn More navigation.
+- Action:
+  1. Upgrade docs pages (`Docs/Index`, `Docs/Show`) to sidebar/search/filter + full markdown reading pane.
+  2. Fix `HelpHint` Learn More interaction and focus/blur behavior.
+  3. Add runtime docs bootstrap to auto-sync docs when DB docs/fragments are missing.
+  4. Expand product/API docs content and add comprehensive API route inventory/reference docs.
+  5. Re-run docs validation, sync, coverage, docs feature/unit tests, component tests, and build.
+- Result: Docs center now renders rich markdown content from runtime docs, supports search/filter workflows, covers major product surfaces + API inventory, and tooltip Learn More links resolve reliably.
+
+Implementation Checklist:
+- [x] Add runtime bootstrap service for missing docs datasets.
+- [x] Integrate bootstrap into docs page controller and tooltip registry resolution.
+- [x] Replace docs index/show UI with sidebar + right-pane markdown view + search/filter controls.
+- [x] Harden `HelpHint` interaction for Learn More navigation.
+- [x] Add missing jobs/product docs and expanded app/API references.
+- [x] Validate and sync docs (`docs:validate`, `docs:sync`, `docs:coverage`).
+- [x] Re-run docs feature/unit tests + HelpHint component test + production build.
+
+Review:
+- Evidence summary:
+  - `php artisan docs:validate` => passed (`Validated markdown files: 17, tooltip files: 2, tooltip fragments: 14`).
+  - `php artisan docs:sync --mode=commit --source=repo` => passed (`Entries: 17 | Fragments: 14 | Links: 109`).
+  - `php artisan docs:coverage --fail-on-missing` => passed (`Coverage: 100.00% (12/12 surfaces)`).
+  - `php artisan test tests/Feature/Documentation tests/Unit/Documentation` => passed (`59 passed, 398 assertions`).
+  - `npm run test:unit -- resources/js/Components/__tests__/HelpHint.spec.ts` => passed (`5 passed`).
+  - `npm run build` => passed (client + SSR).
+- Conditions where this works:
+  - Docs markdown and tooltip YAML remain contract-compliant and synced to runtime (`docs:sync`).
+  - Runtime docs tables are writable so first-load bootstrap can hydrate missing datasets.
+  - Authenticated users can access `/docs` and `/docs/{slug}` with Inertia rendering.
+- Explicit non-goals / limitations:
+  - This pass does not add WYSIWYG authoring workflows.
+  - Search in docs UI currently uses docs page query/filter flow rather than a dedicated live-search component.
+  - API route inventory is generated from current route registration snapshot and should be regenerated when API surface changes.
