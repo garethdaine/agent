@@ -763,7 +763,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             }
 
             $hasExistingToken = preg_match('/\b(already|existing|preexisting|pre-existing)\b/i', $message) === 1;
-            $hasImplementedToken = preg_match('/\b(implemented|present|in place|done|complete|completed|exists)\b/i', $message) === 1;
+            $hasImplementedToken = preg_match('/\b(implemented|present|in place|done|complete|completed|exists|green|pass(?:ing)?|verified|validated)\b/i', $message) === 1;
             if ($hasExistingToken && $hasImplementedToken) {
                 return true;
             }

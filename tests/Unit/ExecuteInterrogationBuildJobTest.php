@@ -435,6 +435,60 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         $this->assertFalse((bool) data_get($session->metadata_json, 'build.execution_evidence.has_revalidation_execution'));
     }
 
+    public function test_codex_success_with_verification_only_and_already_green_signal_completes_task(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ], 'codex');
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'source' => 'interrogation_build',
+            ],
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 1,
+            'payload' => '{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Both target test suites are already green in this workspace; I will run verification again to confirm determinism."}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        AgentRunEvent::query()->create([
+            'agent_job_run_id' => $run->id,
+            'event_type' => 'stdout',
+            'sequence' => 2,
+            'payload' => '{"type":"item.completed","item":{"id":"item_2","type":"command_execution","command":"/bin/zsh -lc \'php artisan test --filter=TaskGraphBuilderTest\'","aggregated_output":"ok","exit_code":0,"status":"completed"}}',
+            'event_ts' => now('UTC'),
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Verification-only with already-green signal task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 2,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_COMPLETED, (string) $task->status);
+        $this->assertTrue((bool) data_get($session->metadata_json, 'build.execution_evidence.already_implemented_signal'));
+        $this->assertTrue((bool) data_get($session->metadata_json, 'build.execution_evidence.has_revalidation_execution'));
+    }
+
     public function test_job_preserves_failed_permission_blocker_context_for_build_retry_and_visibility(): void
     {
         Queue::fake();

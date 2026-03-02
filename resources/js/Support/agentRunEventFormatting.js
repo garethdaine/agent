@@ -52,6 +52,33 @@ const parseJson = (raw) => {
     }
 };
 
+const parseSequentialJsonPayload = (raw) => {
+    if (typeof raw !== 'string') {
+        return null;
+    }
+
+    const trimmed = raw.trim();
+    if (trimmed === '') {
+        return null;
+    }
+
+    const first = trimmed[0];
+    if (first !== '{' && first !== '[') {
+        return null;
+    }
+
+    const { parsedValues, remainder, hasIncompleteJson } = extractJsonObjects(trimmed);
+    if (hasIncompleteJson || parsedValues.length < 2) {
+        return null;
+    }
+
+    if (String(remainder ?? '').trim() !== '') {
+        return null;
+    }
+
+    return parsedValues.map((value) => JSON.stringify(value, null, 2)).join('\n\n');
+};
+
 const parseChunkedTextPayload = (raw) => {
     const parsed = parseJson(raw);
     if (!isRecord(parsed) || typeof parsed.text !== 'string' || typeof parsed.continuation !== 'boolean') {
@@ -1182,6 +1209,82 @@ const extractEnvelopeText = (payloadObject) => {
     return '';
 };
 
+const summarizeCodexMachineEvent = (payloadObject) => {
+    if (!isRecord(payloadObject)) {
+        return '';
+    }
+
+    const type = String(payloadObject.type ?? '').trim();
+    if (type === '') {
+        return '';
+    }
+
+    if (type === 'thread.started') {
+        const threadId = String(payloadObject.thread_id ?? '').trim();
+        return threadId !== '' ? `Thread started (${threadId})` : 'Thread started';
+    }
+
+    if (type === 'turn.started') {
+        return 'Turn started';
+    }
+
+    if (type === 'turn.completed') {
+        const usage = isRecord(payloadObject.usage) ? payloadObject.usage : null;
+        if (!usage) {
+            return 'Turn completed';
+        }
+
+        const inputTokens = Number(usage.input_tokens ?? NaN);
+        const outputTokens = Number(usage.output_tokens ?? NaN);
+        const cachedInputTokens = Number(usage.cached_input_tokens ?? NaN);
+        const summary = [];
+
+        if (Number.isFinite(inputTokens) && inputTokens >= 0) {
+            summary.push(`in ${inputTokens.toLocaleString()}`);
+        }
+        if (Number.isFinite(outputTokens) && outputTokens >= 0) {
+            summary.push(`out ${outputTokens.toLocaleString()}`);
+        }
+        if (Number.isFinite(cachedInputTokens) && cachedInputTokens > 0) {
+            summary.push(`cached ${cachedInputTokens.toLocaleString()}`);
+        }
+
+        return summary.length > 0 ? `Turn completed (${summary.join(', ')})` : 'Turn completed';
+    }
+
+    if (type === 'item.started' || type === 'item.completed') {
+        const item = isRecord(payloadObject.item) ? payloadObject.item : null;
+        if (!item) {
+            return type === 'item.started' ? 'Item started' : 'Item completed';
+        }
+
+        const itemType = String(item.type ?? '').trim();
+        if (itemType === 'command_execution') {
+            return '';
+        }
+
+        if (itemType === 'file_change' && Array.isArray(item.changes)) {
+            const count = item.changes.length;
+            return count > 0
+                ? `File changes ${type === 'item.started' ? 'started' : 'completed'} (${count} file${count === 1 ? '' : 's'})`
+                : `File changes ${type === 'item.started' ? 'started' : 'completed'}`;
+        }
+
+        const text = String(item.text ?? item.message ?? '').trim();
+        if (text !== '') {
+            return text;
+        }
+
+        if (itemType !== '') {
+            return `${itemType.replace(/_/g, ' ')} ${type === 'item.started' ? 'started' : 'completed'}`;
+        }
+
+        return type === 'item.started' ? 'Item started' : 'Item completed';
+    }
+
+    return '';
+};
+
 const collapseConsecutiveTimelineEntries = (entries) => {
     const collapsed = [];
 
@@ -1194,6 +1297,7 @@ const collapseConsecutiveTimelineEntries = (entries) => {
 
         const sameEntry = previous.kind === entry.kind
             && previous.eventType === entry.eventType
+            && String(previous.displayFormat ?? '') === String(entry.displayFormat ?? '')
             && String(previous.text ?? '') === String(entry.text ?? '')
             && String(previous.command?.command ?? '') === String(entry.command?.command ?? '');
 
@@ -1309,6 +1413,7 @@ export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
                 sequence: context.sequence,
                 eventType: context.eventType,
                 kind: 'lifecycle',
+                displayFormat: 'text',
                 text: lifecycleSummary,
                 timestamp,
                 timestampLabel,
@@ -1336,6 +1441,7 @@ export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
                 sequence: context.sequence,
                 eventType: context.eventType,
                 kind: 'command',
+                displayFormat: 'text',
                 command: commandExecution,
                 text: commandExecution.command !== '' ? commandExecution.command : 'Executed command',
                 timestamp,
@@ -1347,12 +1453,45 @@ export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
 
         const envelopeText = extractEnvelopeText(parsedPayload);
         if (envelopeText !== '') {
+            const markdown = looksLikeMarkdown(envelopeText);
             timeline.push({
                 key: `${context.key}:envelope:${index}`,
                 sequence: context.sequence,
                 eventType: context.eventType,
                 kind: context.eventType === 'stderr' ? 'stderr' : 'stdout',
+                displayFormat: markdown ? 'markdown' : 'text',
                 text: envelopeText,
+                timestamp,
+                timestampLabel,
+            });
+
+            return;
+        }
+
+        const codexMachineSummary = summarizeCodexMachineEvent(parsedPayload);
+        if (codexMachineSummary !== '') {
+            timeline.push({
+                key: `${context.key}:machine:${index}`,
+                sequence: context.sequence,
+                eventType: context.eventType,
+                kind: 'structured',
+                displayFormat: 'text',
+                text: codexMachineSummary,
+                timestamp,
+                timestampLabel,
+            });
+
+            return;
+        }
+
+        if (parsedPayload !== null) {
+            timeline.push({
+                key: `${context.key}:json:${index}`,
+                sequence: context.sequence,
+                eventType: context.eventType,
+                kind: context.eventType === 'stderr' ? 'stderr' : 'structured',
+                displayFormat: 'json',
+                text: JSON.stringify(parsedPayload, null, 2),
                 timestamp,
                 timestampLabel,
             });
@@ -1367,7 +1506,24 @@ export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
                 sequence: context.sequence,
                 eventType: context.eventType,
                 kind: 'structured',
+                displayFormat: 'text',
                 text: readExcerptSummary,
+                timestamp,
+                timestampLabel,
+            });
+
+            return;
+        }
+
+        const sequentialJson = parseSequentialJsonPayload(normalizedPayload);
+        if (sequentialJson !== null) {
+            timeline.push({
+                key: `${context.key}:json-sequence:${index}`,
+                sequence: context.sequence,
+                eventType: context.eventType,
+                kind: context.eventType === 'stderr' ? 'stderr' : 'structured',
+                displayFormat: 'json',
+                text: sequentialJson,
                 timestamp,
                 timestampLabel,
             });
@@ -1380,11 +1536,14 @@ export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
             return;
         }
 
+        const markdown = looksLikeMarkdown(text);
+
         timeline.push({
             key: `${context.key}:text:${index}`,
             sequence: context.sequence,
             eventType: context.eventType,
             kind: context.eventType === 'stderr' ? 'stderr' : 'stdout',
+            displayFormat: markdown ? 'markdown' : 'text',
             text,
             timestamp,
             timestampLabel,

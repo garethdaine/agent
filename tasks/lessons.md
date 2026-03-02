@@ -27,6 +27,14 @@ Use this file to capture correction-driven lessons.
 - Applied in: `resources/js/Pages/Docs/Index.vue`, `resources/js/Pages/Docs/Show.vue`, `resources/css/app.css`
 
 ## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User correction on docs live-search dropdown and table column width behavior
+- Correction: User reported search input filtered left navigation but live results dropdown stayed empty, and narrow-column tables did not expand to full container width.
+- Pattern: Relying only on backend search responses can produce empty dropdown UX when index freshness lags local in-memory entries; table CSS using block-style rendering can leave columns collapsed with unused right-side space.
+- Prevention rule: For docs search UX, provide a deterministic local-entry fallback when remote search returns zero results; for docs tables, use table layout rules that ensure minimum full-width fit while preserving overflow behavior for wide datasets.
+- Applied in: `resources/js/Pages/Docs/Index.vue`, `resources/js/Pages/Docs/Show.vue`, `resources/css/app.css`
+
+## Entry
 - Date: 2026-02-25
 - Source (job run id / interrogation session id): Interrogation session 4 / build 4
 - Correction: User reported run monitor output was still unreadable and cluttered with raw JSON fragments.
@@ -433,3 +441,19 @@ Use this file to capture correction-driven lessons.
 - Pattern: In orchestration UIs, exposing low-level run metadata directly (without normalization + effective state mapping) causes misleading statuses and unusable operator prompts.
 - Prevention rule: When run/task state can diverge, always surface an effective status derived from task + policy flags; sanitize structured excerpts before rendering; place required operator actions inline with blocker messages.
 - Applied in: `app/Http/Controllers/Api/V1/InterrogationSessionController.php`, `app/Support/Agent/RunEventWriter.php`, `resources/js/Components/Interrogation/BuildPanel.vue`, `tests/Feature/InterrogationApiWorkflowTest.php`, `tests/Feature/AgentRunnerLifecycleTest.php`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User follow-up report that task cards still showed `Run #... · succeeded` while task status was failed, and active run log still showed raw machine JSON events.
+- Correction: Effective run status mapping handled blocked tasks only; failed-task projection and machine-event summarization paths were incomplete.
+- Pattern: Partial state-projection fixes (single status branch) leave other divergent branches unresolved; machine-event parsing must cover both envelope and non-envelope event shapes.
+- Prevention rule: For orchestration status projection, implement exhaustive task-status mapping (`failed`, `blocked`, etc.) against run status and add regression tests per branch; for event logs, add explicit summarizers for known machine event types (`thread.*`, `turn.*`, `item.*`) before fallback raw rendering.
+- Applied in: `app/Http/Controllers/Api/V1/InterrogationSessionController.php`, `resources/js/Support/agentRunEventFormatting.js`, `tests/Feature/InterrogationApiWorkflowTest.php`
+
+## Entry
+- Date: 2026-03-02
+- Source (job run id / interrogation session id): User correction that build logs were still hard to read (`**markdown**` shown literally and JSON blobs shown compact/raw).
+- Correction: Timeline renderer defaulted to `<pre>` for all text and formatter did not provide explicit display intent, so markdown/json could not be rendered appropriately.
+- Pattern: If transport and presentation layers do not carry a structured display type, UI falls back to plain text and degrades operator readability.
+- Prevention rule: Include explicit `displayFormat` metadata (`markdown|json|text`) on formatted timeline entries and render by type; pretty-print parsed JSON (including concatenated JSON objects) before display.
+- Applied in: `resources/js/Support/agentRunEventFormatting.js`, `resources/js/Components/Interrogation/BuildPanel.vue`

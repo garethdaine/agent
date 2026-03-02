@@ -2956,6 +2956,10 @@ class InterrogationSessionController extends Controller
         $runStatus = Str::lower(trim((string) $run->status));
         $taskStatus = Str::lower(trim((string) ($activeTask?->status ?? '')));
 
+        if ($taskStatus === InterrogationBuildTask::STATUS_FAILED) {
+            return 'failed_task';
+        }
+
         if ($taskStatus !== InterrogationBuildTask::STATUS_BLOCKED) {
             return $runStatus !== '' ? $runStatus : (string) $run->status;
         }

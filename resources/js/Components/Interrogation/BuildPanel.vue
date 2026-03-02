@@ -1,5 +1,6 @@
 <script setup>
 import MarkdownEditor from '@/Components/Markdown/MarkdownEditor.vue';
+import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import { formatInterrogationError } from '@/Components/Interrogation/errorFormatting';
 import { buildAgentRunEventPresentation } from '@/Support/agentRunEventFormatting';
 import axios from 'axios';
@@ -182,6 +183,14 @@ const humanizeStatus = (value) => String(value ?? '')
 const activeRunDisplayStatus = computed(() => {
     const effectiveStatus = humanizeStatus(activeRun.value?.effective_status);
     if (effectiveStatus !== '') {
+        if (effectiveStatus.startsWith('failed')) {
+            return 'failed';
+        }
+
+        if (effectiveStatus.startsWith('blocked')) {
+            return 'blocked';
+        }
+
         return effectiveStatus;
     }
 
@@ -570,7 +579,14 @@ const timelineEntryKindClass = (entry) => {
     return 'border-border bg-muted/10';
 };
 const timelineEntryText = (entry) => String(entry?.text ?? '').trim();
-const isTimelineEntryExpandable = (entry) => timelineEntryText(entry).length > LOG_PREVIEW_CHAR_LIMIT;
+const timelineEntryDisplayFormat = (entry) => String(entry?.displayFormat ?? 'text').trim().toLowerCase() || 'text';
+const isTimelineEntryExpandable = (entry) => {
+    if (timelineEntryDisplayFormat(entry) === 'markdown') {
+        return false;
+    }
+
+    return timelineEntryText(entry).length > LOG_PREVIEW_CHAR_LIMIT;
+};
 const isTimelineEntryExpanded = (entry) => Boolean(activeRunExpandedEntries.value?.[entry?.key]);
 const toggleTimelineEntryExpanded = (entry) => {
     const key = String(entry?.key ?? '').trim();
@@ -591,7 +607,25 @@ const timelineEntryPreviewText = (entry) => {
 
     return `${text.slice(0, LOG_PREVIEW_CHAR_LIMIT).trimEnd()}…`;
 };
-const isCommandOutputExpandable = (entry) => String(entry?.command?.output ?? '').trim().length > LOG_PREVIEW_CHAR_LIMIT;
+const formatPossibleJsonText = (value) => {
+    const text = String(value ?? '').trim();
+    if (text === '') {
+        return '';
+    }
+
+    const first = text[0];
+    if (first !== '{' && first !== '[') {
+        return text;
+    }
+
+    try {
+        return JSON.stringify(JSON.parse(text), null, 2);
+    } catch {
+        return text;
+    }
+};
+const commandOutputText = (entry) => formatPossibleJsonText(String(entry?.command?.output ?? '').trim());
+const isCommandOutputExpandable = (entry) => commandOutputText(entry).length > LOG_PREVIEW_CHAR_LIMIT;
 const isCommandOutputExpanded = (entry) => Boolean(activeRunExpandedCommandOutputs.value?.[entry?.key]);
 const toggleCommandOutputExpanded = (entry) => {
     const key = String(entry?.key ?? '').trim();
@@ -605,7 +639,7 @@ const toggleCommandOutputExpanded = (entry) => {
     };
 };
 const commandOutputPreview = (entry) => {
-    const text = String(entry?.command?.output ?? '').trim();
+    const text = commandOutputText(entry);
     if (!isCommandOutputExpandable(entry) || isCommandOutputExpanded(entry)) {
         return text;
     }
@@ -1327,7 +1361,13 @@ const submitTaskRegeneration = (task) => {
                         </div>
 
                         <div v-else class="mt-2">
-                            <pre class="whitespace-pre-wrap break-words text-[11px] leading-relaxed">{{ timelineEntryPreviewText(entry) }}</pre>
+                            <div
+                                v-if="timelineEntryDisplayFormat(entry) === 'markdown'"
+                                class="prose prose-invert prose-pre:my-2 prose-pre:max-w-full prose-code:text-inherit max-w-none text-[11px] leading-relaxed"
+                            >
+                                <MarkdownRenderer :markdown="timelineEntryPreviewText(entry)" :normalize="false" />
+                            </div>
+                            <pre v-else class="whitespace-pre-wrap break-words text-[11px] leading-relaxed">{{ timelineEntryPreviewText(entry) }}</pre>
                             <button
                                 v-if="isTimelineEntryExpandable(entry)"
                                 type="button"

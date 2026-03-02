@@ -1910,6 +1910,66 @@ class InterrogationApiWorkflowTest extends TestCase
             ->assertJsonPath('data.build.active_run.effective_status', 'blocked_clarification');
     }
 
+    public function test_show_build_state_reports_failed_task_effective_run_status_when_run_succeeded(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build failed status projection session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_BUILD_EXECUTING,
+            'phase' => InterrogationSession::PHASE_BUILD_EXECUTION,
+            'approved_at' => now('UTC'),
+            'metadata_json' => [
+                'build' => [
+                    'status' => 'failed',
+                    'pause_reason' => null,
+                    'task_count' => 1,
+                ],
+            ],
+        ]);
+
+        $job = AgentJob::factory()->for($user)->create();
+        $run = AgentJobRun::factory()->for($job, 'job')->create([
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'status' => AgentJobRun::STATUS_SUCCEEDED,
+            'metadata_json' => [],
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Failed task',
+            'description' => 'Run succeeded but task-level validation failed.',
+            'instructions_markdown' => 'Execute and verify.',
+            'status' => InterrogationBuildTask::STATUS_FAILED,
+            'attempt_count' => 1,
+            'last_error' => 'Runner exited successfully but did not execute concrete implementation or verification commands.',
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $session->metadata_json = [
+            ...((array) ($session->metadata_json ?? [])),
+            'build' => [
+                ...((array) data_get($session->metadata_json, 'build', [])),
+                'active_task_id' => (int) $task->id,
+                'active_run_id' => (int) $run->id,
+            ],
+        ];
+        $session->save();
+
+        $this->getJson('/agent/api/v1/interrogation/sessions/'.$session->id)
+            ->assertOk()
+            ->assertJsonPath('data.build.active_task.status', InterrogationBuildTask::STATUS_FAILED)
+            ->assertJsonPath('data.build.active_run.status', AgentJobRun::STATUS_SUCCEEDED)
+            ->assertJsonPath('data.build.active_run.effective_status', 'failed_task');
+    }
+
     public function test_regenerate_single_build_task_queues_job_with_amend_notes(): void
     {
         Queue::fake();
