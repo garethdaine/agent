@@ -15,6 +15,7 @@ import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Calendar, Plus, ArrowLeft, Play, Pause, RefreshCw, Archive, ArchiveRestore, Eye, AlertTriangle } from 'lucide-vue-next';
+import { confirmDialog } from '@/Support/confirmDialog';
 
 const rituals = ref([]);
 const loading = ref(true);
@@ -68,7 +69,13 @@ const resumeRitual = async (ritual) => {
 };
 
 const archiveRitual = async (ritual) => {
-    if (!confirm(`Archive ritual "${ritual.name}"?`)) {
+    const approved = await confirmDialog(`Archive ritual "${ritual.name}"?`, {
+        title: 'Archive Ritual',
+        confirmText: 'Archive',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 

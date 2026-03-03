@@ -13,6 +13,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { Plus } from 'lucide-vue-next';
 import axios from 'axios';
 import { onMounted, onUnmounted, ref } from 'vue';
+import { confirmDialog } from '@/Support/confirmDialog';
 
 const props = defineProps({
     sessions: {
@@ -140,7 +141,13 @@ const retrySession = async (sessionId) => {
 };
 
 const restartSession = async (sessionId) => {
-    if (!window.confirm('Restart this code analysis session from the beginning?')) {
+    const approved = await confirmDialog('Restart this code analysis session from the beginning?', {
+        title: 'Restart Session',
+        confirmText: 'Restart',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 
@@ -153,7 +160,13 @@ const restartSession = async (sessionId) => {
 };
 
 const purgeSession = async (sessionId) => {
-    if (!window.confirm('Permanently delete this session and all related tasks, events, reports, and exported files? This cannot be undone.')) {
+    const approved = await confirmDialog('Permanently delete this session and all related tasks, events, reports, and exported files? This cannot be undone.', {
+        title: 'Permanently Delete Session',
+        confirmText: 'Delete Permanently',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 

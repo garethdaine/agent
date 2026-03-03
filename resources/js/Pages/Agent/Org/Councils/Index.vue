@@ -15,6 +15,7 @@ import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Scale, ArrowLeft, Plus, AlertTriangle } from 'lucide-vue-next';
+import { confirmDialog } from '@/Support/confirmDialog';
 
 const councils = ref([]);
 const loading = ref(true);
@@ -41,7 +42,13 @@ const loadCouncils = async () => {
 };
 
 const archiveCouncil = async (council) => {
-    if (!confirm(`Archive council "${council.name}"?`)) {
+    const approved = await confirmDialog(`Archive council "${council.name}"?`, {
+        title: 'Archive Council',
+        confirmText: 'Archive',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 

@@ -139,6 +139,41 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             ->assertJsonPath('error.code', 'RUN_TRANSITION_CONFLICT');
     }
 
+    public function test_resume_on_drift_pause_sets_continue_decision_and_requeues_execution(): void
+    {
+        Queue::fake();
+
+        $owner = User::factory()->create();
+        $this->actingAs($owner);
+
+        $session = $this->createSession($owner, [
+            'phase' => 3,
+            'status' => SessionStateTransitionService::STATUS_PAUSED,
+            'error_code' => 'SNAPSHOT_DRIFT_DETECTED',
+            'error_summary' => 'Repository changed after snapshot. Operator decision is required.',
+            'metadata_json' => [
+                'operator_action_required' => 'drift_decision_required',
+                'operator_action_details' => [
+                    'choices' => ['continue_old_snapshot', 'restart'],
+                ],
+            ],
+        ]);
+
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/resume')
+            ->assertStatus(202)
+            ->assertJsonPath('data.session_id', $session->id)
+            ->assertJsonPath('data.queued', true);
+
+        $session->refresh();
+
+        $this->assertSame(SessionStateTransitionService::STATUS_EXECUTING, (string) $session->status);
+        $this->assertSame('continue_old_snapshot', data_get($session->metadata_json, 'drift_decision'));
+        $this->assertNull(data_get($session->metadata_json, 'operator_action_required'));
+        $this->assertNull(data_get($session->metadata_json, 'operator_action_details'));
+
+        Queue::assertPushed(ExecuteRepoAnalysisTaskJob::class, fn (ExecuteRepoAnalysisTaskJob $job): bool => $job->sessionId === $session->id);
+    }
+
     public function test_retry_task_endpoint_validates_task_identifier_and_requeues_failed_task(): void
     {
         Queue::fake();

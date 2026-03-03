@@ -336,6 +336,11 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
             return false;
         }
 
+        $sessionSnapshot = $orchestrator->snapshot($metadata);
+        if ($this->driftChangedOnlyInToleratedPaths($sessionSnapshot, $currentSnapshot)) {
+            return false;
+        }
+
         $metadata['operator_action_required'] = 'drift_decision_required';
         $metadata['operator_action_details'] = [
             'session_snapshot_hash' => $snapshotHash,
@@ -364,6 +369,165 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
         ]);
 
         return true;
+    }
+
+    /**
+     * @param  array<string, mixed>  $sessionSnapshot
+     * @param  array<string, mixed>  $currentSnapshot
+     */
+    private function driftChangedOnlyInToleratedPaths(array $sessionSnapshot, array $currentSnapshot): bool
+    {
+        $toleratedPaths = $this->driftToleratedPaths();
+        if ($toleratedPaths === []) {
+            return false;
+        }
+
+        $originalFiles = $this->manifestFileHashes(data_get($sessionSnapshot, 'manifest.files', []));
+        $currentFiles = $this->manifestFileHashes(data_get($currentSnapshot, 'manifest.files', []));
+
+        $changedPaths = [];
+        $allPaths = array_values(array_unique(array_merge(array_keys($originalFiles), array_keys($currentFiles))));
+        sort($allPaths, SORT_STRING);
+
+        foreach ($allPaths as $path) {
+            $before = $originalFiles[$path] ?? null;
+            $after = $currentFiles[$path] ?? null;
+
+            if ($before !== $after) {
+                $changedPaths[] = $path;
+            }
+        }
+
+        if ($changedPaths === []) {
+            return false;
+        }
+
+        foreach ($changedPaths as $path) {
+            if (! $this->pathMatchesAnyRule($path, $toleratedPaths)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  mixed  $manifestFiles
+     * @return array<string, string>
+     */
+    private function manifestFileHashes(mixed $manifestFiles): array
+    {
+        if (! is_array($manifestFiles)) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($manifestFiles as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $path = trim((string) ($entry['path'] ?? ''));
+            $hash = trim((string) ($entry['content_hash'] ?? ''));
+            if ($path === '' || $hash === '') {
+                continue;
+            }
+
+            $normalizedPath = $this->normalizeRelativePathRule($path, false);
+            if ($normalizedPath === '') {
+                continue;
+            }
+
+            $result[$normalizedPath] = $hash;
+        }
+
+        ksort($result, SORT_STRING);
+
+        return $result;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function driftToleratedPaths(): array
+    {
+        $configured = config('repo_analysis.scan.drift_tolerated_paths', []);
+        if (! is_array($configured)) {
+            return [];
+        }
+
+        $paths = [];
+        foreach ($configured as $rule) {
+            if (! is_string($rule)) {
+                continue;
+            }
+
+            $isDirectoryRule = str_ends_with(trim($rule), '/');
+            $normalized = $this->normalizeRelativePathRule($rule, $isDirectoryRule);
+            if ($normalized === '') {
+                continue;
+            }
+
+            $paths[] = $normalized;
+        }
+
+        $paths = array_values(array_unique($paths));
+        sort($paths, SORT_STRING);
+
+        return $paths;
+    }
+
+    private function normalizeRelativePathRule(string $value, bool $directoryRule): string
+    {
+        $normalized = str_replace('\\', '/', trim($value));
+        if ($normalized === '') {
+            return '';
+        }
+
+        $normalized = ltrim($normalized, '/');
+        $normalized = preg_replace('#/+#', '/', $normalized) ?? $normalized;
+
+        while (str_starts_with($normalized, './')) {
+            $normalized = substr($normalized, 2);
+        }
+
+        if ($normalized === '') {
+            return '';
+        }
+
+        $segments = explode('/', rtrim($normalized, '/'));
+        foreach ($segments as $segment) {
+            if ($segment === '..') {
+                return '';
+            }
+        }
+
+        return $directoryRule
+            ? rtrim($normalized, '/').'/'
+            : rtrim($normalized, '/');
+    }
+
+    /**
+     * @param  array<int, string>  $rules
+     */
+    private function pathMatchesAnyRule(string $path, array $rules): bool
+    {
+        foreach ($rules as $rule) {
+            if (str_ends_with($rule, '/')) {
+                if (str_starts_with($path, $rule)) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($path === $rule) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function recoverStaleRunningTasks(RepoAnalysisSession $session): void

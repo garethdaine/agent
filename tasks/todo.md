@@ -6,6 +6,113 @@
 
 ## Current — Open Items
 
+### Session 17 Hotfix — Snapshot Drift False Positives + Resume Unblock (Completed)
+
+- [x] Prevent snapshot drift pauses when only generated run-output paths (`tasks/`, `docs/`) changed.
+- [x] Ensure paused drift sessions can resume without getting stuck in a drift pause loop.
+- [x] Add regression tests for tolerated drift paths and drift-resume behavior.
+- [x] Run targeted backend tests + frontend build.
+
+Review
+- Drift-tolerant change detection:
+  - Added `repo_analysis.scan.drift_tolerated_paths` in `config/repo_analysis.php` (default includes `tasks/`, `docs/`; env override via `REPO_ANALYSIS_DRIFT_TOLERATED_PATHS`).
+  - Updated `app/Jobs/RepoAnalysis/ExecuteRepoAnalysisTaskJob.php` drift pause logic to compare manifest file hashes and skip `SNAPSHOT_DRIFT_DETECTED` when all changed paths are within tolerated directories.
+- Resume unblock:
+  - Updated `app/Http/Controllers/Api/V1/RepoAnalysisSessionController.php` resume flow to auto-set `metadata_json.drift_decision=continue_old_snapshot` and clear operator-action drift flags when resuming drift-paused sessions.
+- Regression coverage:
+  - Added integration test for tolerated-path drift handling in `tests/Integration/RepoAnalysis/RepoAnalysisExecutionPipelineTest.php`.
+  - Added API lifecycle test for drift resume decision handling in `tests/Feature/Api/V1/RepoAnalysis/RepoAnalysisApiLifecycleTest.php`.
+  - Extended config coverage for drift tolerated paths in `tests/Unit/Config/RepoAnalysisConfigTest.php`.
+- Verification:
+  - `php artisan test --filter=RepoAnalysisExecutionPipelineTest` (pass)
+  - `php artisan test --filter=RepoAnalysisApiLifecycleTest` (pass)
+  - `php artisan test --filter=RepoAnalysisConfigTest` (pass)
+  - `npm run build` (pass)
+
+### Session 17 Design Update — Rate Limit Modal Spacing + In-App Confirm Dialogs (Completed)
+
+- [x] Add top padding offset for the rate-limit modal shown in Monitor.
+- [x] Introduce a shared in-app confirmation dialog utility + global host in the app layout.
+- [x] Replace all frontend `confirm()` / `window.confirm()` browser modal usages with in-app confirmation dialogs.
+- [x] Verify no browser confirm calls remain in `resources/js` and run frontend build.
+
+Review
+- Rate limit modal spacing:
+  - Updated `resources/js/Pages/Agent/Monitor/Index.vue` to anchor the rate-limit modal from the top with added top padding (`items-start` + `pt-16 sm:pt-20`) for clearer vertical breathing room.
+- In-app confirm modal system:
+  - Added shared state/service at `resources/js/Support/confirmDialog.js`.
+  - Added global modal host component `resources/js/Components/AppConfirmDialog.vue`.
+  - Mounted host once in `resources/js/Layouts/AppLayout.vue`.
+- Browser confirm migration:
+  - Replaced all frontend browser confirm usages in:
+    - `resources/js/Pages/Messenger/DeadLetters/Index.vue`
+    - `resources/js/Pages/Messenger/DeadLetters/Show.vue`
+    - `resources/js/Pages/Agent/Delegation/ProfileIndex.vue`
+    - `resources/js/Pages/Tools/CodeAnalysis/Index.vue`
+    - `resources/js/Pages/Tools/Messenger/Index.vue`
+    - `resources/js/Pages/Tools/Discovery/Wizard.vue`
+    - `resources/js/Pages/Tools/Discovery/Index.vue`
+    - `resources/js/Components/Interrogation/BuildPanel.vue`
+    - `resources/js/Pages/Agent/Org/Agents/Index.vue`
+    - `resources/js/Pages/Agent/Org/Councils/Index.vue`
+    - `resources/js/Pages/Agent/Org/Rituals/Index.vue`
+- Verification:
+  - `rg -n --glob '*.vue' "(window\\.)?(alert|confirm)\\s*\\(" resources/js` -> no matches.
+  - `npm run build` -> pass (client + SSR builds).
+
+### Session 17 Follow-up — Monitor Modal Alignment + Internal Header Padding (Completed)
+
+- [x] Keep modal overlay centered in viewport for rate-limit modal.
+- [x] Add additional top padding inside Monitor modal card content so titles are not visually flush.
+- [x] Keep styling consistent across Monitor modals.
+- [x] Run frontend build verification.
+
+Review
+- Updated `resources/js/Pages/Agent/Monitor/Index.vue`:
+  - Restored rate-limit modal overlay alignment to centered (`items-center justify-center`).
+  - Increased modal card content padding from `p-5` to `p-6 pt-7` for retry, approval, rate-limit, and clarification modals.
+- Verification:
+  - `npm run build` -> pass (client + SSR builds).
+
+### Session 17 Follow-up 2 — Global Modal Standardization + Center Alignment (Completed)
+
+- [x] Audit all modal instances and isolate non-standard custom overlays.
+- [x] Replace Monitor custom modals with standard Jetstream modal styling.
+- [x] Ensure all Jetstream modals are centered in viewport.
+- [x] Verify modal usage consistency and run frontend build.
+
+Review
+- Modal audit:
+  - Non-standard custom modal overlays existed only in `resources/js/Pages/Agent/Monitor/Index.vue` (retry, approval, rate-limit, clarification).
+  - Remaining overlay at `resources/js/Components/NotificationDrawer.vue` is a side drawer backdrop, not a modal dialog.
+- Styling standardization:
+  - Replaced all four Monitor custom overlays with Jetstream `ConfirmationModal` usage.
+- Center alignment:
+  - Updated base `resources/js/Components/Modal.vue` layout to center modal panels (`flex min-h-full items-center justify-center`), applying globally to Dialog/Confirmation modals.
+- Verification:
+  - `rg -n "fixed inset-0 z-\\d+.*bg-black/50" resources/js --glob '*.vue'` (only notification drawer backdrop remains).
+  - `npm run build` -> pass (client + SSR builds).
+
+### Session 17 Follow-up 3 — Task Graph Label Cleanup + Analyzer/Dependency Badges (Completed)
+
+- [x] Remove hash IDs from Task display labels in task graph table.
+- [x] Convert Task/Analyzer/Dependency labels from snake_case to title case.
+- [x] Render Analyzer as color-coded badges with deterministic per-analyzer colors.
+- [x] Render Depends On as color-coded badges using the same analyzer color mapping.
+- [x] Verify frontend build.
+
+Review
+- Updated `resources/js/Components/CodeAnalysis/TaskGraphPanel.vue`:
+  - Added label normalization helpers:
+    - strip `:<hex-id>` suffix from task keys.
+    - convert snake_case labels to title case with acronym handling (`AI`, `API`, `UI`, `ID`).
+  - Added deterministic analyzer color palette + hash-based class selection so each analyzer key gets a stable badge color.
+  - Task column now displays cleaned title-cased task labels (no appended hash IDs).
+  - Analyzer column now uses colored badges instead of plain muted text.
+  - Depends On column now uses per-dependency colored badges and a `+N more` badge for overflow.
+- Verification:
+  - `npm run build` -> pass (client + SSR builds).
+
 ### Session 2 Hotfix — AI Task Timeout Root-Cause and Recovery Hardening (Completed)
 
 - [x] Collect and record runtime evidence for the failed `ai_overview` task in session `2` (failed_jobs + task/event timeline + queue timeout path).

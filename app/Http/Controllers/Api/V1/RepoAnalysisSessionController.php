@@ -595,10 +595,22 @@ class RepoAnalysisSessionController extends Controller
         }
 
         $before = ['phase' => (int) $session->phase, 'status' => (string) $session->status];
-        $resumed = $transitions->resume($session->id, [
+        $transitionPayload = [
             'error_code' => null,
             'error_summary' => null,
-        ]);
+        ];
+
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $requiresDriftDecision = (($metadata['operator_action_required'] ?? null) === 'drift_decision_required')
+            || ((string) $session->error_code === 'SNAPSHOT_DRIFT_DETECTED');
+
+        if ($requiresDriftDecision) {
+            $metadata['drift_decision'] = 'continue_old_snapshot';
+            unset($metadata['operator_action_required'], $metadata['operator_action_details']);
+            $transitionPayload['metadata_json'] = $metadata;
+        }
+
+        $resumed = $transitions->resume($session->id, $transitionPayload);
 
         if (! $resumed) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session state changed while resuming.', 409);

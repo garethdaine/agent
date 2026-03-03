@@ -3,6 +3,7 @@ import axios from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import Banner from '@/Components/Banner.vue';
+import AppConfirmDialog from '@/Components/AppConfirmDialog.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
@@ -650,5 +651,7 @@ onBeforeUnmount(() => {
             @clear-all="clearAllNotifications"
             @open-action="openNotificationAction"
         />
+
+        <AppConfirmDialog />
     </div>
 </template>

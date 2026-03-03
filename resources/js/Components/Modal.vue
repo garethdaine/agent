@@ -70,7 +70,7 @@ const maxWidthClass = computed(() => {
 
 <template>
     <dialog class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent" ref="dialog">
-        <div class="fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0 z-50" scroll-region>
+        <div class="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-0" scroll-region>
             <transition
                 enter-active-class="ease-out duration-300"
                 enter-from-class="opacity-0"
@@ -84,18 +84,20 @@ const maxWidthClass = computed(() => {
                 </div>
             </transition>
 
-            <transition
-                enter-active-class="modal-enter-active"
-                enter-from-class="opacity-0 scale-95"
-                enter-to-class="opacity-100 scale-100"
-                leave-active-class="modal-leave-active"
-                leave-from-class="opacity-100 scale-100"
-                leave-to-class="opacity-0 scale-95"
-            >
-                <div v-show="show" class="mb-6 bg-card border border-border rounded-lg overflow-hidden shadow-lg transform sm:w-full sm:mx-auto" :class="maxWidthClass">
-                    <slot v-if="showSlot"/>
-                </div>
-            </transition>
+            <div class="flex min-h-full items-center justify-center">
+                <transition
+                    enter-active-class="modal-enter-active"
+                    enter-from-class="opacity-0 scale-95"
+                    enter-to-class="opacity-100 scale-100"
+                    leave-active-class="modal-leave-active"
+                    leave-from-class="opacity-100 scale-100"
+                    leave-to-class="opacity-0 scale-95"
+                >
+                    <div v-show="show" class="w-full transform overflow-hidden rounded-lg border border-border bg-card shadow-lg sm:mx-auto" :class="maxWidthClass">
+                        <slot v-if="showSlot"/>
+                    </div>
+                </transition>
+            </div>
         </div>
     </dialog>
 </template>

@@ -17,6 +17,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { Plus, Settings, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import axios from 'axios';
 import { onMounted, reactive, ref } from 'vue';
+import { confirmDialog } from '@/Support/confirmDialog';
 
 const sessions = ref([]);
 const loading = ref(false);
@@ -62,7 +63,13 @@ const retrySession = async (sessionId) => {
 };
 
 const restartSession = async (sessionId) => {
-    if (!window.confirm('Restart from the beginning? This will clear all questions, answers, and generated artifacts for this session.')) {
+    const approved = await confirmDialog('Restart from the beginning? This will clear all questions, answers, and generated artifacts for this session.', {
+        title: 'Restart Session',
+        confirmText: 'Restart',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 
@@ -92,7 +99,13 @@ const renameSession = async (sessionId, currentName) => {
 };
 
 const deleteSession = async (sessionId) => {
-    if (!window.confirm('Delete this session? You can restore it later from the Deleted filter.')) {
+    const approved = await confirmDialog('Delete this session? You can restore it later from the Deleted filter.', {
+        title: 'Delete Session',
+        confirmText: 'Delete',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 

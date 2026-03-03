@@ -3,6 +3,7 @@ import MarkdownEditor from '@/Components/Markdown/MarkdownEditor.vue';
 import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import { formatInterrogationError } from '@/Components/Interrogation/errorFormatting';
 import { buildAgentRunEventPresentation } from '@/Support/agentRunEventFormatting';
+import { confirmDialog } from '@/Support/confirmDialog';
 import axios from 'axios';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
@@ -906,12 +907,18 @@ const submitTaskEdit = (task) => {
     cancelTaskEdit();
 };
 
-const confirmTaskDelete = (task) => {
+const confirmTaskDelete = async (task) => {
     if (!canManageTaskList.value || isTaskDeleting(task.id)) {
         return;
     }
 
-    if (!window.confirm(`Delete task #${task.sequence} "${task.title}"?`)) {
+    const approved = await confirmDialog(`Delete task #${task.sequence} "${task.title}"?`, {
+        title: 'Delete Task',
+        confirmText: 'Delete',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 

@@ -12,6 +12,30 @@ Use this file to capture correction-driven lessons.
 
 ## Entry
 - Date: 2026-03-03
+- Source (job run id / interrogation session id): User correction on code-analysis resume blocker (`SNAPSHOT_DRIFT_DETECTED`)
+- Correction: User reported runs cannot resume because repository snapshots drift during normal execution when generated runtime outputs are written to `tasks/` and `docs/`.
+- Pattern: Strict snapshot hash comparison at execute-time pauses sessions on expected generated artifacts and can create a resume loop when drift-decision metadata is not set during resume.
+- Prevention rule: Drift detection must distinguish operationally tolerated generated paths from meaningful source drift, and resume handlers must set/clear drift decision metadata so paused sessions can re-enter execution without repeated operator-block loops.
+- Applied in: `config/repo_analysis.php`, `app/Jobs/RepoAnalysis/ExecuteRepoAnalysisTaskJob.php`, `app/Http/Controllers/Api/V1/RepoAnalysisSessionController.php`, `tests/Integration/RepoAnalysis/RepoAnalysisExecutionPipelineTest.php`, `tests/Feature/Api/V1/RepoAnalysis/RepoAnalysisApiLifecycleTest.php`, `tests/Unit/Config/RepoAnalysisConfigTest.php`
+
+## Entry
+- Date: 2026-03-03
+- Source (job run id / interrogation session id): User correction on modal visual consistency and placement
+- Correction: User requested all modals to match standard Jetstream delete-modal styling and be centered in viewport; custom Monitor overlays were visually inconsistent.
+- Pattern: Page-local custom overlays drift from design-system modal styling and spacing, creating inconsistent UX across flows.
+- Prevention rule: Default to shared `DialogModal`/`ConfirmationModal` components for all dialogs; only build custom overlays when interaction requirements cannot be met by shared modal primitives. If center alignment is a global requirement, enforce it at base `Modal.vue`.
+- Applied in: `resources/js/Pages/Agent/Monitor/Index.vue`, `resources/js/Components/Modal.vue`
+
+## Entry
+- Date: 2026-03-03
+- Source (job run id / interrogation session id): User correction on Monitor modal spacing implementation
+- Correction: User requested title padding inside the modal card while keeping modal centered, and flagged that moving the overlay container to `items-start` broke expected centering.
+- Pattern: Applying spacing fixes at the overlay container level can unintentionally change modal placement behavior; spacing should be applied at the modal content/card layer when alignment must remain unchanged.
+- Prevention rule: For modal spacing tweaks, preserve existing viewport alignment (`items-center justify-center`) and adjust internal card/content padding (`p-*`, `pt-*`) instead of overlay positioning.
+- Applied in: `resources/js/Pages/Agent/Monitor/Index.vue`
+
+## Entry
+- Date: 2026-03-03
 - Source (job run id / interrogation session id): Code Analysis session 2 timeout failure (`ai_overview`)
 - Correction: User reported a failed analysis run and requested full root-cause investigation plus robust fix.
 - Pattern: Coupling AI process timeout and queue worker timeout to the same value (`1200s`) lets the worker hard-kill long-running AI tasks before graceful timeout handling; missing persisted runner `cli_session_id` weakens retry/resume continuity.

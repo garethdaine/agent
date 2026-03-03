@@ -26,14 +26,20 @@ class RepoAnalysisConfigTest extends TestCase
     {
         $mandatoryExcludes = config('repo_analysis.scan.mandatory_excludes');
         $excludePaths = config('repo_analysis.scan.exclude_paths');
+        $driftToleratedPaths = config('repo_analysis.scan.drift_tolerated_paths');
 
         $this->assertIsArray($mandatoryExcludes);
         $this->assertNotEmpty($mandatoryExcludes);
         $this->assertIsArray($excludePaths);
+        $this->assertIsArray($driftToleratedPaths);
 
         foreach (['vendor/', 'node_modules/', 'storage/', 'bootstrap/cache/', '.git/'] as $path) {
             $this->assertContains($path, $mandatoryExcludes);
             $this->assertContains($path, $excludePaths);
+        }
+
+        foreach (['tasks/', 'docs/'] as $path) {
+            $this->assertContains($path, $driftToleratedPaths);
         }
     }
 
@@ -95,6 +101,7 @@ class RepoAnalysisConfigTest extends TestCase
             'REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS' => '999999',
             'REPO_ANALYSIS_QUEUE_TIMEOUT_BUFFER_SECONDS' => '999999',
             'REPO_ANALYSIS_AI_MAX_STREAM_MESSAGE_LENGTH' => '1',
+            'REPO_ANALYSIS_DRIFT_TOLERATED_PATHS' => ' , , ',
         ]);
 
         $this->assertSame(2, $missingOverridesConfig['user']['max_active_sessions_per_user']);
@@ -110,6 +117,10 @@ class RepoAnalysisConfigTest extends TestCase
         foreach (['vendor/', 'node_modules/', 'storage/', 'bootstrap/cache/', '.git/'] as $path) {
             $this->assertContains($path, $invalidOverridesConfig['scan']['mandatory_excludes']);
             $this->assertContains($path, $invalidOverridesConfig['scan']['exclude_paths']);
+        }
+
+        foreach (['tasks/', 'docs/'] as $path) {
+            $this->assertContains($path, $invalidOverridesConfig['scan']['drift_tolerated_paths']);
         }
     }
 
@@ -128,6 +139,7 @@ class RepoAnalysisConfigTest extends TestCase
             'REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS',
             'REPO_ANALYSIS_QUEUE_TIMEOUT_BUFFER_SECONDS',
             'REPO_ANALYSIS_AI_MAX_STREAM_MESSAGE_LENGTH',
+            'REPO_ANALYSIS_DRIFT_TOLERATED_PATHS',
             'HORIZON_REPO_ANALYSIS_TIMEOUT',
         ];
 

@@ -15,6 +15,7 @@ import Badge from '@/Components/ui/Badge.vue';
 import Button from '@/Components/ui/Button.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Plus, Pencil, Trash2, Power, ChevronLeft, ChevronRight, User } from 'lucide-vue-next';
+import { confirmDialog } from '@/Support/confirmDialog';
 
 const profiles = ref([]);
 const loading = ref(true);
@@ -49,7 +50,15 @@ const toggleActive = async (id) => {
 };
 
 const deleteProfile = async (id) => {
-    if (!confirm('Are you sure you want to delete this profile?')) return;
+    const approved = await confirmDialog('Are you sure you want to delete this profile?', {
+        title: 'Delete Profile',
+        confirmText: 'Delete',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
+        return;
+    }
 
     try {
         await axios.delete(`/agent/api/v1/delegation/delegatee-profiles/${id}`);

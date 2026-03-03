@@ -15,6 +15,7 @@ import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Users, Plus, ArrowLeft, Pencil, ArchiveRestore, Archive, AlertTriangle } from 'lucide-vue-next';
+import { confirmDialog } from '@/Support/confirmDialog';
 
 const agents = ref([]);
 const loading = ref(true);
@@ -41,7 +42,13 @@ const loadAgents = async () => {
 };
 
 const archiveAgent = async (agent) => {
-    if (!confirm(`Archive agent "${agent.name}"?`)) {
+    const approved = await confirmDialog(`Archive agent "${agent.name}"?`, {
+        title: 'Archive Agent',
+        confirmText: 'Archive',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 

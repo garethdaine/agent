@@ -173,6 +173,27 @@ class RepoAnalysisExecutionPipelineTest extends TestCase
         $this->assertSame('drift_decision_required', data_get($session->metadata_json, 'operator_action_required'));
     }
 
+    public function test_snapshot_drift_is_ignored_when_changes_are_limited_to_tolerated_paths(): void
+    {
+        $session = $this->createSession();
+
+        GenerateRepoSnapshotJob::dispatchSync($session->id, false);
+        PlanRepoAnalysisTasksJob::dispatchSync($session->id, false);
+
+        File::ensureDirectoryExists($this->repoRoot.'/tasks');
+        File::put($this->repoRoot.'/tasks/runtime-note.md', "# Generated during run\n");
+        File::ensureDirectoryExists($this->repoRoot.'/docs');
+        File::put($this->repoRoot.'/docs/runtime-output.md', "# Generated report artifact\n");
+
+        ExecuteRepoAnalysisTaskJob::dispatchSync($session->id, false);
+
+        $session->refresh();
+
+        $this->assertNotSame('SNAPSHOT_DRIFT_DETECTED', (string) $session->error_code);
+        $this->assertNotSame('drift_decision_required', data_get($session->metadata_json, 'operator_action_required'));
+        $this->assertNotSame('paused', (string) $session->status);
+    }
+
     public function test_replay_is_idempotent_stale_task_state_is_recovered_and_queue_misrouting_is_rejected(): void
     {
         $session = $this->createSession();

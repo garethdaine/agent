@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import HelpHint from '@/Components/HelpHint.vue';
 import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
+import ConfirmationModal from '@/Components/ConfirmationModal.vue';
 import Card from '@/Components/ui/Card.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import Table from '@/Components/ui/Table.vue';
@@ -17,7 +18,7 @@ import { formatAgentRunEventEntries } from '@/Support/agentRunEventFormatting';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { Heart, Gauge, Radio, RefreshCw, AlertTriangle, ShieldCheck, HelpCircle, Square, X } from 'lucide-vue-next';
+import { Heart, Gauge, Radio, RefreshCw, AlertTriangle, ShieldCheck, HelpCircle, Square } from 'lucide-vue-next';
 
 const runs = ref([]);
 const events = ref([]);
@@ -902,180 +903,148 @@ onBeforeUnmount(() => {
                 </Card>
             </div>
 
-            <!-- Retry Modal -->
-            <div v-if="retryModalRunId" class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
-                <Card class="w-full max-w-2xl border-primary/40 shadow-xl">
-                    <CardContent class="p-5">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <RefreshCw class="w-5 h-5 text-primary" />
-                                    <h3 class="text-lg font-semibold text-primary">Retry Run</h3>
-                                </div>
-                                <p class="mt-1 text-xs text-muted-foreground">
-                                    Dispatch a targeted retry for run #{{ retryModalRunId }}.
-                                </p>
-                            </div>
-                            <Button variant="ghost" size="sm" @click="closeRetryModal">
-                                <X class="w-4 h-4" />
-                            </Button>
-                        </div>
+            <ConfirmationModal :show="!!retryModalRunId" @close="closeRetryModal">
+                <template #title>
+                    Retry Run
+                </template>
 
-                        <div class="mt-4 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm text-primary">
-                            <p>The system will generate a corrective reframe prompt based on the STAR reasoning analysis from the failed run.</p>
-                        </div>
+                <template #content>
+                    <p class="text-xs text-muted-foreground">
+                        Dispatch a targeted retry for run #{{ retryModalRunId }}.
+                    </p>
+                    <div class="mt-4 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm text-primary">
+                        <p>The system will generate a corrective reframe prompt based on the STAR reasoning analysis from the failed run.</p>
+                    </div>
+                    <p v-if="retryError" class="mt-2 text-xs text-destructive">{{ retryError }}</p>
+                </template>
 
-                        <p v-if="retryError" class="mt-2 text-xs text-destructive">{{ retryError }}</p>
+                <template #footer>
+                    <Button
+                        variant="outline"
+                        :disabled="retryBusy"
+                        @click="closeRetryModal"
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        class="ms-3"
+                        :disabled="retryBusy"
+                        @click="submitRetry"
+                    >
+                        <RefreshCw v-if="retryBusy" class="w-4 h-4 animate-spin mr-1" />
+                        {{ retryBusy ? 'Dispatching...' : 'Dispatch Retry' }}
+                    </Button>
+                </template>
+            </ConfirmationModal>
 
-                        <div class="mt-4 flex items-center gap-2">
-                            <Button
-                                :disabled="retryBusy"
-                                @click="submitRetry"
-                            >
-                                <RefreshCw v-if="retryBusy" class="w-4 h-4 animate-spin mr-1" />
-                                {{ retryBusy ? 'Dispatching...' : 'Dispatch Retry' }}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                :disabled="retryBusy"
-                                @click="closeRetryModal"
-                            >
-                                Cancel
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+            <ConfirmationModal :show="!!approvalModalState && !!approvalModalRun" @close="closeApprovalModal">
+                <template #title>
+                    {{ approvalModalState?.kind === 'permission_blocker' ? 'Write Permission Blocker' : 'Approval Required' }}
+                </template>
 
-            <div v-if="approvalModalState && approvalModalRun" class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
-                <Card class="w-full max-w-2xl border-warning/40 shadow-xl">
-                    <CardContent class="p-5">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <ShieldCheck class="w-5 h-5 text-warning" />
-                                    <h3 class="text-lg font-semibold text-warning">
-                                        {{ approvalModalState?.kind === 'permission_blocker' ? 'Write Permission Blocker' : 'Approval Required' }}
-                                    </h3>
-                                </div>
-                                <p class="mt-1 text-xs text-muted-foreground">
-                                    Run #{{ approvalModalRun.id }} (job {{ approvalModalRun.agent_job_id }}) {{
-                                        approvalModalState?.kind === 'permission_blocker'
-                                            ? 'reported a write-permission blocker.'
-                                            : 'needs approval before it can continue.'
-                                    }}
-                                </p>
-                            </div>
-                            <Button variant="ghost" size="sm" @click="closeApprovalModal">
-                                <X class="w-4 h-4" />
-                            </Button>
-                        </div>
+                <template #content>
+                    <p class="text-xs text-muted-foreground">
+                        Run #{{ approvalModalRun?.id }} (job {{ approvalModalRun?.agent_job_id }}) {{
+                            approvalModalState?.kind === 'permission_blocker'
+                                ? 'reported a write-permission blocker.'
+                                : 'needs approval before it can continue.'
+                        }}
+                    </p>
 
-                        <div class="mt-4 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
-                            <p class="whitespace-pre-wrap break-words">{{ approvalModalState.excerpt }}</p>
-                        </div>
+                    <div class="mt-4 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+                        <p class="whitespace-pre-wrap break-words">{{ approvalModalState?.excerpt }}</p>
+                    </div>
 
-                        <p class="mt-3 text-xs text-muted-foreground">
-                            Apply updates this job to a non-interactive command template (Codex/Claude aware), stops the current run if needed, then re-runs it.
-                        </p>
-                        <p v-if="approvalError" class="mt-2 text-xs text-destructive">{{ approvalError }}</p>
+                    <p class="mt-3 text-xs text-muted-foreground">
+                        Apply updates this job to a non-interactive command template (Codex/Claude aware), stops the current run if needed, then re-runs it.
+                    </p>
+                    <p v-if="approvalError" class="mt-2 text-xs text-destructive">{{ approvalError }}</p>
+                </template>
 
-                        <div class="mt-4 flex items-center gap-2">
-                            <Button
-                                :disabled="approvalBusy"
-                                @click="approveAndRerun"
-                            >
-                                <RefreshCw v-if="approvalBusy" class="w-4 h-4 animate-spin" />
-                                {{ approvalBusy ? 'Processing…' : 'Apply & Re-run' }}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                :disabled="approvalBusy"
-                                @click="denyApprovalRun"
-                            >
-                                Deny (Stop Run)
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                <template #footer>
+                    <Button
+                        variant="outline"
+                        :disabled="approvalBusy"
+                        @click="denyApprovalRun"
+                    >
+                        Deny (Stop Run)
+                    </Button>
+                    <Button
+                        class="ms-3"
+                        :disabled="approvalBusy"
+                        @click="approveAndRerun"
+                    >
+                        <RefreshCw v-if="approvalBusy" class="w-4 h-4 animate-spin" />
+                        {{ approvalBusy ? 'Processing…' : 'Apply & Re-run' }}
+                    </Button>
+                </template>
+            </ConfirmationModal>
 
-            <div v-if="rateLimitModalState && rateLimitModalRun" class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
-                <Card class="w-full max-w-2xl border-destructive/40 shadow-xl">
-                    <CardContent class="p-5">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <AlertTriangle class="w-5 h-5 text-destructive" />
-                                    <h3 class="text-lg font-semibold text-destructive">Rate Limit Detected</h3>
-                                </div>
-                                <p class="mt-1 text-xs text-muted-foreground">
-                                    Run #{{ rateLimitModalRun.id }} (job {{ rateLimitModalRun.agent_job_id }}) hit an upstream usage/rate limit.
-                                </p>
-                            </div>
-                            <Button variant="ghost" size="sm" @click="closeRateLimitModal">
-                                <X class="w-4 h-4" />
-                            </Button>
-                        </div>
+            <ConfirmationModal :show="!!rateLimitModalState && !!rateLimitModalRun" @close="closeRateLimitModal">
+                <template #title>
+                    Rate Limit Detected
+                </template>
 
-                        <div class="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                            <p class="whitespace-pre-wrap break-words">{{ rateLimitModalState.excerpt }}</p>
-                        </div>
+                <template #content>
+                    <p class="text-xs text-muted-foreground">
+                        Run #{{ rateLimitModalRun?.id }} (job {{ rateLimitModalRun?.agent_job_id }}) hit an upstream usage/rate limit.
+                    </p>
 
-                        <p v-if="rateLimitModalState.holdUntil" class="mt-3 text-xs text-muted-foreground">
-                            Hold until: <span class="font-semibold text-foreground">{{ rateLimitModalState.holdUntil }}</span>
-                            <Badge v-if="rateLimitModalState.holdActive" variant="destructive" class="ml-2">active</Badge>
-                        </p>
-                        <p v-else class="mt-3 text-xs text-muted-foreground">
-                            No reset time was parsed from output. Default hold policy applies.
-                        </p>
-                        <p v-if="rateLimitError" class="mt-2 text-xs text-destructive">{{ rateLimitError }}</p>
+                    <div class="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                        <p class="whitespace-pre-wrap break-words">{{ rateLimitModalState?.excerpt }}</p>
+                    </div>
 
-                        <div class="mt-4 flex items-center gap-2">
-                            <Button
-                                variant="destructive"
-                                :disabled="rateLimitBusy"
-                                @click="runAnywayAfterRateLimit"
-                            >
-                                <RefreshCw v-if="rateLimitBusy" class="w-4 h-4 animate-spin" />
-                                {{ rateLimitBusy ? 'Dispatching…' : 'Run Anyway Now' }}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                :disabled="rateLimitBusy"
-                                @click="closeRateLimitModal"
-                            >
-                                Wait Until Reset
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                    <p v-if="rateLimitModalState?.holdUntil" class="mt-3 text-xs text-muted-foreground">
+                        Hold until: <span class="font-semibold text-foreground">{{ rateLimitModalState.holdUntil }}</span>
+                        <Badge v-if="rateLimitModalState.holdActive" variant="destructive" class="ml-2">active</Badge>
+                    </p>
+                    <p v-else class="mt-3 text-xs text-muted-foreground">
+                        No reset time was parsed from output. Default hold policy applies.
+                    </p>
+                    <p v-if="rateLimitError" class="mt-2 text-xs text-destructive">{{ rateLimitError }}</p>
+                </template>
 
-            <div v-if="clarificationModalState && clarificationModalRun" class="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4">
-                <Card class="w-full max-w-2xl border-primary/40 shadow-xl">
-                    <CardContent class="p-5">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <HelpCircle class="w-5 h-5 text-primary" />
-                                    <h3 class="text-lg font-semibold text-primary">Clarification Requested</h3>
-                                </div>
-                                <p class="mt-1 text-xs text-muted-foreground">
-                                    Run #{{ clarificationModalRun.id }} (job {{ clarificationModalRun.agent_job_id }}) asked a question and needs clarification.
-                                </p>
-                            </div>
-                            <Button variant="ghost" size="sm" @click="closeClarificationModal">
-                                <X class="w-4 h-4" />
-                            </Button>
-                        </div>
+                <template #footer>
+                    <Button
+                        variant="outline"
+                        :disabled="rateLimitBusy"
+                        @click="closeRateLimitModal"
+                    >
+                        Wait Until Reset
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        class="ms-3"
+                        :disabled="rateLimitBusy"
+                        @click="runAnywayAfterRateLimit"
+                    >
+                        <RefreshCw v-if="rateLimitBusy" class="w-4 h-4 animate-spin" />
+                        {{ rateLimitBusy ? 'Dispatching…' : 'Run Anyway Now' }}
+                    </Button>
+                </template>
+            </ConfirmationModal>
 
-                        <div class="mt-4 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm text-primary">
-                            <p class="whitespace-pre-wrap break-words">{{ clarificationModalState.excerpt }}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+            <ConfirmationModal :show="!!clarificationModalState && !!clarificationModalRun" @close="closeClarificationModal">
+                <template #title>
+                    Clarification Requested
+                </template>
+
+                <template #content>
+                    <p class="text-xs text-muted-foreground">
+                        Run #{{ clarificationModalRun?.id }} (job {{ clarificationModalRun?.agent_job_id }}) asked a question and needs clarification.
+                    </p>
+
+                    <div class="mt-4 rounded-md border border-primary/30 bg-primary/10 p-3 text-sm text-primary">
+                        <p class="whitespace-pre-wrap break-words">{{ clarificationModalState?.excerpt }}</p>
+                    </div>
+                </template>
+
+                <template #footer>
+                    <Button variant="outline" @click="closeClarificationModal">
+                        Close
+                    </Button>
+                </template>
+            </ConfirmationModal>
         </div>
     </AppLayout>
 </template>

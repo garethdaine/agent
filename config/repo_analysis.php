@@ -65,11 +65,34 @@ $parseExcludeOverrides = static function (mixed $value) use ($normalizeDirectory
     return array_values(array_filter($parts, static fn (string $path): bool => $path !== ''));
 };
 
+$parseDriftToleratedOverrides = static function (mixed $value) use ($normalizeDirectoryPath): array {
+    if (! is_string($value)) {
+        return [];
+    }
+
+    $parts = array_map('trim', explode(',', $value));
+    $parts = array_map($normalizeDirectoryPath, $parts);
+
+    return array_values(array_filter($parts, static fn (string $path): bool => $path !== ''));
+};
+
 $excludeOverrides = $parseExcludeOverrides(env('REPO_ANALYSIS_EXCLUDE_PATHS'));
 $excludePaths = array_values(array_unique(array_merge($mandatoryExcludes, $excludeOverrides)));
 
 if ($excludePaths === []) {
     $excludePaths = $mandatoryExcludes;
+}
+
+$defaultDriftToleratedPaths = [
+    'tasks/',
+    'docs/',
+];
+
+$driftToleratedOverrides = $parseDriftToleratedOverrides(env('REPO_ANALYSIS_DRIFT_TOLERATED_PATHS'));
+$driftToleratedPaths = array_values(array_unique(array_merge($defaultDriftToleratedPaths, $driftToleratedOverrides)));
+
+if ($driftToleratedPaths === []) {
+    $driftToleratedPaths = $defaultDriftToleratedPaths;
 }
 
 $aiTaskTimeoutSeconds = $coerceBoundedInt(
@@ -127,6 +150,7 @@ return [
     'scan' => [
         'mandatory_excludes' => $mandatoryExcludes,
         'exclude_paths' => $excludePaths,
+        'drift_tolerated_paths' => $driftToleratedPaths,
     ],
 
     'coverage' => [

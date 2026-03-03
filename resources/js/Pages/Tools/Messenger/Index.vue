@@ -21,6 +21,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { RefreshCw, AlertCircle } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, ref, watch } from 'vue';
+import { confirmDialog } from '@/Support/confirmDialog';
 
 const loading = ref(false);
 const refreshing = ref(false);
@@ -398,7 +399,12 @@ const retestConnector = async (connector) => {
 };
 
 const disconnectConnector = async (connector) => {
-    const approved = window.confirm(`Disconnect ${connector.name}? This will remove stored credentials.`);
+    const approved = await confirmDialog(`Disconnect ${connector.name}? This will remove stored credentials.`, {
+        title: 'Disconnect Connector',
+        confirmText: 'Disconnect',
+        confirmVariant: 'destructive',
+    });
+
     if (!approved) {
         return;
     }

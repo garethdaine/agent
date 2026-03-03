@@ -17,6 +17,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { RefreshCw, RotateCcw, Trash2, Eye, CheckSquare, Square } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, ref } from 'vue';
+import { confirmDialog } from '@/Support/confirmDialog';
 
 const props = defineProps({
     deadLetters: Object,
@@ -66,7 +67,12 @@ const filterByConnector = (connectorId) => {
 };
 
 const retrySingle = async (id) => {
-    if (!confirm('Retry this message? It will be re-dispatched for processing.')) {
+    const approved = await confirmDialog('Retry this message? It will be re-dispatched for processing.', {
+        title: 'Retry Message',
+        confirmText: 'Retry',
+    });
+
+    if (!approved) {
         return;
     }
 
@@ -89,7 +95,12 @@ const retryBulk = async () => {
         return;
     }
 
-    if (!confirm(`Retry ${selectedIds.value.length} selected message(s)?`)) {
+    const approved = await confirmDialog(`Retry ${selectedIds.value.length} selected message(s)?`, {
+        title: 'Retry Selected Messages',
+        confirmText: 'Retry',
+    });
+
+    if (!approved) {
         return;
     }
 
@@ -121,8 +132,14 @@ const retryBulk = async () => {
     }
 };
 
-const deleteSingle = (id) => {
-    if (!confirm('Delete this dead letter? This cannot be undone.')) {
+const deleteSingle = async (id) => {
+    const approved = await confirmDialog('Delete this dead letter? This cannot be undone.', {
+        title: 'Delete Dead Letter',
+        confirmText: 'Delete',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 

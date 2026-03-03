@@ -27,6 +27,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { ArrowLeft, Pause, Pencil, Play, RefreshCw, RotateCcw, Settings, Trash2 } from 'lucide-vue-next';
+import { confirmDialog } from '@/Support/confirmDialog';
 
 const props = defineProps({
     sessionId: {
@@ -926,7 +927,13 @@ const requestRevision = async (payload) => {
 };
 
 const regeneratePlan = async () => {
-    if (!window.confirm('Regenerate the entire plan from locked summary context? This will replace the current plan only if a valid regenerated plan is produced.')) {
+    const approved = await confirmDialog('Regenerate the entire plan from locked summary context? This will replace the current plan only if a valid regenerated plan is produced.', {
+        title: 'Regenerate Plan',
+        confirmText: 'Regenerate',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 
@@ -1230,7 +1237,13 @@ const renameCurrentSession = async () => {
 };
 
 const restartFromBeginning = async () => {
-    if (!window.confirm('Restart from the beginning? This will permanently clear all questions, answers, and generated artifacts for this session.')) {
+    const approved = await confirmDialog('Restart from the beginning? This will permanently clear all questions, answers, and generated artifacts for this session.', {
+        title: 'Restart Session',
+        confirmText: 'Restart',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 
@@ -1278,7 +1291,13 @@ const cleanupInvalidQuestions = async () => {
 };
 
 const deleteSession = async () => {
-    if (!window.confirm('Delete this session? You can restore it from the sessions list.')) {
+    const approved = await confirmDialog('Delete this session? You can restore it from the sessions list.', {
+        title: 'Delete Session',
+        confirmText: 'Delete',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 

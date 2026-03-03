@@ -10,6 +10,7 @@ import Badge from '@/Components/ui/Badge.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeft, RotateCcw, Trash2, Clock, AlertCircle } from 'lucide-vue-next';
 import { ref } from 'vue';
+import { confirmDialog } from '@/Support/confirmDialog';
 
 const props = defineProps({
     deadLetter: Object,
@@ -17,8 +18,13 @@ const props = defineProps({
 
 const retrying = ref(false);
 
-const retrySingle = () => {
-    if (!confirm('Retry this message? It will be re-dispatched for processing.')) {
+const retrySingle = async () => {
+    const approved = await confirmDialog('Retry this message? It will be re-dispatched for processing.', {
+        title: 'Retry Message',
+        confirmText: 'Retry',
+    });
+
+    if (!approved) {
         return;
     }
 
@@ -30,8 +36,14 @@ const retrySingle = () => {
     });
 };
 
-const deleteSingle = () => {
-    if (!confirm('Delete this dead letter? This cannot be undone.')) {
+const deleteSingle = async () => {
+    const approved = await confirmDialog('Delete this dead letter? This cannot be undone.', {
+        title: 'Delete Dead Letter',
+        confirmText: 'Delete',
+        confirmVariant: 'destructive',
+    });
+
+    if (!approved) {
         return;
     }
 
