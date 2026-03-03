@@ -149,17 +149,17 @@ class ReportComposer
         $composerJson = $this->readSnapshotLockedJson($projectRoot, $fileIndex, 'composer.json', $warnings);
         $packageJson = $this->readSnapshotLockedJson($projectRoot, $fileIndex, 'package.json', $warnings);
 
-        $dependencyPayload = data_get($artifactByType, 'dependency_manifest.payload_json', []);
-        $routePayload = data_get($artifactByType, 'laravel_routes.payload_json', []);
-        $modelPayload = data_get($artifactByType, 'laravel_models_migrations.payload_json', []);
-        $queuePayload = data_get($artifactByType, 'queue_jobs_events.payload_json', []);
-        $frontendPayload = data_get($artifactByType, 'frontend_module_graph.payload_json', []);
-        $testPayload = data_get($artifactByType, 'test_coverage_map.payload_json', []);
-        $riskPayload = data_get($artifactByType, 'risk_hotspot.payload_json', []);
+        $dependencyPayload = $this->artifactPayload($artifactByType, ['dependency_manifest']);
+        $routePayload = $this->artifactPayload($artifactByType, ['routing_surface', 'laravel_routes']);
+        $modelPayload = $this->artifactPayload($artifactByType, ['data_model_surface', 'laravel_models_migrations']);
+        $queuePayload = $this->artifactPayload($artifactByType, ['async_workflows_surface', 'queue_jobs_events']);
+        $frontendPayload = $this->artifactPayload($artifactByType, ['frontend_surface', 'frontend_module_graph']);
+        $testPayload = $this->artifactPayload($artifactByType, ['test_coverage_map']);
+        $riskPayload = $this->artifactPayload($artifactByType, ['risk_hotspot']);
 
         $languageBreakdown = $this->languageBreakdown($paths);
         $topDirectories = $this->topLevelDistribution($paths);
-        $dependencySummary = $this->dependencySummary($composerJson, $packageJson);
+        $dependencySummary = $this->dependencySummary($composerJson, $packageJson, $dependencyPayload);
 
         $stackSignals = [
             ...$this->inferredStackFromDependencies($composerJson, $packageJson),
@@ -193,11 +193,14 @@ class ReportComposer
                 'job_count' => (int) ($queuePayload['job_count'] ?? 0),
                 'events' => $this->basenameList($this->stringList($queuePayload['event_files'] ?? []), 30),
                 'event_count' => (int) ($queuePayload['event_count'] ?? 0),
+                'schemas' => $this->basenameList($this->stringList($modelPayload['schema_files'] ?? []), 30),
+                'schema_count' => (int) ($modelPayload['schema_count'] ?? 0),
             ],
             'frontend' => [
                 'entrypoints' => $this->sampleList($this->stringList($frontendPayload['entrypoints'] ?? []), 40),
                 'entrypoint_count' => (int) ($frontendPayload['entrypoint_count'] ?? 0),
                 'has_package_manifest' => (bool) ($frontendPayload['has_package_manifest'] ?? false),
+                'frontend_markers' => $this->sampleList($this->stringList($frontendPayload['frontend_markers'] ?? []), 20),
             ],
             'testing' => [
                 'test_file_count' => (int) ($testPayload['test_file_count'] ?? 0),
@@ -262,6 +265,33 @@ class ReportComposer
         ksort($indexed, SORT_STRING);
 
         return $indexed;
+    }
+
+    /**
+     * @param  array<string, array{
+     *   artifact_key: string,
+     *   artifact_type: string,
+     *   content_hash: string,
+     *   payload_json: array<string, mixed>,
+     *   metadata_json: array<string, mixed>
+     * }>  $artifactByType
+     * @param  array<int, string>  $types
+     * @return array<string, mixed>
+     */
+    private function artifactPayload(array $artifactByType, array $types): array
+    {
+        foreach ($types as $type) {
+            if (! is_string($type) || $type === '') {
+                continue;
+            }
+
+            $payload = data_get($artifactByType, $type.'.payload_json');
+            if (is_array($payload)) {
+                return $payload;
+            }
+        }
+
+        return [];
     }
 
     /**
@@ -439,6 +469,7 @@ class ReportComposer
             'ts' => 'TypeScript',
             'tsx' => 'TypeScript',
             'vue' => 'Vue',
+            'svelte' => 'Svelte',
             'css' => 'CSS',
             'scss' => 'SCSS',
             'sass' => 'Sass',
@@ -448,6 +479,23 @@ class ReportComposer
             'md' => 'Markdown',
             'markdown' => 'Markdown',
             'blade.php' => 'Blade',
+            'py' => 'Python',
+            'go' => 'Go',
+            'rs' => 'Rust',
+            'rb' => 'Ruby',
+            'java' => 'Java',
+            'kt' => 'Kotlin',
+            'kts' => 'Kotlin',
+            'cs' => 'C#',
+            'swift' => 'Swift',
+            'dart' => 'Dart',
+            'cpp' => 'C++',
+            'cc' => 'C++',
+            'cxx' => 'C++',
+            'c' => 'C',
+            'h' => 'C/C++ Header',
+            'hpp' => 'C/C++ Header',
+            'hh' => 'C/C++ Header',
         ];
 
         $counts = [];
@@ -508,16 +556,25 @@ class ReportComposer
     /**
      * @param  array<string, mixed>|null  $composerJson
      * @param  array<string, mixed>|null  $packageJson
+     * @param  array<string, mixed>  $dependencyPayload
      * @return array<string, mixed>
      */
-    private function dependencySummary(?array $composerJson, ?array $packageJson): array
+    private function dependencySummary(?array $composerJson, ?array $packageJson, array $dependencyPayload): array
     {
         $phpRuntime = $this->dependencyPairs($composerJson['require'] ?? []);
         $phpDev = $this->dependencyPairs($composerJson['require-dev'] ?? []);
         $nodeRuntime = $this->dependencyPairs($packageJson['dependencies'] ?? []);
         $nodeDev = $this->dependencyPairs($packageJson['devDependencies'] ?? []);
+        $ecosystems = $this->stringList($dependencyPayload['ecosystems'] ?? []);
+        $manifests = $this->stringList($dependencyPayload['manifests'] ?? []);
+        $lockfiles = $this->stringList($dependencyPayload['lockfiles'] ?? []);
 
         return [
+            'ecosystems' => $ecosystems,
+            'manifest_count' => count($manifests),
+            'manifests' => array_slice($manifests, 0, 80),
+            'lockfile_count' => count($lockfiles),
+            'lockfiles' => array_slice($lockfiles, 0, 80),
             'php' => [
                 'runtime_count' => count($phpRuntime),
                 'runtime' => array_slice($phpRuntime, 0, 60),
@@ -576,23 +633,85 @@ class ReportComposer
         $allComposer = array_fill_keys(array_merge($composerDeps, $composerDevDeps), true);
         $allPackage = array_fill_keys(array_merge($packageDeps, $packageDevDeps), true);
 
+        if ($allComposer !== []) {
+            $signals[] = 'PHP package ecosystem';
+        }
+
+        if ($allPackage !== []) {
+            $signals[] = 'Node package ecosystem';
+        }
+
         if (isset($allComposer['laravel/framework'])) {
             $signals[] = 'Laravel';
+        }
+        if (isset($allComposer['symfony/framework-bundle'])) {
+            $signals[] = 'Symfony';
+        }
+        if (isset($allComposer['slim/slim'])) {
+            $signals[] = 'Slim Framework';
+        }
+        if (isset($allComposer['yiisoft/yii2'])) {
+            $signals[] = 'Yii 2';
+        }
+        if (isset($allComposer['codeigniter4/framework'])) {
+            $signals[] = 'CodeIgniter 4';
         }
         if (isset($allComposer['inertiajs/inertia-laravel'])) {
             $signals[] = 'Inertia.js (Laravel adapter)';
         }
+        if (isset($allComposer['livewire/livewire'])) {
+            $signals[] = 'Laravel Livewire';
+        }
+        if (isset($allComposer['laravel/octane'])) {
+            $signals[] = 'Laravel Octane';
+        }
         if (isset($allPackage['@inertiajs/vue3'])) {
             $signals[] = 'Inertia.js + Vue 3';
         }
-        if (isset($allPackage['vue'])) {
+        if (isset($allPackage['react'])) {
+            $signals[] = 'React';
+        }
+        if (isset($allPackage['next'])) {
+            $signals[] = 'Next.js';
+        }
+        if (isset($allPackage['vue']) || isset($allPackage['@vue/runtime-core'])) {
             $signals[] = 'Vue';
+        }
+        if (isset($allPackage['nuxt'])) {
+            $signals[] = 'Nuxt';
+        }
+        if (isset($allPackage['svelte'])) {
+            $signals[] = 'Svelte';
+        }
+        if (isset($allPackage['@angular/core'])) {
+            $signals[] = 'Angular';
+        }
+        if (isset($allPackage['nestjs/core'])) {
+            $signals[] = 'NestJS';
+        }
+        if (isset($allPackage['express'])) {
+            $signals[] = 'Express';
+        }
+        if (isset($allPackage['fastify'])) {
+            $signals[] = 'Fastify';
+        }
+        if (isset($allPackage['koa'])) {
+            $signals[] = 'Koa';
+        }
+        if (isset($allPackage['astro'])) {
+            $signals[] = 'Astro';
         }
         if (isset($allPackage['tailwindcss'])) {
             $signals[] = 'Tailwind CSS';
         }
         if (isset($allPackage['vite'])) {
             $signals[] = 'Vite';
+        }
+        if (isset($allPackage['webpack'])) {
+            $signals[] = 'Webpack';
+        }
+        if (isset($allPackage['typescript'])) {
+            $signals[] = 'TypeScript';
         }
         if (isset($allComposer['laravel/horizon'])) {
             $signals[] = 'Laravel Horizon';
@@ -605,6 +724,9 @@ class ReportComposer
         }
         if (isset($allComposer['pestphp/pest']) || isset($allComposer['phpunit/phpunit'])) {
             $signals[] = 'PHP Testing Framework';
+        }
+        if (isset($allPackage['vitest']) || isset($allPackage['jest']) || isset($allPackage['mocha'])) {
+            $signals[] = 'JavaScript Testing Framework';
         }
 
         return $signals;
@@ -627,8 +749,41 @@ class ReportComposer
         if (in_array('php', $ecosystems, true)) {
             $signals[] = 'PHP';
         }
-        if (in_array('node', $ecosystems, true)) {
-            $signals[] = 'Node.js Tooling';
+        if (in_array('javascript', $ecosystems, true)) {
+            $signals[] = 'JavaScript/TypeScript Tooling';
+        }
+        if (in_array('python', $ecosystems, true)) {
+            $signals[] = 'Python Tooling';
+        }
+        if (in_array('go', $ecosystems, true)) {
+            $signals[] = 'Go Tooling';
+        }
+        if (in_array('rust', $ecosystems, true)) {
+            $signals[] = 'Rust Tooling';
+        }
+        if (in_array('ruby', $ecosystems, true)) {
+            $signals[] = 'Ruby Tooling';
+        }
+        if (in_array('jvm', $ecosystems, true)) {
+            $signals[] = 'JVM Tooling';
+        }
+        if (in_array('dotnet', $ecosystems, true)) {
+            $signals[] = '.NET Tooling';
+        }
+        if (in_array('deno', $ecosystems, true)) {
+            $signals[] = 'Deno Tooling';
+        }
+        if (in_array('elixir', $ecosystems, true)) {
+            $signals[] = 'Elixir Tooling';
+        }
+        if (in_array('swift', $ecosystems, true)) {
+            $signals[] = 'Swift Tooling';
+        }
+        if (in_array('dart_flutter', $ecosystems, true)) {
+            $signals[] = 'Dart/Flutter Tooling';
+        }
+        if (in_array('cpp', $ecosystems, true)) {
+            $signals[] = 'C/C++ Tooling';
         }
         if ((int) ($routePayload['route_file_count'] ?? 0) > 0) {
             $signals[] = 'Route-driven HTTP surface';

@@ -24,10 +24,10 @@ class TaskGraphBuilderTest extends TestCase
             [
                 'filesystem_manifest',
                 'dependency_manifest',
-                'laravel_routes',
-                'laravel_models_migrations',
-                'queue_jobs_events',
-                'frontend_module_graph',
+                'routing_surface',
+                'data_model_surface',
+                'async_workflows_surface',
+                'frontend_surface',
                 'test_coverage_map',
                 'risk_hotspot',
             ],
@@ -66,10 +66,10 @@ class TaskGraphBuilderTest extends TestCase
 
         $this->assertSame([], $tasksByAnalyzer['filesystem_manifest']['depends_on']);
         $this->assertSame(['filesystem_manifest'], $tasksByAnalyzer['dependency_manifest']['depends_on']);
-        $this->assertSame(['dependency_manifest'], $tasksByAnalyzer['laravel_routes']['depends_on']);
-        $this->assertSame(['dependency_manifest'], $tasksByAnalyzer['laravel_models_migrations']['depends_on']);
-        $this->assertSame(['laravel_models_migrations'], $tasksByAnalyzer['queue_jobs_events']['depends_on']);
-        $this->assertSame(['dependency_manifest'], $tasksByAnalyzer['frontend_module_graph']['depends_on']);
+        $this->assertSame(['dependency_manifest'], $tasksByAnalyzer['routing_surface']['depends_on']);
+        $this->assertSame(['dependency_manifest'], $tasksByAnalyzer['data_model_surface']['depends_on']);
+        $this->assertSame(['data_model_surface'], $tasksByAnalyzer['async_workflows_surface']['depends_on']);
+        $this->assertSame(['dependency_manifest'], $tasksByAnalyzer['frontend_surface']['depends_on']);
         $this->assertSame(['dependency_manifest'], $tasksByAnalyzer['test_coverage_map']['depends_on']);
         $this->assertSame(
             ['filesystem_manifest', 'dependency_manifest', 'test_coverage_map'],

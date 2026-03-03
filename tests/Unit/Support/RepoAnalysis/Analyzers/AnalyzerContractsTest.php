@@ -116,8 +116,33 @@ class AnalyzerContractsTest extends TestCase
         $selection = $registry->forProfile('default', $snapshot);
         $selectedKeys = array_map(static fn ($analyzer): string => $analyzer->key(), $selection['analyzers']);
 
-        $this->assertContains('laravel_routes', $selectedKeys);
-        $this->assertContains('laravel_models_migrations', $selectedKeys);
-        $this->assertContains('frontend_module_graph', $selectedKeys);
+        $this->assertContains('routing_surface', $selectedKeys);
+        $this->assertContains('data_model_surface', $selectedKeys);
+        $this->assertContains('frontend_surface', $selectedKeys);
+    }
+
+    public function test_dependency_manifest_detects_multiple_language_ecosystems(): void
+    {
+        $registry = new AnalyzerRegistry;
+        $analyzer = $registry->get('dependency_manifest');
+
+        $result = $analyzer->analyze([
+            'snapshot_hash' => 'snapshot-006',
+            'manifest' => [
+                'files' => [
+                    ['path' => 'services/api/pyproject.toml'],
+                    ['path' => 'backend/go.mod'],
+                    ['path' => 'cli/Cargo.toml'],
+                    ['path' => 'web/package.json', 'content' => '{"name":"multi-stack"}'],
+                    ['path' => 'mobile/pubspec.yaml'],
+                    ['path' => 'src/Server/App.csproj'],
+                ],
+            ],
+        ]);
+
+        $this->assertSame(
+            ['dart_flutter', 'dotnet', 'go', 'javascript', 'python', 'rust'],
+            data_get($result, 'payload.ecosystems')
+        );
     }
 }

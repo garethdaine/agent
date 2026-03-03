@@ -282,13 +282,13 @@ class PlanRepoAnalysisTasksJob implements ShouldQueue
                 'analyzer_name' => 'ai_backend_surface',
                 'section_key' => 'backend',
                 'section_title' => 'Backend Architecture, Data Model, and Routing',
-                'depends_on' => ['laravel_routes', 'laravel_models_migrations', 'queue_jobs_events'],
+                'depends_on' => ['routing_surface', 'data_model_surface', 'async_workflows_surface'],
             ],
             [
                 'analyzer_name' => 'ai_frontend_surface',
                 'section_key' => 'frontend',
                 'section_title' => 'Frontend Architecture and UI Patterns',
-                'depends_on' => ['frontend_module_graph'],
+                'depends_on' => ['frontend_surface'],
             ],
             [
                 'analyzer_name' => 'ai_quality_risk',

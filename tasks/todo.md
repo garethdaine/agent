@@ -2163,3 +2163,50 @@ Review
   - `php artisan test --filter=FeatureSettingsApiTest --stop-on-failure`
   - `php artisan test --filter=FeatureFlagManagerTest --stop-on-failure`
   - `npm run build`
+
+### Session 16 Task 11 — Make Deterministic Repo Analysis Fully Stack-Agnostic (Completed)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- Deterministic analyzer keys were partially generic, but analyzer class naming still reflected Laravel-specific intent.
+- Dependency detection was root-file-biased and could miss monorepo/nested manifests in non-PHP repositories.
+- Repository profile dependency reporting skewed toward PHP/Node parsing and left non-PHP/Node repos with weak deterministic context.
+
+TASK
+- Ensure deterministic analysis is framework-agnostic and usable across arbitrary repository types.
+- Remove Laravel-specific analyzer identity from deterministic analyzer implementation names.
+- Expand deterministic dependency/ecosystem detection and report synthesis to represent diverse stacks.
+
+ACTION
+- [x] Rename analyzer classes/files to generic names and update registry wiring:
+  - [x] `RoutingSurfaceAnalyzer`
+  - [x] `DataModelSurfaceAnalyzer`
+  - [x] `AsyncWorkflowsSurfaceAnalyzer`
+  - [x] `FrontendSurfaceAnalyzer`
+- [x] Expand dependency manifest analyzer to support nested/monorepo manifest discovery and broader ecosystem detection.
+- [x] Genericize repository profile dependency/stack synthesis to be ecosystem-first with optional framework hints.
+- [x] Expand language breakdown mapping for non-PHP ecosystems.
+- [x] Update/extend unit tests for cross-stack ecosystem detection.
+
+RESULT
+- Deterministic analysis now identifies manifests/lockfiles/effective ecosystems across mixed and nested stacks and emits generic artifact keys/outputs.
+- Analyzer naming and deterministic registry composition are now framework-neutral.
+- Repository profile output now carries ecosystem/manifests/lockfiles metadata even when composer/package parsing is absent.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Implemented generic analyzer class rename and registry wiring updates in `app/Support/RepoAnalysis/Analyzers/*`.
+  - Extended dependency ecosystem detection and nested manifest support in `app/Support/RepoAnalysis/Analyzers/DependencyManifestAnalyzer.php`.
+  - Updated repository profile stack/dependency synthesis and language mapping in `app/Support/RepoAnalysis/ReportComposer.php`.
+  - Added/updated analyzer contract test for nested mixed-stack ecosystem detection in `tests/Unit/Support/RepoAnalysis/Analyzers/AnalyzerContractsTest.php`.
+- Conditions where this works:
+  - Snapshot manifest contains repository file paths (root and nested).
+  - Dependency manifests and/or lockfiles are present in recognized formats.
+  - Report generation runs after deterministic artifacts are persisted.
+- Explicit non-goals / limitations:
+  - Deterministic phase still relies on heuristics and does not execute project builds/tests/toolchains.
+  - Framework-specific hints are additive only and do not constrain analysis to any single stack.

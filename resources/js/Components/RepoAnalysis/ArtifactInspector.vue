@@ -15,19 +15,28 @@ const artifactDescriptions = {
     snapshot_manifest: 'Deterministic repository file manifest generated during snapshot.',
     filesystem_manifest: 'Filesystem inventory used as the base analyzer input.',
     dependency_manifest: 'Detected package manifests, lockfiles, and ecosystems.',
-    laravel_routes: 'Discovered Laravel route file surfaces.',
-    laravel_models_migrations: 'Model and migration inventory for domain/data analysis.',
-    queue_jobs_events: 'Queue job and event class inventory.',
-    frontend_module_graph: 'Frontend entrypoint/module surface map.',
+    routing_surface: 'Detected routing/API surface files across frameworks.',
+    data_model_surface: 'Detected data-model, migration, and schema surfaces.',
+    async_workflows_surface: 'Detected background-job, worker, and event/message surfaces.',
+    frontend_surface: 'Frontend entrypoint/module surface map.',
+    laravel_routes: 'Legacy route surface artifact.',
+    laravel_models_migrations: 'Legacy model/migration artifact.',
+    queue_jobs_events: 'Legacy queue/events artifact.',
+    frontend_module_graph: 'Legacy frontend surface artifact.',
     test_coverage_map: 'Discovered tests and empty-suite warnings.',
     risk_hotspot: 'Files considered high-impact hotspots for review.',
     coverage_validation: 'Phase 4 gate summary used to block/allow completion.',
+    ai_analysis_section: 'AI-authored analysis section for narrative synthesis.',
 };
 
 const artifactDescription = (artifact) => artifactDescriptions[String(artifact?.artifact_type ?? '')] ?? 'Analyzer output artifact.';
 
 const artifactSummary = (artifact) => {
-    const payload = artifact?.payload_json;
+    const rawPayload = artifact?.payload_json;
+    const payload = (rawPayload && typeof rawPayload === 'object' && rawPayload.payload && typeof rawPayload.payload === 'object')
+        ? rawPayload.payload
+        : rawPayload;
+
     if (!payload || typeof payload !== 'object') {
         return 'No payload summary available.';
     }
@@ -37,6 +46,7 @@ const artifactSummary = (artifact) => {
         ['route_file_count', 'Route files'],
         ['model_count', 'Models'],
         ['migration_count', 'Migrations'],
+        ['schema_count', 'Schemas'],
         ['job_count', 'Jobs'],
         ['event_count', 'Events'],
         ['entrypoint_count', 'Entrypoints'],

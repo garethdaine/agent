@@ -481,3 +481,11 @@ Use this file to capture correction-driven lessons.
 - Rule: ensure report payload and UI both surface the full markdown narrative as the primary output (not only raw JSON/cards).
 - Rule: keep end-to-end pipeline automatic once session starts; avoid requiring manual "run next step" clicks for a fresh setup session.
 - Rule: any new enablement switch (for example AI task execution) must be added to managed feature flags so it appears in app Feature Settings UI.
+
+## Entry
+- Date: 2026-03-03
+- Source (job run id / interrogation session id): User correction on repo analyzer scope (stack agnostic requirement)
+- Correction: User clarified deterministic repo analysis must be fully agnostic/generic for any codebase, not framework-biased.
+- Pattern: Partial key renaming without fully removing framework-coupled naming/assumptions leaves hidden stack bias in deterministic analyzers and reporting.
+- Prevention rule: For "generic analyzer" requirements, enforce all three checks before completion: (1) neutral analyzer identities/keys, (2) nested manifest + multi-ecosystem detection, (3) report synthesis that does not depend on a single framework ecosystem.
+- Applied in: `app/Support/RepoAnalysis/Analyzers/{RoutingSurfaceAnalyzer.php,DataModelSurfaceAnalyzer.php,AsyncWorkflowsSurfaceAnalyzer.php,FrontendSurfaceAnalyzer.php,DependencyManifestAnalyzer.php}`, `app/Support/RepoAnalysis/ReportComposer.php`, `tests/Unit/Support/RepoAnalysis/Analyzers/AnalyzerContractsTest.php`, `tasks/todo.md`

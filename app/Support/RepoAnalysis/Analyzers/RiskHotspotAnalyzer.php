@@ -33,10 +33,24 @@ class RiskHotspotAnalyzer extends AbstractAnalyzer
     {
         $paths = $this->snapshotPaths($snapshot);
         $hotspots = array_values(array_filter($paths, static function (string $path): bool {
-            return str_starts_with($path, 'app/')
-                || str_starts_with($path, 'database/')
-                || str_starts_with($path, 'routes/')
-                || str_starts_with($path, 'config/');
+            $normalized = strtolower(str_replace('\\', '/', $path));
+
+            if (str_starts_with($normalized, 'app/')
+                || str_starts_with($normalized, 'src/')
+                || str_starts_with($normalized, 'lib/')
+                || str_starts_with($normalized, 'server/')
+                || str_starts_with($normalized, 'backend/')
+                || str_starts_with($normalized, 'api/')
+                || str_starts_with($normalized, 'services/')
+                || str_starts_with($normalized, 'database/')
+                || str_starts_with($normalized, 'db/')
+                || str_starts_with($normalized, 'routes/')
+                || str_starts_with($normalized, 'config/')
+                || str_starts_with($normalized, 'migrations/')) {
+                return true;
+            }
+
+            return preg_match('/(?:^|\/)(schema|migration|route|router|controller|service|handler|worker|consumer|repository)[^\/]*\.(php|js|jsx|ts|tsx|py|go|rs|rb|java|kt|cs)$/i', $normalized) === 1;
         }));
         sort($hotspots, SORT_STRING);
 

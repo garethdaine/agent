@@ -237,6 +237,10 @@ class AiTaskRunner
             ->whereIn('artifact_type', [
                 'filesystem_manifest',
                 'dependency_manifest',
+                'routing_surface',
+                'data_model_surface',
+                'async_workflows_surface',
+                'frontend_surface',
                 'laravel_routes',
                 'laravel_models_migrations',
                 'queue_jobs_events',
