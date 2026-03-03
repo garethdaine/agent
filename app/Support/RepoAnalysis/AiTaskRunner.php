@@ -68,13 +68,13 @@ class AiTaskRunner
             throw new \RuntimeException(
                 trim($stderr) !== ''
                     ? trim($stderr)
-                    : 'AI runner command failed for repo analysis task.'
+                    : 'AI runner command failed for code analysis task.'
             );
         }
 
         $parsed = $adapter->parseSummaryResponse($stdout);
         if (! is_array($parsed) || trim((string) ($parsed['summary_markdown'] ?? '')) === '') {
-            throw new \RuntimeException('Unable to parse AI runner response for repo analysis task.');
+            throw new \RuntimeException('Unable to parse AI runner response for code analysis task.');
         }
 
         $payload = [

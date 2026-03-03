@@ -459,7 +459,7 @@ Use this file to capture correction-driven lessons.
 - Applied in: `resources/js/Support/agentRunEventFormatting.js`, `resources/js/Components/Interrogation/BuildPanel.vue`
 
 ## 2026-03-02 - Repo analysis output must prioritize human-readable context
-- Trigger: User reported repo-analysis output was unusable (hash lists / unclear panels) after a full run.
+- Trigger: User reported code-analysis output was unusable (hash lists / unclear panels) after a full run.
 - Mistake pattern: Building deterministic pipeline artifacts without transforming them into clear repository narratives (architecture, stack, data model, dependencies, feature surfaces).
 - Prevention rules:
   - Every discovery/report tool must ship a narrative export layer, not only raw artifact dumps.
@@ -473,9 +473,9 @@ Use this file to capture correction-driven lessons.
 - Prevention rules:
   - If a report is generated, expose complete report context directly in-app, with export as secondary.
   - New long-running sessions created from a wizard should auto-enter phase 1 when safe, rather than requiring a redundant first click.
-  - Validate create -> wizard UX end-to-end before marking repo-analysis changes complete.
+  - Validate create -> wizard UX end-to-end before marking code-analysis changes complete.
 
-## 2026-03-02 Repo Analysis: AI-first Narrative Requirement
+## 2026-03-02 Code Analysis: AI-first Narrative Requirement
 - Correction pattern: when a tool is expected to produce human-readable repository analysis, do not stop at deterministic artifacts/stats.
 - Rule: wire deterministic analyzers as evidence inputs, but require AI section tasks (runner-selected `claude|codex`) to synthesize the final report.
 - Rule: ensure report payload and UI both surface the full markdown narrative as the primary output (not only raw JSON/cards).
@@ -485,14 +485,14 @@ Use this file to capture correction-driven lessons.
 ## Entry
 - Date: 2026-03-03
 - Source (job run id / interrogation session id): User correction on repo analyzer scope (stack agnostic requirement)
-- Correction: User clarified deterministic repo analysis must be fully agnostic/generic for any codebase, not framework-biased.
+- Correction: User clarified deterministic code analysis must be fully agnostic/generic for any codebase, not framework-biased.
 - Pattern: Partial key renaming without fully removing framework-coupled naming/assumptions leaves hidden stack bias in deterministic analyzers and reporting.
 - Prevention rule: For "generic analyzer" requirements, enforce all three checks before completion: (1) neutral analyzer identities/keys, (2) nested manifest + multi-ecosystem detection, (3) report synthesis that does not depend on a single framework ecosystem.
 - Applied in: `app/Support/RepoAnalysis/Analyzers/{RoutingSurfaceAnalyzer.php,DataModelSurfaceAnalyzer.php,AsyncWorkflowsSurfaceAnalyzer.php,FrontendSurfaceAnalyzer.php,DependencyManifestAnalyzer.php}`, `app/Support/RepoAnalysis/ReportComposer.php`, `tests/Unit/Support/RepoAnalysis/Analyzers/AnalyzerContractsTest.php`, `tasks/todo.md`
 
 ## Entry
 - Date: 2026-03-03
-- Source (job run id / interrogation session id): User correction on Repo Analysis wizard UX (polling jitter)
+- Source (job run id / interrogation session id): User correction on Code Analysis wizard UX (polling jitter)
 - Correction: User required websocket-driven live updates only (Reverb/Echo) and removal of polling that caused Task Graph loading flashes.
 - Pattern: Polling full related collections on fixed intervals creates avoidable loading-state thrash and table layout jumps during active task execution.
 - Prevention rule: For realtime execution UIs, default to event-driven updates with debounced targeted refreshes and silent collection updates; only show loading placeholders on initial empty-state hydration.
@@ -500,7 +500,7 @@ Use this file to capture correction-driven lessons.
 
 ## Entry
 - Date: 2026-03-03
-- Source (job run id / interrogation session id): User correction on Repo Analysis execution UX feedback
+- Source (job run id / interrogation session id): User correction on Code Analysis execution UX feedback
 - Correction: User requested explicit in-progress feedback (spinners/status badges/progress) because task execution state was not obvious.
 - Pattern: Event-driven updates alone are insufficient when row-level status presentation lacks clear visual affordances for active/terminal states.
 - Prevention rule: For long-running execution tables, always include three feedback layers by default: per-row status badges, active-state spinner cues, and an aggregate progress indicator.
@@ -508,8 +508,15 @@ Use this file to capture correction-driven lessons.
 
 ## Entry
 - Date: 2026-03-03
-- Source (job run id / interrogation session id): User correction on repo-analysis report depth (design patterns + coding standards/code quality)
+- Source (job run id / interrogation session id): User correction on code-analysis report depth (design patterns + coding standards/code quality)
 - Correction: User required explicit extraction and reporting of design patterns and coding standards/code quality, not only broad architecture/testing summaries.
 - Pattern: High-level repository narratives can miss critical engineering-context sections unless those sections are modeled as first-class analyzer artifacts and dedicated AI report sections.
 - Prevention rule: For repository analysis features, treat `design patterns` and `coding standards/code quality` as mandatory dimensions with both deterministic artifact extraction and explicit AI narrative sections in the final report.
 - Applied in: `app/Support/RepoAnalysis/Analyzers/{ArchitecturePatternsAnalyzer.php,CodeQualityStandardsAnalyzer.php}`, `app/Jobs/RepoAnalysis/PlanRepoAnalysisTasksJob.php`, `app/Support/RepoAnalysis/{AiTaskRunner.php,ReportComposer.php}`, `resources/js/Components/RepoAnalysis/ReportViewer.vue`, `config/repo_analysis.php`, `tests/Unit/Support/RepoAnalysis/*`
+
+## 2026-03-03 Naming Semantics: Code Analysis Scope
+- Source: User correction that the analyzer can target non-repo codebases.
+- Lesson: Use domain-neutral naming (`Code Analysis`) for user-facing labels, routes, docs, and exported artifacts unless scope is explicitly repository-only.
+- Rule:
+  - Prefer `code-analysis` slugs for new user-facing paths and channels.
+  - Keep legacy internal class/table identifiers only when renaming would be invasive, but never surface those terms in UI copy.

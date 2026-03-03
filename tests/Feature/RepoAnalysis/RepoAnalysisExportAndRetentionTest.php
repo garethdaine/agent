@@ -25,7 +25,7 @@ class RepoAnalysisExportAndRetentionTest extends TestCase
     {
         parent::setUp();
 
-        $this->projectRoot = storage_path('framework/testing/repo-analysis-export-'.Str::uuid());
+        $this->projectRoot = storage_path('framework/testing/code-analysis-export-'.Str::uuid());
         File::deleteDirectory($this->projectRoot);
         File::ensureDirectoryExists($this->projectRoot);
     }
@@ -48,31 +48,31 @@ class RepoAnalysisExportAndRetentionTest extends TestCase
         $third = $service->export($session, $report->fresh());
 
         $this->assertMatchesRegularExpression(
-            '#/docs/discovery/repo-analysis/collision-session\.md$#',
+            '#/docs/discovery/code-analysis/collision-session\.md$#',
             $first['markdown_export_path']
         );
         $this->assertMatchesRegularExpression(
-            '#/docs/discovery/repo-analysis/collision-session\.json$#',
+            '#/docs/discovery/code-analysis/collision-session\.json$#',
             $first['json_export_path']
         );
         $this->assertStringContainsString('## Repository Profile', File::get($first['markdown_export_path']));
-        $this->assertStringContainsString('### Repo Analysis Glossary', File::get($first['markdown_export_path']));
+        $this->assertStringContainsString('### Code Analysis Glossary', File::get($first['markdown_export_path']));
 
         $this->assertMatchesRegularExpression(
-            '#/docs/discovery/repo-analysis/collision-session-v2\.md$#',
+            '#/docs/discovery/code-analysis/collision-session-v2\.md$#',
             $second['markdown_export_path']
         );
         $this->assertMatchesRegularExpression(
-            '#/docs/discovery/repo-analysis/collision-session-v2\.json$#',
+            '#/docs/discovery/code-analysis/collision-session-v2\.json$#',
             $second['json_export_path']
         );
 
         $this->assertMatchesRegularExpression(
-            '#/docs/discovery/repo-analysis/collision-session-v3\.md$#',
+            '#/docs/discovery/code-analysis/collision-session-v3\.md$#',
             $third['markdown_export_path']
         );
         $this->assertMatchesRegularExpression(
-            '#/docs/discovery/repo-analysis/collision-session-v3\.json$#',
+            '#/docs/discovery/code-analysis/collision-session-v3\.json$#',
             $third['json_export_path']
         );
     }
@@ -150,7 +150,7 @@ class RepoAnalysisExportAndRetentionTest extends TestCase
             'updated_at' => now('UTC')->subDays(45),
         ]);
 
-        $reportDirectory = $this->projectRoot.'/docs/discovery/repo-analysis';
+        $reportDirectory = $this->projectRoot.'/docs/discovery/code-analysis';
         File::ensureDirectoryExists($reportDirectory);
         $markdownPath = $reportDirectory.'/retention-session.md';
         $jsonPath = $reportDirectory.'/retention-session.json';
@@ -169,7 +169,7 @@ class RepoAnalysisExportAndRetentionTest extends TestCase
             'generated_at' => now('UTC')->subDays(45),
         ]);
 
-        $this->artisan('repo-analysis:prune-artifacts')
+        $this->artisan('code-analysis:prune-artifacts')
             ->assertExitCode(0);
 
         $this->assertDatabaseMissing('repo_analysis_artifacts', ['id' => $oldTaskArtifact->id]);

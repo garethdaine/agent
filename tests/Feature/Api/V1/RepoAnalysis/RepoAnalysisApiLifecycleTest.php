@@ -28,10 +28,10 @@ class RepoAnalysisApiLifecycleTest extends TestCase
     {
         parent::setUp();
 
-        $this->repoRoot = storage_path('framework/testing/repo-analysis-api-'.(string) str()->uuid());
+        $this->repoRoot = storage_path('framework/testing/code-analysis-api-'.(string) str()->uuid());
         File::deleteDirectory($this->repoRoot);
         File::ensureDirectoryExists($this->repoRoot);
-        File::put($this->repoRoot.'/composer.json', '{"name":"acme/repo-analysis-api"}');
+        File::put($this->repoRoot.'/composer.json', '{"name":"acme/code-analysis-api"}');
 
         config()->set('repo_analysis.enabled', true);
         config()->set('repo_analysis.user.max_active_sessions_per_user', 2);
@@ -43,13 +43,13 @@ class RepoAnalysisApiLifecycleTest extends TestCase
         $owner = User::factory()->create();
         $this->actingAs($owner);
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions', [
+        $this->postJson('/agent/api/v1/code-analysis/sessions', [
             'name' => 'Invalid Session',
             'project_directory' => 'relative/path',
         ])->assertStatus(422)
             ->assertJsonPath('error.code', 'VALIDATION_ERROR');
 
-        $create = $this->postJson('/agent/api/v1/repo-analysis/sessions', [
+        $create = $this->postJson('/agent/api/v1/code-analysis/sessions', [
             'name' => 'API Session',
             'project_directory' => $this->repoRoot,
             'analyzer_profile' => 'default',
@@ -62,26 +62,26 @@ class RepoAnalysisApiLifecycleTest extends TestCase
 
         $sessionId = (int) $create->json('data.id');
 
-        $this->getJson('/agent/api/v1/repo-analysis/sessions')
+        $this->getJson('/agent/api/v1/code-analysis/sessions')
             ->assertOk()
             ->assertJsonPath('data.0.id', $sessionId);
 
-        $this->patchJson('/agent/api/v1/repo-analysis/sessions/'.$sessionId, [
+        $this->patchJson('/agent/api/v1/code-analysis/sessions/'.$sessionId, [
             'name' => 'API Session Updated',
             'runner_type' => 'claude',
         ])->assertOk()
             ->assertJsonPath('data.name', 'API Session Updated')
             ->assertJsonPath('data.runner_type', 'claude');
 
-        $this->getJson('/agent/api/v1/repo-analysis/sessions/'.$sessionId)
+        $this->getJson('/agent/api/v1/code-analysis/sessions/'.$sessionId)
             ->assertOk()
             ->assertJsonPath('data.id', $sessionId);
 
-        $this->deleteJson('/agent/api/v1/repo-analysis/sessions/'.$sessionId)
+        $this->deleteJson('/agent/api/v1/code-analysis/sessions/'.$sessionId)
             ->assertOk()
             ->assertJsonPath('data.deleted', true);
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$sessionId.'/restore')
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$sessionId.'/restore')
             ->assertOk()
             ->assertJsonPath('data.id', $sessionId);
     }
@@ -97,7 +97,7 @@ class RepoAnalysisApiLifecycleTest extends TestCase
         $this->createSession($owner, ['status' => 'planning', 'phase' => 2]);
         $target = $this->createSession($owner, ['status' => 'setup', 'phase' => 0]);
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$target->id.'/start-snapshot')
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$target->id.'/start-snapshot')
             ->assertStatus(409)
             ->assertJsonPath('error.code', 'ACTIVE_SESSION_LIMIT_REACHED');
 
@@ -110,7 +110,7 @@ class RepoAnalysisApiLifecycleTest extends TestCase
                 'phase' => 6,
             ]);
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$target->id.'/start-snapshot')
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$target->id.'/start-snapshot')
             ->assertStatus(202)
             ->assertJsonPath('data.session_id', $target->id)
             ->assertJsonPath('data.queued', true);
@@ -130,11 +130,11 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             'status' => SessionStateTransitionService::STATUS_EXECUTING,
         ]);
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/resume')
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/resume')
             ->assertStatus(409)
             ->assertJsonPath('error.code', 'RUN_TRANSITION_CONFLICT');
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/restart-from-beginning')
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/restart-from-beginning')
             ->assertStatus(409)
             ->assertJsonPath('error.code', 'RUN_TRANSITION_CONFLICT');
     }
@@ -161,7 +161,7 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             'analyzer_version' => '1.0.0',
         ]);
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/retry-task', [])
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/retry-task', [])
             ->assertStatus(422)
             ->assertJsonPath('error.code', 'VALIDATION_ERROR');
 
@@ -176,12 +176,12 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             'analyzer_version' => '1.0.0',
         ]);
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/retry-task', [
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/retry-task', [
             'task_id' => $otherTask->id,
         ])->assertStatus(422)
             ->assertJsonPath('error.code', 'VALIDATION_ERROR');
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/retry-task', [
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/retry-task', [
             'task_id' => $task->id,
         ])->assertStatus(409)
             ->assertJsonPath('error.code', 'RUN_TRANSITION_CONFLICT');
@@ -193,7 +193,7 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             'error_summary' => 'failed',
         ]);
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/retry-task', [
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/retry-task', [
             'task_id' => $task->id,
         ])->assertStatus(202)
             ->assertJsonPath('data.session_id', $session->id)
@@ -268,24 +268,24 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             'generated_at' => now('UTC'),
         ]);
 
-        $this->getJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/events?since_sequence=1&limit=10')
+        $this->getJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/events?since_sequence=1&limit=10')
             ->assertOk()
             ->assertJsonPath('meta.returned', 2)
             ->assertJsonPath('meta.latest_sequence', 3)
             ->assertJsonPath('data.0.sequence', 2)
             ->assertJsonPath('data.1.sequence', 3);
 
-        $this->getJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/tasks')
+        $this->getJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/tasks')
             ->assertOk()
             ->assertJsonPath('meta.returned', 1)
             ->assertJsonPath('data.0.id', $task->id);
 
-        $this->getJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/artifacts')
+        $this->getJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/artifacts')
             ->assertOk()
             ->assertJsonPath('meta.returned', 1)
             ->assertJsonPath('data.0.repo_analysis_task_id', $task->id);
 
-        $this->getJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/reports')
+        $this->getJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/reports')
             ->assertOk()
             ->assertJsonPath('meta.returned', 1)
             ->assertJsonPath('data.0.report_version', '1.0.0');
@@ -314,17 +314,17 @@ class RepoAnalysisApiLifecycleTest extends TestCase
         ]);
 
         $this->actingAs($otherUser);
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$retrySession->id.'/retry')
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$retrySession->id.'/retry')
             ->assertStatus(403);
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$restartSession->id.'/restart-from-beginning')
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$restartSession->id.'/restart-from-beginning')
             ->assertStatus(403);
 
         $this->actingAs($adminUser);
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$retrySession->id.'/retry')
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$retrySession->id.'/retry')
             ->assertStatus(202)
             ->assertJsonPath('data.queued', true);
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$restartSession->id.'/restart-from-beginning')
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$restartSession->id.'/restart-from-beginning')
             ->assertStatus(202)
             ->assertJsonPath('data.queued', true);
     }
@@ -341,7 +341,7 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             'status' => SessionStateTransitionService::STATUS_SETUP,
         ]);
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/start-snapshot')
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/start-snapshot')
             ->assertStatus(202)
             ->assertJsonPath('data.queued', true);
 
@@ -350,7 +350,7 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             'status' => SessionStateTransitionService::STATUS_PAUSED,
         ]);
 
-        $this->postJson('/agent/api/v1/repo-analysis/sessions/'.$session->id.'/restart-from-beginning')
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/restart-from-beginning')
             ->assertStatus(202)
             ->assertJsonPath('data.queued', true);
 
@@ -375,7 +375,7 @@ class RepoAnalysisApiLifecycleTest extends TestCase
     {
         return RepoAnalysisSession::query()->create(array_merge([
             'user_id' => $owner->id,
-            'name' => 'Repo Analysis Session',
+            'name' => 'Code Analysis Session',
             'project_directory' => $this->repoRoot,
             'analyzer_profile' => 'default',
             'phase' => 0,

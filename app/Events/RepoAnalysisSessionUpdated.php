@@ -26,7 +26,7 @@ class RepoAnalysisSessionUpdated implements ShouldBroadcast
 
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel('repo-analysis.'.$this->sessionId);
+        return new PrivateChannel('code-analysis.'.$this->sessionId);
     }
 
     public function broadcastAs(): string

@@ -54,6 +54,26 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/chat/sessions/{id}` | `-` | `ChatSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}/actions` | `-` | `ChatSessionController@actions` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}/messages` | `-` | `ChatSessionController@messages` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/code-analysis/sessions` | `-` | `RepoAnalysisSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions` | `-` | `RepoAnalysisSessionController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/code-analysis/sessions/{id}` | `-` | `RepoAnalysisSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| PATCH | `agent/api/v1/code-analysis/sessions/{id}` | `-` | `RepoAnalysisSessionController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| DELETE | `agent/api/v1/code-analysis/sessions/{id}` | `-` | `RepoAnalysisSessionController@destroy` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/code-analysis/sessions/{id}/artifacts` | `-` | `RepoAnalysisSessionController@artifacts` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/code-analysis/sessions/{id}/events` | `-` | `RepoAnalysisSessionController@events` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/execute` | `-` | `RepoAnalysisSessionController@execute` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/generate-report` | `-` | `RepoAnalysisSessionController@generateReport` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/pause` | `-` | `RepoAnalysisSessionController@pause` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/plan` | `-` | `RepoAnalysisSessionController@plan` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/code-analysis/sessions/{id}/reports` | `-` | `RepoAnalysisSessionController@reports` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/restart-from-beginning` | `-` | `RepoAnalysisSessionController@restartFromBeginning` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/restore` | `-` | `RepoAnalysisSessionController@restore` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/resume` | `-` | `RepoAnalysisSessionController@resume` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/retry` | `-` | `RepoAnalysisSessionController@retry` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/retry-task` | `-` | `RepoAnalysisSessionController@retryTask` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/start-snapshot` | `-` | `RepoAnalysisSessionController@startSnapshot` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/code-analysis/sessions/{id}/tasks` | `-` | `RepoAnalysisSessionController@tasks` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/validate-coverage` | `-` | `RepoAnalysisSessionController@validateCoverage` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/compliance/metrics` | `-` | `ComplianceController@metrics` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/compliance/status` | `-` | `ComplianceController@status` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/connectors/discord/webhook` | `agent.api.connectors.discord.webhook` | `WebhookController@handleDiscord` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
@@ -195,26 +215,6 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/org/rituals/{id}/restore` | `-` | `OrgRitualController@restore` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, org, throttle:agent-mutations` |
 | POST | `agent/api/v1/org/rituals/{id}/resume` | `-` | `OrgRitualController@resume` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, org, throttle:agent-mutations` |
 | POST | `agent/api/v1/org/rituals/{id}/run` | `-` | `OrgRitualController@run` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, org, throttle:agent-mutations` |
-| GET | `agent/api/v1/repo-analysis/sessions` | `-` | `RepoAnalysisSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
-| POST | `agent/api/v1/repo-analysis/sessions` | `-` | `RepoAnalysisSessionController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| GET | `agent/api/v1/repo-analysis/sessions/{id}` | `-` | `RepoAnalysisSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
-| PATCH | `agent/api/v1/repo-analysis/sessions/{id}` | `-` | `RepoAnalysisSessionController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| DELETE | `agent/api/v1/repo-analysis/sessions/{id}` | `-` | `RepoAnalysisSessionController@destroy` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| GET | `agent/api/v1/repo-analysis/sessions/{id}/artifacts` | `-` | `RepoAnalysisSessionController@artifacts` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
-| GET | `agent/api/v1/repo-analysis/sessions/{id}/events` | `-` | `RepoAnalysisSessionController@events` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
-| POST | `agent/api/v1/repo-analysis/sessions/{id}/execute` | `-` | `RepoAnalysisSessionController@execute` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| POST | `agent/api/v1/repo-analysis/sessions/{id}/generate-report` | `-` | `RepoAnalysisSessionController@generateReport` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| POST | `agent/api/v1/repo-analysis/sessions/{id}/pause` | `-` | `RepoAnalysisSessionController@pause` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| POST | `agent/api/v1/repo-analysis/sessions/{id}/plan` | `-` | `RepoAnalysisSessionController@plan` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| GET | `agent/api/v1/repo-analysis/sessions/{id}/reports` | `-` | `RepoAnalysisSessionController@reports` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
-| POST | `agent/api/v1/repo-analysis/sessions/{id}/restart-from-beginning` | `-` | `RepoAnalysisSessionController@restartFromBeginning` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| POST | `agent/api/v1/repo-analysis/sessions/{id}/restore` | `-` | `RepoAnalysisSessionController@restore` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| POST | `agent/api/v1/repo-analysis/sessions/{id}/resume` | `-` | `RepoAnalysisSessionController@resume` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| POST | `agent/api/v1/repo-analysis/sessions/{id}/retry` | `-` | `RepoAnalysisSessionController@retry` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| POST | `agent/api/v1/repo-analysis/sessions/{id}/retry-task` | `-` | `RepoAnalysisSessionController@retryTask` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| POST | `agent/api/v1/repo-analysis/sessions/{id}/start-snapshot` | `-` | `RepoAnalysisSessionController@startSnapshot` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| GET | `agent/api/v1/repo-analysis/sessions/{id}/tasks` | `-` | `RepoAnalysisSessionController@tasks` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
-| POST | `agent/api/v1/repo-analysis/sessions/{id}/validate-coverage` | `-` | `RepoAnalysisSessionController@validateCoverage` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/runs` | `-` | `AgentRunController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/runs/{id}` | `-` | `AgentRunController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/runs/{id}/confirm-lesson` | `-` | `AgentRunController@confirmSuggestedLesson` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |

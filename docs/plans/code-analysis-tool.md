@@ -1,4 +1,4 @@
-# Repo Analysis Tool — Deterministic Implementation Plan
+# Code Analysis Tool — Deterministic Implementation Plan
 
 ## Metadata
 - Status: Draft
@@ -11,7 +11,7 @@
   - Path/command policy enforcement
 
 ## Executive Summary
-Build a new `Repo Analysis` tool under `Tools` that reuses the existing wizard, queue, transition, and event-stream architecture, but executes a deterministic-first task graph over the full codebase. The system produces reproducible analysis artifacts and versioned reports, then optionally allows LLM-assisted narrative synthesis from locked artifacts.
+Build a new `Code Analysis` tool under `Tools` that reuses the existing wizard, queue, transition, and event-stream architecture, but executes a deterministic-first task graph over the full codebase. The system produces reproducible analysis artifacts and versioned reports, then optionally allows LLM-assisted narrative synthesis from locked artifacts.
 
 The implementation should prioritize reproducibility, coverage guarantees, and operational safety over generative output speed.
 
@@ -24,9 +24,9 @@ Current capabilities that should be reused as-is:
 - Export workflow writing versioned markdown artifacts to `docs/`.
 - Policy-driven path safety (`PathPolicy`) and command constraints.
 
-Current gaps relative to requested repo-analysis behavior:
+Current gaps relative to requested code-analysis behavior:
 - Discovery is runner-stream based and not deterministic/reproducible across runs.
-- No deterministic task DAG for whole-repo analysis coverage.
+- No deterministic task DAG for whole-code analysis coverage.
 - No analysis artifact registry (manifest, graph, report components) with hash chaining.
 
 ## Goals
@@ -38,12 +38,12 @@ Current gaps relative to requested repo-analysis behavior:
 
 ## Non-Goals
 1. Replacing existing Requirements Discovery flow.
-2. Executing implementation/build actions from repo analysis.
+2. Executing implementation/build actions from code analysis.
 3. Introducing broad write access to repository files during analysis.
 4. Dependence on an LLM to complete core analysis stages.
 
 ## User Workflow (Wizard)
-Phase model for new tool (`Repo Analysis`):
+Phase model for new tool (`Code Analysis`):
 
 | Phase | Name | Purpose | Deterministic |
 |---|---|---|---|
@@ -178,15 +178,15 @@ Key columns:
 - `app/Models/RepoAnalysisArtifact.php`
 - `app/Models/RepoAnalysisReport.php`
 
-- `app/Support/RepoAnalysis/SessionStateTransitionService.php`
+- `app/Support/CodeAnalysis/SessionStateTransitionService.php`
   - Atomic status/phase transitions with allowed-from guards.
 
-- `app/Support/RepoAnalysis/EventWriter.php`
+- `app/Support/CodeAnalysis/EventWriter.php`
   - Sequenced event append + broadcasts.
   - Payload redaction and utf8 normalization (mirror interrogation behavior).
 
 ### Snapshot and Planning
-- `app/Support/RepoAnalysis/SnapshotBuilder.php`
+- `app/Support/CodeAnalysis/SnapshotBuilder.php`
   - Build canonical manifest:
     - relative path
     - type (file/dir/symlink)
@@ -195,15 +195,15 @@ Key columns:
     - sha256 for eligible files
   - Apply include/exclude filters deterministically.
 
-- `app/Support/RepoAnalysis/TaskGraphBuilder.php`
+- `app/Support/CodeAnalysis/TaskGraphBuilder.php`
   - Build DAG based on detected stack + configured analyzers.
   - Emit stable task keys and dependency list.
 
 ### Analyzer Execution
-- `app/Support/RepoAnalysis/Analyzers/AnalyzerInterface.php`
+- `app/Support/CodeAnalysis/Analyzers/AnalyzerInterface.php`
   - `key()`, `version()`, `supports(sessionProfile)`, `run(context): AnalyzerResult`.
 
-- `app/Support/RepoAnalysis/Analyzers/AnalyzerRegistry.php`
+- `app/Support/CodeAnalysis/Analyzers/AnalyzerRegistry.php`
   - Returns deterministic ordered analyzer set by profile.
 
 - Initial analyzers:
@@ -217,20 +217,20 @@ Key columns:
   - `RiskHotspotAnalyzer` (fan-in/out, churn proxy, orphaned modules)
 
 ### Coverage and Reporting
-- `app/Support/RepoAnalysis/CoverageGateService.php`
+- `app/Support/CodeAnalysis/CoverageGateService.php`
   - Validates required artifacts and thresholds.
 
-- `app/Support/RepoAnalysis/ReportComposer.php`
+- `app/Support/CodeAnalysis/ReportComposer.php`
   - Assemble report sections from deterministic artifacts only.
 
-- `app/Support/RepoAnalysis/ExportService.php`
+- `app/Support/CodeAnalysis/ExportService.php`
   - Write:
-    - `docs/discovery/repo-analysis/{slug}.md`
-    - `docs/discovery/repo-analysis/{slug}.json`
+    - `docs/discovery/code-analysis/{slug}.md`
+    - `docs/discovery/code-analysis/{slug}.json`
   - Version suffix strategy on name conflict (`-v2`, `-v3`).
 
 ### Optional Narrative
-- `app/Support/RepoAnalysis/NarrativeSynthesisService.php`
+- `app/Support/CodeAnalysis/NarrativeSynthesisService.php`
   - Optional, post-gate only.
   - Input is locked artifacts/report JSON.
   - Output saved as separate artifact section with provenance.
@@ -245,7 +245,7 @@ Key columns:
 - `GenerateRepoAnalysisReportJob`
 
 Queue recommendations:
-- New queue: `repo-analysis` on redis.
+- New queue: `code-analysis` on redis.
 - Dedicated Horizon supervisor (parallelism bounded and configurable).
 - Keep `tries=1` by default, retries controlled explicitly per task state.
 
@@ -258,7 +258,7 @@ Execution behavior:
 6. Dispatch next step.
 
 ## API Surface
-Add under `/agent/api/v1/repo-analysis/*`.
+Add under `/agent/api/v1/code-analysis/*`.
 
 Session endpoints:
 - `GET /sessions`
@@ -299,16 +299,16 @@ Request scaffolding:
 
 ## Wizard UI Scaffolding
 Add pages under:
-- `resources/js/Pages/Tools/RepoAnalysis/Index.vue`
-- `resources/js/Pages/Tools/RepoAnalysis/Create.vue`
-- `resources/js/Pages/Tools/RepoAnalysis/Wizard.vue`
-- `resources/js/Pages/Tools/RepoAnalysis/Settings.vue`
+- `resources/js/Pages/Tools/CodeAnalysis/Index.vue`
+- `resources/js/Pages/Tools/CodeAnalysis/Create.vue`
+- `resources/js/Pages/Tools/CodeAnalysis/Wizard.vue`
+- `resources/js/Pages/Tools/CodeAnalysis/Settings.vue`
 
 Add reusable components under:
-- `resources/js/Components/RepoAnalysis/TaskGraphPanel.vue`
-- `resources/js/Components/RepoAnalysis/CoveragePanel.vue`
-- `resources/js/Components/RepoAnalysis/ReportViewer.vue`
-- `resources/js/Components/RepoAnalysis/ArtifactInspector.vue`
+- `resources/js/Components/CodeAnalysis/TaskGraphPanel.vue`
+- `resources/js/Components/CodeAnalysis/CoveragePanel.vue`
+- `resources/js/Components/CodeAnalysis/ReportViewer.vue`
+- `resources/js/Components/CodeAnalysis/ArtifactInspector.vue`
 
 Realtime behavior should mirror current wizard:
 - subscribe to private channel
@@ -405,13 +405,13 @@ Minimum required gates before completion:
 - Plan handoff integration from report output.
 
 ## Acceptance Criteria
-1. A user can run repo analysis from wizard setup to completed report without manual shell work.
+1. A user can run code analysis from wizard setup to completed report without manual shell work.
 2. Output includes deterministic artifacts and versioned markdown/json reports.
 3. Task failures are visible with recoverable retry semantics.
 4. Coverage gates prevent false-complete runs.
 5. Two identical runs on the same snapshot produce identical report hash.
 
 ## Open Questions
-1. Should repo-analysis sessions share the same per-user active session limit as interrogation or have a dedicated limit?
+1. Should code-analysis sessions share the same per-user active session limit as interrogation or have a dedicated limit?
 2. Should narrative synthesis be enabled by default or opt-in only?
 3. Should artifacts be retained forever or subject to retention policy by size/age?

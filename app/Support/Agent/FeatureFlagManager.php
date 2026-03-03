@@ -71,12 +71,12 @@ class FeatureFlagManager
             'description' => 'Enable LLM-powered memory features: semantic embeddings (pgvector), entity extraction, and Neo4j knowledge graph. Requires Agent Memory to be enabled and provider keys configured.',
         ],
         self::REPO_ANALYSIS_ENABLED => [
-            'label' => 'Repo Analysis',
-            'description' => 'Enable the Repo Analysis tool, API lifecycle routes, and Tools navigation entry.',
+            'label' => 'Code Analysis',
+            'description' => 'Enable the Code Analysis tool, API lifecycle routes, and Tools navigation entry.',
         ],
         self::REPO_ANALYSIS_AI_ENABLED => [
-            'label' => 'Repo Analysis AI Tasks',
-            'description' => 'Enable AI-driven task execution and narrative report synthesis for Repo Analysis sessions.',
+            'label' => 'Code Analysis AI Tasks',
+            'description' => 'Enable AI-driven task execution and narrative report synthesis for Code Analysis sessions.',
         ],
         self::ORG_ENABLED => [
             'label' => 'Org Layer',

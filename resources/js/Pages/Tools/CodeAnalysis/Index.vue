@@ -32,14 +32,14 @@ const load = async () => {
     error.value = '';
 
     try {
-        const { data } = await axios.get('/agent/api/v1/repo-analysis/sessions');
+        const { data } = await axios.get('/agent/api/v1/code-analysis/sessions');
         sessions.value = (data?.data ?? []).map((session) => ({
             ...session,
-            wizard_url: route('tools.repo-analysis.wizard', session.id),
-            settings_url: route('tools.repo-analysis.settings', session.id),
+            wizard_url: route('tools.code-analysis.wizard', session.id),
+            settings_url: route('tools.code-analysis.settings', session.id),
         }));
     } catch (e) {
-        error.value = e?.response?.data?.error?.message ?? 'Failed to load repo analysis sessions.';
+        error.value = e?.response?.data?.error?.message ?? 'Failed to load code analysis sessions.';
     } finally {
         loading.value = false;
     }
@@ -47,7 +47,7 @@ const load = async () => {
 
 const pauseSession = async (sessionId) => {
     try {
-        await axios.post(`/agent/api/v1/repo-analysis/sessions/${sessionId}/pause`);
+        await axios.post(`/agent/api/v1/code-analysis/sessions/${sessionId}/pause`);
         await load();
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to pause session.';
@@ -56,7 +56,7 @@ const pauseSession = async (sessionId) => {
 
 const resumeSession = async (sessionId) => {
     try {
-        await axios.post(`/agent/api/v1/repo-analysis/sessions/${sessionId}/resume`);
+        await axios.post(`/agent/api/v1/code-analysis/sessions/${sessionId}/resume`);
         await load();
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to resume session.';
@@ -65,7 +65,7 @@ const resumeSession = async (sessionId) => {
 
 const retrySession = async (sessionId) => {
     try {
-        await axios.post(`/agent/api/v1/repo-analysis/sessions/${sessionId}/retry`);
+        await axios.post(`/agent/api/v1/code-analysis/sessions/${sessionId}/retry`);
         await load();
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to retry session.';
@@ -73,12 +73,12 @@ const retrySession = async (sessionId) => {
 };
 
 const restartSession = async (sessionId) => {
-    if (!window.confirm('Restart this repo analysis session from the beginning?')) {
+    if (!window.confirm('Restart this code analysis session from the beginning?')) {
         return;
     }
 
     try {
-        await axios.post(`/agent/api/v1/repo-analysis/sessions/${sessionId}/restart-from-beginning`);
+        await axios.post(`/agent/api/v1/code-analysis/sessions/${sessionId}/restart-from-beginning`);
         await load();
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to restart session.';
@@ -89,13 +89,13 @@ onMounted(load);
 </script>
 
 <template>
-    <AppLayout title="Repo Analysis">
-        <Head title="Repo Analysis" />
+    <AppLayout title="Code Analysis">
+        <Head title="Code Analysis" />
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Repo Analysis</h2>
-                <Link :href="route('tools.repo-analysis.create')">
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Code Analysis</h2>
+                <Link :href="route('tools.code-analysis.create')">
                     <Button size="sm">
                         <Plus class="h-4 w-4" />
                         New Session
@@ -169,10 +169,10 @@ onMounted(load);
                                             >
                                                 Restart
                                             </Button>
-                                            <Link :href="route('tools.repo-analysis.settings', session.id)">
+                                            <Link :href="route('tools.code-analysis.settings', session.id)">
                                                 <Button variant="outline" size="sm">Settings</Button>
                                             </Link>
-                                            <Link :href="route('tools.repo-analysis.wizard', session.id)">
+                                            <Link :href="route('tools.code-analysis.wizard', session.id)">
                                                 <Button size="sm">Open</Button>
                                             </Link>
                                         </div>

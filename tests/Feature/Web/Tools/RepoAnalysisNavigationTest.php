@@ -33,8 +33,8 @@ class RepoAnalysisNavigationTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Tools/Index')
-                ->where('repoAnalysis.available', true)
-                ->where('repoAnalysis.indexRoute', route('tools.repo-analysis.index'))
+                ->where('codeAnalysis.available', true)
+                ->where('codeAnalysis.indexRoute', route('tools.code-analysis.index'))
             );
     }
 
@@ -48,34 +48,34 @@ class RepoAnalysisNavigationTest extends TestCase
         ]);
 
         $this->actingAs($owner)
-            ->get(route('tools.repo-analysis.index'))
+            ->get(route('tools.code-analysis.index'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Tools/RepoAnalysis/Index')
+                ->component('Tools/CodeAnalysis/Index')
                 ->where('sessions.0.id', $session->id)
-                ->where('sessions.0.wizard_url', route('tools.repo-analysis.wizard', $session->id))
+                ->where('sessions.0.wizard_url', route('tools.code-analysis.wizard', $session->id))
             );
 
         $this->actingAs($owner)
-            ->get(route('tools.repo-analysis.create'))
+            ->get(route('tools.code-analysis.create'))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Tools/RepoAnalysis/Create')
+                ->component('Tools/CodeAnalysis/Create')
             );
 
         $this->actingAs($owner)
-            ->get(route('tools.repo-analysis.wizard', $session->id))
+            ->get(route('tools.code-analysis.wizard', $session->id))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Tools/RepoAnalysis/Wizard')
+                ->component('Tools/CodeAnalysis/Wizard')
                 ->where('sessionId', $session->id)
             );
 
         $this->actingAs($owner)
-            ->get(route('tools.repo-analysis.settings', $session->id))
+            ->get(route('tools.code-analysis.settings', $session->id))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('Tools/RepoAnalysis/Settings')
+                ->component('Tools/CodeAnalysis/Settings')
                 ->where('sessionId', $session->id)
             );
     }
@@ -116,7 +116,7 @@ class RepoAnalysisNavigationTest extends TestCase
         ]);
 
         $this->actingAs($owner)
-            ->get(route('tools.repo-analysis.wizard', $paused->id))
+            ->get(route('tools.code-analysis.wizard', $paused->id))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('actionVisibility.pause', false)
@@ -126,7 +126,7 @@ class RepoAnalysisNavigationTest extends TestCase
             );
 
         $this->actingAs($owner)
-            ->get(route('tools.repo-analysis.wizard', $failed->id))
+            ->get(route('tools.code-analysis.wizard', $failed->id))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('actionVisibility.pause', false)
@@ -136,14 +136,14 @@ class RepoAnalysisNavigationTest extends TestCase
             );
 
         $this->actingAs($owner)
-            ->get(route('tools.repo-analysis.wizard', $completed->id))
+            ->get(route('tools.code-analysis.wizard', $completed->id))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('actionVisibility.export', true)
             );
 
         $this->actingAs($admin)
-            ->get(route('tools.repo-analysis.wizard', $running->id))
+            ->get(route('tools.code-analysis.wizard', $running->id))
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('actionVisibility.pause', true)
@@ -158,16 +158,16 @@ class RepoAnalysisNavigationTest extends TestCase
         $session = $this->createSession($owner);
 
         $this->actingAs($other)
-            ->get(route('tools.repo-analysis.wizard', $session->id))
+            ->get(route('tools.code-analysis.wizard', $session->id))
             ->assertStatus(403)
-            ->assertSeeText('You do not have access to this Repo Analysis session.');
+            ->assertSeeText('You do not have access to this Code Analysis session.');
     }
 
     private function createSession(User $owner, array $overrides = []): RepoAnalysisSession
     {
         return RepoAnalysisSession::query()->create(array_merge([
             'user_id' => $owner->id,
-            'name' => 'Repo Analysis Web Session',
+            'name' => 'Code Analysis Web Session',
             'project_directory' => base_path(),
             'analyzer_profile' => 'default',
             'phase' => 0,

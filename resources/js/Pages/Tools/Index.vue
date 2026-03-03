@@ -9,7 +9,7 @@ import { computed } from 'vue';
 import { Search, Database, MessageSquare, Settings, Brain, GitBranchPlus } from 'lucide-vue-next';
 
 const props = defineProps({
-    repoAnalysis: {
+    codeAnalysis: {
         type: Object,
         default: () => ({
             available: false,
@@ -60,12 +60,12 @@ const baseTools = [
 const tools = computed(() => {
     const items = [...baseTools];
 
-    if (props.repoAnalysis?.available) {
+    if (props.codeAnalysis?.available) {
         items.splice(1, 0, {
-            route: 'tools.repo-analysis.index',
-            category: 'Repo Analysis',
-            title: 'AI-driven repository analysis',
-            description: 'Run stepwise repository analysis with live task feedback and full narrative reporting.',
+            route: 'tools.code-analysis.index',
+            category: 'Code Analysis',
+            title: 'AI-driven code analysis',
+            description: 'Run stepwise code analysis with live task feedback and full narrative reporting.',
             icon: GitBranchPlus,
         });
     }

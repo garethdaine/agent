@@ -29,7 +29,7 @@ class RepoAnalysisExecutionPipelineTest extends TestCase
     {
         parent::setUp();
 
-        $this->repoRoot = storage_path('framework/testing/repo-analysis-pipeline-'.(string) str()->uuid());
+        $this->repoRoot = storage_path('framework/testing/code-analysis-pipeline-'.(string) str()->uuid());
         File::deleteDirectory($this->repoRoot);
         File::ensureDirectoryExists($this->repoRoot);
 
@@ -212,7 +212,7 @@ class RepoAnalysisExecutionPipelineTest extends TestCase
 
         return RepoAnalysisSession::query()->create([
             'user_id' => $user->id,
-            'name' => 'Repo Analysis Pipeline Test',
+            'name' => 'Code Analysis Pipeline Test',
             'project_directory' => $this->repoRoot,
             'analyzer_profile' => 'default',
             'phase' => 0,
@@ -224,8 +224,8 @@ class RepoAnalysisExecutionPipelineTest extends TestCase
     private function seedRepositoryFixture(string $root): void
     {
         File::put($root.'/artisan', "#!/usr/bin/env php\n");
-        File::put($root.'/composer.json', '{"name":"acme/repo-analysis"}');
-        File::put($root.'/package.json', '{"name":"repo-analysis-app"}');
+        File::put($root.'/composer.json', '{"name":"acme/code-analysis"}');
+        File::put($root.'/package.json', '{"name":"code-analysis-app"}');
 
         File::ensureDirectoryExists($root.'/routes');
         File::put($root.'/routes/web.php', "<?php\n");

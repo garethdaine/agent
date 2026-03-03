@@ -174,7 +174,7 @@ class EventWriterTest extends TestCase
 
         return RepoAnalysisSession::query()->create([
             'user_id' => $user->id,
-            'project_directory' => '/tmp/repo-analysis-test',
+            'project_directory' => '/tmp/code-analysis-test',
             'status' => 'setup',
             'phase' => 0,
         ]);

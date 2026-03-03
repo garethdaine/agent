@@ -2,20 +2,20 @@
 
 Derived from discovery session 16.
 
-# Repo Analysis Tool Deterministic Implementation Plan
+# Code Analysis Tool Deterministic Implementation Plan
 
 ## Scope Boundary
-- Implement a new, separate `Repo Analysis` tool path without changing existing Requirements Discovery behavior, schemas, or queue workflows.
+- Implement a new, separate `Code Analysis` tool path without changing existing Requirements Discovery behavior, schemas, or queue workflows.
 - Keep deterministic core stages (`Setup -> Snapshot -> Plan -> Execute -> Validate -> Report -> Complete`) fully independent of LLM output.
 - Allow optional narrative synthesis only after deterministic gates pass; store as separate provenance-tagged artifact and never mutate deterministic artifacts.
 - Restrict repository writes during analysis to system persistence records and explicit report exports only.
-- Enforce dedicated Repo Analysis user policy constraints:
+- Enforce dedicated Code Analysis user policy constraints:
   - owner-only default access with admin override
   - separate per-user active-session cap of `2`
   - artifact/report retention split (task artifacts TTL, final exports retained)
 
 ## Architecture Changes
-- Add a new backend module namespace under `app/Support/RepoAnalysis/` and avoid coupling to interrogation internals beyond reusable patterns.
+- Add a new backend module namespace under `app/Support/CodeAnalysis/` and avoid coupling to interrogation internals beyond reusable patterns.
 - Create deterministic orchestration components:
   - `SessionStateTransitionService` for atomic state/phase transitions with strict allowed-from matrix
   - `EventWriter` for sequenced append-only events + websocket broadcasting + payload redaction + UTF-8 normalization
@@ -26,12 +26,12 @@ Derived from discovery session 16.
   - `ReportComposer` for deterministic report package assembly
   - `ExportService` for markdown/json versioned exports
   - `NarrativeSynthesisService` for optional post-gate narrative generation
-- Add repo-analysis queue pipeline on Redis via dedicated queue name and Horizon supervisor entry.
+- Add code-analysis queue pipeline on Redis via dedicated queue name and Horizon supervisor entry.
 - Preserve job isolation from existing interrogation jobs by using separate job classes and queue routing.
 
 Impacted components/files:
-- `app/Support/RepoAnalysis/*`
-- `app/Jobs/RepoAnalysis/*`
+- `app/Support/CodeAnalysis/*`
+- `app/Jobs/CodeAnalysis/*`
 - `config/repo_analysis.php`
 - `config/horizon.php`
 
@@ -70,7 +70,7 @@ Impacted components/files:
 - model files listed above
 
 ## API and Tool Contracts
-- Add REST API namespace under `/agent/api/v1/repo-analysis/*` in `routes/api.php`.
+- Add REST API namespace under `/agent/api/v1/code-analysis/*` in `routes/api.php`.
 - Implement session CRUD endpoints and lifecycle mutation endpoints with explicit request validation classes.
 - Implement read endpoints for events/tasks/artifacts/reports with pagination and sequence filters.
 - Controller scaffolding:
@@ -92,8 +92,8 @@ Impacted components/files:
 Impacted components/files:
 - `routes/api.php`
 - `app/Http/Controllers/Api/V1/RepoAnalysisSessionController.php`
-- `app/Http/Requests/Agent/RepoAnalysis/*`
-- optional `app/Http/Resources/Agent/RepoAnalysis/*`
+- `app/Http/Requests/Agent/CodeAnalysis/*`
+- optional `app/Http/Resources/Agent/CodeAnalysis/*`
 
 ## Event Contracts and Realtime Delivery
 - Define event envelope contract shared by websocket and polling:
@@ -114,7 +114,7 @@ Impacted components/files:
   - maintain strict ordering parity with websocket stream
 
 Impacted components/files:
-- `app/Support/RepoAnalysis/EventWriter.php`
+- `app/Support/CodeAnalysis/EventWriter.php`
 - websocket broadcast events/channels in `app/Events/*` or equivalent
 - API read endpoint for events in controller
 
@@ -122,7 +122,7 @@ Impacted components/files:
 - Implement policy classes for session/task/artifact/report access with owner-only default and admin override:
   - `RepoAnalysisSessionPolicy` (view, update, delete, mutate lifecycle, view artifacts/reports)
 - Register policy mappings in auth provider.
-- Enforce dedicated active-session cap (`2`) for Repo Analysis only:
+- Enforce dedicated active-session cap (`2`) for Code Analysis only:
   - apply during session create/start transitions
   - return explicit actionable error when cap reached
 - Enforce `PathPolicy` for `project_directory` on create/update/start operations.
@@ -133,7 +133,7 @@ Impacted components/files:
 Impacted components/files:
 - `app/Policies/RepoAnalysisSessionPolicy.php`
 - `app/Providers/AuthServiceProvider.php`
-- `app/Support/RepoAnalysis/*` (authorization and cap checks)
+- `app/Support/CodeAnalysis/*` (authorization and cap checks)
 - `app/Models/AgentAuditLog.php` integration points
 
 ## Deterministic Snapshot, Planning, and Analyzer Contracts
@@ -154,11 +154,11 @@ Impacted components/files:
   - otherwise mark affected tasks for rerun and emit explicit reason event
 
 Impacted components/files:
-- `app/Support/RepoAnalysis/SnapshotBuilder.php`
-- `app/Support/RepoAnalysis/TaskGraphBuilder.php`
-- `app/Support/RepoAnalysis/Analyzers/AnalyzerInterface.php`
-- `app/Support/RepoAnalysis/Analyzers/AnalyzerRegistry.php`
-- analyzer implementations under `app/Support/RepoAnalysis/Analyzers/*`
+- `app/Support/CodeAnalysis/SnapshotBuilder.php`
+- `app/Support/CodeAnalysis/TaskGraphBuilder.php`
+- `app/Support/CodeAnalysis/Analyzers/AnalyzerInterface.php`
+- `app/Support/CodeAnalysis/Analyzers/AnalyzerRegistry.php`
+- analyzer implementations under `app/Support/CodeAnalysis/Analyzers/*`
 
 ## Failure, Retry, Resume, and Drift Behavior
 - Task failure policy implementation:
@@ -178,8 +178,8 @@ Impacted components/files:
   - persist concise `error_code`, `error_summary`, failed task metadata, last successful sequence
 
 Impacted components/files:
-- `app/Support/RepoAnalysis/SessionStateTransitionService.php`
-- `app/Jobs/RepoAnalysis/ExecuteRepoAnalysisTaskJob.php`
+- `app/Support/CodeAnalysis/SessionStateTransitionService.php`
+- `app/Jobs/CodeAnalysis/ExecuteRepoAnalysisTaskJob.php`
 - lifecycle controller actions and requests
 
 ## Coverage Gates, Reporting, Export, and Retention
@@ -196,7 +196,7 @@ Impacted components/files:
 - Report persistence (`repo_analysis_reports`):
   - store structured report JSON + report hash + version metadata
 - Export behavior (`ExportService`):
-  - write to `docs/discovery/repo-analysis/{slug}.md` and `.json`
+  - write to `docs/discovery/code-analysis/{slug}.md` and `.json`
   - collision-safe suffixing (`-v2`, `-v3`, ...)
   - enforce export directory policy and path safety
 - Retention controls:
@@ -204,28 +204,28 @@ Impacted components/files:
   - final report exports retained indefinitely
 
 Impacted components/files:
-- `app/Support/RepoAnalysis/CoverageGateService.php`
-- `app/Support/RepoAnalysis/ReportComposer.php`
-- `app/Support/RepoAnalysis/ExportService.php`
+- `app/Support/CodeAnalysis/CoverageGateService.php`
+- `app/Support/CodeAnalysis/ReportComposer.php`
+- `app/Support/CodeAnalysis/ExportService.php`
 - cleanup command/job and schedule registration
 - `config/repo_analysis.php`
 
 ## User and Operator Surface Exposure (Routes, Pages, Navigation, Discoverability)
 - Add UI pages:
-  - `resources/js/Pages/Tools/RepoAnalysis/Index.vue`
-  - `resources/js/Pages/Tools/RepoAnalysis/Create.vue`
-  - `resources/js/Pages/Tools/RepoAnalysis/Wizard.vue`
-  - `resources/js/Pages/Tools/RepoAnalysis/Settings.vue`
+  - `resources/js/Pages/Tools/CodeAnalysis/Index.vue`
+  - `resources/js/Pages/Tools/CodeAnalysis/Create.vue`
+  - `resources/js/Pages/Tools/CodeAnalysis/Wizard.vue`
+  - `resources/js/Pages/Tools/CodeAnalysis/Settings.vue`
 - Add UI components:
-  - `resources/js/Components/RepoAnalysis/TaskGraphPanel.vue`
-  - `resources/js/Components/RepoAnalysis/CoveragePanel.vue`
-  - `resources/js/Components/RepoAnalysis/ReportViewer.vue`
-  - `resources/js/Components/RepoAnalysis/ArtifactInspector.vue`
+  - `resources/js/Components/CodeAnalysis/TaskGraphPanel.vue`
+  - `resources/js/Components/CodeAnalysis/CoveragePanel.vue`
+  - `resources/js/Components/CodeAnalysis/ReportViewer.vue`
+  - `resources/js/Components/CodeAnalysis/ArtifactInspector.vue`
 - Add route/page exposure:
   - web routes and Inertia route bindings for index/create/wizard/settings
   - API route links surfaced in UI actions
 - Add navigation discoverability:
-  - Tools landing includes Repo Analysis entry card with permission-aware visibility
+  - Tools landing includes Code Analysis entry card with permission-aware visibility
   - direct navigation from Tools index to create flow and existing sessions
   - wizard includes clear action controls for pause/resume/retry/restart/export and operator decision prompts
 - Realtime UX:
@@ -233,14 +233,14 @@ Impacted components/files:
   - polling fallback with cursor when websocket unavailable
   - conflict handling prompts when server state supersedes stale client state
 - In-app discoverability acceptance checks:
-  - authorized user can find Repo Analysis from Tools index without manual URL entry
+  - authorized user can find Code Analysis from Tools index without manual URL entry
   - owner can open session detail/wizard directly from list
   - admin override visibility and actions are clearly labeled
   - blocked actions show policy or state reason and suggested next action
 
 Impacted components/files:
-- `resources/js/Pages/Tools/RepoAnalysis/*`
-- `resources/js/Components/RepoAnalysis/*`
+- `resources/js/Pages/Tools/CodeAnalysis/*`
+- `resources/js/Components/CodeAnalysis/*`
 - shared tools navigation component(s) and route definitions
 
 ## Observability and Auditability
@@ -273,7 +273,7 @@ Impacted components/files:
 - Feature tests:
   - all API endpoints for session/lifecycle/read operations
   - authorization rules (owner-only + admin override)
-  - active-session cap enforcement (Repo Analysis-specific)
+  - active-session cap enforcement (Code Analysis-specific)
   - invalid transition rejection and standardized error responses
   - event ordering and `since_sequence` pagination
   - retry/pause/resume/restart behavior and drift decision gates
@@ -289,17 +289,17 @@ Impacted components/files:
   - operator actions exposed/hidden correctly per state and authorization
 
 Impacted components/files:
-- `tests/Unit/Support/RepoAnalysis/*`
-- `tests/Feature/Api/V1/RepoAnalysis/*`
-- `tests/Integration/RepoAnalysis/*`
+- `tests/Unit/Support/CodeAnalysis/*`
+- `tests/Feature/Api/V1/CodeAnalysis/*`
+- `tests/Integration/CodeAnalysis/*`
 - frontend/inertia tests under existing JS test structure
 
 ## Backward Compatibility
 - Keep existing Requirements Discovery routes, models, jobs, and websocket channels unchanged.
-- Do not overload interrogation tables; all Repo Analysis data is isolated in new tables.
-- Isolate queue routing via `repo-analysis` queue; no changes to existing queue names required for old flows.
-- Guard new config with defaults that do not alter current runtime behavior when Repo Analysis is unused.
-- Preserve existing policy behavior for non-Repo Analysis resources.
+- Do not overload interrogation tables; all Code Analysis data is isolated in new tables.
+- Isolate queue routing via `code-analysis` queue; no changes to existing queue names required for old flows.
+- Guard new config with defaults that do not alter current runtime behavior when Code Analysis is unused.
+- Preserve existing policy behavior for non-Code Analysis resources.
 
 ## Rollout and Rollback Controls
 - Rollout controls:
@@ -308,7 +308,7 @@ Impacted components/files:
   - enable analyzers through config-controlled registry entries
 - Rollback controls:
   - disable feature flag to remove user entry points and lifecycle execution while preserving stored data
-  - stop `repo-analysis` queue workers/supervisor safely without affecting other queues
+  - stop `code-analysis` queue workers/supervisor safely without affecting other queues
   - keep migrations additive; avoid destructive schema changes in initial release
   - maintain export files and report records for audit continuity even if tool is disabled
 - Operational guardrails:
@@ -318,7 +318,7 @@ Impacted components/files:
 ## Implementation Sequence and Dependency Order
 1. Create `config/repo_analysis.php` and wire feature flag, defaults, policy values, analyzer registry config.
 2. Add migrations for five new tables with indexes/constraints; add models with casts/relations.
-3. Implement authorization policies, admin override logic, and Repo Analysis active-session cap enforcement.
+3. Implement authorization policies, admin override logic, and Code Analysis active-session cap enforcement.
 4. Implement `SessionStateTransitionService` and transition matrix tests.
 5. Implement `EventWriter` with sequence generation, redaction, UTF-8 normalization, and broadcast integration.
 6. Implement `SnapshotBuilder` with canonical traversal/serialization and snapshot hash policy (`mtime` excluded from hash input).
@@ -342,7 +342,7 @@ Impacted components/files:
 - Resume/restart/drift semantics match policy with explicit operator choice capture.
 - Coverage gates block false completion and allow no-test completion only with explicit warning persisted in report.
 - Report hash is derived from ordered artifact hashes and persisted with report package metadata.
-- Exported markdown/json files are versioned and collision-safe in `docs/discovery/repo-analysis`.
+- Exported markdown/json files are versioned and collision-safe in `docs/discovery/code-analysis`.
 - Realtime event stream preserves sequence parity across websocket and polling consumers.
 - Authorization and discoverability checks pass for owner-only defaults and admin overrides.
 - Retention behavior enforces task artifact TTL and indefinite final report export availability.
@@ -377,7 +377,7 @@ Impacted components/files:
 - Retention cleanup can delete artifacts still needed for troubleshooting if report/artifact linkage and TTL boundaries are not explicit.
 - Secret redaction can over-redact (losing diagnostics) or under-redact (data exposure) without stable allow/deny patterns and tests.
 - Owner/admin authorization drift between API and UI can expose controls users cannot execute or hide valid controls, reducing operability.
-- Queue isolation misconfiguration can route repo-analysis jobs to existing workers, causing contention or behavior coupling.
+- Queue isolation misconfiguration can route code-analysis jobs to existing workers, causing contention or behavior coupling.
 - Export collision handling bugs can overwrite prior reports or produce non-canonical version suffix increments.
 - No-test coverage warning path can be implemented inconsistently, causing either false blocking or silent pass without required warning evidence.
 
@@ -385,13 +385,13 @@ Impacted components/files:
 ## Assumptions
 
 - Redis and Horizon are available and already used as operational dependencies in the target environment.
-- Existing websocket/private channel infrastructure used by Requirements Discovery can be reused for Repo Analysis events with minimal adaptation.
-- `PathPolicy` supports the required absolute-path and base-directory validation semantics for repo-analysis project directories and export paths.
+- Existing websocket/private channel infrastructure used by Requirements Discovery can be reused for Code Analysis events with minimal adaptation.
+- `PathPolicy` supports the required absolute-path and base-directory validation semantics for code-analysis project directories and export paths.
 - Repository scanning excludes (`vendor`, `node_modules`, `storage`, `bootstrap/cache`, `.git`) are acceptable defaults for all supported projects unless explicitly extended.
 - Analyzer versioning is controlled in configuration/code and will be bumped intentionally when output-affecting behavior changes.
 - Canonical JSON serialization utilities are available or can be implemented consistently in PHP for stable key ordering and hash input generation.
 - Audit log infrastructure is available for lifecycle mutation recording without schema redesign.
-- Frontend tools navigation has an existing extension point where Repo Analysis entry and settings links can be added without redesigning global layout.
+- Frontend tools navigation has an existing extension point where Code Analysis entry and settings links can be added without redesigning global layout.
 - Fixture repositories for integration and determinism tests can be added under test assets and executed in CI environments.
 - Optional narrative synthesis provider dependencies may be absent by default; deterministic completion must remain fully functional when narrative is disabled.
 

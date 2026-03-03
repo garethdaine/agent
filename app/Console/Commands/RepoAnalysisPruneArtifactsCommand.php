@@ -9,9 +9,9 @@ use Illuminate\Console\Command;
 
 class RepoAnalysisPruneArtifactsCommand extends Command
 {
-    protected $signature = 'repo-analysis:prune-artifacts {--dry-run : Show how many artifacts would be pruned}';
+    protected $signature = 'code-analysis:prune-artifacts {--dry-run : Show how many artifacts would be pruned}';
 
-    protected $description = 'Delete repo-analysis task artifacts older than configured retention window';
+    protected $description = 'Delete code-analysis task artifacts older than configured retention window';
 
     public function handle(): int
     {
@@ -19,7 +19,7 @@ class RepoAnalysisPruneArtifactsCommand extends Command
         $summary = (new PruneRepoAnalysisArtifactsJob((bool) $this->option('dry-run')))->handle();
 
         $this->info(sprintf(
-            'Repo Analysis artifact prune: deleted %d of %d candidates older than %d days (failed: %d).',
+            'Code Analysis artifact prune: deleted %d of %d candidates older than %d days (failed: %d).',
             $summary['deleted'],
             $summary['candidates'],
             $summary['retention_days'],

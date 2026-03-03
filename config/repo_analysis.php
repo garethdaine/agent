@@ -74,7 +74,7 @@ return [
 
     'queue' => [
         'connection' => 'redis',
-        'name' => 'repo-analysis',
+        'name' => 'code-analysis',
         'supervisor' => [
             'max_processes' => $coerceBoundedInt(env('HORIZON_REPO_ANALYSIS_MAX_PROCESSES', 2), 2, 1, 4),
             'memory_mb' => 128,
@@ -120,7 +120,7 @@ return [
     ],
 
     'exports' => [
-        'relative_directory' => env('REPO_ANALYSIS_EXPORT_RELATIVE_DIRECTORY', 'docs/discovery/repo-analysis'),
+        'relative_directory' => env('REPO_ANALYSIS_EXPORT_RELATIVE_DIRECTORY', 'docs/discovery/code-analysis'),
     ],
 
     'retention' => [

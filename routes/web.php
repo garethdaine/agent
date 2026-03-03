@@ -88,17 +88,17 @@ Route::middleware([
 
     Route::get('/tools', function () {
         $user = request()->user();
-        $repoAnalysisAvailable = $user !== null
+        $codeAnalysisAvailable = $user !== null
             && app(FeatureFlagManager::class)->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)
             && Gate::forUser($user)->allows('create', RepoAnalysisSession::class);
 
         return Inertia::render('Tools/Index', [
-            'repoAnalysis' => [
-                'available' => $repoAnalysisAvailable,
-                'indexRoute' => $repoAnalysisAvailable ? route('tools.repo-analysis.index') : null,
-                'blockedMessage' => $repoAnalysisAvailable
+            'codeAnalysis' => [
+                'available' => $codeAnalysisAvailable,
+                'indexRoute' => $codeAnalysisAvailable ? route('tools.code-analysis.index') : null,
+                'blockedMessage' => $codeAnalysisAvailable
                     ? null
-                    : 'Repo Analysis is unavailable. Enable the feature or request access from an administrator.',
+                    : 'Code Analysis is unavailable. Enable the feature or request access from an administrator.',
             ],
         ]);
     })->name('tools.index');
@@ -169,14 +169,14 @@ Route::middleware([
         ]);
     })->name('tools.discovery.wizard');
 
-    Route::get('/tools/repo-analysis', function () {
+    Route::get('/tools/code-analysis', function () {
         if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)) {
-            return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
+            return response('Code Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
         }
 
         $user = request()->user();
         if ($user === null || ! Gate::forUser($user)->allows('create', RepoAnalysisSession::class)) {
-            return response('You do not have access to Repo Analysis. Ask an administrator for access.', 403);
+            return response('You do not have access to Code Analysis. Ask an administrator for access.', 403);
         }
 
         $query = RepoAnalysisSession::query()->withCount('reports')->latest();
@@ -198,12 +198,12 @@ Route::middleware([
                 'status' => (string) $session->status,
                 'report_count' => (int) ($session->reports_count ?? 0),
                 'updated_at' => optional($session->updated_at)?->toIso8601String(),
-                'wizard_url' => route('tools.repo-analysis.wizard', $session->id),
-                'settings_url' => route('tools.repo-analysis.settings', $session->id),
+                'wizard_url' => route('tools.code-analysis.wizard', $session->id),
+                'settings_url' => route('tools.code-analysis.settings', $session->id),
             ])
             ->values();
 
-        return Inertia::render('Tools/RepoAnalysis/Index', [
+        return Inertia::render('Tools/CodeAnalysis/Index', [
             'sessions' => $sessions,
             'viewer' => [
                 'user_id' => (int) $user->id,
@@ -212,33 +212,33 @@ Route::middleware([
             ],
             'defaultProjectDirectory' => base_path(),
         ]);
-    })->name('tools.repo-analysis.index');
+    })->name('tools.code-analysis.index');
 
-    Route::get('/tools/repo-analysis/create', function () {
+    Route::get('/tools/code-analysis/create', function () {
         if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)) {
-            return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
+            return response('Code Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
         }
 
         $user = request()->user();
         if ($user === null || ! Gate::forUser($user)->allows('create', RepoAnalysisSession::class)) {
-            return response('You do not have access to Repo Analysis. Ask an administrator for access.', 403);
+            return response('You do not have access to Code Analysis. Ask an administrator for access.', 403);
         }
 
-        return Inertia::render('Tools/RepoAnalysis/Create', [
+        return Inertia::render('Tools/CodeAnalysis/Create', [
             'defaultProjectDirectory' => base_path(),
         ]);
-    })->name('tools.repo-analysis.create');
+    })->name('tools.code-analysis.create');
 
-    Route::get('/tools/repo-analysis/{id}', function (int $id) {
+    Route::get('/tools/code-analysis/{id}', function (int $id) {
         if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)) {
-            return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
+            return response('Code Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
         }
 
         $user = request()->user();
         $session = RepoAnalysisSession::query()->findOrFail($id);
 
         if ($user === null || ! Gate::forUser($user)->allows('view', $session)) {
-            return response('You do not have access to this Repo Analysis session. Ask an administrator if you need access.', 403);
+            return response('You do not have access to this Code Analysis session. Ask an administrator if you need access.', 403);
         }
 
         $canMutate = Gate::forUser($user)->allows('update', $session);
@@ -253,7 +253,7 @@ Route::middleware([
         $isRunning = in_array((string) $session->status, $runningStatuses, true);
         $hasExport = $session->reports()->exists();
 
-        return Inertia::render('Tools/RepoAnalysis/Wizard', [
+        return Inertia::render('Tools/CodeAnalysis/Wizard', [
             'sessionId' => (int) $session->id,
             'initialSession' => [
                 'id' => (int) $session->id,
@@ -282,24 +282,24 @@ Route::middleware([
                 'export' => $hasExport,
             ],
         ]);
-    })->name('tools.repo-analysis.wizard');
+    })->name('tools.code-analysis.wizard');
 
-    Route::get('/tools/repo-analysis/{id}/settings', function (int $id) {
+    Route::get('/tools/code-analysis/{id}/settings', function (int $id) {
         if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)) {
-            return response('Repo Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
+            return response('Code Analysis is currently disabled. Enable REPO_ANALYSIS_ENABLED to access this tool.', 403);
         }
 
         $user = request()->user();
         $session = RepoAnalysisSession::query()->findOrFail($id);
 
         if ($user === null || ! Gate::forUser($user)->allows('update', $session)) {
-            return response('You do not have access to this Repo Analysis session. Ask an administrator if you need access.', 403);
+            return response('You do not have access to this Code Analysis session. Ask an administrator if you need access.', 403);
         }
 
-        return Inertia::render('Tools/RepoAnalysis/Settings', [
+        return Inertia::render('Tools/CodeAnalysis/Settings', [
             'sessionId' => (int) $session->id,
         ]);
-    })->name('tools.repo-analysis.settings');
+    })->name('tools.code-analysis.settings');
 
     // Org Layer routes (guarded by org UI feature flag)
     Route::middleware(['org.ui'])->prefix('agent/org')->group(function () {

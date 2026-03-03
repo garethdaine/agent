@@ -1,9 +1,9 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import TaskGraphPanel from '@/Components/RepoAnalysis/TaskGraphPanel.vue';
-import CoveragePanel from '@/Components/RepoAnalysis/CoveragePanel.vue';
-import ReportViewer from '@/Components/RepoAnalysis/ReportViewer.vue';
-import ArtifactInspector from '@/Components/RepoAnalysis/ArtifactInspector.vue';
+import TaskGraphPanel from '@/Components/CodeAnalysis/TaskGraphPanel.vue';
+import CoveragePanel from '@/Components/CodeAnalysis/CoveragePanel.vue';
+import ReportViewer from '@/Components/CodeAnalysis/ReportViewer.vue';
+import ArtifactInspector from '@/Components/CodeAnalysis/ArtifactInspector.vue';
 import Button from '@/Components/ui/Button.vue';
 import Card from '@/Components/ui/Card.vue';
 import CardHeader from '@/Components/ui/CardHeader.vue';
@@ -106,7 +106,7 @@ const applySession = (nextSession) => {
 
 const loadSession = async () => {
     try {
-        const { data } = await axios.get(`/agent/api/v1/repo-analysis/sessions/${props.sessionId}`);
+        const { data } = await axios.get(`/agent/api/v1/code-analysis/sessions/${props.sessionId}`);
         applySession(data?.data ?? null);
         deriveActionVisibility();
     } catch (e) {
@@ -117,7 +117,7 @@ const loadSession = async () => {
 const loadEvents = async () => {
     try {
         const sinceSequence = nextEventCursor(events.value);
-        const { data } = await axios.get(`/agent/api/v1/repo-analysis/sessions/${props.sessionId}/events`, {
+        const { data } = await axios.get(`/agent/api/v1/code-analysis/sessions/${props.sessionId}/events`, {
             params: {
                 since_sequence: sinceSequence,
                 limit: 200,
@@ -139,9 +139,9 @@ const loadCollections = async (options = {}) => {
 
     try {
         const [tasksResponse, artifactsResponse, reportsResponse] = await Promise.all([
-            axios.get(`/agent/api/v1/repo-analysis/sessions/${props.sessionId}/tasks`, { params: { limit: 200 } }),
-            axios.get(`/agent/api/v1/repo-analysis/sessions/${props.sessionId}/artifacts`, { params: { limit: 200 } }),
-            axios.get(`/agent/api/v1/repo-analysis/sessions/${props.sessionId}/reports`, { params: { limit: 50 } }),
+            axios.get(`/agent/api/v1/code-analysis/sessions/${props.sessionId}/tasks`, { params: { limit: 200 } }),
+            axios.get(`/agent/api/v1/code-analysis/sessions/${props.sessionId}/artifacts`, { params: { limit: 200 } }),
+            axios.get(`/agent/api/v1/code-analysis/sessions/${props.sessionId}/reports`, { params: { limit: 50 } }),
         ]);
 
         tasks.value = tasksResponse?.data?.data ?? [];
@@ -149,7 +149,7 @@ const loadCollections = async (options = {}) => {
         reports.value = reportsResponse?.data?.data ?? [];
         deriveActionVisibility();
     } catch (e) {
-        error.value = e?.response?.data?.error?.message ?? 'Failed to load related repo analysis data.';
+        error.value = e?.response?.data?.error?.message ?? 'Failed to load related code analysis data.';
     } finally {
         if (!silent) {
             loadingCollections.value = false;
@@ -216,7 +216,7 @@ const subscribeRealtime = () => {
     }
 
     try {
-        echoChannel = window.Echo.private(`repo-analysis.${props.sessionId}`)
+        echoChannel = window.Echo.private(`code-analysis.${props.sessionId}`)
             .listen('.session.updated', (event) => {
                 if (!event) {
                     return;
@@ -259,8 +259,8 @@ const subscribeRealtime = () => {
 
 const unsubscribeRealtime = () => {
     if (window.Echo && echoChannel) {
-        window.Echo.leave(`private-repo-analysis.${props.sessionId}`);
-        window.Echo.leave(`repo-analysis.${props.sessionId}`);
+        window.Echo.leave(`private-code-analysis.${props.sessionId}`);
+        window.Echo.leave(`code-analysis.${props.sessionId}`);
     }
 
     echoChannel = null;
@@ -281,7 +281,7 @@ const postLifecycle = async (endpoint, options = {}) => {
             optimisticExpectedStatus.value = expectedStatus;
         }
 
-        await axios.post(`/agent/api/v1/repo-analysis/sessions/${props.sessionId}/${endpoint}`, payload ?? {});
+        await axios.post(`/agent/api/v1/code-analysis/sessions/${props.sessionId}/${endpoint}`, payload ?? {});
 
         if (successNotice !== '') {
             notice.value = successNotice;
@@ -439,23 +439,23 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <AppLayout title="Repo Analysis Wizard">
-        <Head :title="`Repo Analysis #${sessionId}`" />
+    <AppLayout title="Code Analysis Wizard">
+        <Head :title="`Code Analysis #${sessionId}`" />
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Repo Analysis Wizard</h2>
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Code Analysis Wizard</h2>
                     <p class="text-xs text-muted-foreground">
                         Session #{{ sessionId }}
                         <span v-if="viewer.is_admin_override"> · admin override</span>
                     </p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <Link :href="route('tools.repo-analysis.settings', sessionId)">
+                    <Link :href="route('tools.code-analysis.settings', sessionId)">
                         <Button variant="outline" size="sm">Settings</Button>
                     </Link>
-                    <Link :href="route('tools.repo-analysis.index')">
+                    <Link :href="route('tools.code-analysis.index')">
                         <Button variant="outline" size="sm">All Sessions</Button>
                     </Link>
                 </div>

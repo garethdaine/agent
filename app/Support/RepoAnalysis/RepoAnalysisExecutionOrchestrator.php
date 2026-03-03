@@ -25,11 +25,11 @@ class RepoAnalysisExecutionOrchestrator
 
     public function queue(): string
     {
-        $queue = config('repo_analysis.queue.name', 'repo-analysis');
+        $queue = config('repo_analysis.queue.name', 'code-analysis');
 
         return is_string($queue) && $queue !== ''
             ? $queue
-            : 'repo-analysis';
+            : 'code-analysis';
     }
 
     public function assertQueue(?string $actualQueue): void

@@ -286,7 +286,7 @@ onBeforeUnmount(() => {
                                     <MessageSquare class="w-4 h-4 mr-1.5" />
                                     Messenger
                                 </NavLink>
-                                <NavLink :href="route('tools.index')" :active="route().current('tools.index') || route().current('tools.discovery.*') || route().current('tools.backups.*') || route().current('tools.features.*') || route().current('tools.memory.*') || route().current('tools.repo-analysis.*')">
+                                <NavLink :href="route('tools.index')" :active="route().current('tools.index') || route().current('tools.discovery.*') || route().current('tools.backups.*') || route().current('tools.features.*') || route().current('tools.memory.*') || route().current('tools.code-analysis.*')">
                                     <Wrench class="w-4 h-4 mr-1.5" />
                                     Tools
                                 </NavLink>
@@ -488,7 +488,7 @@ onBeforeUnmount(() => {
                             <MessageSquare class="w-5 h-5" />
                             Messenger
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('tools.index')" :active="route().current('tools.index') || route().current('tools.discovery.*') || route().current('tools.backups.*') || route().current('tools.features.*') || route().current('tools.memory.*') || route().current('tools.repo-analysis.*')">
+                        <ResponsiveNavLink :href="route('tools.index')" :active="route().current('tools.index') || route().current('tools.discovery.*') || route().current('tools.backups.*') || route().current('tools.features.*') || route().current('tools.memory.*') || route().current('tools.code-analysis.*')">
                             <Wrench class="w-5 h-5" />
                             Tools
                         </ResponsiveNavLink>

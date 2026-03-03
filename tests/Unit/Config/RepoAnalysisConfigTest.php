@@ -7,7 +7,7 @@ use Tests\TestCase;
 /**
  * Assumptions:
  * - Redis and Horizon are available.
- * - Repo Analysis is disabled by default unless explicitly enabled.
+ * - Code Analysis is disabled by default unless explicitly enabled.
  */
 class RepoAnalysisConfigTest extends TestCase
 {

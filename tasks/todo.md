@@ -11,13 +11,13 @@
 Pre-Execution Goal Articulation (STAR)
 
 SITUATION
-- Repo Analysis backend/API, lifecycle jobs, and deterministic event sequencing exist, but there are no user-facing web routes/pages/components under Tools for Repo Analysis.
-- Tools landing currently has no Repo Analysis discoverability card/link, so operators cannot reach this flow from `/tools` without manual URL entry.
-- Existing Discovery wizard already demonstrates websocket + polling patterns, but Repo Analysis has no equivalent UI or stale-client supersede handling yet.
-- Repo Analysis feature flag defaults to disabled; UI exposure must be permission-aware and provide an actionable blocked message when feature access is unavailable.
+- Code Analysis backend/API, lifecycle jobs, and deterministic event sequencing exist, but there are no user-facing web routes/pages/components under Tools for Code Analysis.
+- Tools landing currently has no Code Analysis discoverability card/link, so operators cannot reach this flow from `/tools` without manual URL entry.
+- Existing Discovery wizard already demonstrates websocket + polling patterns, but Code Analysis has no equivalent UI or stale-client supersede handling yet.
+- Code Analysis feature flag defaults to disabled; UI exposure must be permission-aware and provide an actionable blocked message when feature access is unavailable.
 
 TASK
-- Ship Repo Analysis user/operator surfaces under Tools with route wiring and navigation discoverability.
+- Ship Code Analysis user/operator surfaces under Tools with route wiring and navigation discoverability.
 - Ensure authorized users can reach index/create/wizard/settings from Tools, open sessions from list to wizard, and see lifecycle actions based on role/state.
 - Implement ordered realtime + polling fallback event ingestion so event sequence appends correctly and stale client state is superseded by server truth.
 - Prove behavior with tests-first workflow (fail then pass) for navigation visibility, route reachability, action visibility, and sequence append ordering.
@@ -28,24 +28,24 @@ ACTION
   - [x] JS unit test for sequence merge/poll cursor behavior to prove ordered append and dedupe.
 - [x] Run targeted tests and capture red-state evidence.
 - [x] Implement minimum route/UI changes:
-  - [x] web routes and Inertia bindings for `tools.repo-analysis.{index,create,wizard,settings}`,
-  - [x] Tools index Repo Analysis card visibility with feature + authorization gating,
-  - [x] Repo Analysis pages/components under `resources/js/Pages/Tools/RepoAnalysis/*` and `resources/js/Components/RepoAnalysis/*`,
+  - [x] web routes and Inertia bindings for `tools.code-analysis.{index,create,wizard,settings}`,
+  - [x] Tools index Code Analysis card visibility with feature + authorization gating,
+  - [x] Code Analysis pages/components under `resources/js/Pages/Tools/RepoAnalysis/*` and `resources/js/Components/RepoAnalysis/*`,
   - [x] wizard lifecycle controls (`pause/resume/retry/restart/export`) with state/role-based visibility.
 - [x] Implement websocket subscription + polling fallback with strict sequence merge and stale-state supersede handling.
 - [x] Re-run targeted tests, then run required verification commands, and document evidence/limitations in this section.
 
 RESULT
 - Completion is proven by fail-then-pass test evidence showing:
-  - authorized users see Repo Analysis in Tools and can reach index/create/wizard/settings without manual URL entry,
+  - authorized users see Code Analysis in Tools and can reach index/create/wizard/settings without manual URL entry,
   - session list links to wizard and action controls are visible/hidden by status/ownership/admin override rules,
   - event ingestion appends ordered by sequence with dedupe and polling cursor progression,
   - websocket-unavailable fallback continues via polling without sequence regressions,
   - unauthorized/disabled surface is hidden or blocked with an actionable message.
 
 Assumptions and scope boundaries
-- Assumption: Repo Analysis APIs remain at `/agent/api/v1/repo-analysis/*` and are the data source for these pages.
-- Assumption: “authorized user” means authenticated user with Repo Analysis feature enabled and `create/view` policy permission.
+- Assumption: Code Analysis APIs remain at `/agent/api/v1/code-analysis/*` and are the data source for these pages.
+- Assumption: “authorized user” means authenticated user with Code Analysis feature enabled and `create/view` policy permission.
 - Scope boundary: this task targets web routes, Inertia pages/components, navigation discoverability, and frontend realtime/polling behavior; it does not redesign backend lifecycle semantics.
 
 Failure modes to guard
@@ -58,10 +58,10 @@ Review
 - [x] Explicit non-goals / limitations.
 - Evidence summary:
   - Red state:
-    - `php artisan test tests/Feature/Web/Tools/RepoAnalysisNavigationTest.php` failed with missing props/routes (`repoAnalysis.available` missing; `tools.repo-analysis.*` routes undefined).
+    - `php artisan test tests/Feature/Web/Tools/RepoAnalysisNavigationTest.php` failed with missing props/routes (`repoAnalysis.available` missing; `tools.code-analysis.*` routes undefined).
     - `npm run test:unit -- resources/js/Pages/Tools/RepoAnalysis/__tests__/eventStream.spec.ts` failed with missing module `../eventStream`.
   - Implemented:
-    - Web route wiring and access gating in `routes/web.php` for `tools.repo-analysis.index/create/wizard/settings`.
+    - Web route wiring and access gating in `routes/web.php` for `tools.code-analysis.index/create/wizard/settings`.
     - Tools card discoverability + gating props in `resources/js/Pages/Tools/Index.vue`.
     - New pages:
       - `resources/js/Pages/Tools/RepoAnalysis/Index.vue`
@@ -88,9 +88,9 @@ Review
     - `php artisan test --filter=RepoAnalysis` => `63 passed (422 assertions)`.
     - `npm run build` completed client + SSR builds successfully.
 - Conditions where this works:
-  - Repo Analysis feature flag is enabled (`repo_analysis.enabled=true`) for UI route access.
+  - Code Analysis feature flag is enabled (`repo_analysis.enabled=true`) for UI route access.
   - User is authenticated and policy-authorized (`create/view/update`) for the session.
-  - Realtime uses `repo-analysis.{sessionId}` private channel when Echo is available; otherwise polling fallback continues.
+  - Realtime uses `code-analysis.{sessionId}` private channel when Echo is available; otherwise polling fallback continues.
   - Event merge correctness assumes monotonic `sequence` values from backend contract.
 - Explicit non-goals / limitations:
   - Composer dev check could not run end-to-end because local script calls `php artisan pail`, which is unavailable in this environment; command exited before full stack remained up.
@@ -101,18 +101,18 @@ Review
 Pre-Execution Goal Articulation (STAR)
 
 SITUATION
-- Repo Analysis schema/models exist (`repo_analysis_sessions`, `repo_analysis_events`) and transition service is in place, but there is no `EventWriter` for Repo Analysis.
-- There is currently no Repo Analysis events read endpoint/helper implementing incremental `since_sequence` retrieval with strict ordering.
+- Code Analysis schema/models exist (`repo_analysis_sessions`, `repo_analysis_events`) and transition service is in place, but there is no `EventWriter` for Code Analysis.
+- There is currently no Code Analysis events read endpoint/helper implementing incremental `since_sequence` retrieval with strict ordering.
 - Existing event writers in the codebase show two relevant patterns:
   - deterministic, transaction-safe per-session sequencing + redaction/UTF-8 normalization (`InterrogationEventWriter`),
   - lightweight per-scope sequence append (`DelegationEventWriter`).
 
 TASK
-- Add a Repo Analysis `EventWriter` that performs append-only event writes with:
+- Add a Code Analysis `EventWriter` that performs append-only event writes with:
   - monotonic per-session sequence assignment under transaction lock,
   - payload UTF-8 normalization + secret redaction before persistence,
   - a broadcast hook using the same normalized payload and assigned sequence used for storage.
-- Add a Repo Analysis event read contract helper for ordered incremental fetch using `since_sequence` semantics.
+- Add a Code Analysis event read contract helper for ordered incremental fetch using `since_sequence` semantics.
 - Prove behavior with test-first coverage for sequence monotonicity, normalization/redaction, and ordered incremental retrieval including empty results.
 
 ACTION
@@ -138,7 +138,7 @@ RESULT
   - incremental reads return an empty result set when no new events exist.
 
 Assumptions and scope boundaries
-- Assumption: this task is backend-only for Repo Analysis event write/read contracts and does not require full Repo Analysis controller/routing rollout yet.
+- Assumption: this task is backend-only for Code Analysis event write/read contracts and does not require full Code Analysis controller/routing rollout yet.
 - Assumption: sequence uniqueness is guaranteed by both transactional assignment and existing DB unique constraint on `(repo_analysis_session_id, sequence)`.
 - Scope boundary: only `app/Support/RepoAnalysis/EventWriter.php`, minimal event read query helper/model usage, and targeted tests for this behavior.
 
@@ -168,21 +168,21 @@ Review
   - Redaction handles both value patterns (`token=...`, `Bearer ...`) and nested secret-like keys (`api_token`, `password`, `secret`).
   - Incremental reads use `EventWriter::readSinceSequence()` with positive `since_sequence` and bounded limit.
 - Explicit non-goals / limitations:
-  - No Repo Analysis API controller/routes were added in this task; read contract is currently service/model-level.
+  - No Code Analysis API controller/routes were added in this task; read contract is currently service/model-level.
   - Broadcast integration is implemented as a callback hook, not yet wired to Laravel broadcast channels/events.
   - True multi-process race simulation is not covered in tests; stale-writer sequencing is validated via interleaved inserts.
 
-### Session 16 Task 2 — Create Repo Analysis Schema and Eloquent Models (Completed)
+### Session 16 Task 2 — Create Code Analysis Schema and Eloquent Models (Completed)
 
 Pre-Execution Goal Articulation
 
 SITUATION
-- Repo Analysis configuration and Horizon defaults now exist, but dedicated persistence tables/models for sessions, events, tasks, artifacts, and reports do not yet exist.
+- Code Analysis configuration and Horizon defaults now exist, but dedicated persistence tables/models for sessions, events, tasks, artifacts, and reports do not yet exist.
 - Existing interrogation tables are already in production use and must remain untouched.
 - This task requires additive-only schema work plus new Eloquent models and verification through fail-then-pass tests.
 
 TASK
-- Add dedicated Repo Analysis schema and model layer so the application can persist deterministic session lifecycle, event stream, task graph state, artifacts, and reports.
+- Add dedicated Code Analysis schema and model layer so the application can persist deterministic session lifecycle, event stream, task graph state, artifacts, and reports.
 - Ensure required per-session uniqueness rules are enforced for event sequencing, task keys, and artifact keys.
 - Ensure foreign key cascade behavior is correct, session soft deletes are supported, and status/phase query indexes exist for lifecycle reads.
 
@@ -211,7 +211,7 @@ RESULT
 
 Assumptions and scope boundaries
 - Assumption: migrations are additive-only and must not alter existing interrogation schema.
-- Assumption: Repo Analysis schema naming follows `repo_analysis_*` table conventions and `RepoAnalysis*` model naming.
+- Assumption: Code Analysis schema naming follows `repo_analysis_*` table conventions and `RepoAnalysis*` model naming.
 - Scope boundary: only new migrations in `database/migrations/*repo_analysis*`, new models in `app/Models/RepoAnalysis*.php`, and test coverage needed to verify this task.
 
 Failure modes to guard
@@ -245,30 +245,30 @@ Review
 - Conditions where this works:
   - Migrations run in order so `repo_analysis_sessions` exists before child tables with foreign keys.
   - Database backend enforces unique constraints and FK cascades (validated on `pgsql_testing`).
-  - Repo Analysis writes use per-session uniqueness for event sequencing/task keys/artifact keys.
+  - Code Analysis writes use per-session uniqueness for event sequencing/task keys/artifact keys.
 - Explicit non-goals / limitations:
   - No API endpoints, services, jobs, policies, or frontend surfaces were added in this task.
   - This task does not yet enforce enum/check constraints for allowed status/event/task values.
 
-### Session 16 Task 1 — Add Repo Analysis Configuration and Queue Defaults (Completed)
+### Session 16 Task 1 — Add Code Analysis Configuration and Queue Defaults (Completed)
 
 Pre-Execution Goal Articulation
 
 SITUATION
-- `config/repo_analysis.php` does not yet exist, so Repo Analysis defaults are not codified in runtime config.
-- `config/horizon.php` currently has no dedicated `repo-analysis` queue wait threshold or supervisor definition.
-- Existing config unit tests cover other features but not Repo Analysis defaults, safety excludes, or retention policy shape.
+- `config/repo_analysis.php` does not yet exist, so Code Analysis defaults are not codified in runtime config.
+- `config/horizon.php` currently has no dedicated `code-analysis` queue wait threshold or supervisor definition.
+- Existing config unit tests cover other features but not Code Analysis defaults, safety excludes, or retention policy shape.
 
 TASK
-- Add deterministic, feature-flagged Repo Analysis configuration with safe defaults and retention settings.
-- Add bounded Horizon queue/supervisor defaults for `repo-analysis`.
+- Add deterministic, feature-flagged Code Analysis configuration with safe defaults and retention settings.
+- Add bounded Horizon queue/supervisor defaults for `code-analysis`.
 - Add and pass a dedicated unit test suite proving defaults and fallback/safety behavior.
 
 ACTION
 - [x] Add `tests/Unit/Config/RepoAnalysisConfigTest.php` first, including required assumptions docblock and failure-path checks.
 - [x] Run `php artisan test --filter=RepoAnalysisConfigTest` and confirm red state before implementation.
 - [x] Implement `config/repo_analysis.php` with feature flag default off, deterministic defaults, mandatory excludes, and retention fields.
-- [x] Update `config/horizon.php` with `repo-analysis` wait threshold and bounded supervisor config.
+- [x] Update `config/horizon.php` with `code-analysis` wait threshold and bounded supervisor config.
 - [x] Re-run `php artisan test --filter=RepoAnalysisConfigTest` and confirm green.
 - [x] Record verification evidence and completion review in this task log section.
 
@@ -282,7 +282,7 @@ RESULT
 
 Assumptions and scope boundaries
 - Assumption: Redis and Horizon are available in target environments.
-- Assumption: Repo Analysis remains disabled by default unless explicitly enabled.
+- Assumption: Code Analysis remains disabled by default unless explicitly enabled.
 - Scope boundary: only `config/repo_analysis.php`, `config/horizon.php`, and config unit tests are changed; no API/UI behavior changes.
 
 Failure modes to guard
@@ -299,34 +299,34 @@ Review
     - `require(.../config/repo_analysis.php): Failed to open stream: No such file or directory`.
   - Implemented:
     - `config/repo_analysis.php` with feature flag default off, bounded override fallback, mandatory excludes, and retention policy defaults.
-    - `config/horizon.php` with `redis:repo-analysis` wait threshold and `supervisor-repo-analysis` defaults + environment entries.
+    - `config/horizon.php` with `redis:code-analysis` wait threshold and `supervisor-code-analysis` defaults + environment entries.
   - Green state: `php artisan test --filter=RepoAnalysisConfigTest` passed (`5 passed, 35 assertions`).
 - Conditions where this works:
   - Runtime is using this repository config set and Horizon reads `config/horizon.php`.
-  - Optional env overrides for Repo Analysis remain within defined bounds; invalid values intentionally fall back to safe defaults.
+  - Optional env overrides for Code Analysis remain within defined bounds; invalid values intentionally fall back to safe defaults.
   - Mandatory excludes remain enforced through merged defaults, even with empty/invalid exclude override input.
 - Explicit non-goals / limitations:
   - No API routes, controllers, models, migrations, jobs, or frontend pages were changed.
-  - This task does not enable Repo Analysis by default; it only establishes configuration and queue defaults.
+  - This task does not enable Code Analysis by default; it only establishes configuration and queue defaults.
 
-### Session 16 Task 1 — Draft deterministic repo analysis tool implementation spec (Completed)
+### Session 16 Task 1 — Draft deterministic code analysis tool implementation spec (Completed)
 
 Pre-Execution Goal Articulation
 
 SITUATION
 - Requirements Discovery already provides a robust wizard/state-machine/event-stream foundation across setup, discovery, interrogation, summary, planning, and build.
 - Existing discovery behavior is primarily LLM-driven during discovery/interrogation and does not provide deterministic, reproducible repository-wide analysis artifacts.
-- The requested capability is a robust codebase/repo analysis tool with task-based execution, proper planning, full-repo understanding, and report generation/storage.
+- The requested capability is a robust codebase/code analysis tool with task-based execution, proper planning, full-repo understanding, and report generation/storage.
 
 TASK
-- Produce an implementation-ready technical plan for a new deterministic repo-analysis tool integrated into Agent’s existing architecture.
+- Produce an implementation-ready technical plan for a new deterministic code-analysis tool integrated into Agent’s existing architecture.
 - Align proposed design with existing conventions: queue jobs, phase transitions, event streaming, wizard UX, exports, and policy enforcement.
 - Define concrete scaffolding for schema, routes, controllers, services, jobs, artifacts, reports, and test strategy.
 
 ACTION
 - [x] Inspect existing discovery flow and lifecycle contracts (`InterrogationSession`, controller routes/actions, discovery/summary/build jobs, event writer, export services).
 - [x] Extract reusable patterns (state transitions, queue orchestration, websocket event flow, metadata and build-style task orchestration).
-- [x] Draft implementation-ready spec in `docs/plans/repo-analysis-tool.md` with:
+- [x] Draft implementation-ready spec in `docs/plans/code-analysis-tool.md` with:
   - [x] deterministic architecture and reproducibility guarantees,
   - [x] schema/model design,
   - [x] API surface and wizard phase mapping,
@@ -335,10 +335,10 @@ ACTION
   - [x] verification/testing and rollout plan.
 
 RESULT
-- Completion is proven by a committed plan document that can be executed directly by engineering to implement the new repo-analysis capability with deterministic behavior and testable acceptance criteria.
+- Completion is proven by a committed plan document that can be executed directly by engineering to implement the new code-analysis capability with deterministic behavior and testable acceptance criteria.
 
 Assumptions and scope boundaries
-- Assumption: repo-analysis should be integrated as a new tool that reuses existing platform primitives rather than replacing Requirements Discovery.
+- Assumption: code-analysis should be integrated as a new tool that reuses existing platform primitives rather than replacing Requirements Discovery.
 - Assumption: deterministic analyzers should be first-class, with LLM usage optional and downstream of locked deterministic artifacts.
 - Scope boundary: this task produces architecture/specification only (no runtime feature implementation in this task).
 
@@ -351,7 +351,7 @@ Review
 - [x] Conditions where this works.
 - [x] Explicit non-goals / limitations.
 - Evidence summary:
-  - Added implementation plan: `docs/plans/repo-analysis-tool.md`.
+  - Added implementation plan: `docs/plans/code-analysis-tool.md`.
   - Plan includes concrete class/file scaffolding, API contracts, state machine, job orchestration, artifact schema, report formats, and rollout gates.
 - Conditions where this works:
   - Existing interrogation queue/event architecture remains available for reuse.
@@ -1748,7 +1748,7 @@ RESULT
 - Completion is verified by fail-then-pass evidence from the targeted test filter and by assertions that duplicate start, invalid phase jumps, invalid resume/retry, terminal-state mutation, and competing writes are rejected.
 
 Assumptions and scope boundaries
-- Assumption: repo analysis lifecycle uses phases `0..6` and status values `setup|snapshotting|planning|executing|validating|reporting|completed|paused|failed`.
+- Assumption: code analysis lifecycle uses phases `0..6` and status values `setup|snapshotting|planning|executing|validating|reporting|completed|paused|failed`.
 - Assumption: terminal protection is enforced for `phase=6,status=completed`.
 - Scope boundary: this task only introduces the transition service + unit tests.
 
@@ -1781,7 +1781,7 @@ Review
 Pre-Execution Goal Articulation (STAR)
 
 SITUATION
-- Repo Analysis session/task/event foundations exist, but `app/Support/RepoAnalysis/SnapshotBuilder.php` does not exist yet.
+- Code Analysis session/task/event foundations exist, but `app/Support/RepoAnalysis/SnapshotBuilder.php` does not exist yet.
 - Deterministic requirements are strict: canonical path traversal, deterministic manifest JSON, and snapshot hash stability when file contents are unchanged but mtimes differ.
 - Constraints: scope is limited to `SnapshotBuilder` and fixture-based tests; no queue/controller/UI wiring in this task.
 
@@ -1834,7 +1834,7 @@ Review
   - Default excludes from `repo_analysis.scan.exclude_paths` are always merged with task-specific excludes.
   - Path guard behavior marks invalid include/exclude rules containing `..` as `path_escape_attempts` and rejects symlink traversal.
 - Explicit non-goals / limitations:
-  - This task does not yet persist snapshot outputs to repo-analysis tables or wire jobs/controllers/UI.
+  - This task does not yet persist snapshot outputs to code-analysis tables or wire jobs/controllers/UI.
   - Unreadable-file behavior relies on filesystem permission semantics of the runtime OS.
   - SnapshotBuilder currently returns arrays (manifest + JSON + hash) and does not yet expose a dedicated value object/DTO.
 
@@ -1905,7 +1905,7 @@ Review
 Pre-Execution Goal Articulation (STAR)
 
 SITUATION
-- Repo Analysis foundations exist (schema/models, transition service, event writer, snapshot builder, task graph/analyzers), but pipeline jobs for deterministic execution phases are not yet implemented.
+- Code Analysis foundations exist (schema/models, transition service, event writer, snapshot builder, task graph/analyzers), but pipeline jobs for deterministic execution phases are not yet implemented.
 - There is no integration coverage for queue-driven phase progression, retry-once semantics, pause behavior, resume reuse gating, or snapshot drift pause controls.
 - Constraints: implement only queue jobs in `app/Jobs/RepoAnalysis/*` and orchestration service wiring; no UI/report export screen work in this task.
 
@@ -1937,7 +1937,7 @@ RESULT
 - Completion is verified by fail-then-pass evidence from the integration test file plus persisted state checks for paused/resumed/failed/completed outcomes and emitted diagnostics.
 
 Assumptions and scope boundaries
-- Assumption: repo-analysis jobs must always route to `repo-analysis` queue on Redis; queue retries remain disabled (`tries=1`) and retry policy is implemented in execute-task logic.
+- Assumption: code-analysis jobs must always route to `code-analysis` queue on Redis; queue retries remain disabled (`tries=1`) and retry policy is implemented in execute-task logic.
 - Assumption: deterministic analyzers and snapshot/task graph builders are already available and remain unchanged unless minimal wiring requires it.
 - Scope boundary: no API controller/UI/export UX implementation in this task.
 
@@ -1963,7 +1963,7 @@ Review
   - Green state (`php artisan test --filter=RepoAnalysisExecutionPipelineTest`) passed:
     - `6 passed (35 assertions)`.
 - Conditions where this works:
-  - Jobs are routed on the configured `repo-analysis` queue; misrouted execution throws `QueueMisroutingException`.
+  - Jobs are routed on the configured `code-analysis` queue; misrouted execution throws `QueueMisroutingException`.
   - Snapshot payload is present in session metadata and `snapshot_hash` exists before planning/execution.
   - Retry policy is enforced in task logic (`tries=1` at queue layer): retryable failures auto-retry once, second retryable failure pauses; non-retryable failures pause immediately.
   - Resume reuse preserves completed task outputs only when both `input_hash` and `analyzer_version` match current deterministic plan input.
@@ -1978,15 +1978,15 @@ Review
 Pre-Execution Goal Articulation (STAR)
 
 SITUATION
-- Repo Analysis pipeline jobs exist and currently inline simplified coverage and report logic inside `ValidateRepoAnalysisCoverageJob` and `GenerateRepoAnalysisReportJob`.
-- Dedicated services for coverage gates, deterministic report composition, and versioned exports are not yet implemented for Repo Analysis.
+- Code Analysis pipeline jobs exist and currently inline simplified coverage and report logic inside `ValidateRepoAnalysisCoverageJob` and `GenerateRepoAnalysisReportJob`.
+- Dedicated services for coverage gates, deterministic report composition, and versioned exports are not yet implemented for Code Analysis.
 - Retention cleanup for task-level artifacts is not implemented or scheduled.
 - Constraints from this task: implement only `CoverageGateService`, `ReportComposer`, `ExportService`, retention cleanup command/job + scheduler registration, and add the three specified test files.
 
 TASK
 - Completion must be blocked when coverage gates fail (missing required artifact classes or critical task failures), while allowing completion with warning when test mapping is empty.
 - Report composition must be deterministic with report hash derived from ordered artifact hashes (immutable deterministic inputs), without requiring narrative.
-- Report export must write versioned files under `docs/discovery/repo-analysis/{slug}.md|json`, suffixing on collisions (`-v2`, `-v3`, ...), and enforce export path policy.
+- Report export must write versioned files under `docs/discovery/code-analysis/{slug}.md|json`, suffixing on collisions (`-v2`, `-v3`, ...), and enforce export path policy.
 - Retention cleanup must delete task-level artifacts older than 30 days while preserving report records and exported files.
 
 ACTION
@@ -2003,7 +2003,7 @@ ACTION
   - [x] config updates for required artifact classes and export path policy.
 - [x] Update report/coverage jobs to use the new services and enforce gate blocking semantics.
 - [x] Re-run targeted tests and ensure pass.
-- [x] Verify export paths match `docs/discovery/repo-analysis/{slug}.md|json` pattern.
+- [x] Verify export paths match `docs/discovery/code-analysis/{slug}.md|json` pattern.
 
 RESULT
 - Evidence of correctness is fail-then-pass test output for the three new test classes and assertions proving:
@@ -2031,12 +2031,12 @@ Review
     - `Target class [App\Support\RepoAnalysis\CoverageGateService] does not exist.`
     - `Target class [App\Support\RepoAnalysis\ReportComposer] does not exist.`
     - `Target class [App\Support\RepoAnalysis\ExportService] does not exist.`
-    - `The command "repo-analysis:prune-artifacts" does not exist.`
+    - `The command "code-analysis:prune-artifacts" does not exist.`
   - Green state:
     - `php artisan test tests/Unit/Support/RepoAnalysis/CoverageGateServiceTest.php tests/Unit/Support/RepoAnalysis/ReportComposerTest.php tests/Feature/RepoAnalysis/RepoAnalysisExportAndRetentionTest.php` passed (`8 passed, 26 assertions`).
     - `php artisan test --filter=RepoAnalysisExecutionPipelineTest` passed (`6 passed, 35 assertions`) after job wiring changes.
   - Export path pattern verification:
-    - `RepoAnalysisExportAndRetentionTest` asserts generated markdown/json paths match `/docs/discovery/repo-analysis/{slug}.md|json` and collision suffixes `-v2`, `-v3`.
+    - `RepoAnalysisExportAndRetentionTest` asserts generated markdown/json paths match `/docs/discovery/code-analysis/{slug}.md|json` and collision suffixes `-v2`, `-v3`.
 - Conditions where this works:
   - Coverage gate passes only when snapshot hash exists, required artifact classes are present, and no critical failed tasks exist.
   - No-tests repositories still pass coverage when `test_coverage_map` emits `empty_test_suite` warning.
@@ -2048,18 +2048,18 @@ Review
   - Export service enforces relative export directory policy but does not currently integrate `PathPolicy` helper methods.
   - Partial cleanup failures are counted and tolerated; failed IDs are not yet persisted in a dedicated audit artifact.
 
-### Session 16 Task 9 — Implement Repo Analysis API, Requests, Authorization, Limits, and Audit Logging (Completed)
+### Session 16 Task 9 — Implement Code Analysis API, Requests, Authorization, Limits, and Audit Logging (Completed)
 
 Pre-Execution Goal Articulation (STAR)
 
 SITUATION
-- Repo Analysis core data model, deterministic services, queue jobs, and coverage/report services exist in the working tree.
-- `/agent/api/v1/repo-analysis/*` endpoints, repo-analysis request classes, repo-analysis policy mapping, and lifecycle mutation audit logs are not yet wired.
+- Code Analysis core data model, deterministic services, queue jobs, and coverage/report services exist in the working tree.
+- `/agent/api/v1/code-analysis/*` endpoints, code-analysis request classes, code-analysis policy mapping, and lifecycle mutation audit logs are not yet wired.
 - App policy registration is handled in `AppServiceProvider` (not `AuthServiceProvider`) and admin checks use `User::hasRole('admin')`.
-- Constraints: owner-only by default with admin override, dedicated Repo Analysis active-session cap fixed at `2`, test-first workflow, and non-destructive DB operations only.
+- Constraints: owner-only by default with admin override, dedicated Code Analysis active-session cap fixed at `2`, test-first workflow, and non-destructive DB operations only.
 
 TASK
-- Repo Analysis API lifecycle/read surface is fully exposed and validated.
+- Code Analysis API lifecycle/read surface is fully exposed and validated.
 - Owner/admin authorization, active-session cap, invalid transition handling, invalid task-id handling, and event pagination parity (`since_sequence`) are enforced.
 - Lifecycle mutations are audit-logged.
 - `RepoAnalysisApiLifecycleTest` covers red/green behavior and passes with route registration verification.
@@ -2070,20 +2070,20 @@ ACTION
   - [x] cover CRUD/lifecycle/read endpoints, validation failures, invalid transitions, owner/admin authz, cap enforcement, retry/restart edge cases, paused-only resume, events `since_sequence`, and lifecycle audit log writes.
 - [x] Run `php artisan test --filter=RepoAnalysisApiLifecycleTest` and capture failing output.
 - [x] Implement minimal backend changes in scope:
-  - [x] Register all `/agent/api/v1/repo-analysis/*` routes in `routes/api.php`.
+  - [x] Register all `/agent/api/v1/code-analysis/*` routes in `routes/api.php`.
   - [x] Create `app/Http/Controllers/Api/V1/RepoAnalysisSessionController.php` with scoped lifecycle/read handlers.
   - [x] Add request classes in `app/Http/Requests/Agent/RepoAnalysis/*`.
   - [x] Add `app/Policies/RepoAnalysisSessionPolicy.php` and map it in `AppServiceProvider`.
   - [x] Enforce active-session cap (`2`) at create/start path.
   - [x] Add lifecycle mutation audit log writes via `AuditLogger`.
 - [x] Re-run `php artisan test --filter=RepoAnalysisApiLifecycleTest` and confirm pass.
-- [x] Run `php artisan route:list --path=agent/api/v1/repo-analysis` and confirm endpoint registration.
+- [x] Run `php artisan route:list --path=agent/api/v1/code-analysis` and confirm endpoint registration.
 - [x] Add review notes with assumptions, conditions for correctness, handled/not-handled paths, and limitations.
 
 RESULT
 - Completion evidence is:
   - red-to-green transition for `RepoAnalysisApiLifecycleTest`,
-  - route-list output confirming repo-analysis API endpoints,
+  - route-list output confirming code-analysis API endpoints,
   - audit-log assertions for lifecycle mutation actions.
 
 Failure modes to guard
@@ -2097,7 +2097,7 @@ Review
 - Evidence summary:
   - Red state: `php artisan test --filter=RepoAnalysisApiLifecycleTest` failed with endpoint 404s before API wiring (`Expected response status code [422] but received 404` and related route misses).
   - Green state: `php artisan test --filter=RepoAnalysisApiLifecycleTest` passed (`7 passed, 63 assertions`).
-  - Route registration: `php artisan route:list --path=agent/api/v1/repo-analysis` shows 20 repo-analysis endpoints including lifecycle (`start-snapshot`, `retry-task`, `restart-from-beginning`) and read endpoints (`events`, `tasks`, `artifacts`, `reports`).
+  - Route registration: `php artisan route:list --path=agent/api/v1/code-analysis` shows 20 code-analysis endpoints including lifecycle (`start-snapshot`, `retry-task`, `restart-from-beginning`) and read endpoints (`events`, `tasks`, `artifacts`, `reports`).
   - Implemented files:
     - `app/Http/Controllers/Api/V1/RepoAnalysisSessionController.php`
     - `app/Http/Requests/Agent/RepoAnalysis/StoreRepoAnalysisSessionRequest.php`
@@ -2109,32 +2109,32 @@ Review
     - test coverage in `tests/Feature/Api/V1/RepoAnalysis/RepoAnalysisApiLifecycleTest.php`
 - Conditions where this works:
   - Session ownership is enforced by policy with admin override via `User::hasRole('admin')`.
-  - Create/start mutations enforce dedicated repo-analysis active-session cap from `repo_analysis.user.max_active_sessions_per_user` (default `2`).
+  - Create/start mutations enforce dedicated code-analysis active-session cap from `repo_analysis.user.max_active_sessions_per_user` (default `2`).
   - Lifecycle mutation endpoints return deterministic transition conflicts (`RUN_TRANSITION_CONFLICT`) for invalid states.
   - Retry-task endpoint rejects missing/foreign `task_id` and only requeues failed tasks.
   - Events endpoint preserves `since_sequence` parity via ordered sequence reads and latest-sequence metadata.
   - Lifecycle mutation endpoints write immutable `agent_audit_logs` entries via `AuditLogger`.
 - Explicit non-goals / limitations:
-  - This task does not implement websocket broadcasting route contracts for repo-analysis events; it delivers polling read parity only.
+  - This task does not implement websocket broadcasting route contracts for code-analysis events; it delivers polling read parity only.
   - Restart currently hard-resets session tasks/events/artifacts/reports before requeueing snapshot; no partial restart strategy is implemented.
   - Mutation endpoints are exposed regardless of `repo_analysis.enabled` flag; flag-based route hiding was not added in this task.
 
-## 2026-03-02 Repo Analysis Report Clarity Follow-up
-- [x] Investigate why repo-analysis output is unclear and verify websocket/polling behavior.
+## 2026-03-02 Code Analysis Report Clarity Follow-up
+- [x] Investigate why code-analysis output is unclear and verify websocket/polling behavior.
 - [x] Upgrade report composition/export to produce a detailed human-readable repository report.
-- [x] Clarify Repo Analysis UI semantics for Task Graph, Coverage Gate, and Artifacts.
+- [x] Clarify Code Analysis UI semantics for Task Graph, Coverage Gate, and Artifacts.
 - [x] Add/adjust automated tests for new report and UI behavior.
-- [x] Run focused repo-analysis tests and verify pass.
+- [x] Run focused code-analysis tests and verify pass.
 - [x] Commit and push.
 
 ### Review
 - Upgraded ReportComposer + ExportService so exported markdown now includes repository profile sections (overview, dependencies, structure, backend, frontend, testing, risk hotspots, coverage gate, glossary, limitations, deterministic parsing warnings).
-- Updated Repo Analysis wizard panels: Task Graph now shows DAG dependency context, Coverage Gate now binds to real `coverage_validated` events and displays pass/blocker summary, Artifacts now include type descriptions and payload summaries.
+- Updated Code Analysis wizard panels: Task Graph now shows DAG dependency context, Coverage Gate now binds to real `coverage_validated` events and displays pass/blocker summary, Artifacts now include type descriptions and payload summaries.
 - Added regression checks in `ReportComposerTest` and export markdown assertions in `RepoAnalysisExportAndRetentionTest`.
 - Verification: `php artisan test --filter=RepoAnalysis --stop-on-failure` (64 tests, all passing).
 
-## 2026-03-02 Repo Analysis UX Follow-up
-- [x] Add full report rendering in Repo Analysis UI (not metadata-only cards).
+## 2026-03-02 Code Analysis UX Follow-up
+- [x] Add full report rendering in Code Analysis UI (not metadata-only cards).
 - [x] Auto-start analysis for newly created sessions without requiring manual "Run Next Step".
 - [x] Verify with focused tests and push.
 
@@ -2143,18 +2143,18 @@ Review
 - Create flow now routes to wizard with one-time `autostart=1`; wizard consumes that flag and immediately starts snapshot when session is in setup phase.
 - Verification: `php artisan test --filter=RepoAnalysis --stop-on-failure` and `npm run build` both pass.
 
-## 2026-03-02 Repo Analysis AI-Driven Report Completion
+## 2026-03-02 Code Analysis AI-Driven Report Completion
 - [x] Wire AI artifacts into report payload so final report is primarily AI-authored markdown sections.
 - [x] Update markdown export to include full AI report (with deterministic appendix) instead of only compact profile bullets.
 - [x] Update ReportViewer to render full markdown report in UI and expose deterministic appendix cleanly.
 - [x] Ensure wizard auto-starts analysis when opening a fresh setup session (no manual "Run Next Step" needed).
 - [x] Surface AI enablement as a managed app feature flag in Feature Settings UI config.
 - [x] Add/adjust tests for report composition, API/session runner persistence, and feature-flag exposure.
-- [x] Run focused repo-analysis tests + frontend build verification.
+- [x] Run focused code-analysis tests + frontend build verification.
 - [ ] Commit and push.
 
 ### Review
-- Repo Analysis report composition now unwraps analyzer payload artifacts, includes AI section outputs, and stores `full_report_markdown` for direct UI/export rendering.
+- Code Analysis report composition now unwraps analyzer payload artifacts, includes AI section outputs, and stores `full_report_markdown` for direct UI/export rendering.
 - Markdown export now prints a full narrative report first (AI final synthesis when present), then deterministic appendix + artifact ledger.
 - Wizard auto-start now triggers for fresh setup sessions via metadata/query/inferred setup state, avoiding manual first-step clicks.
 - Feature Settings now includes a managed toggle for `repo_analysis.ai.enabled` and planning uses this flag to enable/disable AI task graph nodes.
@@ -2164,7 +2164,7 @@ Review
   - `php artisan test --filter=FeatureFlagManagerTest --stop-on-failure`
   - `npm run build`
 
-### Session 16 Task 11 — Make Deterministic Repo Analysis Fully Stack-Agnostic (Completed)
+### Session 16 Task 11 — Make Deterministic Code Analysis Fully Stack-Agnostic (Completed)
 
 Pre-Execution Goal Articulation (STAR)
 
@@ -2211,22 +2211,22 @@ Review
   - Deterministic phase still relies on heuristics and does not execute project builds/tests/toolchains.
   - Framework-specific hints are additive only and do not constrain analysis to any single stack.
 
-### Session 16 Task 12 — Remove Repo Analysis Wizard Polling Jitter; Reverb/Echo Event-Driven Updates (Completed)
+### Session 16 Task 12 — Remove Code Analysis Wizard Polling Jitter; Reverb/Echo Event-Driven Updates (Completed)
 
 Pre-Execution Goal Articulation (STAR)
 
 SITUATION
-- Repo Analysis wizard refreshed session/events/tasks/artifacts/reports every 3s via polling.
+- Code Analysis wizard refreshed session/events/tasks/artifacts/reports every 3s via polling.
 - Poll-driven collection reload toggled loading state repeatedly, causing Task Graph table to flash "Loading tasks…" and jump during active runs.
 
 TASK
-- Remove polling behavior from Repo Analysis wizard.
+- Remove polling behavior from Code Analysis wizard.
 - Use Reverb/Echo broadcast events as the primary update mechanism.
 - Eliminate table jitter by keeping existing rows visible during realtime refreshes.
 
 ACTION
-- [x] Removed polling timer loop (`schedulePoll`) from Repo Analysis wizard lifecycle.
-- [x] Kept realtime subscription on `private-repo-analysis.{sessionId}` and merged incoming events directly.
+- [x] Removed polling timer loop (`schedulePoll`) from Code Analysis wizard lifecycle.
+- [x] Kept realtime subscription on `private-code-analysis.{sessionId}` and merged incoming events directly.
 - [x] Added debounced event-driven refresh queues for session and related collections.
 - [x] Scoped collection refreshes to relevant event types only (task/report/coverage/snapshot plan events).
 - [x] Updated collection loading mode to support silent refreshes so existing rows remain visible.
@@ -2254,7 +2254,7 @@ Review
 - Explicit non-goals / limitations:
   - No fallback polling remains in this wizard; if websocket is unavailable, data only updates on manual/user-triggered refresh actions.
 
-### Session 16 Task 13 — Repo Analysis Task Graph UX: Spinners, Status Badges, Overall Progress (Completed)
+### Session 16 Task 13 — Code Analysis Task Graph UX: Spinners, Status Badges, Overall Progress (Completed)
 
 ACTION PLAN
 - [x] Add status badges for task rows with visual severity/state mapping.
@@ -2289,7 +2289,7 @@ ACTION PLAN
 - [x] Wire both analyzers into default task graph profile and coverage requirements.
 - [x] Add explicit AI sections for design patterns and coding standards/code quality, and include them in final report dependencies.
 - [x] Surface these new outputs in report composition and in-app report viewer deterministic appendix.
-- [x] Update tests and run repo-analysis verification suite + frontend build.
+- [x] Update tests and run code-analysis verification suite + frontend build.
 
 Review
 - [x] Evidence summary with exact command outputs.
@@ -2320,3 +2320,24 @@ Review
 - Explicit non-goals / limitations:
   - Deterministic pattern/quality extraction remains heuristic and evidence-based; it does not execute linters/tests/type-checkers.
   - Precision/recall of pattern detection varies by naming conventions and file-content availability in snapshots.
+
+## 2026-03-03 Code Analysis Naming Consolidation
+- [x] Replace remaining legacy repository-centric naming with "Code Analysis"/`code-analysis` in project docs/history and route mentions.
+- [x] Rename discovery/plan spec filenames from prior repository-centric names to `code-analysis-tool*.md`.
+- [x] Re-scan the repository for stale user-facing naming.
+- [x] Run targeted verification (PHP tests + frontend build).
+- [ ] Commit changes.
+
+### Review
+- `rg` scan confirms zero remaining legacy repository-centric naming strings in tracked source/docs.
+- Renamed docs specs:
+  - `docs/discovery/code-analysis-tool.md`
+  - `docs/plans/code-analysis-tool.md`
+  - `docs/plans/code-analysis-tool-v2.md`
+- Verification:
+  - `php artisan test --filter=RepoAnalysisNavigationTest` (pass)
+  - `php artisan test --filter=RepoAnalysisApiLifecycleTest` (pass)
+  - `php artisan test --filter=RepoAnalysisExecutionPipelineTest` (pass)
+  - `npm run build` (pass)
+- Notes:
+  - Initial parallel test run failed due shared Postgres test DB migration races; sequential reruns were green.

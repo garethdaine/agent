@@ -36,7 +36,7 @@ const load = async () => {
     error.value = '';
 
     try {
-        const { data } = await axios.get(`/agent/api/v1/repo-analysis/sessions/${props.sessionId}`);
+        const { data } = await axios.get(`/agent/api/v1/code-analysis/sessions/${props.sessionId}`);
         form.name = data?.data?.name ?? '';
         form.project_directory = data?.data?.project_directory ?? '';
         form.analyzer_profile = data?.data?.analyzer_profile ?? 'default';
@@ -55,7 +55,7 @@ const save = async () => {
     validation.value = {};
 
     try {
-        await axios.patch(`/agent/api/v1/repo-analysis/sessions/${props.sessionId}`, {
+        await axios.patch(`/agent/api/v1/code-analysis/sessions/${props.sessionId}`, {
             name: form.name,
             project_directory: form.project_directory,
             analyzer_profile: form.analyzer_profile,
@@ -77,17 +77,17 @@ onMounted(load);
 </script>
 
 <template>
-    <AppLayout title="Repo Analysis Settings">
-        <Head title="Repo Analysis Settings" />
+    <AppLayout title="Code Analysis Settings">
+        <Head title="Code Analysis Settings" />
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Repo Analysis Settings</h2>
+                <h2 class="text-xl font-semibold leading-tight text-foreground">Code Analysis Settings</h2>
                 <div class="flex items-center gap-2">
-                    <Link :href="route('tools.repo-analysis.wizard', sessionId)">
+                    <Link :href="route('tools.code-analysis.wizard', sessionId)">
                         <Button variant="outline" size="sm">Back to Wizard</Button>
                     </Link>
-                    <Link :href="route('tools.repo-analysis.index')">
+                    <Link :href="route('tools.code-analysis.index')">
                         <Button variant="outline" size="sm">Session List</Button>
                     </Link>
                 </div>

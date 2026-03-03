@@ -16,7 +16,7 @@ class ExportService
     public function export(RepoAnalysisSession $session, RepoAnalysisReport $report): array
     {
         $relativeDirectory = $this->normalizedRelativeDirectory(
-            (string) config('repo_analysis.exports.relative_directory', 'docs/discovery/repo-analysis')
+            (string) config('repo_analysis.exports.relative_directory', 'docs/discovery/code-analysis')
         );
         $projectRoot = $this->resolvedProjectRoot((string) $session->project_directory);
         $directory = $projectRoot.'/'.$relativeDirectory;
@@ -108,7 +108,7 @@ class ExportService
     {
         $base = trim((string) $session->name);
         if ($base === '') {
-            $base = 'repo-analysis-session-'.$session->id;
+            $base = 'code-analysis-session-'.$session->id;
         }
 
         $slug = Str::of($base)
@@ -117,7 +117,7 @@ class ExportService
             ->trim('-')
             ->value();
 
-        return $slug !== '' ? $slug : 'repo-analysis-session-'.$session->id;
+        return $slug !== '' ? $slug : 'code-analysis-session-'.$session->id;
     }
 
     /**
@@ -126,7 +126,7 @@ class ExportService
     private function markdown(RepoAnalysisSession $session, RepoAnalysisReport $report, array $payload): string
     {
         $lines = [
-            '# Repo Analysis Report',
+            '# Code Analysis Report',
             '',
             'Session: '.$session->id,
             'Runner: '.(string) data_get($payload, 'runner_type', $session->runner_type ?? 'claude'),
@@ -545,7 +545,7 @@ class ExportService
             return [];
         }
 
-        $lines = ['### Repo Analysis Glossary', ''];
+        $lines = ['### Code Analysis Glossary', ''];
 
         foreach (['task_graph', 'coverage_gate', 'artifacts'] as $key) {
             $value = trim((string) ($glossary[$key] ?? ''));

@@ -22,7 +22,7 @@ class PruneRepoAnalysisArtifactsJob implements ShouldQueue
         public bool $dryRun = false,
     ) {
         $this->onConnection(config('repo_analysis.queue.connection', 'redis'));
-        $this->onQueue(config('repo_analysis.queue.name', 'repo-analysis'));
+        $this->onQueue(config('repo_analysis.queue.name', 'code-analysis'));
     }
 
     /**

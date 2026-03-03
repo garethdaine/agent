@@ -35,7 +35,7 @@ Broadcast::channel('delegation.user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
 });
 
-Broadcast::channel('repo-analysis.{sessionId}', function ($user, $sessionId) {
+Broadcast::channel('code-analysis.{sessionId}', function ($user, $sessionId) {
     $session = RepoAnalysisSession::query()->find((int) $sessionId);
     if ($session === null) {
         return false;

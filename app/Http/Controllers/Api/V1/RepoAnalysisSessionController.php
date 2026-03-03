@@ -807,7 +807,7 @@ class RepoAnalysisSessionController extends Controller
 
         return ErrorEnvelope::make(
             'ACTIVE_SESSION_LIMIT_REACHED',
-            sprintf('You already have %d active repo analysis sessions.', $maxActiveSessions),
+            sprintf('You already have %d active code analysis sessions.', $maxActiveSessions),
             409
         );
     }

@@ -29,7 +29,7 @@ class PlanRepoAnalysisTasksJob implements ShouldQueue
         public bool $dispatchNext = true,
     ) {
         $this->onConnection(config('repo_analysis.queue.connection', 'redis'));
-        $this->onQueue(config('repo_analysis.queue.name', 'repo-analysis'));
+        $this->onQueue(config('repo_analysis.queue.name', 'code-analysis'));
     }
 
     public function handle(

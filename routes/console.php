@@ -42,7 +42,7 @@ Schedule::command('delegation:recompute-metrics')
 Schedule::command('nl-parse:cleanup')
     ->dailyAt('03:00');
 
-Schedule::command('repo-analysis:prune-artifacts')
+Schedule::command('code-analysis:prune-artifacts')
     ->dailyAt('03:40')
     ->withoutOverlapping();
 

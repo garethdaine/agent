@@ -35,19 +35,19 @@ const submit = async () => {
     validation.value = {};
 
     try {
-        const { data } = await axios.post('/agent/api/v1/repo-analysis/sessions', form);
+        const { data } = await axios.post('/agent/api/v1/code-analysis/sessions', form);
         const sessionId = data?.data?.id;
 
         if (sessionId) {
-            router.visit(`${route('tools.repo-analysis.wizard', sessionId)}?autostart=1`);
+            router.visit(`${route('tools.code-analysis.wizard', sessionId)}?autostart=1`);
             return;
         }
 
-        router.visit(route('tools.repo-analysis.index'));
+        router.visit(route('tools.code-analysis.index'));
     } catch (e) {
         const payload = e?.response?.data ?? {};
         validation.value = payload?.error?.details ?? payload?.errors ?? {};
-        error.value = payload?.error?.message ?? payload?.message ?? 'Failed to create repo analysis session.';
+        error.value = payload?.error?.message ?? payload?.message ?? 'Failed to create code analysis session.';
     } finally {
         submitting.value = false;
     }
@@ -55,13 +55,13 @@ const submit = async () => {
 </script>
 
 <template>
-    <AppLayout title="New Repo Analysis Session">
-        <Head title="New Repo Analysis Session" />
+    <AppLayout title="New Code Analysis Session">
+        <Head title="New Code Analysis Session" />
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">New Repo Analysis Session</h2>
-                <Link :href="route('tools.repo-analysis.index')">
+                <h2 class="text-xl font-semibold leading-tight text-foreground">New Code Analysis Session</h2>
+                <Link :href="route('tools.code-analysis.index')">
                     <Button variant="outline" size="sm">
                         <ArrowLeft class="h-4 w-4" />
                         Back

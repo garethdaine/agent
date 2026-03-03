@@ -71,7 +71,7 @@ class StoreRepoAnalysisSessionRequest extends FormRequest
             if ($activeSessions >= $maxActiveSessions) {
                 $validator->errors()->add(
                     'project_directory',
-                    sprintf('You already have %d active repo analysis sessions.', $maxActiveSessions)
+                    sprintf('You already have %d active code analysis sessions.', $maxActiveSessions)
                 );
             }
         });
