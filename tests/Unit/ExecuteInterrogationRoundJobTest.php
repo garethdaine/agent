@@ -459,10 +459,12 @@ class ExecuteInterrogationRoundJobTest extends TestCase
 
                 if ($commandCalls < 3) {
                     $this->assertSame('codex-session-123', (string) $sessionArg->cli_session_id);
+
                     return ['php', '-r', 'echo json_encode(["question_text" => "How should published product docs and tooltip content be versioned in phase 1?", "answer_type" => "choice", "options" => ["Single live version only","Snapshot per release"], "progress_estimate" => 62, "is_complete" => false]);'];
                 }
 
                 $this->assertSame('', (string) $sessionArg->cli_session_id);
+
                 return ['php', '-r', 'echo json_encode(["question_text" => "Should generated docs include code examples in every article?", "answer_type" => "choice", "options" => ["Required by default","Optional per page"], "progress_estimate" => 70, "is_complete" => false]);'];
             });
         $adapter->shouldReceive('buildEnvironment')
@@ -740,7 +742,232 @@ class ExecuteInterrogationRoundJobTest extends TestCase
         });
     }
 
-    private function interrogatingSession(): InterrogationSession
+    public function test_dynamic_question_bank_does_not_repeat_canonical_key_within_run(): void
+    {
+        Queue::fake();
+
+        $session = $this->interrogatingSession([
+            'dynamic_question_bank_mode' => true,
+            'dynamic_question_bank' => [
+                [
+                    'canonical_key' => 'interrogation.reliability.success_contract',
+                    'question_id' => 'q-interrogation-reliability-success-contract',
+                    'prompt' => 'Which outcome policy defines what counts as a successful run?',
+                    'answer_type' => 'choice',
+                    'options' => ['Strict terminal success', 'Assisted counts as success'],
+                    'depends_on' => [],
+                    'category' => 'reliability',
+                    'decision_axis' => 'success_contract',
+                    'rationale' => 'Needed for reliability scoring.',
+                    'priority' => 1,
+                ],
+            ],
+        ]);
+
+        $job = new ExecuteInterrogationRoundJob((int) $session->id, 'Start interrogation.', true);
+        $this->app->call([$job, 'handle']);
+
+        $firstQuestion = InterrogationEvent::query()
+            ->where('interrogation_session_id', $session->id)
+            ->where('event_type', InterrogationEvent::TYPE_QUESTION)
+            ->orderByDesc('sequence')
+            ->first();
+
+        $this->assertNotNull($firstQuestion);
+        $this->assertSame(
+            'interrogation.reliability.success_contract',
+            data_get($firstQuestion?->payload, 'canonical_key')
+        );
+
+        $answerJob = new ExecuteInterrogationRoundJob(
+            (int) $session->id,
+            'Strict terminal success.',
+            false,
+            [
+                'question_id' => 'q-interrogation-reliability-success-contract',
+                'answer_type' => 'choice',
+                'selected_option' => 'Strict terminal success',
+            ],
+        );
+        $this->app->call([$answerJob, 'handle']);
+
+        $this->assertSame(
+            1,
+            InterrogationEvent::query()
+                ->where('interrogation_session_id', $session->id)
+                ->where('event_type', InterrogationEvent::TYPE_QUESTION)
+                ->where('payload->canonical_key', 'interrogation.reliability.success_contract')
+                ->count()
+        );
+    }
+
+    public function test_dynamic_question_bank_respects_dependency_gating(): void
+    {
+        $session = $this->interrogatingSession([
+            'dynamic_question_bank_mode' => true,
+            'dynamic_question_bank' => [
+                [
+                    'canonical_key' => 'interrogation.reliability.scoring_model',
+                    'question_id' => 'q-interrogation-reliability-scoring-model',
+                    'prompt' => 'Which reliability scoring model should be used?',
+                    'answer_type' => 'choice',
+                    'options' => ['Pass-rate', 'Weighted severity'],
+                    'depends_on' => ['interrogation.reliability.success_contract'],
+                    'category' => 'reliability',
+                    'decision_axis' => 'scoring_model',
+                    'rationale' => 'Dependent on success contract.',
+                    'priority' => 1,
+                ],
+                [
+                    'canonical_key' => 'interrogation.reliability.success_contract',
+                    'question_id' => 'q-interrogation-reliability-success-contract',
+                    'prompt' => 'Which run-success contract should be canonical?',
+                    'answer_type' => 'choice',
+                    'options' => ['Strict', 'Assisted'],
+                    'depends_on' => [],
+                    'category' => 'reliability',
+                    'decision_axis' => 'success_contract',
+                    'rationale' => 'Prerequisite for scoring.',
+                    'priority' => 2,
+                ],
+            ],
+        ]);
+
+        $job = new ExecuteInterrogationRoundJob((int) $session->id, 'Start interrogation.', true);
+        $this->app->call([$job, 'handle']);
+
+        $askedQuestionIds = InterrogationEvent::query()
+            ->where('interrogation_session_id', $session->id)
+            ->where('event_type', InterrogationEvent::TYPE_QUESTION)
+            ->pluck('payload')
+            ->map(static fn (array $payload): string => (string) ($payload['question_id'] ?? ''))
+            ->all();
+
+        $this->assertContains('q-interrogation-reliability-success-contract', $askedQuestionIds);
+        $this->assertNotContains('q-interrogation-reliability-scoring-model', $askedQuestionIds);
+    }
+
+    public function test_dynamic_question_bank_rejects_near_duplicate_phrasing_via_semantic_dedupe(): void
+    {
+        Queue::fake();
+
+        $session = $this->interrogatingSession([
+            'dynamic_question_bank_mode' => true,
+            'dynamic_question_bank' => [
+                [
+                    'canonical_key' => 'interrogation.reliability.success_contract',
+                    'question_id' => 'q-interrogation-reliability-success-contract',
+                    'prompt' => 'Which outcome policy defines what counts as a successful run?',
+                    'answer_type' => 'choice',
+                    'options' => ['Strict terminal success', 'Assisted success'],
+                    'depends_on' => [],
+                    'category' => 'reliability',
+                    'decision_axis' => 'success_contract',
+                    'rationale' => 'First success policy axis.',
+                    'priority' => 1,
+                ],
+                [
+                    'canonical_key' => 'interrogation.reliability.outcome_policy_reporting',
+                    'question_id' => 'q-interrogation-reliability-outcome-policy-reporting',
+                    'prompt' => 'Which outcome policy defines what counts as successful run?',
+                    'answer_type' => 'choice',
+                    'options' => ['Strict terminal success', 'Assisted success'],
+                    'depends_on' => [],
+                    'category' => 'reliability',
+                    'decision_axis' => 'outcome_policy_reporting',
+                    'rationale' => 'Near-duplicate phrasing that should be suppressed.',
+                    'priority' => 2,
+                ],
+            ],
+        ]);
+
+        $firstRound = new ExecuteInterrogationRoundJob((int) $session->id, 'Start interrogation.', true);
+        $this->app->call([$firstRound, 'handle']);
+
+        $answerRound = new ExecuteInterrogationRoundJob(
+            (int) $session->id,
+            'Strict terminal success.',
+            false,
+            [
+                'question_id' => 'q-interrogation-reliability-success-contract',
+                'answer_type' => 'choice',
+                'selected_option' => 'Strict terminal success',
+            ],
+        );
+        $this->app->call([$answerRound, 'handle']);
+
+        $this->assertFalse(
+            InterrogationEvent::query()
+                ->where('interrogation_session_id', $session->id)
+                ->where('event_type', InterrogationEvent::TYPE_QUESTION)
+                ->where('payload->question_id', 'q-interrogation-reliability-outcome-policy-reporting')
+                ->exists()
+        );
+
+        $session->refresh();
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $suppressed = is_array($metadata['suppressed_canonical_keys'] ?? null) ? $metadata['suppressed_canonical_keys'] : [];
+
+        $this->assertContains('interrogation.reliability.outcome_policy_reporting', $suppressed);
+    }
+
+    public function test_dynamic_question_bank_ends_when_exhausted(): void
+    {
+        Queue::fake();
+
+        $session = $this->interrogatingSession([
+            'dynamic_question_bank_mode' => true,
+            'dynamic_question_bank' => [
+                [
+                    'canonical_key' => 'interrogation.scope.pilot_wedge',
+                    'question_id' => 'q-interrogation-scope-pilot-wedge',
+                    'prompt' => 'Which pilot wedge should be prioritized?',
+                    'answer_type' => 'choice',
+                    'options' => ['Engineering workflows', 'Internal automation'],
+                    'depends_on' => [],
+                    'category' => 'scope',
+                    'decision_axis' => 'pilot_wedge',
+                    'rationale' => 'Top-level prioritization.',
+                    'priority' => 1,
+                ],
+            ],
+        ]);
+
+        $firstRound = new ExecuteInterrogationRoundJob((int) $session->id, 'Start interrogation.', true);
+        $this->app->call([$firstRound, 'handle']);
+
+        $answerRound = new ExecuteInterrogationRoundJob(
+            (int) $session->id,
+            'Engineering workflows.',
+            false,
+            [
+                'question_id' => 'q-interrogation-scope-pilot-wedge',
+                'answer_type' => 'choice',
+                'selected_option' => 'Engineering workflows',
+            ],
+        );
+        $this->app->call([$answerRound, 'handle']);
+
+        $session->refresh();
+
+        $this->assertSame(InterrogationSession::PHASE_SUMMARY, (int) $session->phase);
+        $this->assertSame(InterrogationSession::STATUS_SUMMARIZING, (string) $session->status);
+
+        $this->assertTrue(
+            InterrogationEvent::query()
+                ->where('interrogation_session_id', $session->id)
+                ->where('event_type', InterrogationEvent::TYPE_SYSTEM)
+                ->where('payload->notice', 'interrogation_complete')
+                ->exists()
+        );
+
+        Queue::assertPushed(ExecuteInterrogationSummaryJob::class);
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    private function interrogatingSession(array $metadata = []): InterrogationSession
     {
         $user = User::factory()->create();
 
@@ -752,7 +979,7 @@ class ExecuteInterrogationRoundJobTest extends TestCase
             'interrogation_type' => InterrogationSession::TYPE_FEATURE,
             'status' => InterrogationSession::STATUS_INTERROGATING,
             'phase' => InterrogationSession::PHASE_INTERROGATION,
-            'metadata_json' => [],
+            'metadata_json' => $metadata,
         ]);
     }
 }

@@ -43,6 +43,26 @@ class CodexAdapter implements InterrogationRunnerAdapter
     /**
      * @return array<int, string>
      */
+    public function buildQuestionBankCommand(InterrogationSession $session, string $userMessage, string $systemPrompt): array
+    {
+        $command = $this->baseExecCommand();
+
+        if (is_string($session->cli_session_id) && $session->cli_session_id !== '') {
+            $command[] = 'resume';
+            $command[] = $session->cli_session_id;
+        }
+
+        $command[] = '--json';
+        $command[] = '--output-schema';
+        $command[] = $this->schemaFilePath('question-bank', $this->questionBankSchema());
+        $command[] = $this->composePrompt($systemPrompt, $userMessage);
+
+        return $command;
+    }
+
+    /**
+     * @return array<int, string>
+     */
     public function buildSummaryCommand(InterrogationSession $session, string $summaryPrompt, string $systemPrompt): array
     {
         $command = $this->baseExecCommand();
@@ -452,6 +472,7 @@ class CodexAdapter implements InterrogationRunnerAdapter
 
         return [
             'question_id' => (string) ($decoded['question_id'] ?? 'q-'.substr(sha1($questionText), 0, 12)),
+            'canonical_key' => is_string($decoded['canonical_key'] ?? null) ? $decoded['canonical_key'] : null,
             'question_text' => $questionText,
             'answer_type' => (string) ($decoded['answer_type'] ?? 'freetext'),
             'options' => is_array($decoded['options'] ?? null) ? array_values($decoded['options']) : [],
@@ -459,6 +480,30 @@ class CodexAdapter implements InterrogationRunnerAdapter
             'category' => (string) ($decoded['category'] ?? 'general'),
             'progress_estimate' => (int) ($decoded['progress_estimate'] ?? 0),
             'is_complete' => (bool) ($decoded['is_complete'] ?? false),
+            'cli_session_id' => is_string($decoded['cli_session_id'] ?? null)
+                ? $decoded['cli_session_id']
+                : (is_string($decoded['session_id'] ?? null) ? $decoded['session_id'] : null),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function parseQuestionBankResponse(string $output): ?array
+    {
+        $decoded = $this->decodeBestEffortJson($output);
+
+        if (! is_array($decoded) || ! is_array($decoded['questions'] ?? null)) {
+            return null;
+        }
+
+        $questions = array_values(array_filter(
+            $decoded['questions'],
+            static fn ($question): bool => is_array($question)
+        ));
+
+        return [
+            'questions' => $questions,
             'cli_session_id' => is_string($decoded['cli_session_id'] ?? null)
                 ? $decoded['cli_session_id']
                 : (is_string($decoded['session_id'] ?? null) ? $decoded['session_id'] : null),
@@ -825,6 +870,7 @@ class CodexAdapter implements InterrogationRunnerAdapter
             'additionalProperties' => false,
             'properties' => [
                 'question_id' => ['type' => 'string'],
+                'canonical_key' => ['type' => 'string'],
                 'question_text' => ['type' => 'string'],
                 'answer_type' => ['type' => 'string', 'enum' => ['choice', 'freetext', 'skip_allowed']],
                 'options' => ['type' => 'array', 'items' => ['type' => 'string']],
@@ -832,6 +878,38 @@ class CodexAdapter implements InterrogationRunnerAdapter
                 'category' => ['type' => 'string'],
                 'progress_estimate' => ['type' => 'integer'],
                 'is_complete' => ['type' => 'boolean'],
+                'cli_session_id' => ['type' => 'string'],
+            ],
+        ], JSON_UNESCAPED_SLASHES) ?: '{}';
+    }
+
+    private function questionBankSchema(): string
+    {
+        return json_encode([
+            'type' => 'object',
+            'required' => ['questions'],
+            'additionalProperties' => false,
+            'properties' => [
+                'questions' => [
+                    'type' => 'array',
+                    'minItems' => 1,
+                    'maxItems' => 30,
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['category', 'decision_axis', 'prompt', 'answer_type', 'options', 'depends_on_axes', 'priority', 'rationale'],
+                        'additionalProperties' => false,
+                        'properties' => [
+                            'category' => ['type' => 'string'],
+                            'decision_axis' => ['type' => 'string'],
+                            'prompt' => ['type' => 'string'],
+                            'answer_type' => ['type' => 'string', 'enum' => ['choice', 'freetext']],
+                            'options' => ['type' => 'array', 'items' => ['type' => 'string']],
+                            'depends_on_axes' => ['type' => 'array', 'items' => ['type' => 'string']],
+                            'priority' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100],
+                            'rationale' => ['type' => 'string'],
+                        ],
+                    ],
+                ],
                 'cli_session_id' => ['type' => 'string'],
             ],
         ], JSON_UNESCAPED_SLASHES) ?: '{}';

@@ -7,6 +7,9 @@ use App\Models\InterrogationSession;
 use App\Support\Interrogation\AdapterFactory;
 use App\Support\Interrogation\ConversationReconstructor;
 use App\Support\Interrogation\InterrogationEventWriter;
+use App\Support\Interrogation\InterrogationQuestionBankGenerator;
+use App\Support\Interrogation\InterrogationQuestionBankPlanner;
+use App\Support\Interrogation\InterrogationSemanticDeduper;
 use App\Support\Interrogation\QuestionPayloadGuard;
 use App\Support\Interrogation\SessionStateTransitionService;
 use App\Support\Interrogation\SystemPromptResolver;
@@ -59,6 +62,9 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
         SystemPromptResolver $promptResolver,
         ConversationReconstructor $reconstructor,
         QuestionPayloadGuard $questionPayloadGuard,
+        InterrogationQuestionBankGenerator $questionBankGenerator,
+        InterrogationQuestionBankPlanner $questionBankPlanner,
+        InterrogationSemanticDeduper $semanticDeduper,
     ): void {
         $session = InterrogationSession::query()->find($this->sessionId);
 
@@ -76,9 +82,17 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             $payload = is_array($this->answerPayload) ? $this->answerPayload : [];
             $answerType = (string) ($payload['answer_type'] ?? 'freetext');
             $questionId = isset($payload['question_id']) ? trim((string) $payload['question_id']) : '';
+            $canonicalKey = isset($payload['canonical_key']) && is_string($payload['canonical_key'])
+                ? trim((string) $payload['canonical_key'])
+                : '';
+
+            if ($canonicalKey === '' && $questionId !== '') {
+                $canonicalKey = (string) ($this->resolveCanonicalKeyForQuestionId($session, $questionId) ?? '');
+            }
 
             $normalized = [
                 'question_id' => $questionId !== '' ? $questionId : null,
+                'canonical_key' => $canonicalKey !== '' ? $canonicalKey : null,
                 'answer_type' => $answerType,
                 'answer_text' => (string) ($payload['answer_text'] ?? ''),
                 'selected_option' => (string) ($payload['selected_option'] ?? ''),
@@ -95,9 +109,27 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             }
 
             $writer->appendAnswer($normalized);
+            $this->recordAnsweredCanonicalKey($session, $normalized);
         }
 
         try {
+            if ($this->shouldUseDynamicQuestionBank($session)) {
+                $handled = $this->handleDynamicQuestionBankRound(
+                    session: $session,
+                    writer: $writer,
+                    adapterFactory: $adapterFactory,
+                    transitions: $transitions,
+                    promptResolver: $promptResolver,
+                    questionBankGenerator: $questionBankGenerator,
+                    questionBankPlanner: $questionBankPlanner,
+                    semanticDeduper: $semanticDeduper,
+                );
+
+                if ($handled) {
+                    return;
+                }
+            }
+
             $adapter = $adapterFactory->make((string) $session->runner_type);
             $systemPrompt = $promptResolver->resolveForPhase($session, 'interrogation');
             $roundPrompt = $this->buildRoundPromptWithAnsweredContext($session, $this->userMessage, $questionPayloadGuard);
@@ -445,6 +477,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             }
 
             if (! $done) {
+                $this->recordAskedCanonicalKey($session, $question);
                 $writer->appendQuestion($question);
 
                 if ($session->status !== InterrogationSession::STATUS_INTERROGATING) {
@@ -1120,6 +1153,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
 
         return [
             'question_id' => $questionId !== '' ? $questionId : null,
+            'canonical_key' => is_string($question['canonical_key'] ?? null) ? $question['canonical_key'] : null,
             'answer_type' => $answerType,
             'answer_text' => (string) ($priorAnswerPayload['answer_text'] ?? ''),
             'selected_option' => (string) ($priorAnswerPayload['selected_option'] ?? ''),
@@ -1129,5 +1163,251 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             'auto_resolved_duplicate' => true,
             'source_question_id' => (string) ($priorAnswerPayload['question_id'] ?? ''),
         ];
+    }
+
+    private function shouldUseDynamicQuestionBank(InterrogationSession $session): bool
+    {
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $mode = data_get($metadata, 'dynamic_question_bank_mode');
+
+        if (is_bool($mode)) {
+            return $mode;
+        }
+
+        return false;
+    }
+
+    private function resolveCanonicalKeyForQuestionId(InterrogationSession $session, string $questionId): ?string
+    {
+        $questionId = trim($questionId);
+        if ($questionId === '') {
+            return null;
+        }
+
+        $payload = $session->events()
+            ->where('event_type', InterrogationEvent::TYPE_QUESTION)
+            ->where('payload->question_id', $questionId)
+            ->orderByDesc('sequence')
+            ->value('payload');
+
+        if (! is_array($payload)) {
+            return null;
+        }
+
+        $canonicalKey = trim((string) ($payload['canonical_key'] ?? ''));
+
+        return $canonicalKey === '' ? null : $canonicalKey;
+    }
+
+    /**
+     * @param  array<string, mixed>  $answerPayload
+     */
+    private function recordAnsweredCanonicalKey(InterrogationSession $session, array $answerPayload): void
+    {
+        $canonicalKey = trim((string) ($answerPayload['canonical_key'] ?? ''));
+        if ($canonicalKey === '') {
+            return;
+        }
+
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $metadata['answered_canonical_keys'] = $this->mergeCanonicalKey(
+            (array) ($metadata['answered_canonical_keys'] ?? []),
+            $canonicalKey,
+        );
+        $metadata['locked_policy_snapshot'] = is_array($metadata['locked_policy_snapshot'] ?? null)
+            ? $metadata['locked_policy_snapshot']
+            : [];
+        $metadata['locked_policy_snapshot'][$canonicalKey] = $this->summarizeAnswerPayload($answerPayload);
+        $session->metadata_json = $metadata;
+        $session->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $questionPayload
+     */
+    private function recordAskedCanonicalKey(InterrogationSession $session, array $questionPayload): void
+    {
+        $canonicalKey = trim((string) ($questionPayload['canonical_key'] ?? ''));
+        if ($canonicalKey === '') {
+            return;
+        }
+
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $metadata['asked_canonical_keys'] = $this->mergeCanonicalKey(
+            (array) ($metadata['asked_canonical_keys'] ?? []),
+            $canonicalKey,
+        );
+        $session->metadata_json = $metadata;
+        $session->save();
+    }
+
+    /**
+     * @param  array<int, mixed>  $keys
+     * @return array<int, string>
+     */
+    private function mergeCanonicalKey(array $keys, string $canonicalKey): array
+    {
+        $normalized = array_values(array_filter(
+            array_map(static fn ($value): string => is_string($value) ? trim($value) : '', $keys),
+            static fn (string $value): bool => $value !== ''
+        ));
+
+        $normalized[] = trim($canonicalKey);
+
+        return array_values(array_unique(array_filter(
+            $normalized,
+            static fn (string $value): bool => $value !== ''
+        )));
+    }
+
+    private function handleDynamicQuestionBankRound(
+        InterrogationSession $session,
+        InterrogationEventWriter $writer,
+        AdapterFactory $adapterFactory,
+        SessionStateTransitionService $transitions,
+        SystemPromptResolver $promptResolver,
+        InterrogationQuestionBankGenerator $questionBankGenerator,
+        InterrogationQuestionBankPlanner $questionBankPlanner,
+        InterrogationSemanticDeduper $semanticDeduper,
+    ): bool {
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $questionBank = is_array($metadata['dynamic_question_bank'] ?? null)
+            ? $metadata['dynamic_question_bank']
+            : [];
+
+        if ($questionBank === []) {
+            $adapter = $adapterFactory->make((string) $session->runner_type);
+            $systemPrompt = $promptResolver->resolveForPhase($session, 'interrogation');
+            $generated = $questionBankGenerator->generate($session, $adapter, $systemPrompt);
+
+            if (! is_array($generated) || ! is_array($generated['questions'] ?? null) || $generated['questions'] === []) {
+                return false;
+            }
+
+            $questionBank = $generated['questions'];
+            $metadata['dynamic_question_bank'] = $questionBank;
+            $metadata['dynamic_question_bank_generated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+
+            if (is_string($generated['cli_session_id'] ?? null) && trim((string) $generated['cli_session_id']) !== '') {
+                $session->cli_session_id = trim((string) $generated['cli_session_id']);
+            }
+        }
+
+        $askedCanonicalKeys = array_values(array_filter(
+            (array) ($metadata['asked_canonical_keys'] ?? []),
+            static fn ($value): bool => is_string($value) && trim($value) !== ''
+        ));
+        $answeredCanonicalKeys = array_values(array_filter(
+            (array) ($metadata['answered_canonical_keys'] ?? []),
+            static fn ($value): bool => is_string($value) && trim($value) !== ''
+        ));
+        $suppressedCanonicalKeys = array_values(array_filter(
+            (array) ($metadata['suppressed_canonical_keys'] ?? []),
+            static fn ($value): bool => is_string($value) && trim($value) !== ''
+        ));
+        $askedQuestionTexts = $this->askedQuestionTexts($session);
+
+        $selection = $questionBankPlanner->nextEligibleQuestion(
+            questionBank: $questionBank,
+            askedCanonicalKeys: $askedCanonicalKeys,
+            answeredCanonicalKeys: $answeredCanonicalKeys,
+            suppressedCanonicalKeys: $suppressedCanonicalKeys,
+            askedQuestionTexts: $askedQuestionTexts,
+            deduper: $semanticDeduper,
+            threshold: (float) config('agent.interrogation.semantic_dedupe_similarity_threshold', 0.88),
+        );
+
+        $newSuppressed = array_values(array_unique(array_merge(
+            $suppressedCanonicalKeys,
+            (array) ($selection['suppressed'] ?? [])
+        )));
+        $metadata['suppressed_canonical_keys'] = $newSuppressed;
+
+        $question = is_array($selection['question'] ?? null) ? $selection['question'] : null;
+
+        if ($question === null) {
+            $session->metadata_json = $metadata;
+            $session->save();
+
+            $writer->appendSystem([
+                'notice' => 'interrogation_complete',
+                'message' => 'Interrogation completed: no eligible unanswered decision axes remain.',
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ]);
+
+            $moved = $transitions->transitionPhase(
+                (int) $session->id,
+                InterrogationSession::PHASE_INTERROGATION,
+                InterrogationSession::PHASE_SUMMARY,
+                InterrogationSession::STATUS_SUMMARIZING,
+                [InterrogationSession::STATUS_INTERROGATING],
+            );
+
+            if ($moved) {
+                $session->refresh();
+                (new InterrogationEventWriter($session))->appendPhaseTransition(
+                    InterrogationSession::PHASE_INTERROGATION,
+                    InterrogationSession::PHASE_SUMMARY,
+                    (string) $session->status,
+                    ['at' => CarbonImmutable::now('UTC')->toIso8601String()],
+                );
+                ExecuteInterrogationSummaryJob::dispatch((int) $session->id);
+            }
+
+            return true;
+        }
+
+        $canonicalKey = trim((string) ($question['canonical_key'] ?? ''));
+        $totalQuestions = max(1, count($questionBank));
+        $nextAskedCount = count(array_unique(array_merge($askedCanonicalKeys, [$canonicalKey])));
+        $progressEstimate = max(1, min(99, (int) floor(($nextAskedCount / $totalQuestions) * 99)));
+
+        $questionPayload = [
+            'question_id' => (string) ($question['question_id'] ?? $questionBankPlanner->questionIdForCanonicalKey($canonicalKey)),
+            'canonical_key' => $canonicalKey !== '' ? $canonicalKey : null,
+            'question_text' => (string) ($question['prompt'] ?? ''),
+            'answer_type' => (string) ($question['answer_type'] ?? 'choice'),
+            'options' => is_array($question['options'] ?? null) ? array_values($question['options']) : [],
+            'reasoning' => (string) ($question['rationale'] ?? ''),
+            'category' => (string) ($question['category'] ?? 'general'),
+            'progress_estimate' => $progressEstimate,
+            'is_complete' => false,
+        ];
+
+        $metadata['asked_canonical_keys'] = $this->mergeCanonicalKey($askedCanonicalKeys, $canonicalKey);
+        $session->metadata_json = $metadata;
+        $session->save();
+
+        $writer->appendQuestion($questionPayload);
+
+        if ($session->status !== InterrogationSession::STATUS_INTERROGATING) {
+            $transitions->transition(
+                (int) $session->id,
+                [InterrogationSession::STATUS_DISCOVERING, InterrogationSession::STATUS_SUMMARIZING, InterrogationSession::STATUS_PAUSED],
+                InterrogationSession::STATUS_INTERROGATING,
+                ['phase' => InterrogationSession::PHASE_INTERROGATION],
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function askedQuestionTexts(InterrogationSession $session): array
+    {
+        return $session->events()
+            ->where('event_type', InterrogationEvent::TYPE_QUESTION)
+            ->orderBy('sequence')
+            ->get(['payload'])
+            ->map(function (InterrogationEvent $event): string {
+                $payload = is_array($event->payload) ? $event->payload : [];
+
+                return trim((string) ($payload['question_text'] ?? ''));
+            })
+            ->filter(static fn (string $text): bool => $text !== '')
+            ->values()
+            ->all();
     }
 }

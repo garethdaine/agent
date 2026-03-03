@@ -19,6 +19,11 @@ interface InterrogationRunnerAdapter
     /**
      * @return array<int, string>
      */
+    public function buildQuestionBankCommand(InterrogationSession $session, string $userMessage, string $systemPrompt): array;
+
+    /**
+     * @return array<int, string>
+     */
     public function buildSummaryCommand(InterrogationSession $session, string $summaryPrompt, string $systemPrompt): array;
 
     /**
@@ -45,6 +50,11 @@ interface InterrogationRunnerAdapter
      * @return array<string, mixed>|null
      */
     public function parseQuestionResponse(string $output): ?array;
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function parseQuestionBankResponse(string $output): ?array;
 
     /**
      * @return array<string, mixed>|null

@@ -19,6 +19,7 @@ class SubmitAnswerRequest extends FormRequest
     {
         return [
             'question_id' => ['nullable', 'string', 'max:120'],
+            'canonical_key' => ['nullable', 'string', 'max:180'],
             'answer_type' => ['required', Rule::in(['choice', 'freetext', 'skip'])],
             'answer_text' => ['nullable', 'string', 'max:10000', 'required_if:answer_type,freetext'],
             'selected_option' => ['nullable', 'string', 'max:1000'],

@@ -12,6 +12,14 @@ Use this file to capture correction-driven lessons.
 
 ## Entry
 - Date: 2026-03-03
+- Source (job run id / interrogation session id): User correction on interrogation dedupe implementation approach
+- Correction: User rejected a hard-coded, domain-specific question bank tied to one discovery run (Phase 1 governance), and required a run-agnostic solution.
+- Pattern: Encoding current-run semantics directly into core interrogation flow couples platform behavior to transient project context and creates regressions for future runs with different domains/goals.
+- Prevention rule: Implement interrogation controls as generic infrastructure (canonical key contract, stateful dedupe, dependency graph execution, pluggable question banks), with domain content loaded from run-scoped configuration or generated artifacts, never hard-coded for a single project/problem.
+- Applied in: Reverted run-specific files and restarted design toward run-agnostic interrogation architecture.
+
+## Entry
+- Date: 2026-03-03
 - Source (job run id / interrogation session id): User correction on code-analysis resume blocker (`SNAPSHOT_DRIFT_DETECTED`)
 - Correction: User reported runs cannot resume because repository snapshots drift during normal execution when generated runtime outputs are written to `tasks/` and `docs/`.
 - Pattern: Strict snapshot hash comparison at execute-time pauses sessions on expected generated artifacts and can create a resume loop when drift-decision metadata is not set during resume.

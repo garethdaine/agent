@@ -126,6 +126,24 @@ class ExecuteInterrogationDiscoveryJob implements ShouldQueue
 
             // Start interrogation with a fresh CLI session to avoid carrying discovery stream state.
             $session->cli_session_id = null;
+            $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+            $metadata['dynamic_question_bank_mode'] = (bool) config('agent.interrogation.dynamic_question_bank_enabled', true);
+            $metadata['asked_canonical_keys'] = array_values(array_unique(array_filter(
+                (array) ($metadata['asked_canonical_keys'] ?? []),
+                static fn ($value): bool => is_string($value) && trim($value) !== ''
+            )));
+            $metadata['answered_canonical_keys'] = array_values(array_unique(array_filter(
+                (array) ($metadata['answered_canonical_keys'] ?? []),
+                static fn ($value): bool => is_string($value) && trim($value) !== ''
+            )));
+            $metadata['suppressed_canonical_keys'] = array_values(array_unique(array_filter(
+                (array) ($metadata['suppressed_canonical_keys'] ?? []),
+                static fn ($value): bool => is_string($value) && trim($value) !== ''
+            )));
+            $metadata['locked_policy_snapshot'] = is_array($metadata['locked_policy_snapshot'] ?? null)
+                ? $metadata['locked_policy_snapshot']
+                : [];
+            $session->metadata_json = $metadata;
             $session->save();
 
             $typeLabel = trim((string) $session->interrogation_type);
