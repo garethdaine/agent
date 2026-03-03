@@ -47,4 +47,9 @@ class RepoAnalysisSessionPolicy
     {
         return (int) $session->user_id === (int) $user->id;
     }
+
+    public function forceDelete(User $user, RepoAnalysisSession $session): bool
+    {
+        return (int) $session->user_id === (int) $user->id;
+    }
 }

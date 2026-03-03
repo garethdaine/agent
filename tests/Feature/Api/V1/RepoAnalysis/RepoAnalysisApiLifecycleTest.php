@@ -299,6 +299,91 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             ->assertJsonPath('data.0.report_version', '1.0.0');
     }
 
+    public function test_purge_permanently_deletes_session_related_records_and_export_files(): void
+    {
+        $owner = User::factory()->create();
+        $this->actingAs($owner);
+
+        $session = $this->createSession($owner, [
+            'phase' => 6,
+            'status' => SessionStateTransitionService::STATUS_COMPLETED,
+        ]);
+
+        $task = RepoAnalysisTask::query()->create([
+            'repo_analysis_session_id' => $session->id,
+            'task_key' => 'filesystem_manifest',
+            'task_type' => 'analyzer',
+            'status' => 'completed',
+            'phase' => 3,
+            'analyzer_name' => 'filesystem_manifest',
+            'analyzer_version' => '1.0.0',
+        ]);
+
+        $artifactPath = $this->repoRoot.'/docs/discovery/code-analysis/artifact-'.$session->id.'.json';
+        File::ensureDirectoryExists(dirname($artifactPath));
+        File::put($artifactPath, '{"artifact":true}');
+
+        RepoAnalysisArtifact::query()->create([
+            'repo_analysis_session_id' => $session->id,
+            'repo_analysis_task_id' => $task->id,
+            'artifact_type' => 'filesystem_manifest',
+            'artifact_key' => 'filesystem_manifest.tree',
+            'content_hash' => hash('sha256', 'artifact'),
+            'storage_path' => $artifactPath,
+            'payload_json' => [
+                'warning_artifact_path' => $artifactPath,
+            ],
+        ]);
+
+        $reportMarkdownPath = $this->repoRoot.'/docs/discovery/code-analysis/report-'.$session->id.'.md';
+        $reportJsonPath = $this->repoRoot.'/docs/discovery/code-analysis/report-'.$session->id.'.json';
+        File::put($reportMarkdownPath, '# report');
+        File::put($reportJsonPath, '{"report":true}');
+
+        RepoAnalysisReport::query()->create([
+            'repo_analysis_session_id' => $session->id,
+            'report_version' => '1.0.0',
+            'report_hash' => hash('sha256', 'report'),
+            'status' => 'generated',
+            'payload_json' => ['summary' => 'ok'],
+            'markdown_export_path' => $reportMarkdownPath,
+            'json_export_path' => $reportJsonPath,
+            'generated_at' => now('UTC'),
+        ]);
+
+        RepoAnalysisEvent::query()->create([
+            'repo_analysis_session_id' => $session->id,
+            'sequence' => 1,
+            'event_type' => 'report_generated',
+            'payload_json' => [],
+            'phase' => 6,
+            'status' => 'completed',
+            'event_ts' => now('UTC'),
+        ]);
+
+        $session->update([
+            'report_summary_json' => [
+                'markdown_export_path' => $reportMarkdownPath,
+                'json_export_path' => $reportJsonPath,
+            ],
+        ]);
+
+        $this->postJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/purge')
+            ->assertOk()
+            ->assertJsonPath('data.id', $session->id)
+            ->assertJsonPath('data.purged', true);
+
+        $this->assertNull(RepoAnalysisSession::query()->withTrashed()->find($session->id));
+        $this->assertSame(0, RepoAnalysisTask::query()->where('repo_analysis_session_id', $session->id)->count());
+        $this->assertSame(0, RepoAnalysisArtifact::query()->where('repo_analysis_session_id', $session->id)->count());
+        $this->assertSame(0, RepoAnalysisReport::query()->where('repo_analysis_session_id', $session->id)->count());
+        $this->assertSame(0, RepoAnalysisEvent::query()->where('repo_analysis_session_id', $session->id)->count());
+
+        $this->assertFalse(File::exists($artifactPath));
+        $this->assertFalse(File::exists($reportMarkdownPath));
+        $this->assertFalse(File::exists($reportJsonPath));
+    }
+
     public function test_tasks_endpoint_reconciles_running_tasks_immediately_when_session_is_not_executing(): void
     {
         $owner = User::factory()->create();

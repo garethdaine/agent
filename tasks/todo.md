@@ -6,6 +6,31 @@
 
 ## Current — Open Items
 
+### Session 16 Hotfix — Purge Sessions and Realtime Status Reliability (Completed)
+
+- [x] Add permanent purge API endpoint for Code Analysis sessions that force-deletes the session and all related records.
+- [x] Ensure purge cleans up session-linked exported report/docs files and artifact storage paths with path safety guards.
+- [x] Add Code Analysis index UI action for permanent delete with explicit confirmation.
+- [x] Improve Code Analysis realtime delivery by switching session update broadcasts to immediate mode.
+- [x] Add Echo subscriptions in Code Analysis index to live-update row status/phase/updated timestamps.
+- [x] Add feature test coverage for purge behavior and file cleanup.
+- [x] Verify with focused backend tests and frontend production build.
+
+Review
+- Root cause:
+  - Existing delete endpoint only soft-deleted sessions, leaving connected records and exported files intact.
+  - Code Analysis realtime events used queued broadcasting, which could lag/fail when broadcast queue workers were not active.
+  - Code Analysis index view had no Echo subscription, so session list rows remained stale without manual refresh.
+- Fix summary:
+  - Added `/agent/api/v1/code-analysis/sessions/{id}/purge` for irreversible cleanup.
+  - Purge now force-deletes session graph and removes linked report/artifact files inside approved roots.
+  - Switched `RepoAnalysisSessionUpdated` to `ShouldBroadcastNow`.
+  - Added index-page Echo listeners per session channel and a realtime availability banner.
+- Verification:
+  - `php artisan test --filter=RepoAnalysisApiLifecycleTest` (pass, includes purge coverage)
+  - `php artisan test --filter=RepoAnalysisExecutionPipelineTest` (pass)
+  - `npm run build` (pass)
+
 ### Session 16 Hotfix — Restore Wizard Lifecycle Controls and Fix Paused Retry Dead-End (Completed)
 
 - [x] Restore lifecycle actions in Code Analysis wizard (`Pause`, `Resume`, `Retry Session`, `Restart`) without reintroducing `Run Next Step`, Coverage card, Artifacts card, or Event Stream card.

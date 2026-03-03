@@ -12,6 +12,14 @@ Use this file to capture correction-driven lessons.
 
 ## Entry
 - Date: 2026-03-03
+- Source (job run id / interrogation session id): User correction on permanent session deletion and stale realtime status updates
+- Correction: User required irreversible session cleanup (including related tasks/artifacts/reports/files) and flagged that realtime status/progress was not updating via Reverb/Echo.
+- Pattern: Soft-delete-only flows leave residual data/files that users expect removed; queued broadcasting can appear broken when broadcast workers are not guaranteed, and index surfaces without channel subscriptions stay stale.
+- Prevention rule: For workflows that generate derivative artifacts/files, provide an explicit purge path with safe file cleanup; for live status UIs, ensure both immediate broadcast delivery strategy and explicit frontend channel subscriptions are implemented.
+- Applied in: `app/Http/Controllers/Api/V1/RepoAnalysisSessionController.php`, `routes/api.php`, `app/Events/RepoAnalysisSessionUpdated.php`, `resources/js/Pages/Tools/CodeAnalysis/Index.vue`, `tests/Feature/Api/V1/RepoAnalysis/RepoAnalysisApiLifecycleTest.php`
+
+## Entry
+- Date: 2026-03-03
 - Source (job run id / interrogation session id): User correction on Code Analysis wizard simplification and paused retry behavior
 - Correction: User reported required lifecycle controls (`Pause`, `Resume`, `Restart`) were removed along with the intentionally removed `Run Next Step`, and retrying while paused appeared stuck.
 - Pattern: Broad UI removals can accidentally remove adjacent critical controls; backend retry endpoints that only queue jobs without state transition can dead-end when workers guard on session status.

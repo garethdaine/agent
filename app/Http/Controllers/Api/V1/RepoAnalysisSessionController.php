@@ -26,6 +26,7 @@ use App\Support\RepoAnalysis\SessionStateTransitionService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
 
 class RepoAnalysisSessionController extends Controller
@@ -200,6 +201,72 @@ class RepoAnalysisSessionController extends Controller
             'data' => [
                 'id' => (int) $session->id,
                 'deleted' => true,
+            ],
+        ]);
+    }
+
+    public function purge(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
+    {
+        $session = $this->resolveSession($request, $id, true);
+        if ($forbidden = $this->forbiddenIfCannot($request, 'forceDelete', $session)) {
+            return $forbidden;
+        }
+
+        $projectRoot = $this->resolvedProjectRoot((string) $session->project_directory);
+        $storageRoot = realpath(storage_path()) ?: storage_path();
+        $allowedRoots = array_values(array_filter([$projectRoot, $storageRoot], static fn (?string $path): bool => is_string($path) && $path !== ''));
+
+        $pathsToDelete = $this->collectSessionFilePaths($session);
+        $deletedFileCount = 0;
+        $missingFileCount = 0;
+
+        foreach ($pathsToDelete as $path) {
+            $deleted = $this->deletePathIfAllowed($path, $allowedRoots);
+            if ($deleted) {
+                $deletedFileCount++;
+                continue;
+            }
+
+            if ($path !== '' && ! file_exists($path)) {
+                $missingFileCount++;
+            }
+        }
+
+        $before = [
+            'deleted_at' => optional($session->deleted_at)?->toIso8601String(),
+            'phase' => (int) $session->phase,
+            'status' => (string) $session->status,
+            'counts' => [
+                'events' => $session->events()->count(),
+                'tasks' => $session->tasks()->count(),
+                'artifacts' => $session->artifacts()->count(),
+                'reports' => $session->reports()->count(),
+            ],
+        ];
+
+        $session->forceDelete();
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'repo_analysis.session.purge',
+            targetType: 'repo_analysis_session',
+            targetId: (int) $id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['force_deleted', 'related_records', 'export_files'],
+            before: $before,
+            after: [
+                'force_deleted' => true,
+                'deleted_files' => $deletedFileCount,
+                'missing_files' => $missingFileCount,
+            ],
+        );
+
+        return response()->json([
+            'data' => [
+                'id' => (int) $id,
+                'purged' => true,
+                'deleted_files' => $deletedFileCount,
+                'missing_files' => $missingFileCount,
             ],
         ]);
     }
@@ -793,6 +860,114 @@ class RepoAnalysisSessionController extends Controller
         $session = $query->findOrFail($id);
 
         return $session;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function collectSessionFilePaths(RepoAnalysisSession $session): array
+    {
+        $paths = [];
+
+        foreach ($session->reports()->get(['markdown_export_path', 'json_export_path']) as $report) {
+            foreach ([(string) ($report->markdown_export_path ?? ''), (string) ($report->json_export_path ?? '')] as $path) {
+                if ($path !== '') {
+                    $paths[] = $path;
+                }
+            }
+        }
+
+        foreach ($session->artifacts()->get(['storage_path', 'payload_json']) as $artifact) {
+            $storagePath = (string) ($artifact->storage_path ?? '');
+            if ($storagePath !== '') {
+                $paths[] = $storagePath;
+            }
+
+            $warningArtifactPath = (string) data_get($artifact->payload_json, 'warning_artifact_path', '');
+            if ($warningArtifactPath !== '') {
+                $paths[] = $warningArtifactPath;
+            }
+        }
+
+        foreach ([
+            (string) data_get($session->report_summary_json, 'markdown_export_path', ''),
+            (string) data_get($session->report_summary_json, 'json_export_path', ''),
+        ] as $path) {
+            if ($path !== '') {
+                $paths[] = $path;
+            }
+        }
+
+        return array_values(array_unique($paths));
+    }
+
+    /**
+     * @param  array<int, string>  $allowedRoots
+     */
+    private function deletePathIfAllowed(string $path, array $allowedRoots): bool
+    {
+        $normalizedPath = trim($path);
+        if ($normalizedPath === '' || ! str_starts_with($normalizedPath, '/')) {
+            return false;
+        }
+
+        $normalizedPath = rtrim($normalizedPath, '/');
+        if ($normalizedPath === '') {
+            return false;
+        }
+
+        if (! $this->isPathWithinRoots($normalizedPath, $allowedRoots)) {
+            return false;
+        }
+
+        foreach ($allowedRoots as $root) {
+            if ($normalizedPath === rtrim($root, '/')) {
+                return false;
+            }
+        }
+
+        if (is_file($normalizedPath)) {
+            return File::delete($normalizedPath);
+        }
+
+        if (is_dir($normalizedPath)) {
+            return File::deleteDirectory($normalizedPath);
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<int, string>  $allowedRoots
+     */
+    private function isPathWithinRoots(string $path, array $allowedRoots): bool
+    {
+        foreach ($allowedRoots as $root) {
+            $normalizedRoot = rtrim($root, '/');
+            if ($normalizedRoot === '') {
+                continue;
+            }
+
+            if ($path === $normalizedRoot || str_starts_with($path, $normalizedRoot.'/')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function resolvedProjectRoot(string $projectDirectory): ?string
+    {
+        if ($projectDirectory === '' || ! str_starts_with($projectDirectory, '/')) {
+            return null;
+        }
+
+        $resolved = realpath($projectDirectory);
+        if ($resolved === false || ! is_dir($resolved)) {
+            return null;
+        }
+
+        return rtrim($resolved, '/');
     }
 
     private function transformSession(RepoAnalysisSession $session): array

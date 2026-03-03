@@ -65,6 +65,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/code-analysis/sessions/{id}/generate-report` | `-` | `RepoAnalysisSessionController@generateReport` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/code-analysis/sessions/{id}/pause` | `-` | `RepoAnalysisSessionController@pause` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/code-analysis/sessions/{id}/plan` | `-` | `RepoAnalysisSessionController@plan` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/purge` | `-` | `RepoAnalysisSessionController@purge` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/code-analysis/sessions/{id}/reports` | `-` | `RepoAnalysisSessionController@reports` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/code-analysis/sessions/{id}/restart-from-beginning` | `-` | `RepoAnalysisSessionController@restartFromBeginning` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/code-analysis/sessions/{id}/restore` | `-` | `RepoAnalysisSessionController@restore` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |

@@ -12,7 +12,7 @@ import TableCell from '@/Components/ui/TableCell.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { Plus } from 'lucide-vue-next';
 import axios from 'axios';
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 
 const props = defineProps({
     sessions: {
@@ -24,8 +24,78 @@ const props = defineProps({
 const sessions = ref(props.sessions);
 const loading = ref(false);
 const error = ref('');
+const websocketActive = ref(false);
 
 const runningStatuses = ['snapshotting', 'planning', 'executing', 'validating', 'reporting'];
+const subscribedSessionIds = new Set();
+
+const upsertSessionLinks = (session) => ({
+    ...session,
+    wizard_url: route('tools.code-analysis.wizard', session.id),
+    settings_url: route('tools.code-analysis.settings', session.id),
+});
+
+const applyRealtimeEvent = (sessionId, event) => {
+    const index = sessions.value.findIndex((session) => Number(session.id) === Number(sessionId));
+    if (index < 0) {
+        return;
+    }
+
+    const current = sessions.value[index];
+    const nextStatus = String(event?.status ?? '').trim();
+    const nextPhase = Number(event?.phase ?? Number.NaN);
+    const nextUpdatedAt = String(event?.event_ts ?? '').trim();
+
+    sessions.value[index] = {
+        ...current,
+        status: nextStatus !== '' ? nextStatus : current.status,
+        phase: Number.isNaN(nextPhase) ? current.phase : nextPhase,
+        updated_at: nextUpdatedAt !== '' ? nextUpdatedAt : current.updated_at,
+    };
+};
+
+const leaveRealtime = () => {
+    if (!window.Echo) {
+        subscribedSessionIds.clear();
+        websocketActive.value = false;
+
+        return;
+    }
+
+    for (const sessionId of subscribedSessionIds) {
+        window.Echo.leave(`private-code-analysis.${sessionId}`);
+        window.Echo.leave(`code-analysis.${sessionId}`);
+    }
+
+    subscribedSessionIds.clear();
+    websocketActive.value = false;
+};
+
+const subscribeRealtime = () => {
+    leaveRealtime();
+
+    if (!window.Echo) {
+        websocketActive.value = false;
+        return;
+    }
+
+    try {
+        for (const session of sessions.value) {
+            const sessionId = Number(session?.id);
+            if (!Number.isFinite(sessionId)) {
+                continue;
+            }
+
+            window.Echo.private(`code-analysis.${sessionId}`)
+                .listen('.session.updated', (event) => applyRealtimeEvent(sessionId, event));
+            subscribedSessionIds.add(sessionId);
+        }
+
+        websocketActive.value = true;
+    } catch {
+        websocketActive.value = false;
+    }
+};
 
 const load = async () => {
     loading.value = true;
@@ -33,11 +103,8 @@ const load = async () => {
 
     try {
         const { data } = await axios.get('/agent/api/v1/code-analysis/sessions');
-        sessions.value = (data?.data ?? []).map((session) => ({
-            ...session,
-            wizard_url: route('tools.code-analysis.wizard', session.id),
-            settings_url: route('tools.code-analysis.settings', session.id),
-        }));
+        sessions.value = (data?.data ?? []).map((session) => upsertSessionLinks(session));
+        subscribeRealtime();
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load code analysis sessions.';
     } finally {
@@ -85,7 +152,21 @@ const restartSession = async (sessionId) => {
     }
 };
 
+const purgeSession = async (sessionId) => {
+    if (!window.confirm('Permanently delete this session and all related tasks, events, reports, and exported files? This cannot be undone.')) {
+        return;
+    }
+
+    try {
+        await axios.post(`/agent/api/v1/code-analysis/sessions/${sessionId}/purge`);
+        await load();
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to permanently delete session.';
+    }
+};
+
 onMounted(load);
+onUnmounted(leaveRealtime);
 </script>
 
 <template>
@@ -106,6 +187,12 @@ onMounted(load);
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-[1440px] space-y-4">
+                <div
+                    v-if="!websocketActive"
+                    class="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300"
+                >
+                    Realtime updates unavailable. Start Reverb/Echo to live-refresh session statuses.
+                </div>
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {{ error }}
                 </div>
@@ -168,6 +255,14 @@ onMounted(load);
                                                 @click="restartSession(session.id)"
                                             >
                                                 Restart
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                class="border-destructive/40 text-destructive hover:bg-destructive/10"
+                                                @click="purgeSession(session.id)"
+                                            >
+                                                Delete
                                             </Button>
                                             <Link :href="route('tools.code-analysis.settings', session.id)">
                                                 <Button variant="outline" size="sm">Settings</Button>

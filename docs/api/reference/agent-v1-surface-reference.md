@@ -74,7 +74,7 @@ Registered endpoints: 8
 
 ### Code Analysis
 
-Registered endpoints: 20
+Registered endpoints: 21
 
 | Method | URI | Route Name |
 | --- | --- | --- |
@@ -89,6 +89,7 @@ Registered endpoints: 20
 | POST | `agent/api/v1/code-analysis/sessions/{id}/generate-report` | `-` |
 | POST | `agent/api/v1/code-analysis/sessions/{id}/pause` | `-` |
 | POST | `agent/api/v1/code-analysis/sessions/{id}/plan` | `-` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/purge` | `-` |
 | GET | `agent/api/v1/code-analysis/sessions/{id}/reports` | `-` |
 | POST | `agent/api/v1/code-analysis/sessions/{id}/restart-from-beginning` | `-` |
 | POST | `agent/api/v1/code-analysis/sessions/{id}/restore` | `-` |

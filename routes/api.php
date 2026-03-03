@@ -150,6 +150,7 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::patch('/code-analysis/sessions/{id}', [RepoAnalysisSessionController::class, 'update'])->middleware('throttle:agent-mutations');
             Route::delete('/code-analysis/sessions/{id}', [RepoAnalysisSessionController::class, 'destroy'])->middleware('throttle:agent-mutations');
             Route::post('/code-analysis/sessions/{id}/restore', [RepoAnalysisSessionController::class, 'restore'])->middleware('throttle:agent-mutations');
+            Route::post('/code-analysis/sessions/{id}/purge', [RepoAnalysisSessionController::class, 'purge'])->middleware('throttle:agent-mutations');
 
             Route::post('/code-analysis/sessions/{id}/start-snapshot', [RepoAnalysisSessionController::class, 'startSnapshot'])->middleware('throttle:agent-mutations');
             Route::post('/code-analysis/sessions/{id}/plan', [RepoAnalysisSessionController::class, 'plan'])->middleware('throttle:agent-mutations');
