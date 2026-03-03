@@ -497,3 +497,11 @@ Use this file to capture correction-driven lessons.
 - Pattern: Polling full related collections on fixed intervals creates avoidable loading-state thrash and table layout jumps during active task execution.
 - Prevention rule: For realtime execution UIs, default to event-driven updates with debounced targeted refreshes and silent collection updates; only show loading placeholders on initial empty-state hydration.
 - Applied in: `resources/js/Pages/Tools/RepoAnalysis/Wizard.vue`, `resources/js/Components/RepoAnalysis/TaskGraphPanel.vue`, `tasks/todo.md`
+
+## Entry
+- Date: 2026-03-03
+- Source (job run id / interrogation session id): User correction on Repo Analysis execution UX feedback
+- Correction: User requested explicit in-progress feedback (spinners/status badges/progress) because task execution state was not obvious.
+- Pattern: Event-driven updates alone are insufficient when row-level status presentation lacks clear visual affordances for active/terminal states.
+- Prevention rule: For long-running execution tables, always include three feedback layers by default: per-row status badges, active-state spinner cues, and an aggregate progress indicator.
+- Applied in: `resources/js/Components/RepoAnalysis/TaskGraphPanel.vue`, `tasks/todo.md`

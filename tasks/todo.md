@@ -2253,3 +2253,30 @@ Review
   - Backend emits `RepoAnalysisSessionUpdated` events through `EventWriter`.
 - Explicit non-goals / limitations:
   - No fallback polling remains in this wizard; if websocket is unavailable, data only updates on manual/user-triggered refresh actions.
+
+### Session 16 Task 13 — Repo Analysis Task Graph UX: Spinners, Status Badges, Overall Progress (Completed)
+
+ACTION PLAN
+- [x] Add status badges for task rows with visual severity/state mapping.
+- [x] Add inline loading spinners for active task statuses.
+- [x] Add overall progress summary and progress bar for task completion.
+- [x] Verify with web test + frontend build.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Updated `resources/js/Components/RepoAnalysis/TaskGraphPanel.vue`:
+    - added row-level status badges with semantic colors,
+    - added inline spinner for active statuses (`running|starting|in_progress|retrying`),
+    - added aggregate task counters and an overall completion progress bar,
+    - changed loading row to include spinner and only appear for initial empty-load state.
+  - Verification:
+    - `php artisan test tests/Feature/Web/Tools/RepoAnalysisNavigationTest.php` => `4 passed (122 assertions)`.
+    - `npm run build` => client and SSR builds completed successfully.
+- Conditions where this works:
+  - Task list API returns statuses for each row.
+  - Wizard receives task list updates (now event-driven via Reverb/Echo).
+- Explicit non-goals / limitations:
+  - Progress bar reflects task terminal-state completion only; it does not estimate per-task internal progress percentage.
