@@ -2210,3 +2210,46 @@ Review
 - Explicit non-goals / limitations:
   - Deterministic phase still relies on heuristics and does not execute project builds/tests/toolchains.
   - Framework-specific hints are additive only and do not constrain analysis to any single stack.
+
+### Session 16 Task 12 — Remove Repo Analysis Wizard Polling Jitter; Reverb/Echo Event-Driven Updates (Completed)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- Repo Analysis wizard refreshed session/events/tasks/artifacts/reports every 3s via polling.
+- Poll-driven collection reload toggled loading state repeatedly, causing Task Graph table to flash "Loading tasks…" and jump during active runs.
+
+TASK
+- Remove polling behavior from Repo Analysis wizard.
+- Use Reverb/Echo broadcast events as the primary update mechanism.
+- Eliminate table jitter by keeping existing rows visible during realtime refreshes.
+
+ACTION
+- [x] Removed polling timer loop (`schedulePoll`) from Repo Analysis wizard lifecycle.
+- [x] Kept realtime subscription on `private-repo-analysis.{sessionId}` and merged incoming events directly.
+- [x] Added debounced event-driven refresh queues for session and related collections.
+- [x] Scoped collection refreshes to relevant event types only (task/report/coverage/snapshot plan events).
+- [x] Updated collection loading mode to support silent refreshes so existing rows remain visible.
+- [x] Updated Task Graph loading row to render only when no tasks exist.
+
+RESULT
+- Task Graph no longer flashes every few seconds from polling.
+- Realtime updates are now driven by Reverb/Echo events with targeted, silent follow-up fetches.
+- UI remains stable while still reflecting task/report/artifact changes during execution.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - `resources/js/Pages/Tools/RepoAnalysis/Wizard.vue`:
+    - removed polling timer/setup teardown.
+    - added event-type based debounced `queueSessionRefresh` + `queueCollectionsRefresh`.
+    - changed `loadCollections` to support `silent` mode.
+  - `resources/js/Components/RepoAnalysis/TaskGraphPanel.vue`:
+    - loading row now only appears when `loading && tasks.length === 0`.
+- Conditions where this works:
+  - Echo/Reverb channel is connected and session channel authorization succeeds.
+  - Backend emits `RepoAnalysisSessionUpdated` events through `EventWriter`.
+- Explicit non-goals / limitations:
+  - No fallback polling remains in this wizard; if websocket is unavailable, data only updates on manual/user-triggered refresh actions.

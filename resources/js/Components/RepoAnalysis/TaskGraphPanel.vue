@@ -59,7 +59,7 @@ const dependencySummary = (task) => {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    <TableRow v-if="loading">
+                    <TableRow v-if="loading && tasks.length === 0">
                         <TableCell colspan="6" class="text-center text-muted-foreground">Loading tasks…</TableCell>
                     </TableRow>
                     <TableRow v-for="task in tasks" :key="task.id">

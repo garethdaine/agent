@@ -61,10 +61,11 @@ const actionBusy = ref({
     runNext: false,
     export: false,
 });
-const pollingTimer = ref(null);
 const optimisticExpectedStatus = ref(null);
 const autoStartRequested = ref(false);
 const autoStartAttempted = ref(false);
+const sessionRefreshTimer = ref(null);
+const collectionsRefreshTimer = ref(null);
 
 const activeStatusByPhase = {
     1: 'snapshotting',
@@ -125,12 +126,16 @@ const loadEvents = async () => {
 
         events.value = mergeEventsInSequence(events.value, data?.data ?? []);
     } catch {
-        // Polling should continue even if a single event request fails.
+        // Initial event hydration failures should not block wizard rendering.
     }
 };
 
-const loadCollections = async () => {
-    loadingCollections.value = true;
+const loadCollections = async (options = {}) => {
+    const { silent = false } = options;
+
+    if (!silent) {
+        loadingCollections.value = true;
+    }
 
     try {
         const [tasksResponse, artifactsResponse, reportsResponse] = await Promise.all([
@@ -146,32 +151,63 @@ const loadCollections = async () => {
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load related repo analysis data.';
     } finally {
-        loadingCollections.value = false;
+        if (!silent) {
+            loadingCollections.value = false;
+        }
     }
 };
 
-const refreshAll = async () => {
+const refreshAll = async (options = {}) => {
+    const { silentCollections = false } = options;
+
     loading.value = true;
     error.value = '';
 
     await Promise.all([
         loadSession(),
         loadEvents(),
-        loadCollections(),
+        loadCollections({ silent: silentCollections }),
     ]);
 
     loading.value = false;
 };
 
-const schedulePoll = () => {
-    clearTimeout(pollingTimer.value);
-    pollingTimer.value = setTimeout(async () => {
-        await Promise.all([loadEvents(), loadSession(), loadCollections()]);
-        schedulePoll();
-    }, 3000);
+let echoChannel = null;
+const sessionRefreshEvents = new Set([
+    'snapshot_generated',
+    'tasks_planned',
+    'task_started',
+    'task_retry_scheduled',
+    'task_failed',
+    'task_completed',
+    'snapshot_drift_detected',
+    'coverage_validated',
+    'report_generated',
+]);
+const collectionRefreshEvents = new Set([
+    'snapshot_generated',
+    'tasks_planned',
+    'task_started',
+    'task_retry_scheduled',
+    'task_failed',
+    'task_completed',
+    'coverage_validated',
+    'report_generated',
+]);
+
+const queueSessionRefresh = () => {
+    clearTimeout(sessionRefreshTimer.value);
+    sessionRefreshTimer.value = setTimeout(() => {
+        loadSession();
+    }, 150);
 };
 
-let echoChannel = null;
+const queueCollectionsRefresh = () => {
+    clearTimeout(collectionsRefreshTimer.value);
+    collectionsRefreshTimer.value = setTimeout(() => {
+        loadCollections({ silent: true });
+    }, 150);
+};
 
 const subscribeRealtime = () => {
     if (!window.Echo) {
@@ -187,10 +223,31 @@ const subscribeRealtime = () => {
                 }
 
                 events.value = mergeEventsInSequence(events.value, [event]);
-                loadSession();
+                const nextPhase = Number(event?.phase ?? NaN);
+                if (!Number.isNaN(nextPhase) && session.value) {
+                    session.value = {
+                        ...session.value,
+                        phase: nextPhase,
+                    };
+                }
 
-                if (String(event?.event_type ?? '').startsWith('task_') || event?.event_type === 'report_generated') {
-                    loadCollections();
+                const nextStatus = String(event?.status ?? '').trim();
+                if (nextStatus !== '' && session.value) {
+                    session.value = {
+                        ...session.value,
+                        status: nextStatus,
+                    };
+                    deriveActionVisibility();
+                }
+
+                const eventType = String(event?.event_type ?? '');
+
+                if (sessionRefreshEvents.has(eventType)) {
+                    queueSessionRefresh();
+                }
+
+                if (collectionRefreshEvents.has(eventType)) {
+                    queueCollectionsRefresh();
                 }
             });
 
@@ -230,7 +287,7 @@ const postLifecycle = async (endpoint, options = {}) => {
             notice.value = successNotice;
         }
 
-        await refreshAll();
+        await refreshAll({ silentCollections: true });
     } catch (e) {
         optimisticExpectedStatus.value = null;
         error.value = e?.response?.data?.error?.message ?? 'Failed to perform session action.';
@@ -372,11 +429,11 @@ onMounted(async () => {
     await refreshAll();
     await maybeAutoStart();
     subscribeRealtime();
-    schedulePoll();
 });
 
 onUnmounted(() => {
-    clearTimeout(pollingTimer.value);
+    clearTimeout(sessionRefreshTimer.value);
+    clearTimeout(collectionsRefreshTimer.value);
     unsubscribeRealtime();
 });
 </script>
@@ -408,7 +465,7 @@ onUnmounted(() => {
         <div class="px-4 py-6 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-[1440px] space-y-4">
                 <div v-if="!websocketActive" class="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-                    Websocket unavailable. Polling fallback is active.
+                    Realtime updates are unavailable. Connect Reverb/Echo to receive live task updates.
                 </div>
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ error }}</div>
                 <div v-if="notice" class="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">{{ notice }}</div>

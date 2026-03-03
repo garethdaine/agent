@@ -489,3 +489,11 @@ Use this file to capture correction-driven lessons.
 - Pattern: Partial key renaming without fully removing framework-coupled naming/assumptions leaves hidden stack bias in deterministic analyzers and reporting.
 - Prevention rule: For "generic analyzer" requirements, enforce all three checks before completion: (1) neutral analyzer identities/keys, (2) nested manifest + multi-ecosystem detection, (3) report synthesis that does not depend on a single framework ecosystem.
 - Applied in: `app/Support/RepoAnalysis/Analyzers/{RoutingSurfaceAnalyzer.php,DataModelSurfaceAnalyzer.php,AsyncWorkflowsSurfaceAnalyzer.php,FrontendSurfaceAnalyzer.php,DependencyManifestAnalyzer.php}`, `app/Support/RepoAnalysis/ReportComposer.php`, `tests/Unit/Support/RepoAnalysis/Analyzers/AnalyzerContractsTest.php`, `tasks/todo.md`
+
+## Entry
+- Date: 2026-03-03
+- Source (job run id / interrogation session id): User correction on Repo Analysis wizard UX (polling jitter)
+- Correction: User required websocket-driven live updates only (Reverb/Echo) and removal of polling that caused Task Graph loading flashes.
+- Pattern: Polling full related collections on fixed intervals creates avoidable loading-state thrash and table layout jumps during active task execution.
+- Prevention rule: For realtime execution UIs, default to event-driven updates with debounced targeted refreshes and silent collection updates; only show loading placeholders on initial empty-state hydration.
+- Applied in: `resources/js/Pages/Tools/RepoAnalysis/Wizard.vue`, `resources/js/Components/RepoAnalysis/TaskGraphPanel.vue`, `tasks/todo.md`
