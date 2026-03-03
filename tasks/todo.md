@@ -6,6 +6,54 @@
 
 ## Current — Open Items
 
+### Session 20 Discovery — Native Research + Grounded Answer Brief (Completed)
+
+- [x] Define a native Perplexica-inspired research subsystem as a first-class bounded context inside Agent.
+- [x] Specify modular pipeline architecture (query planning, retrieval, acquisition, chunking, ranking, grounded generation, streaming).
+- [x] Map the subsystem to current Agent Scheduler primitives (jobs, runs, events, artifacts, queue workers).
+- [x] Publish implementation brief with phased delivery, acceptance criteria, and verification gates.
+
+Review
+- Created discovery brief: `docs/discovery/native-research-grounded-answer-integration-brief.md`.
+- Brief includes:
+  - A Laravel-native `Research` bounded context with domain primitives (`ResearchJob`, `Source`, `Document`, `EvidenceChunk`, `EvidencePack`, `GroundedAnswer`).
+  - Clear service contracts for query pipeline, pluggable search providers, document extraction, chunk/index lifecycle, hybrid ranking, and citation-enforced generation.
+  - Scheduler integration design for a reusable `ResearchStep` usable by any workflow/agent task.
+  - Production controls copied from Perplexica-style UX knobs (`vertical`, `mode`, history-aware query expansion, diversity constraints, multi-layer cache).
+  - A pragmatic build order, testing matrix, operational metrics, and definition-of-done gates.
+
+### Session 19 Discovery — Credentials Manager Integration Brief (Completed)
+
+- [x] Define a centralized credential domain model for API keys, OAuth tokens, secrets, and provider metadata.
+- [x] Specify encryption/decryption design with key versioning, rotation workflow, and auditability requirements.
+- [x] Document OAuth lifecycle handling (connect, refresh, revoke, expiry, failure recovery) for extensible provider integrations.
+- [x] Publish implementation brief with phased delivery plan and release acceptance criteria.
+
+Review
+- Created discovery brief: `docs/discovery/credentials-manager-integration-brief.md`.
+- Brief includes:
+  - A provider-agnostic credentials architecture (`CredentialStore` contract + encrypted repository + provider driver registry).
+  - Secure storage and cryptography requirements (envelope encryption, key versions, redaction, access policy, audit logs).
+  - OAuth-specific lifecycle orchestration and background refresh strategy for multi-provider integrations.
+  - Extensibility rules so new providers can be added without core schema/service rewrites.
+  - Phased implementation roadmap, testing matrix, and definition-of-done criteria.
+
+### Session 18 Discovery — n8n Workflow Automation Integration Brief (Completed)
+
+- [x] Review Agent integration surfaces and constraints (jobs/runs/events/auth/token model).
+- [x] Review official n8n docs for workflow execution, webhooks, API, queue mode, and platform constraints.
+- [x] Draft a concise feature brief covering fit, benefits, MVP scope, architecture, and expansion roadmap.
+- [x] Publish brief in project docs and log review notes.
+
+Review
+- Created discovery brief: `docs/discovery/n8n-workflow-automation-integration-brief.md`.
+- Brief includes:
+  - Strategic fit with existing Agent architecture (`/agent/api/v1` jobs/runs/events + token-based integrations).
+  - Concrete MVP design for outbound Agent events to n8n and inbound n8n action calls into Agent.
+  - Security, reliability, and operational guardrails (signatures, idempotency, retries, rate limits, audit logs).
+  - Phased expansion roadmap for templates, approval loops, and deeper orchestration.
+  - Official n8n source links (docs + site) for capability and constraint validation.
+
 ### Session 17 Hotfix — Snapshot Drift False Positives + Resume Unblock (Completed)
 
 - [x] Prevent snapshot drift pauses when only generated run-output paths (`tasks/`, `docs/`) changed.
