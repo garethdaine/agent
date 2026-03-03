@@ -149,6 +149,10 @@ class RepoAnalysisApiLifecycleTest extends TestCase
         $session = $this->createSession($owner, [
             'phase' => 3,
             'status' => SessionStateTransitionService::STATUS_PAUSED,
+            'metadata_json' => [
+                'operator_action_required' => 'task_retry_decision_required',
+                'operator_action_details' => ['task_key' => 'filesystem_manifest'],
+            ],
         ]);
 
         $task = RepoAnalysisTask::query()->create([
@@ -199,6 +203,10 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             ->assertJsonPath('data.session_id', $session->id)
             ->assertJsonPath('data.task_id', $task->id)
             ->assertJsonPath('data.queued', true);
+
+        $session->refresh();
+        $this->assertSame(SessionStateTransitionService::STATUS_EXECUTING, (string) $session->status);
+        $this->assertNull(data_get($session->metadata_json, 'operator_action_required'));
 
         Queue::assertPushed(ExecuteRepoAnalysisTaskJob::class, fn (ExecuteRepoAnalysisTaskJob $job): bool => $job->sessionId === $session->id);
     }

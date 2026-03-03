@@ -11,6 +11,14 @@ Use this file to capture correction-driven lessons.
 - Applied in:
 
 ## Entry
+- Date: 2026-03-03
+- Source (job run id / interrogation session id): User correction on Code Analysis wizard simplification and paused retry behavior
+- Correction: User reported required lifecycle controls (`Pause`, `Resume`, `Restart`) were removed along with the intentionally removed `Run Next Step`, and retrying while paused appeared stuck.
+- Pattern: Broad UI removals can accidentally remove adjacent critical controls; backend retry endpoints that only queue jobs without state transition can dead-end when workers guard on session status.
+- Prevention rule: When removing UI elements, preserve adjacent control surfaces unless explicitly requested; for queued retry actions, always validate the prerequisite state transition occurs before dispatching jobs.
+- Applied in: `resources/js/Pages/Tools/CodeAnalysis/Wizard.vue`, `app/Http/Controllers/Api/V1/RepoAnalysisSessionController.php`, `tests/Feature/Api/V1/RepoAnalysis/RepoAnalysisApiLifecycleTest.php`
+
+## Entry
 - Date: 2026-03-02
 - Source (job run id / interrogation session id): User correction on docs automation expectation after Session 15 docs implementation
 - Correction: User clarified that commit-time docs flow must update detailed documentation from code/API changes, not only validate/sync existing markdown.

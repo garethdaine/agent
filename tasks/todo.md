@@ -6,6 +6,26 @@
 
 ## Current — Open Items
 
+### Session 16 Hotfix — Restore Wizard Lifecycle Controls and Fix Paused Retry Dead-End (Completed)
+
+- [x] Restore lifecycle actions in Code Analysis wizard (`Pause`, `Resume`, `Retry Session`, `Restart`) without reintroducing `Run Next Step`, Coverage card, Artifacts card, or Event Stream card.
+- [x] Fix `retry-task` API path so phase-3 sessions in `paused|failed` transition back to `executing` before dispatching execution.
+- [x] Clear `task_retry_decision_required` operator-action metadata when retrying a failed task.
+- [x] Add/adjust API lifecycle test coverage for paused-session task retry behavior.
+- [x] Verify with focused backend tests and frontend production build.
+
+Review
+- Root cause:
+  - Wizard simplification removed the whole session action surface, including required lifecycle controls.
+  - `retry-task` dispatched execute jobs while session stayed `paused`, so execute jobs no-op'd at guard checks.
+- Fix summary:
+  - Reintroduced a compact `Session State` card with lifecycle buttons.
+  - `retry-task` now resumes/retries session state first (phase 3), then dispatches execute.
+- Verification:
+  - `php artisan test --filter=RepoAnalysisApiLifecycleTest` (pass)
+  - `php artisan test --filter=RepoAnalysisExecutionPipelineTest` (pass)
+  - `npm run build` (pass)
+
 ### Session 16 Task 10 — Wire Web Routes, Inertia Pages/Components, Navigation Discoverability, and Realtime UX (Completed)
 
 Pre-Execution Goal Articulation (STAR)

@@ -340,6 +340,7 @@ class RepoAnalysisSessionController extends Controller
     public function retryTask(
         RetryRepoAnalysisTaskRequest $request,
         int $id,
+        SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
         $session = $this->resolveSession($request, $id);
@@ -363,6 +364,33 @@ class RepoAnalysisSessionController extends Controller
             'started_at' => null,
             'finished_at' => null,
         ]);
+
+        if ((int) $session->phase === 3) {
+            $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+            if (($metadata['operator_action_required'] ?? null) === 'task_retry_decision_required') {
+                unset($metadata['operator_action_required'], $metadata['operator_action_details']);
+            }
+
+            $transitionPayload = [
+                'error_code' => null,
+                'error_summary' => null,
+                'metadata_json' => $metadata,
+            ];
+
+            if ((string) $session->status === SessionStateTransitionService::STATUS_PAUSED) {
+                $resumed = $transitions->resume($session->id, $transitionPayload);
+                if (! $resumed) {
+                    return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot resume from its current state.', 409);
+                }
+                $session->refresh();
+            } elseif ((string) $session->status === SessionStateTransitionService::STATUS_FAILED) {
+                $retried = $transitions->retry($session->id, $transitionPayload);
+                if (! $retried) {
+                    return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot retry from its current state.', 409);
+                }
+                $session->refresh();
+            }
+        }
 
         ExecuteRepoAnalysisTaskJob::dispatch((int) $session->id);
 

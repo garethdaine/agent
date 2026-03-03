@@ -3,6 +3,10 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import TaskGraphPanel from '@/Components/CodeAnalysis/TaskGraphPanel.vue';
 import ReportViewer from '@/Components/CodeAnalysis/ReportViewer.vue';
 import Button from '@/Components/ui/Button.vue';
+import Card from '@/Components/ui/Card.vue';
+import CardHeader from '@/Components/ui/CardHeader.vue';
+import CardTitle from '@/Components/ui/CardTitle.vue';
+import CardContent from '@/Components/ui/CardContent.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { onMounted, onUnmounted, ref } from 'vue';
@@ -35,7 +39,17 @@ const loadingCollections = ref(false);
 const error = ref('');
 const notice = ref('');
 const websocketActive = ref(false);
+const actionVisibility = ref({
+    pause: false,
+    resume: false,
+    retry: false,
+    restart: false,
+});
 const actionBusy = ref({
+    pause: false,
+    resume: false,
+    retry: false,
+    restart: false,
     export: false,
 });
 const optimisticExpectedStatus = ref(null);
@@ -48,6 +62,20 @@ const activeStatusByPhase = {
     3: 'executing',
 };
 
+const runningStatuses = ['snapshotting', 'planning', 'executing', 'validating', 'reporting'];
+
+const deriveActionVisibility = () => {
+    const status = String(session.value?.status ?? '');
+    const canMutate = Boolean(props.viewer?.can_mutate);
+
+    actionVisibility.value = {
+        pause: canMutate && runningStatuses.includes(status),
+        resume: canMutate && status === 'paused',
+        retry: canMutate && status === 'failed',
+        restart: canMutate,
+    };
+};
+
 const applySession = (nextSession) => {
     const expected = optimisticExpectedStatus.value;
     session.value = nextSession;
@@ -58,6 +86,8 @@ const applySession = (nextSession) => {
     } else if (expected && String(nextSession?.status ?? '') === expected) {
         optimisticExpectedStatus.value = null;
     }
+
+    deriveActionVisibility();
 };
 
 const loadSession = async () => {
@@ -189,6 +219,7 @@ const subscribeRealtime = () => {
                         ...session.value,
                         status: nextStatus,
                     };
+                    deriveActionVisibility();
                 }
 
                 const eventType = String(event?.event_type ?? '');
@@ -294,6 +325,38 @@ const retryTask = async (taskId) => {
     });
 };
 
+const pauseSession = async () => {
+    await postLifecycle('pause', {
+        busyKey: 'pause',
+        expectedStatus: 'paused',
+        successNotice: 'Session paused.',
+    });
+};
+
+const resumeSession = async () => {
+    await postLifecycle('resume', {
+        busyKey: 'resume',
+        expectedStatus: activeStatusByPhase[String(session.value?.phase ?? '')] ?? null,
+        successNotice: 'Session resumed.',
+    });
+};
+
+const retrySession = async () => {
+    await postLifecycle('retry', {
+        busyKey: 'retry',
+        expectedStatus: activeStatusByPhase[String(session.value?.phase ?? '')] ?? null,
+        successNotice: 'Session retry queued.',
+    });
+};
+
+const restartSession = async () => {
+    await postLifecycle('restart-from-beginning', {
+        busyKey: 'restart',
+        expectedStatus: 'setup',
+        successNotice: 'Session restart queued.',
+    });
+};
+
 const exportLatestReport = async () => {
     actionBusy.value.export = true;
     error.value = '';
@@ -375,6 +438,74 @@ onUnmounted(() => {
                     <p v-if="session?.error_code" class="mt-1 text-xs opacity-90">Code: {{ session.error_code }}</p>
                 </div>
                 <div v-if="notice" class="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">{{ notice }}</div>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Session State</CardTitle>
+                    </CardHeader>
+                    <CardContent class="space-y-3">
+                        <div class="grid gap-3 md:grid-cols-5">
+                            <div class="rounded border border-border p-3">
+                                <p class="text-xs text-muted-foreground">Status</p>
+                                <p class="mt-1 text-sm font-medium">{{ session?.status ?? '—' }}</p>
+                            </div>
+                            <div class="rounded border border-border p-3">
+                                <p class="text-xs text-muted-foreground">Phase</p>
+                                <p class="mt-1 text-sm font-medium">{{ session?.phase ?? '—' }}</p>
+                            </div>
+                            <div class="rounded border border-border p-3">
+                                <p class="text-xs text-muted-foreground">Project</p>
+                                <p class="mt-1 truncate text-sm font-medium">{{ session?.project_directory ?? '—' }}</p>
+                            </div>
+                            <div class="rounded border border-border p-3">
+                                <p class="text-xs text-muted-foreground">Runner</p>
+                                <p class="mt-1 text-sm font-medium">{{ session?.runner_type ?? 'codex' }}</p>
+                            </div>
+                            <div class="rounded border border-border p-3">
+                                <p class="text-xs text-muted-foreground">Updated</p>
+                                <p class="mt-1 text-sm font-medium">{{ session?.updated_at ?? '—' }}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <Button
+                                v-if="actionVisibility.pause"
+                                variant="outline"
+                                :disabled="actionBusy.pause"
+                                @click="pauseSession"
+                            >
+                                {{ actionBusy.pause ? 'Pausing…' : 'Pause' }}
+                            </Button>
+
+                            <Button
+                                v-if="actionVisibility.resume"
+                                variant="outline"
+                                :disabled="actionBusy.resume"
+                                @click="resumeSession"
+                            >
+                                {{ actionBusy.resume ? 'Resuming…' : 'Resume' }}
+                            </Button>
+
+                            <Button
+                                v-if="actionVisibility.retry"
+                                variant="outline"
+                                :disabled="actionBusy.retry"
+                                @click="retrySession"
+                            >
+                                {{ actionBusy.retry ? 'Retrying…' : 'Retry Session' }}
+                            </Button>
+
+                            <Button
+                                v-if="actionVisibility.restart"
+                                variant="outline"
+                                :disabled="actionBusy.restart"
+                                @click="restartSession"
+                            >
+                                {{ actionBusy.restart ? 'Restarting…' : 'Restart' }}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 <TaskGraphPanel
                     :tasks="tasks"
