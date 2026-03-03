@@ -53,8 +53,10 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             'name' => 'API Session',
             'project_directory' => $this->repoRoot,
             'analyzer_profile' => 'default',
+            'runner_type' => 'codex',
         ])->assertStatus(202)
             ->assertJsonPath('data.name', 'API Session')
+            ->assertJsonPath('data.runner_type', 'codex')
             ->assertJsonPath('data.phase', 0)
             ->assertJsonPath('data.status', SessionStateTransitionService::STATUS_SETUP);
 
@@ -66,8 +68,10 @@ class RepoAnalysisApiLifecycleTest extends TestCase
 
         $this->patchJson('/agent/api/v1/repo-analysis/sessions/'.$sessionId, [
             'name' => 'API Session Updated',
+            'runner_type' => 'claude',
         ])->assertOk()
-            ->assertJsonPath('data.name', 'API Session Updated');
+            ->assertJsonPath('data.name', 'API Session Updated')
+            ->assertJsonPath('data.runner_type', 'claude');
 
         $this->getJson('/agent/api/v1/repo-analysis/sessions/'.$sessionId)
             ->assertOk()

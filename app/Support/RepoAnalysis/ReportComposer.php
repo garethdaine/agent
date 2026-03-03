@@ -6,11 +6,16 @@ namespace App\Support\RepoAnalysis;
 
 use App\Models\RepoAnalysisArtifact;
 use App\Models\RepoAnalysisSession;
+use App\Support\Agent\FeatureFlagManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 
 class ReportComposer
 {
+    public function __construct(
+        private readonly FeatureFlagManager $featureFlags,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $coverageSummary
      * @return array{
@@ -36,13 +41,20 @@ class ReportComposer
             ->select(['artifact_key', 'artifact_type', 'content_hash', 'payload_json', 'metadata_json'])
             ->orderBy('artifact_key')
             ->get()
-            ->map(static fn ($artifact): array => [
-                'artifact_key' => (string) $artifact->artifact_key,
-                'artifact_type' => (string) $artifact->artifact_type,
-                'content_hash' => (string) $artifact->content_hash,
-                'payload_json' => is_array($artifact->payload_json) ? $artifact->payload_json : [],
-                'metadata_json' => is_array($artifact->metadata_json) ? $artifact->metadata_json : [],
-            ])
+            ->map(function ($artifact): array {
+                $rawPayload = is_array($artifact->payload_json) ? $artifact->payload_json : [];
+                $normalizedPayload = is_array($rawPayload['payload'] ?? null)
+                    ? $rawPayload['payload']
+                    : $rawPayload;
+
+                return [
+                    'artifact_key' => (string) $artifact->artifact_key,
+                    'artifact_type' => (string) $artifact->artifact_type,
+                    'content_hash' => (string) $artifact->content_hash,
+                    'payload_json' => is_array($normalizedPayload) ? $normalizedPayload : [],
+                    'metadata_json' => is_array($artifact->metadata_json) ? $artifact->metadata_json : [],
+                ];
+            })
             ->all();
 
         $artifacts = array_map(static fn (array $artifact): array => [
@@ -61,13 +73,23 @@ class ReportComposer
 
         $reportHash = hash('sha256', $this->canonicalJson($hashInput));
         $repositoryProfile = $this->buildRepositoryProfile($session, $artifactRecords, $coverageSummary);
+        $aiSections = $this->extractAiSections($artifactRecords);
+        $fullReportMarkdown = $this->composeFullReportMarkdown($aiSections);
 
         $payload = [
             'session_id' => $session->id,
             'snapshot_hash' => (string) $session->snapshot_hash,
+            'runner_type' => (string) ($session->runner_type ?: 'claude'),
             'artifact_count' => count($artifacts),
             'artifacts' => $artifacts,
             'coverage' => $coverageSummary,
+            'ai_report' => [
+                'enabled' => $this->featureFlags->enabled(FeatureFlagManager::REPO_ANALYSIS_AI_ENABLED),
+                'section_count' => count($aiSections),
+                'has_final_report_section' => $this->hasFinalReportSection($aiSections),
+                'sections' => $aiSections,
+            ],
+            'full_report_markdown' => $fullReportMarkdown,
             'repository_profile' => $repositoryProfile,
             'generated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
         ];
@@ -79,6 +101,7 @@ class ReportComposer
             'metadata_json' => [
                 'artifact_hash_count' => count($artifacts),
                 'hash_input' => $hashInput,
+                'ai_section_count' => count($aiSections),
                 'repository_profile_warnings' => $repositoryProfile['warnings'] ?? [],
             ],
             'payload' => $artifacts,
@@ -201,7 +224,7 @@ class ReportComposer
                 'artifacts' => 'Versioned outputs from snapshot/analyzers/coverage/reporting, each identified by artifact key and content hash.',
             ],
             'limitations' => [
-                'Analysis is static and deterministic; it summarizes repository structure and code surfaces without executing application runtime flows.',
+                'Analysis combines deterministic repository scanning with AI synthesis and does not execute full runtime behavior.',
             ],
             'warnings' => $warnings,
         ];
@@ -731,6 +754,136 @@ class ReportComposer
         sort($codes, SORT_STRING);
 
         return $codes;
+    }
+
+    /**
+     * @param  array<int, array{
+     *   artifact_key: string,
+     *   artifact_type: string,
+     *   content_hash: string,
+     *   payload_json: array<string, mixed>,
+     *   metadata_json: array<string, mixed>
+     * }>  $artifactRecords
+     * @return array<int, array<string, mixed>>
+     */
+    private function extractAiSections(array $artifactRecords): array
+    {
+        $sections = [];
+        $order = [
+            'overview' => 10,
+            'backend' => 20,
+            'frontend' => 30,
+            'quality_risk' => 40,
+            'final_report' => 90,
+        ];
+
+        foreach ($artifactRecords as $artifactRecord) {
+            if (($artifactRecord['artifact_type'] ?? '') !== 'ai_analysis_section') {
+                continue;
+            }
+
+            $payload = is_array($artifactRecord['payload_json'] ?? null)
+                ? $artifactRecord['payload_json']
+                : [];
+
+            $sectionKey = trim((string) ($payload['section_key'] ?? ''));
+            $sectionTitle = trim((string) ($payload['section_title'] ?? ''));
+            $summaryMarkdown = trim((string) ($payload['summary_markdown'] ?? ''));
+
+            if ($sectionKey === '') {
+                $sectionKey = trim((string) ($payload['task_name'] ?? ''));
+            }
+            if ($sectionTitle === '') {
+                $sectionTitle = Str::title(str_replace('_', ' ', $sectionKey));
+            }
+
+            $sections[] = [
+                'section_key' => $sectionKey,
+                'section_title' => $sectionTitle,
+                'task_key' => (string) ($payload['task_key'] ?? ''),
+                'task_name' => (string) ($payload['task_name'] ?? ''),
+                'summary_markdown' => $summaryMarkdown,
+                'goals' => $this->stringList($payload['goals'] ?? []),
+                'constraints' => $this->stringList($payload['constraints'] ?? []),
+                'acceptance_criteria' => $this->stringList($payload['acceptance_criteria'] ?? []),
+                'open_questions' => $this->stringList($payload['open_questions'] ?? []),
+                '_sort' => $order[$sectionKey] ?? 50,
+            ];
+        }
+
+        usort($sections, static function (array $left, array $right): int {
+            $leftOrder = (int) ($left['_sort'] ?? 50);
+            $rightOrder = (int) ($right['_sort'] ?? 50);
+
+            if ($leftOrder !== $rightOrder) {
+                return $leftOrder <=> $rightOrder;
+            }
+
+            return strcmp((string) ($left['section_key'] ?? ''), (string) ($right['section_key'] ?? ''));
+        });
+
+        return array_map(static function (array $section): array {
+            unset($section['_sort']);
+
+            return $section;
+        }, $sections);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $aiSections
+     */
+    private function hasFinalReportSection(array $aiSections): bool
+    {
+        foreach ($aiSections as $section) {
+            if ((string) ($section['section_key'] ?? '') === 'final_report'
+                && trim((string) ($section['summary_markdown'] ?? '')) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $aiSections
+     */
+    private function composeFullReportMarkdown(array $aiSections): string
+    {
+        foreach ($aiSections as $section) {
+            $sectionKey = (string) ($section['section_key'] ?? '');
+            $sectionMarkdown = trim((string) ($section['summary_markdown'] ?? ''));
+
+            if ($sectionKey === 'final_report' && $sectionMarkdown !== '') {
+                return $sectionMarkdown;
+            }
+        }
+
+        $blocks = [];
+
+        foreach ($aiSections as $section) {
+            $sectionKey = (string) ($section['section_key'] ?? '');
+            if ($sectionKey === 'final_report') {
+                continue;
+            }
+
+            $sectionMarkdown = trim((string) ($section['summary_markdown'] ?? ''));
+            if ($sectionMarkdown === '') {
+                continue;
+            }
+
+            $sectionTitle = trim((string) ($section['section_title'] ?? ''));
+            if ($sectionTitle !== '') {
+                $blocks[] = '## '.$sectionTitle;
+            }
+            $blocks[] = $sectionMarkdown;
+        }
+
+        $composed = trim(implode("\n\n", $blocks));
+        if ($composed === '') {
+            return '';
+        }
+
+        return preg_replace("/\n{3,}/", "\n\n", $composed) ?? $composed;
     }
 
     /**

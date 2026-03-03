@@ -8,6 +8,7 @@ use App\Models\RepoAnalysisArtifact;
 use App\Models\RepoAnalysisSession;
 use App\Models\RepoAnalysisTask;
 use App\Support\RepoAnalysis\Analyzers\AnalyzerRegistry;
+use App\Support\RepoAnalysis\AiTaskRunner;
 use App\Support\RepoAnalysis\EventWriter;
 use App\Support\RepoAnalysis\RepoAnalysisExecutionOrchestrator;
 use App\Support\RepoAnalysis\SessionStateTransitionService;
@@ -38,6 +39,7 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
         SessionStateTransitionService $transitions,
         AnalyzerRegistry $analyzers,
         SnapshotBuilder $snapshotBuilder,
+        AiTaskRunner $aiTaskRunner,
     ): void {
         $orchestrator->assertQueue($this->queue);
 
@@ -136,8 +138,13 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
                 throw new \RuntimeException('Snapshot payload missing from session metadata.');
             }
 
-            $analyzer = $analyzers->get((string) $nextTask->analyzer_name);
-            $result = $analyzer->analyze($snapshot);
+            $taskType = (string) $nextTask->task_type;
+            if ($taskType === 'ai_analysis') {
+                $result = $aiTaskRunner->run($session, $nextTask, $snapshot, $writer);
+            } else {
+                $analyzer = $analyzers->get((string) $nextTask->analyzer_name);
+                $result = $analyzer->analyze($snapshot);
+            }
 
             $artifact = RepoAnalysisArtifact::query()->updateOrCreate(
                 [
@@ -175,9 +182,17 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
             $nextTask->metadata_json = $taskMetadata;
             $nextTask->save();
 
+            if ($taskType === 'ai_analysis' && is_string($result['cli_session_id'] ?? null) && $result['cli_session_id'] !== '') {
+                $sessionMetadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+                $sessionMetadata['ai_cli_session_id'] = $result['cli_session_id'];
+                $session->metadata_json = $sessionMetadata;
+                $session->save();
+            }
+
             $writer->append('task_completed', [
                 'task_key' => (string) $nextTask->task_key,
                 'analyzer' => (string) $nextTask->analyzer_name,
+                'task_type' => (string) $nextTask->task_type,
                 'attempt' => $attempt,
                 'output_hash' => (string) $result['output_hash'],
             ], [

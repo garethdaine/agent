@@ -20,6 +20,8 @@ class FeatureFlagManager
 
     public const REPO_ANALYSIS_ENABLED = 'repo_analysis.enabled';
 
+    public const REPO_ANALYSIS_AI_ENABLED = 'repo_analysis.ai.enabled';
+
     // Org layer flag constants
     public const ORG_ENABLED = 'agent.org.enabled';
 
@@ -71,6 +73,10 @@ class FeatureFlagManager
         self::REPO_ANALYSIS_ENABLED => [
             'label' => 'Repo Analysis',
             'description' => 'Enable the Repo Analysis tool, API lifecycle routes, and Tools navigation entry.',
+        ],
+        self::REPO_ANALYSIS_AI_ENABLED => [
+            'label' => 'Repo Analysis AI Tasks',
+            'description' => 'Enable AI-driven task execution and narrative report synthesis for Repo Analysis sessions.',
         ],
         self::ORG_ENABLED => [
             'label' => 'Org Layer',

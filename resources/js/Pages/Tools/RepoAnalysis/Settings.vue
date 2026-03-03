@@ -28,6 +28,7 @@ const form = reactive({
     name: '',
     project_directory: '',
     analyzer_profile: 'default',
+    runner_type: 'claude',
 });
 
 const load = async () => {
@@ -39,6 +40,7 @@ const load = async () => {
         form.name = data?.data?.name ?? '';
         form.project_directory = data?.data?.project_directory ?? '';
         form.analyzer_profile = data?.data?.analyzer_profile ?? 'default';
+        form.runner_type = data?.data?.runner_type ?? 'claude';
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load settings.';
     } finally {
@@ -57,6 +59,7 @@ const save = async () => {
             name: form.name,
             project_directory: form.project_directory,
             analyzer_profile: form.analyzer_profile,
+            runner_type: form.runner_type,
         });
 
         notice.value = 'Settings saved.';
@@ -96,7 +99,7 @@ onMounted(load);
                 <Card>
                     <CardHeader>
                         <CardTitle>Session Configuration</CardTitle>
-                        <CardDescription>Update display name, repository path, and analyzer profile.</CardDescription>
+                        <CardDescription>Update display name, repository path, analyzer profile, and AI runner.</CardDescription>
                     </CardHeader>
                     <CardContent class="space-y-4">
                         <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ error }}</div>
@@ -118,6 +121,20 @@ onMounted(load);
                             <label class="block text-sm font-medium">Analyzer Profile</label>
                             <Input v-model="form.analyzer_profile" class="mt-1" type="text" :error="!!validation.analyzer_profile" :disabled="loading || saving" />
                             <p v-if="validation.analyzer_profile" class="mt-1 text-sm text-destructive">{{ validation.analyzer_profile[0] }}</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium">AI Runner</label>
+                            <select
+                                v-model="form.runner_type"
+                                class="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                :disabled="loading || saving"
+                            >
+                                <option value="claude">Claude</option>
+                                <option value="codex">Codex</option>
+                            </select>
+                            <p class="mt-1 text-xs text-muted-foreground">Used for AI analysis tasks and final report synthesis.</p>
+                            <p v-if="validation.runner_type" class="mt-1 text-sm text-destructive">{{ validation.runner_type[0] }}</p>
                         </div>
 
                         <div class="flex justify-end">

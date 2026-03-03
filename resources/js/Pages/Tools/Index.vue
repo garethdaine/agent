@@ -64,8 +64,8 @@ const tools = computed(() => {
         items.splice(1, 0, {
             route: 'tools.repo-analysis.index',
             category: 'Repo Analysis',
-            title: 'Deterministic repository analysis',
-            description: 'Run snapshot/plan/execute/validate/report workflows with realtime operator controls.',
+            title: 'AI-driven repository analysis',
+            description: 'Run stepwise repository analysis with live task feedback and full narrative reporting.',
             icon: GitBranchPlus,
         });
     }

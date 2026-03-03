@@ -474,3 +474,10 @@ Use this file to capture correction-driven lessons.
   - If a report is generated, expose complete report context directly in-app, with export as secondary.
   - New long-running sessions created from a wizard should auto-enter phase 1 when safe, rather than requiring a redundant first click.
   - Validate create -> wizard UX end-to-end before marking repo-analysis changes complete.
+
+## 2026-03-02 Repo Analysis: AI-first Narrative Requirement
+- Correction pattern: when a tool is expected to produce human-readable repository analysis, do not stop at deterministic artifacts/stats.
+- Rule: wire deterministic analyzers as evidence inputs, but require AI section tasks (runner-selected `claude|codex`) to synthesize the final report.
+- Rule: ensure report payload and UI both surface the full markdown narrative as the primary output (not only raw JSON/cards).
+- Rule: keep end-to-end pipeline automatic once session starts; avoid requiring manual "run next step" clicks for a fresh setup session.
+- Rule: any new enablement switch (for example AI task execution) must be added to managed feature flags so it appears in app Feature Settings UI.

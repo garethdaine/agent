@@ -23,6 +23,7 @@ class RepoAnalysisSession extends Model
 
     protected $attributes = [
         'analyzer_profile' => 'default',
+        'runner_type' => 'claude',
         'status' => 'setup',
         'phase' => 0,
         'manifest_stats_json' => '{}',

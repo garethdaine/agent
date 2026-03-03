@@ -91,6 +91,46 @@ class ReportComposerTest extends TestCase
         );
     }
 
+    public function test_compose_promotes_ai_final_report_markdown_from_ai_section_artifacts(): void
+    {
+        $session = $this->createSession();
+
+        RepoAnalysisArtifact::query()->create([
+            'repo_analysis_session_id' => $session->id,
+            'artifact_type' => 'ai_analysis_section',
+            'artifact_key' => 'ai.ai_final_report.json',
+            'content_hash' => hash('sha256', 'ai-final'),
+            'payload_json' => [
+                'payload' => [
+                    'section_key' => 'final_report',
+                    'section_title' => 'Final Comprehensive Repository Report',
+                    'task_key' => 'ai_final_report:abc123',
+                    'task_name' => 'ai_final_report',
+                    'summary_markdown' => "## Comprehensive Repository Report\n\nThis is a fully synthesized narrative.",
+                    'goals' => ['Deliver a complete repository explanation'],
+                    'constraints' => ['Use code evidence'],
+                    'acceptance_criteria' => ['Explain dependencies and architecture'],
+                    'open_questions' => [],
+                ],
+                'warnings' => [],
+                'warning_artifact_path' => null,
+            ],
+            'metadata_json' => [],
+        ]);
+
+        $composed = app(ReportComposer::class)->compose($session->fresh(), []);
+
+        $this->assertSame(
+            "## Comprehensive Repository Report\n\nThis is a fully synthesized narrative.",
+            data_get($composed, 'payload_json.full_report_markdown')
+        );
+        $this->assertSame(
+            1,
+            (int) data_get($composed, 'payload_json.ai_report.section_count')
+        );
+        $this->assertTrue((bool) data_get($composed, 'payload_json.ai_report.has_final_report_section'));
+    }
+
     /**
      * @param  array<int, array{artifact_key: string, artifact_type: string, content_hash: string}>  $artifacts
      */

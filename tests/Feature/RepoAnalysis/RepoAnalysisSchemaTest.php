@@ -29,6 +29,7 @@ class RepoAnalysisSchemaTest extends TestCase
             'name',
             'project_directory',
             'analyzer_profile',
+            'runner_type',
             'status',
             'phase',
             'snapshot_hash',

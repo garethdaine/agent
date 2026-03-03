@@ -4,6 +4,7 @@ import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import Button from '@/Components/ui/Button.vue';
+import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -47,6 +48,12 @@ const selectedReport = computed(() => {
 const selectedPayload = computed(() => selectedReport.value?.payload_json ?? {});
 const selectedProfile = computed(() => selectedPayload.value?.repository_profile ?? {});
 const selectedCoverage = computed(() => selectedProfile.value?.coverage_gate ?? selectedPayload.value?.coverage ?? {});
+const selectedAiReport = computed(() => (selectedPayload.value?.ai_report && typeof selectedPayload.value.ai_report === 'object')
+    ? selectedPayload.value.ai_report
+    : {});
+const selectedAiSections = computed(() => Array.isArray(selectedAiReport.value?.sections)
+    ? selectedAiReport.value.sections.filter((section) => section && typeof section === 'object')
+    : []);
 
 const asList = (value) => {
     if (!Array.isArray(value)) {
@@ -86,6 +93,45 @@ const dependencySample = (pairs, limit = 16) => {
         .slice(0, limit)
         .map((pair) => `${pair.name}${pair.version ? ` (${pair.version})` : ''}`);
 };
+
+const composeSectionMarkdown = (sections) => {
+    if (!Array.isArray(sections) || sections.length === 0) {
+        return '';
+    }
+
+    const blocks = sections
+        .map((section) => {
+            const title = String(section?.section_title ?? '').trim();
+            const markdown = String(section?.summary_markdown ?? '').trim();
+            if (markdown === '') {
+                return '';
+            }
+
+            if (title === '') {
+                return markdown;
+            }
+
+            return `## ${title}\n\n${markdown}`;
+        })
+        .filter((value) => value.length > 0);
+
+    return blocks.join('\n\n');
+};
+
+const fullReportMarkdown = computed(() => {
+    const direct = String(selectedPayload.value?.full_report_markdown ?? '').trim();
+    if (direct !== '') {
+        return direct;
+    }
+
+    const finalSection = selectedAiSections.value.find((section) => String(section?.section_key ?? '') === 'final_report');
+    const finalMarkdown = String(finalSection?.summary_markdown ?? '').trim();
+    if (finalMarkdown !== '') {
+        return finalMarkdown;
+    }
+
+    return composeSectionMarkdown(selectedAiSections.value);
+});
 </script>
 
 <template>
@@ -120,10 +166,24 @@ const dependencySample = (pairs, limit = 16) => {
                     <p class="mt-1 text-xs text-muted-foreground">
                         Session {{ selectedPayload.session_id ?? '—' }} · artifacts {{ selectedPayload.artifact_count ?? 0 }}
                     </p>
+                    <p class="mt-1 text-xs text-muted-foreground">
+                        Runner {{ selectedPayload.runner_type ?? '—' }} · AI sections {{ selectedAiSections.length }}
+                    </p>
 
-                    <div class="mt-3 space-y-3 text-xs">
+                    <div class="mt-3 space-y-4 text-xs">
+                        <div v-if="fullReportMarkdown !== ''" class="space-y-2">
+                            <p class="font-semibold">Narrative Report</p>
+                            <MarkdownRenderer
+                                :markdown="fullReportMarkdown"
+                                class="summary-markdown prose prose-sm max-w-none rounded-md border border-border bg-muted/30 p-3 text-foreground dark:prose-invert prose-headings:text-foreground prose-strong:text-foreground prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"
+                            />
+                        </div>
+                        <div v-else class="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                            AI narrative report is not available yet for this run.
+                        </div>
+
                         <div v-if="selectedProfile?.overview">
-                            <p class="font-semibold">Overview</p>
+                            <p class="font-semibold">Deterministic Appendix</p>
                             <p class="text-muted-foreground">
                                 Stack: {{ asList(selectedProfile.overview.inferred_stack).join(', ') || 'Not inferred' }}
                             </p>
@@ -199,11 +259,11 @@ const dependencySample = (pairs, limit = 16) => {
                             </p>
                         </div>
 
-                        <div v-if="selectedProfile?.glossary">
-                            <p class="font-semibold">Glossary</p>
-                            <p class="text-muted-foreground">Task Graph: {{ selectedProfile.glossary.task_graph ?? '—' }}</p>
-                            <p class="text-muted-foreground">Coverage Gate: {{ selectedProfile.glossary.coverage_gate ?? '—' }}</p>
-                            <p class="text-muted-foreground">Artifacts: {{ selectedProfile.glossary.artifacts ?? '—' }}</p>
+                        <div v-if="selectedAiSections.length > 0">
+                            <p class="font-semibold">AI Section Coverage</p>
+                            <p class="text-muted-foreground">
+                                {{ selectedAiSections.map((section) => section.section_title).join(' · ') }}
+                            </p>
                         </div>
 
                         <div>

@@ -2142,3 +2142,24 @@ Review
 - ReportViewer now shows full report content directly in-app (overview, dependency summary, backend/frontend surfaces, testing, risk hotspots, coverage gate, glossary) plus raw payload JSON.
 - Create flow now routes to wizard with one-time `autostart=1`; wizard consumes that flag and immediately starts snapshot when session is in setup phase.
 - Verification: `php artisan test --filter=RepoAnalysis --stop-on-failure` and `npm run build` both pass.
+
+## 2026-03-02 Repo Analysis AI-Driven Report Completion
+- [x] Wire AI artifacts into report payload so final report is primarily AI-authored markdown sections.
+- [x] Update markdown export to include full AI report (with deterministic appendix) instead of only compact profile bullets.
+- [x] Update ReportViewer to render full markdown report in UI and expose deterministic appendix cleanly.
+- [x] Ensure wizard auto-starts analysis when opening a fresh setup session (no manual "Run Next Step" needed).
+- [x] Surface AI enablement as a managed app feature flag in Feature Settings UI config.
+- [x] Add/adjust tests for report composition, API/session runner persistence, and feature-flag exposure.
+- [x] Run focused repo-analysis tests + frontend build verification.
+- [ ] Commit and push.
+
+### Review
+- Repo Analysis report composition now unwraps analyzer payload artifacts, includes AI section outputs, and stores `full_report_markdown` for direct UI/export rendering.
+- Markdown export now prints a full narrative report first (AI final synthesis when present), then deterministic appendix + artifact ledger.
+- Wizard auto-start now triggers for fresh setup sessions via metadata/query/inferred setup state, avoiding manual first-step clicks.
+- Feature Settings now includes a managed toggle for `repo_analysis.ai.enabled` and planning uses this flag to enable/disable AI task graph nodes.
+- Verification executed:
+  - `php artisan test --filter=RepoAnalysis --stop-on-failure`
+  - `php artisan test --filter=FeatureSettingsApiTest --stop-on-failure`
+  - `php artisan test --filter=FeatureFlagManagerTest --stop-on-failure`
+  - `npm run build`

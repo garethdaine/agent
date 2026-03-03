@@ -291,7 +291,7 @@ const runNextStep = async () => {
 };
 
 const maybeAutoStart = async () => {
-    if (!autoStartRequested.value || autoStartAttempted.value) {
+    if (autoStartAttempted.value) {
         return;
     }
 
@@ -303,6 +303,16 @@ const maybeAutoStart = async () => {
 
     const phase = Number(session.value?.phase ?? 0);
     const status = String(session.value?.status ?? '');
+    const metadataAutoStart = Boolean(session.value?.metadata?.auto_start_on_open);
+    const inferredAutoStart = phase === 0 && status === 'setup' && events.value.length === 0;
+    const shouldAutoStart = autoStartRequested.value || metadataAutoStart || inferredAutoStart;
+
+    if (!shouldAutoStart) {
+        autoStartAttempted.value = true;
+
+        return;
+    }
+
     if (phase !== 0 || status !== 'setup') {
         autoStartAttempted.value = true;
 
@@ -408,7 +418,7 @@ onUnmounted(() => {
                         <CardTitle>Session State</CardTitle>
                     </CardHeader>
                     <CardContent class="space-y-3">
-                        <div class="grid gap-3 md:grid-cols-4">
+                        <div class="grid gap-3 md:grid-cols-5">
                             <div class="rounded border border-border p-3">
                                 <p class="text-xs text-muted-foreground">Status</p>
                                 <p class="mt-1 text-sm font-medium">{{ session?.status ?? '—' }}</p>
@@ -420,6 +430,10 @@ onUnmounted(() => {
                             <div class="rounded border border-border p-3">
                                 <p class="text-xs text-muted-foreground">Project</p>
                                 <p class="mt-1 text-sm font-medium truncate">{{ session?.project_directory ?? '—' }}</p>
+                            </div>
+                            <div class="rounded border border-border p-3">
+                                <p class="text-xs text-muted-foreground">Runner</p>
+                                <p class="mt-1 text-sm font-medium">{{ session?.runner_type ?? 'claude' }}</p>
                             </div>
                             <div class="rounded border border-border p-3">
                                 <p class="text-xs text-muted-foreground">Updated</p>

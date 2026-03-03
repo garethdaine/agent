@@ -92,10 +92,12 @@ class RepoAnalysisSessionController extends Controller
             'name' => array_key_exists('name', $validated) ? ($validated['name'] ?: null) : null,
             'project_directory' => (string) $validated['project_directory'],
             'analyzer_profile' => (string) ($validated['analyzer_profile'] ?? 'default'),
+            'runner_type' => (string) ($validated['runner_type'] ?? 'claude'),
             'status' => SessionStateTransitionService::STATUS_SETUP,
             'phase' => 0,
             'metadata_json' => [
                 'source' => 'api',
+                'auto_start_on_open' => true,
             ],
         ]);
 
@@ -105,9 +107,9 @@ class RepoAnalysisSessionController extends Controller
             targetType: 'repo_analysis_session',
             targetId: (int) $session->id,
             ownerUserId: (int) $session->user_id,
-            changedFields: ['name', 'project_directory', 'analyzer_profile', 'status', 'phase'],
+            changedFields: ['name', 'project_directory', 'analyzer_profile', 'runner_type', 'status', 'phase'],
             before: null,
-            after: $session->only(['id', 'name', 'project_directory', 'analyzer_profile', 'status', 'phase']),
+            after: $session->only(['id', 'name', 'project_directory', 'analyzer_profile', 'runner_type', 'status', 'phase']),
         );
 
         return response()->json([
@@ -126,7 +128,7 @@ class RepoAnalysisSessionController extends Controller
         }
 
         $validated = $request->validated();
-        $before = $session->only(['name', 'project_directory', 'analyzer_profile']);
+        $before = $session->only(['name', 'project_directory', 'analyzer_profile', 'runner_type']);
 
         if (array_key_exists('name', $validated)) {
             $session->name = $validated['name'] ?: null;
@@ -140,10 +142,16 @@ class RepoAnalysisSessionController extends Controller
             $session->analyzer_profile = $validated['analyzer_profile'] ?: 'default';
         }
 
+        if (array_key_exists('runner_type', $validated)) {
+            $session->runner_type = in_array($validated['runner_type'], ['claude', 'codex'], true)
+                ? $validated['runner_type']
+                : 'claude';
+        }
+
         $session->save();
 
         $changedFields = [];
-        foreach (['name', 'project_directory', 'analyzer_profile'] as $field) {
+        foreach (['name', 'project_directory', 'analyzer_profile', 'runner_type'] as $field) {
             if (data_get($before, $field) !== data_get($session, $field)) {
                 $changedFields[] = $field;
             }
@@ -158,7 +166,7 @@ class RepoAnalysisSessionController extends Controller
                 ownerUserId: (int) $session->user_id,
                 changedFields: $changedFields,
                 before: $before,
-                after: $session->only(['name', 'project_directory', 'analyzer_profile']),
+                after: $session->only(['name', 'project_directory', 'analyzer_profile', 'runner_type']),
             );
         }
 
@@ -239,6 +247,11 @@ class RepoAnalysisSessionController extends Controller
         if ($limitError = $this->activeSessionLimitEnvelope((int) $session->user_id, (int) $session->id)) {
             return $limitError;
         }
+
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        unset($metadata['auto_start_on_open']);
+        $session->metadata_json = $metadata;
+        $session->save();
 
         GenerateRepoSnapshotJob::dispatch($session->id);
 
@@ -758,6 +771,7 @@ class RepoAnalysisSessionController extends Controller
             'name' => $session->name,
             'project_directory' => $session->project_directory,
             'analyzer_profile' => $session->analyzer_profile,
+            'runner_type' => $session->runner_type,
             'phase' => (int) $session->phase,
             'status' => (string) $session->status,
             'snapshot_hash' => $session->snapshot_hash,

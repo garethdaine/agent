@@ -21,11 +21,13 @@ class StoreRepoAnalysisSessionRequest extends FormRequest
         $projectDirectory = $this->input('project_directory');
         $name = $this->input('name');
         $profile = $this->input('analyzer_profile');
+        $runnerType = $this->input('runner_type');
 
         $this->merge([
             'project_directory' => is_string($projectDirectory) ? trim($projectDirectory) : $projectDirectory,
             'name' => is_string($name) ? trim($name) : $name,
             'analyzer_profile' => is_string($profile) ? trim($profile) : $profile,
+            'runner_type' => is_string($runnerType) ? trim($runnerType) : $runnerType,
         ]);
     }
 
@@ -38,6 +40,7 @@ class StoreRepoAnalysisSessionRequest extends FormRequest
             'name' => ['nullable', 'string', 'max:255'],
             'project_directory' => ['required', 'string', 'max:1024'],
             'analyzer_profile' => ['nullable', 'string', 'max:64'],
+            'runner_type' => ['nullable', 'string', 'in:claude,codex'],
         ];
     }
 

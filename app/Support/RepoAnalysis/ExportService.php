@@ -129,10 +129,26 @@ class ExportService
             '# Repo Analysis Report',
             '',
             'Session: '.$session->id,
+            'Runner: '.(string) data_get($payload, 'runner_type', $session->runner_type ?? 'claude'),
             'Report hash: '.(string) $report->report_hash,
             'Generated at: '.(string) data_get($payload, 'generated_at', ''),
             '',
         ];
+
+        $fullReportMarkdown = trim((string) data_get($payload, 'full_report_markdown', ''));
+        if ($fullReportMarkdown !== '') {
+            $lines[] = '## Full Repository Report';
+            $lines[] = '';
+            $lines[] = $fullReportMarkdown;
+            $lines[] = '';
+        }
+
+        if ($fullReportMarkdown === '') {
+            $aiSections = data_get($payload, 'ai_report.sections', []);
+            if (is_array($aiSections) && $aiSections !== []) {
+                $lines = array_merge($lines, $this->renderAiSections($aiSections));
+            }
+        }
 
         $repositoryProfile = data_get($payload, 'repository_profile', []);
         if (is_array($repositoryProfile) && $repositoryProfile !== []) {
@@ -159,6 +175,34 @@ class ExportService
         }
 
         return implode(PHP_EOL, $lines);
+    }
+
+    /**
+     * @param  array<int, mixed>  $sections
+     * @return array<int, string>
+     */
+    private function renderAiSections(array $sections): array
+    {
+        $lines = ['## AI Analysis Sections', ''];
+
+        foreach ($sections as $section) {
+            if (! is_array($section)) {
+                continue;
+            }
+
+            $title = trim((string) ($section['section_title'] ?? ''));
+            $markdown = trim((string) ($section['summary_markdown'] ?? ''));
+            if ($title === '' || $markdown === '') {
+                continue;
+            }
+
+            $lines[] = '### '.$title;
+            $lines[] = '';
+            $lines[] = $markdown;
+            $lines[] = '';
+        }
+
+        return $lines;
     }
 
     /**

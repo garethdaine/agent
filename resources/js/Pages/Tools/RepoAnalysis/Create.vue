@@ -22,6 +22,7 @@ const form = reactive({
     name: '',
     project_directory: props.defaultProjectDirectory || '',
     analyzer_profile: 'default',
+    runner_type: 'claude',
 });
 
 const submitting = ref(false);
@@ -97,6 +98,16 @@ const submit = async () => {
                             <label class="block text-sm font-medium">Analyzer Profile</label>
                             <Input v-model="form.analyzer_profile" class="mt-1" type="text" :error="!!validation.analyzer_profile" />
                             <p v-if="validation.analyzer_profile" class="mt-1 text-sm text-destructive">{{ validation.analyzer_profile[0] }}</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium">AI Runner</label>
+                            <select v-model="form.runner_type" class="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                <option value="claude">Claude</option>
+                                <option value="codex">Codex</option>
+                            </select>
+                            <p class="mt-1 text-xs text-muted-foreground">Runner used for AI analysis tasks and final report generation.</p>
+                            <p v-if="validation.runner_type" class="mt-1 text-sm text-destructive">{{ validation.runner_type[0] }}</p>
                         </div>
 
                         <div class="flex justify-end">

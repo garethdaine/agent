@@ -42,7 +42,7 @@ feature_flags:
   - docs_search_enabled
   - help_hint_enabled
 locale: en
-reviewed_at: 2026-03-02
+reviewed_at: 2026-03-03
 ---
 # Interface Surface Coverage
 

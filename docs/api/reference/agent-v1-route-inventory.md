@@ -21,7 +21,7 @@ setting_keys:
 feature_flags:
   - docs_center_enabled
 locale: en
-reviewed_at: 2026-03-02
+reviewed_at: 2026-03-03
 ---
 # Agent API v1 Route Inventory
 

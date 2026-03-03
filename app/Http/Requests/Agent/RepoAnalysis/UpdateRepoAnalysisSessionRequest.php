@@ -29,6 +29,11 @@ class UpdateRepoAnalysisSessionRequest extends FormRequest
             $normalized['analyzer_profile'] = is_string($profile) ? trim($profile) : $profile;
         }
 
+        if ($this->has('runner_type')) {
+            $runnerType = $this->input('runner_type');
+            $normalized['runner_type'] = is_string($runnerType) ? trim($runnerType) : $runnerType;
+        }
+
         if ($this->has('project_directory')) {
             $projectDirectory = $this->input('project_directory');
             $normalized['project_directory'] = is_string($projectDirectory) ? trim($projectDirectory) : $projectDirectory;
@@ -47,6 +52,7 @@ class UpdateRepoAnalysisSessionRequest extends FormRequest
         return [
             'name' => ['nullable', 'string', 'max:255'],
             'analyzer_profile' => ['nullable', 'string', 'max:64'],
+            'runner_type' => ['nullable', 'string', 'in:claude,codex'],
             'project_directory' => ['sometimes', 'required', 'string', 'max:1024'],
         ];
     }

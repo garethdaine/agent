@@ -111,6 +111,12 @@ return [
         ],
     ],
 
+    'ai' => [
+        'enabled' => $coerceBoolean(env('REPO_ANALYSIS_AI_ENABLED', true), true),
+        'task_timeout_seconds' => $coerceBoundedInt(env('REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS', 1200), 1200, 60, 7200),
+        'max_stream_message_length' => $coerceBoundedInt(env('REPO_ANALYSIS_AI_MAX_STREAM_MESSAGE_LENGTH', 320), 320, 80, 4000),
+    ],
+
     'exports' => [
         'relative_directory' => env('REPO_ANALYSIS_EXPORT_RELATIVE_DIRECTORY', 'docs/discovery/repo-analysis'),
     ],

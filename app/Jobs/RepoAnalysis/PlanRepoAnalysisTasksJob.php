@@ -6,6 +6,7 @@ namespace App\Jobs\RepoAnalysis;
 
 use App\Models\RepoAnalysisSession;
 use App\Models\RepoAnalysisTask;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\RepoAnalysis\Analyzers\AnalyzerRegistry;
 use App\Support\RepoAnalysis\EventWriter;
 use App\Support\RepoAnalysis\RepoAnalysisExecutionOrchestrator;
@@ -36,6 +37,7 @@ class PlanRepoAnalysisTasksJob implements ShouldQueue
         RepoAnalysisExecutionOrchestrator $orchestrator,
         SessionStateTransitionService $transitions,
         AnalyzerRegistry $analyzers,
+        FeatureFlagManager $featureFlags,
     ): void {
         $orchestrator->assertQueue($this->queue);
 
@@ -141,6 +143,70 @@ class PlanRepoAnalysisTasksJob implements ShouldQueue
             ]));
         }
 
+        if ($featureFlags->enabled(FeatureFlagManager::REPO_ANALYSIS_AI_ENABLED)) {
+            foreach ($this->aiTaskDefinitions() as $aiTaskDefinition) {
+                $analyzerName = (string) $aiTaskDefinition['analyzer_name'];
+                $analyzerVersion = 'ai-task-1.0.0';
+                $taskKey = $this->taskKey((string) $session->analyzer_profile, (string) $session->snapshot_hash, $analyzerName, $analyzerVersion);
+                $plannedTaskKeys[] = $taskKey;
+
+                $inputHash = $orchestrator->taskInputHash(
+                    (string) $session->snapshot_hash,
+                    $analyzerName,
+                    $analyzerVersion,
+                );
+
+                $dependsOn = is_array($aiTaskDefinition['depends_on'] ?? null)
+                    ? array_values(array_filter($aiTaskDefinition['depends_on'], static fn (mixed $dependency): bool => is_string($dependency) && $dependency !== ''))
+                    : [];
+
+                $taskMetadata = [
+                    'ai_task' => true,
+                    'section_key' => (string) ($aiTaskDefinition['section_key'] ?? $analyzerName),
+                    'section_title' => (string) ($aiTaskDefinition['section_title'] ?? $analyzerName),
+                    'runner_type' => (string) ($session->runner_type ?: 'claude'),
+                ];
+
+                $existingTask = $existingTasks->get($taskKey);
+                $baseAttributes = [
+                    'repo_analysis_session_id' => $session->id,
+                    'task_key' => $taskKey,
+                    'task_type' => 'ai_analysis',
+                    'phase' => 3,
+                    'depends_on_json' => $dependsOn,
+                    'analyzer_name' => $analyzerName,
+                    'analyzer_version' => $analyzerVersion,
+                    'input_hash' => $inputHash,
+                ];
+
+                if ($existingTask instanceof RepoAnalysisTask) {
+                    $existingTaskMetadata = is_array($existingTask->metadata_json) ? $existingTask->metadata_json : [];
+                    $existingTask->fill(array_merge($baseAttributes, [
+                        'status' => 'pending',
+                        'attempt_count' => 0,
+                        'output_hash' => null,
+                        'artifact_ids_json' => [],
+                        'error_code' => null,
+                        'error_summary' => null,
+                        'started_at' => null,
+                        'finished_at' => null,
+                        'metadata_json' => array_merge($existingTaskMetadata, $taskMetadata),
+                    ]));
+                    $existingTask->save();
+
+                    continue;
+                }
+
+                RepoAnalysisTask::query()->create(array_merge($baseAttributes, [
+                    'status' => 'pending',
+                    'attempt_count' => 0,
+                    'max_attempts' => 1,
+                    'artifact_ids_json' => [],
+                    'metadata_json' => $taskMetadata,
+                ]));
+            }
+        }
+
         if ($plannedTaskKeys !== []) {
             $session->tasks()
                 ->whereNotIn('task_key', $plannedTaskKeys)
@@ -193,5 +259,56 @@ class PlanRepoAnalysisTasksJob implements ShouldQueue
         $taskMetadata['failure_script'] = array_values(array_filter($script, static fn (mixed $value): bool => is_string($value) && $value !== ''));
 
         return $taskMetadata;
+    }
+
+    /**
+     * @return array<int, array{
+     *   analyzer_name: string,
+     *   section_key: string,
+     *   section_title: string,
+     *   depends_on: array<int, string>
+     * }>
+     */
+    private function aiTaskDefinitions(): array
+    {
+        return [
+            [
+                'analyzer_name' => 'ai_repo_overview',
+                'section_key' => 'overview',
+                'section_title' => 'Repository Overview',
+                'depends_on' => ['filesystem_manifest', 'dependency_manifest'],
+            ],
+            [
+                'analyzer_name' => 'ai_backend_surface',
+                'section_key' => 'backend',
+                'section_title' => 'Backend Architecture, Data Model, and Routing',
+                'depends_on' => ['laravel_routes', 'laravel_models_migrations', 'queue_jobs_events'],
+            ],
+            [
+                'analyzer_name' => 'ai_frontend_surface',
+                'section_key' => 'frontend',
+                'section_title' => 'Frontend Architecture and UI Patterns',
+                'depends_on' => ['frontend_module_graph'],
+            ],
+            [
+                'analyzer_name' => 'ai_quality_risk',
+                'section_key' => 'quality_risk',
+                'section_title' => 'Testing, Coverage, and Risk Analysis',
+                'depends_on' => ['test_coverage_map', 'risk_hotspot'],
+            ],
+            [
+                'analyzer_name' => 'ai_final_report',
+                'section_key' => 'final_report',
+                'section_title' => 'Final Comprehensive Repository Report',
+                'depends_on' => ['ai_repo_overview', 'ai_backend_surface', 'ai_frontend_surface', 'ai_quality_risk'],
+            ],
+        ];
+    }
+
+    private function taskKey(string $profile, string $snapshotHash, string $analyzerName, string $analyzerVersion): string
+    {
+        $hashInput = implode('|', [$profile, $snapshotHash, $analyzerName, $analyzerVersion]);
+
+        return sprintf('%s:%s', $analyzerName, substr(hash('sha256', $hashInput), 0, 24));
     }
 }

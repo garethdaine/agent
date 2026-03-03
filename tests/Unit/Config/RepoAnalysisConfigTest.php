@@ -48,6 +48,16 @@ class RepoAnalysisConfigTest extends TestCase
         $this->assertSame('indefinite', $retention['final_reports_retention']);
     }
 
+    public function test_ai_defaults_are_defined(): void
+    {
+        $ai = config('repo_analysis.ai');
+
+        $this->assertIsArray($ai);
+        $this->assertArrayHasKey('enabled', $ai);
+        $this->assertArrayHasKey('task_timeout_seconds', $ai);
+        $this->assertArrayHasKey('max_stream_message_length', $ai);
+    }
+
     public function test_missing_and_invalid_overrides_fallback_to_safe_defaults(): void
     {
         $missingOverridesConfig = $this->loadConfigWithEnvOverrides([]);
@@ -55,12 +65,18 @@ class RepoAnalysisConfigTest extends TestCase
             'REPO_ANALYSIS_MAX_ACTIVE_SESSIONS_PER_USER' => '-1',
             'REPO_ANALYSIS_NARRATIVE_SYNTHESIS_DEFAULT' => 'maybe',
             'REPO_ANALYSIS_EXCLUDE_PATHS' => ' , , ',
+            'REPO_ANALYSIS_AI_ENABLED' => 'not-a-bool',
+            'REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS' => '999999',
+            'REPO_ANALYSIS_AI_MAX_STREAM_MESSAGE_LENGTH' => '1',
         ]);
 
         $this->assertSame(2, $missingOverridesConfig['user']['max_active_sessions_per_user']);
         $this->assertFalse($missingOverridesConfig['user']['narrative_synthesis_default']);
         $this->assertSame(2, $invalidOverridesConfig['user']['max_active_sessions_per_user']);
         $this->assertFalse($invalidOverridesConfig['user']['narrative_synthesis_default']);
+        $this->assertTrue($invalidOverridesConfig['ai']['enabled']);
+        $this->assertSame(1200, $invalidOverridesConfig['ai']['task_timeout_seconds']);
+        $this->assertSame(320, $invalidOverridesConfig['ai']['max_stream_message_length']);
 
         foreach (['vendor/', 'node_modules/', 'storage/', 'bootstrap/cache/', '.git/'] as $path) {
             $this->assertContains($path, $invalidOverridesConfig['scan']['mandatory_excludes']);
@@ -79,6 +95,9 @@ class RepoAnalysisConfigTest extends TestCase
             'REPO_ANALYSIS_MAX_ACTIVE_SESSIONS_PER_USER',
             'REPO_ANALYSIS_NARRATIVE_SYNTHESIS_DEFAULT',
             'REPO_ANALYSIS_EXCLUDE_PATHS',
+            'REPO_ANALYSIS_AI_ENABLED',
+            'REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS',
+            'REPO_ANALYSIS_AI_MAX_STREAM_MESSAGE_LENGTH',
         ];
 
         $originalValues = [];

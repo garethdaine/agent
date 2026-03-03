@@ -116,6 +116,7 @@ onMounted(load);
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Session</TableHead>
+                                    <TableHead>Runner</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Phase</TableHead>
                                     <TableHead>Updated</TableHead>
@@ -124,13 +125,14 @@ onMounted(load);
                             </TableHeader>
                             <TableBody>
                                 <TableRow v-if="loading">
-                                    <TableCell colspan="5" class="text-center text-muted-foreground">Loading sessions…</TableCell>
+                                    <TableCell colspan="6" class="text-center text-muted-foreground">Loading sessions…</TableCell>
                                 </TableRow>
                                 <TableRow v-for="session in sessions" :key="session.id">
                                     <TableCell>
                                         <p class="font-medium">{{ session.name || `Session #${session.id}` }}</p>
                                         <p class="text-xs text-muted-foreground">{{ session.project_directory }}</p>
                                     </TableCell>
+                                    <TableCell class="text-xs text-muted-foreground">{{ session.runner_type || 'claude' }}</TableCell>
                                     <TableCell class="text-xs">{{ session.status }}</TableCell>
                                     <TableCell class="text-xs text-muted-foreground">{{ session.phase }}</TableCell>
                                     <TableCell class="text-xs text-muted-foreground">{{ session.updated_at || '—' }}</TableCell>
@@ -177,7 +179,7 @@ onMounted(load);
                                     </TableCell>
                                 </TableRow>
                                 <TableRow v-if="!loading && sessions.length === 0">
-                                    <TableCell colspan="5" class="text-center text-muted-foreground">No sessions found.</TableCell>
+                                    <TableCell colspan="6" class="text-center text-muted-foreground">No sessions found.</TableCell>
                                 </TableRow>
                             </TableBody>
                         </Table>
