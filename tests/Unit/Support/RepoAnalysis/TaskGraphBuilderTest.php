@@ -28,8 +28,10 @@ class TaskGraphBuilderTest extends TestCase
                 'data_model_surface',
                 'async_workflows_surface',
                 'frontend_surface',
+                'architecture_patterns',
                 'test_coverage_map',
                 'risk_hotspot',
+                'code_quality_standards',
             ],
             array_map(static fn (array $task): string => $task['analyzer_key'], $first['tasks'])
         );
@@ -70,11 +72,13 @@ class TaskGraphBuilderTest extends TestCase
         $this->assertSame(['dependency_manifest'], $tasksByAnalyzer['data_model_surface']['depends_on']);
         $this->assertSame(['data_model_surface'], $tasksByAnalyzer['async_workflows_surface']['depends_on']);
         $this->assertSame(['dependency_manifest'], $tasksByAnalyzer['frontend_surface']['depends_on']);
+        $this->assertSame(['filesystem_manifest'], $tasksByAnalyzer['architecture_patterns']['depends_on']);
         $this->assertSame(['dependency_manifest'], $tasksByAnalyzer['test_coverage_map']['depends_on']);
         $this->assertSame(
             ['filesystem_manifest', 'dependency_manifest', 'test_coverage_map'],
             $tasksByAnalyzer['risk_hotspot']['depends_on']
         );
+        $this->assertSame(['dependency_manifest'], $tasksByAnalyzer['code_quality_standards']['depends_on']);
     }
 
     public function test_unsupported_profile_returns_no_tasks_and_explicit_skip_reason(): void

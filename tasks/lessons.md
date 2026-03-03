@@ -505,3 +505,11 @@ Use this file to capture correction-driven lessons.
 - Pattern: Event-driven updates alone are insufficient when row-level status presentation lacks clear visual affordances for active/terminal states.
 - Prevention rule: For long-running execution tables, always include three feedback layers by default: per-row status badges, active-state spinner cues, and an aggregate progress indicator.
 - Applied in: `resources/js/Components/RepoAnalysis/TaskGraphPanel.vue`, `tasks/todo.md`
+
+## Entry
+- Date: 2026-03-03
+- Source (job run id / interrogation session id): User correction on repo-analysis report depth (design patterns + coding standards/code quality)
+- Correction: User required explicit extraction and reporting of design patterns and coding standards/code quality, not only broad architecture/testing summaries.
+- Pattern: High-level repository narratives can miss critical engineering-context sections unless those sections are modeled as first-class analyzer artifacts and dedicated AI report sections.
+- Prevention rule: For repository analysis features, treat `design patterns` and `coding standards/code quality` as mandatory dimensions with both deterministic artifact extraction and explicit AI narrative sections in the final report.
+- Applied in: `app/Support/RepoAnalysis/Analyzers/{ArchitecturePatternsAnalyzer.php,CodeQualityStandardsAnalyzer.php}`, `app/Jobs/RepoAnalysis/PlanRepoAnalysisTasksJob.php`, `app/Support/RepoAnalysis/{AiTaskRunner.php,ReportComposer.php}`, `resources/js/Components/RepoAnalysis/ReportViewer.vue`, `config/repo_analysis.php`, `tests/Unit/Support/RepoAnalysis/*`

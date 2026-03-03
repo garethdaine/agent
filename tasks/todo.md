@@ -2280,3 +2280,43 @@ Review
   - Wizard receives task list updates (now event-driven via Reverb/Echo).
 - Explicit non-goals / limitations:
   - Progress bar reflects task terminal-state completion only; it does not estimate per-task internal progress percentage.
+
+### Session 16 Task 14 — Add Design Pattern + Coding Standards/Quality Analysis to Repo Analyzer (Completed)
+
+ACTION PLAN
+- [x] Add deterministic analyzer `architecture_patterns` to extract pattern signals/evidence generically across stacks.
+- [x] Add deterministic analyzer `code_quality_standards` to extract lint/format/static-analysis/CI quality signals and quality commands.
+- [x] Wire both analyzers into default task graph profile and coverage requirements.
+- [x] Add explicit AI sections for design patterns and coding standards/code quality, and include them in final report dependencies.
+- [x] Surface these new outputs in report composition and in-app report viewer deterministic appendix.
+- [x] Update tests and run repo-analysis verification suite + frontend build.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Added analyzers:
+    - `app/Support/RepoAnalysis/Analyzers/ArchitecturePatternsAnalyzer.php`
+    - `app/Support/RepoAnalysis/Analyzers/CodeQualityStandardsAnalyzer.php`
+  - Registry/graph wiring:
+    - `app/Support/RepoAnalysis/Analyzers/AnalyzerRegistry.php`
+    - `config/repo_analysis.php`
+  - AI task expansion and report synthesis:
+    - `app/Jobs/RepoAnalysis/PlanRepoAnalysisTasksJob.php`
+    - `app/Support/RepoAnalysis/AiTaskRunner.php`
+    - `app/Support/RepoAnalysis/ReportComposer.php`
+  - UI surfacing:
+    - `resources/js/Components/RepoAnalysis/ReportViewer.vue`
+  - Test/build verification:
+    - `php artisan test tests/Unit/Support/RepoAnalysis tests/Integration/RepoAnalysis tests/Unit/Config/RepoAnalysisConfigTest.php --stop-on-failure`
+      - Result: `49 passed (213 assertions)`.
+    - `npm run build`
+      - Result: client + SSR builds completed successfully.
+- Conditions where this works:
+  - Snapshot manifest includes path/content entries for files selected by snapshot policy.
+  - Analyzer profile is `default` (or includes the new analyzer keys).
+  - AI synthesis feature flag is enabled for the new AI sections to execute.
+- Explicit non-goals / limitations:
+  - Deterministic pattern/quality extraction remains heuristic and evidence-based; it does not execute linters/tests/type-checkers.
+  - Precision/recall of pattern detection varies by naming conventions and file-content availability in snapshots.

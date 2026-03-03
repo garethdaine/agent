@@ -110,9 +110,6 @@ class AiTaskRunner
         return $result;
     }
 
-    /**
-     * @param  object  $adapter
-     */
     private function consumeStreamChunk(
         object $adapter,
         EventWriter $writer,
@@ -155,6 +152,7 @@ class AiTaskRunner
                     'phase' => 3,
                     'status' => SessionStateTransitionService::STATUS_EXECUTING,
                 ]);
+
                 continue;
             }
 
@@ -241,12 +239,14 @@ class AiTaskRunner
                 'data_model_surface',
                 'async_workflows_surface',
                 'frontend_surface',
+                'architecture_patterns',
                 'laravel_routes',
                 'laravel_models_migrations',
                 'queue_jobs_events',
                 'frontend_module_graph',
                 'test_coverage_map',
                 'risk_hotspot',
+                'code_quality_standards',
                 'coverage_validation',
             ])
             ->orderBy('artifact_type')
@@ -298,8 +298,10 @@ class AiTaskRunner
             'ai_repo_overview' => 'Produce a comprehensive repository overview: project purpose, primary features, overall architecture, tech stack, and dependency landscape.',
             'ai_backend_surface' => 'Analyze backend architecture in depth: domain structure, models, migrations, routing/API surfaces, queue/event patterns, and key backend flows.',
             'ai_frontend_surface' => 'Analyze frontend architecture in depth: page structure, component patterns, state/data flow, UI conventions, and integration points with backend APIs.',
+            'ai_design_patterns' => 'Extract design and architecture patterns in depth: identify dominant patterns, where they appear, evidence files, consistency, and where patterns are mixed or violated.',
+            'ai_coding_standards_quality' => 'Analyze coding standards and code quality posture: lint/format/static-analysis setup, testing quality, CI quality gates, maintainability risks, and standards enforcement gaps.',
             'ai_quality_risk' => 'Assess testing and quality posture: test inventory, likely coverage gaps, operational risks, hotspots, and maintainability concerns with evidence.',
-            'ai_final_report' => 'Synthesize a final full report covering dependencies, codebase structure, patterns, features, data model, tech stack, tests, routes, migrations, risks, and prioritized recommendations.',
+            'ai_final_report' => 'Synthesize a final full report covering dependencies, codebase structure, features, data model, tech stack, routes, migrations, design patterns, coding standards, code quality, tests, risks, and prioritized recommendations.',
             default => 'Analyze the assigned repository section with evidence and produce a detailed markdown report.',
         };
     }
@@ -333,9 +335,6 @@ class AiTaskRunner
         return $items;
     }
 
-    /**
-     * @return mixed
-     */
     private function normalizeForHash(mixed $value): mixed
     {
         if (! is_array($value)) {

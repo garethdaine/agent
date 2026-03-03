@@ -46,6 +46,15 @@ class ReportComposer
                 $normalizedPayload = is_array($rawPayload['payload'] ?? null)
                     ? $rawPayload['payload']
                     : $rawPayload;
+                $warnings = is_array($rawPayload['warnings'] ?? null) ? $rawPayload['warnings'] : [];
+
+                if ($warnings !== [] && ! isset($normalizedPayload['warnings'])) {
+                    $normalizedPayload['warnings'] = $warnings;
+                }
+
+                if (! isset($normalizedPayload['warning_artifact_path']) && array_key_exists('warning_artifact_path', $rawPayload)) {
+                    $normalizedPayload['warning_artifact_path'] = $rawPayload['warning_artifact_path'];
+                }
 
                 return [
                     'artifact_key' => (string) $artifact->artifact_key,
@@ -154,6 +163,8 @@ class ReportComposer
         $modelPayload = $this->artifactPayload($artifactByType, ['data_model_surface', 'laravel_models_migrations']);
         $queuePayload = $this->artifactPayload($artifactByType, ['async_workflows_surface', 'queue_jobs_events']);
         $frontendPayload = $this->artifactPayload($artifactByType, ['frontend_surface', 'frontend_module_graph']);
+        $patternPayload = $this->artifactPayload($artifactByType, ['architecture_patterns']);
+        $codeQualityPayload = $this->artifactPayload($artifactByType, ['code_quality_standards']);
         $testPayload = $this->artifactPayload($artifactByType, ['test_coverage_map']);
         $riskPayload = $this->artifactPayload($artifactByType, ['risk_hotspot']);
 
@@ -202,6 +213,8 @@ class ReportComposer
                 'has_package_manifest' => (bool) ($frontendPayload['has_package_manifest'] ?? false),
                 'frontend_markers' => $this->sampleList($this->stringList($frontendPayload['frontend_markers'] ?? []), 20),
             ],
+            'patterns' => $this->patternSummary($patternPayload),
+            'code_quality' => $this->codeQualitySummary($codeQualityPayload),
             'testing' => [
                 'test_file_count' => (int) ($testPayload['test_file_count'] ?? 0),
                 'test_files' => $this->sampleList($this->stringList($testPayload['test_files'] ?? []), 40),
@@ -225,6 +238,8 @@ class ReportComposer
                 'task_graph' => 'Deterministic analyzer DAG generated in phase 2, with dependency-ordered tasks executed in phase 3.',
                 'coverage_gate' => 'Phase 4 validation that blocks completion if required artifact classes are missing or critical task failures exist.',
                 'artifacts' => 'Versioned outputs from snapshot/analyzers/coverage/reporting, each identified by artifact key and content hash.',
+                'design_pattern_extraction' => 'Deterministic + AI synthesis that identifies recurring architectural and design patterns with evidence references.',
+                'coding_standards_quality' => 'Deterministic + AI synthesis of standards tooling, CI quality gates, and maintainability posture.',
             ],
             'limitations' => [
                 'Analysis combines deterministic repository scanning with AI synthesis and does not execute full runtime behavior.',
@@ -591,7 +606,6 @@ class ReportComposer
     }
 
     /**
-     * @param  mixed  $dependencies
      * @return array<int, array{name: string, version: string}>
      */
     private function dependencyPairs(mixed $dependencies): array
@@ -615,6 +629,109 @@ class ReportComposer
         usort($pairs, static fn (array $left, array $right): int => strcmp($left['name'], $right['name']));
 
         return $pairs;
+    }
+
+    /**
+     * @param  array<string, mixed>  $patternPayload
+     * @return array<string, mixed>
+     */
+    private function patternSummary(array $patternPayload): array
+    {
+        $detectedPatterns = is_array($patternPayload['detected_patterns'] ?? null)
+            ? $patternPayload['detected_patterns']
+            : [];
+
+        $patterns = [];
+        foreach ($detectedPatterns as $pattern) {
+            if (! is_array($pattern)) {
+                continue;
+            }
+
+            $patternKey = trim((string) ($pattern['pattern_key'] ?? ''));
+            $patternName = trim((string) ($pattern['pattern_name'] ?? ''));
+            if ($patternKey === '' && $patternName === '') {
+                continue;
+            }
+
+            $patterns[] = [
+                'pattern_key' => $patternKey,
+                'pattern_name' => $patternName,
+                'confidence' => trim((string) ($pattern['confidence'] ?? 'unknown')),
+                'evidence_file_count' => max(0, (int) ($pattern['evidence_file_count'] ?? 0)),
+                'evidence_files' => $this->sampleList($this->stringList($pattern['evidence_files'] ?? []), 20),
+                'signal_types' => $this->stringList($pattern['signal_types'] ?? []),
+            ];
+        }
+
+        usort($patterns, static fn (array $left, array $right): int => strcmp(
+            (string) ($left['pattern_key'] ?? ''),
+            (string) ($right['pattern_key'] ?? '')
+        ));
+
+        return [
+            'pattern_count' => count($patterns),
+            'patterns' => $patterns,
+            'pattern_keys' => $this->stringList($patternPayload['detected_pattern_keys'] ?? []),
+            'architecture_signals' => $this->stringList($patternPayload['architecture_signals'] ?? []),
+            'source_file_count' => max(0, (int) ($patternPayload['source_file_count'] ?? 0)),
+            'warnings' => $this->warningCodes($patternPayload['warnings'] ?? []),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $codeQualityPayload
+     * @return array<string, mixed>
+     */
+    private function codeQualitySummary(array $codeQualityPayload): array
+    {
+        $standardsFiles = is_array($codeQualityPayload['standards_files'] ?? null)
+            ? $codeQualityPayload['standards_files']
+            : [];
+
+        $standards = [];
+        foreach ($standardsFiles as $standard) {
+            if (! is_array($standard)) {
+                continue;
+            }
+
+            $tool = trim((string) ($standard['tool'] ?? ''));
+            $category = trim((string) ($standard['category'] ?? ''));
+            $file = trim((string) ($standard['file'] ?? ''));
+            if ($tool === '' || $file === '') {
+                continue;
+            }
+
+            $standards[] = [
+                'tool' => $tool,
+                'category' => $category !== '' ? $category : 'other',
+                'file' => $file,
+            ];
+        }
+
+        usort($standards, static function (array $left, array $right): int {
+            $toolComparison = strcmp((string) ($left['tool'] ?? ''), (string) ($right['tool'] ?? ''));
+            if ($toolComparison !== 0) {
+                return $toolComparison;
+            }
+
+            return strcmp((string) ($left['file'] ?? ''), (string) ($right['file'] ?? ''));
+        });
+
+        return [
+            'standards_file_count' => count($standards),
+            'standards_files' => array_slice($standards, 0, 120),
+            'tool_count' => max(0, (int) ($codeQualityPayload['tool_count'] ?? 0)),
+            'tools' => $this->stringList($codeQualityPayload['tools'] ?? []),
+            'tooling_categories' => is_array($codeQualityPayload['tooling_categories'] ?? null)
+                ? $codeQualityPayload['tooling_categories']
+                : [],
+            'quality_command_count' => max(0, (int) ($codeQualityPayload['quality_command_count'] ?? 0)),
+            'quality_commands' => $this->sampleList($this->stringList($codeQualityPayload['quality_commands'] ?? []), 80),
+            'ci_pipeline_count' => max(0, (int) ($codeQualityPayload['ci_pipeline_count'] ?? 0)),
+            'ci_pipelines' => $this->sampleList($this->stringList($codeQualityPayload['ci_pipelines'] ?? []), 40),
+            'quality_signals' => $this->stringList($codeQualityPayload['quality_signals'] ?? []),
+            'warnings' => $this->warningCodes($codeQualityPayload['warnings'] ?? []),
+        ];
     }
 
     /**
@@ -796,7 +913,6 @@ class ReportComposer
     }
 
     /**
-     * @param  mixed  $values
      * @return array<int, string>
      */
     private function stringList(mixed $values): array
@@ -852,7 +968,6 @@ class ReportComposer
     }
 
     /**
-     * @param  mixed  $warnings
      * @return array<int, string>
      */
     private function warningCodes(mixed $warnings): array
@@ -882,7 +997,6 @@ class ReportComposer
     }
 
     /**
-     * @param  mixed  $blockingFailures
      * @return array<int, string>
      */
     private function blockingFailureCodes(mixed $blockingFailures): array
@@ -928,7 +1042,9 @@ class ReportComposer
             'overview' => 10,
             'backend' => 20,
             'frontend' => 30,
-            'quality_risk' => 40,
+            'design_patterns' => 35,
+            'coding_standards_quality' => 40,
+            'quality_risk' => 45,
             'final_report' => 90,
         ];
 
@@ -1051,9 +1167,6 @@ class ReportComposer
         return json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
     }
 
-    /**
-     * @return mixed
-     */
     private function normalize(mixed $value): mixed
     {
         if (! is_array($value)) {

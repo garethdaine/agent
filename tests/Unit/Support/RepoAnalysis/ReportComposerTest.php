@@ -89,6 +89,12 @@ class ReportComposerTest extends TestCase
             true,
             data_get($composed, 'payload_json.repository_profile.coverage_gate.passed')
         );
+        $this->assertIsArray(data_get($composed, 'payload_json.repository_profile.patterns'));
+        $this->assertIsArray(data_get($composed, 'payload_json.repository_profile.code_quality'));
+        $this->assertSame(
+            'Deterministic + AI synthesis that identifies recurring architectural and design patterns with evidence references.',
+            data_get($composed, 'payload_json.repository_profile.glossary.design_pattern_extraction')
+        );
     }
 
     public function test_compose_promotes_ai_final_report_markdown_from_ai_section_artifacts(): void

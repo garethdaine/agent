@@ -291,6 +291,18 @@ class PlanRepoAnalysisTasksJob implements ShouldQueue
                 'depends_on' => ['frontend_surface'],
             ],
             [
+                'analyzer_name' => 'ai_design_patterns',
+                'section_key' => 'design_patterns',
+                'section_title' => 'Design Pattern Extraction and Architectural Conventions',
+                'depends_on' => ['architecture_patterns', 'routing_surface', 'data_model_surface', 'frontend_surface'],
+            ],
+            [
+                'analyzer_name' => 'ai_coding_standards_quality',
+                'section_key' => 'coding_standards_quality',
+                'section_title' => 'Coding Standards and Code Quality Posture',
+                'depends_on' => ['code_quality_standards', 'test_coverage_map', 'risk_hotspot', 'dependency_manifest'],
+            ],
+            [
                 'analyzer_name' => 'ai_quality_risk',
                 'section_key' => 'quality_risk',
                 'section_title' => 'Testing, Coverage, and Risk Analysis',
@@ -300,7 +312,14 @@ class PlanRepoAnalysisTasksJob implements ShouldQueue
                 'analyzer_name' => 'ai_final_report',
                 'section_key' => 'final_report',
                 'section_title' => 'Final Comprehensive Repository Report',
-                'depends_on' => ['ai_repo_overview', 'ai_backend_surface', 'ai_frontend_surface', 'ai_quality_risk'],
+                'depends_on' => [
+                    'ai_repo_overview',
+                    'ai_backend_surface',
+                    'ai_frontend_surface',
+                    'ai_design_patterns',
+                    'ai_coding_standards_quality',
+                    'ai_quality_risk',
+                ],
             ],
         ];
     }

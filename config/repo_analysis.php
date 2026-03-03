@@ -106,8 +106,10 @@ return [
         'required_artifact_classes' => [
             'filesystem_manifest',
             'dependency_manifest',
+            'architecture_patterns',
             'risk_hotspot',
             'test_coverage_map',
+            'code_quality_standards',
         ],
     ],
 

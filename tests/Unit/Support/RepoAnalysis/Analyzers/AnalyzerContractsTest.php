@@ -119,6 +119,8 @@ class AnalyzerContractsTest extends TestCase
         $this->assertContains('routing_surface', $selectedKeys);
         $this->assertContains('data_model_surface', $selectedKeys);
         $this->assertContains('frontend_surface', $selectedKeys);
+        $this->assertContains('architecture_patterns', $selectedKeys);
+        $this->assertContains('code_quality_standards', $selectedKeys);
     }
 
     public function test_dependency_manifest_detects_multiple_language_ecosystems(): void
@@ -144,5 +146,58 @@ class AnalyzerContractsTest extends TestCase
             ['dart_flutter', 'dotnet', 'go', 'javascript', 'python', 'rust'],
             data_get($result, 'payload.ecosystems')
         );
+    }
+
+    public function test_architecture_patterns_analyzer_detects_common_pattern_markers(): void
+    {
+        $registry = new AnalyzerRegistry;
+        $analyzer = $registry->get('architecture_patterns');
+
+        $result = $analyzer->analyze([
+            'snapshot_hash' => 'snapshot-007',
+            'manifest' => [
+                'files' => [
+                    ['path' => 'src/services/UserService.ts', 'content' => 'export class UserService {}'],
+                    ['path' => 'src/repositories/UserRepository.ts', 'content' => 'export class UserRepository {}'],
+                    ['path' => 'src/factories/UserFactory.ts', 'content' => 'export class UserFactory {}'],
+                    ['path' => 'src/events/UserCreatedEvent.ts', 'content' => 'eventBus.emit(\"created\")'],
+                    ['path' => 'src/controllers/UserController.ts', 'content' => 'class UserController {}'],
+                    ['path' => 'src/models/User.ts', 'content' => 'class User {}'],
+                    ['path' => 'src/views/UserView.tsx', 'content' => 'export const UserView = () => null'],
+                ],
+            ],
+        ]);
+
+        $this->assertGreaterThan(0, (int) data_get($result, 'payload.detected_pattern_count'));
+        $this->assertContains('repository_pattern', data_get($result, 'payload.detected_pattern_keys'));
+        $this->assertContains('service_layer', data_get($result, 'payload.detected_pattern_keys'));
+    }
+
+    public function test_code_quality_standards_analyzer_detects_quality_tooling_and_commands(): void
+    {
+        $registry = new AnalyzerRegistry;
+        $analyzer = $registry->get('code_quality_standards');
+
+        $result = $analyzer->analyze([
+            'snapshot_hash' => 'snapshot-008',
+            'manifest' => [
+                'files' => [
+                    ['path' => '.editorconfig'],
+                    ['path' => '.github/workflows/ci.yml'],
+                    ['path' => 'phpstan.neon'],
+                    ['path' => 'package.json', 'content' => json_encode([
+                        'scripts' => [
+                            'lint' => 'eslint .',
+                            'test' => 'vitest run',
+                            'build' => 'vite build',
+                        ],
+                    ])],
+                ],
+            ],
+        ]);
+
+        $this->assertGreaterThan(0, (int) data_get($result, 'payload.standards_file_count'));
+        $this->assertContains('CI Workflow', data_get($result, 'payload.tools'));
+        $this->assertGreaterThan(0, (int) data_get($result, 'payload.quality_command_count'));
     }
 }

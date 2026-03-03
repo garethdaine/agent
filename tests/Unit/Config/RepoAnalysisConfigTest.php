@@ -58,6 +58,19 @@ class RepoAnalysisConfigTest extends TestCase
         $this->assertArrayHasKey('max_stream_message_length', $ai);
     }
 
+    public function test_default_coverage_requirements_include_pattern_and_quality_artifacts(): void
+    {
+        $required = config('repo_analysis.coverage.required_artifact_classes');
+
+        $this->assertIsArray($required);
+        $this->assertContains('filesystem_manifest', $required);
+        $this->assertContains('dependency_manifest', $required);
+        $this->assertContains('architecture_patterns', $required);
+        $this->assertContains('test_coverage_map', $required);
+        $this->assertContains('risk_hotspot', $required);
+        $this->assertContains('code_quality_standards', $required);
+    }
+
     public function test_missing_and_invalid_overrides_fallback_to_safe_defaults(): void
     {
         $missingOverridesConfig = $this->loadConfigWithEnvOverrides([]);
@@ -127,6 +140,7 @@ class RepoAnalysisConfigTest extends TestCase
                 if ($original === false) {
                     putenv($key);
                     unset($_ENV[$key], $_SERVER[$key]);
+
                     continue;
                 }
 

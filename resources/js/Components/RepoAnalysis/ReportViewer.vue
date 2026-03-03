@@ -47,6 +47,8 @@ const selectedReport = computed(() => {
 
 const selectedPayload = computed(() => selectedReport.value?.payload_json ?? {});
 const selectedProfile = computed(() => selectedPayload.value?.repository_profile ?? {});
+const selectedPatterns = computed(() => selectedProfile.value?.patterns ?? {});
+const selectedCodeQuality = computed(() => selectedProfile.value?.code_quality ?? {});
 const selectedCoverage = computed(() => selectedProfile.value?.coverage_gate ?? selectedPayload.value?.coverage ?? {});
 const selectedAiReport = computed(() => (selectedPayload.value?.ai_report && typeof selectedPayload.value.ai_report === 'object')
     ? selectedPayload.value.ai_report
@@ -222,6 +224,35 @@ const fullReportMarkdown = computed(() => {
                             <p class="font-semibold">Frontend Surface</p>
                             <p class="text-muted-foreground">
                                 Entrypoints {{ selectedProfile.frontend.entrypoint_count ?? 0 }} · package manifest {{ selectedProfile.frontend.has_package_manifest ? 'yes' : 'no' }}
+                            </p>
+                        </div>
+
+                        <div v-if="selectedPatterns && (selectedPatterns.pattern_count ?? 0) > 0">
+                            <p class="font-semibold">Design Patterns</p>
+                            <p class="text-muted-foreground">
+                                Patterns detected: {{ selectedPatterns.pattern_count ?? 0 }}
+                            </p>
+                            <p class="text-muted-foreground">
+                                {{ (selectedPatterns.patterns ?? []).map((pattern) => pattern.pattern_name || pattern.pattern_key).filter(Boolean).join(' · ') }}
+                            </p>
+                            <p v-if="asList(selectedPatterns.architecture_signals).length > 0" class="text-muted-foreground">
+                                Signals: {{ asList(selectedPatterns.architecture_signals).join(' | ') }}
+                            </p>
+                        </div>
+
+                        <div v-if="selectedCodeQuality && ((selectedCodeQuality.standards_file_count ?? 0) > 0 || (selectedCodeQuality.quality_command_count ?? 0) > 0)">
+                            <p class="font-semibold">Coding Standards &amp; Quality</p>
+                            <p class="text-muted-foreground">
+                                Standards files: {{ selectedCodeQuality.standards_file_count ?? 0 }} · tools {{ selectedCodeQuality.tool_count ?? 0 }}
+                            </p>
+                            <p v-if="asList(selectedCodeQuality.tools).length > 0" class="text-muted-foreground">
+                                Tools: {{ asList(selectedCodeQuality.tools).join(', ') }}
+                            </p>
+                            <p class="text-muted-foreground">
+                                Quality commands: {{ selectedCodeQuality.quality_command_count ?? 0 }} · CI pipelines {{ selectedCodeQuality.ci_pipeline_count ?? 0 }}
+                            </p>
+                            <p v-if="asList(selectedCodeQuality.quality_signals).length > 0" class="text-muted-foreground">
+                                Signals: {{ asList(selectedCodeQuality.quality_signals).join(' | ') }}
                             </p>
                         </div>
 

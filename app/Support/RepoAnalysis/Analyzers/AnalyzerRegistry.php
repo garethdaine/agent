@@ -31,8 +31,10 @@ class AnalyzerRegistry
             new DataModelSurfaceAnalyzer,
             new AsyncWorkflowsSurfaceAnalyzer,
             new FrontendSurfaceAnalyzer,
+            new ArchitecturePatternsAnalyzer,
             new TestCoverageMapAnalyzer,
             new RiskHotspotAnalyzer,
+            new CodeQualityStandardsAnalyzer,
         ];
 
         $this->analyzers = [];
@@ -48,8 +50,10 @@ class AnalyzerRegistry
                 'data_model_surface',
                 'async_workflows_surface',
                 'frontend_surface',
+                'architecture_patterns',
                 'test_coverage_map',
                 'risk_hotspot',
+                'code_quality_standards',
             ],
         ];
     }
