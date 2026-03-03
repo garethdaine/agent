@@ -252,4 +252,28 @@ class InterrogationCodexAdapterCommandTest extends TestCase
         $this->assertSame('diagnostic', $parsed['type'] ?? null);
         $this->assertSame('', $parsed['payload']['message'] ?? null);
     }
+
+    public function test_parse_summary_response_preserves_cli_session_id_from_structured_envelope(): void
+    {
+        $adapter = new CodexAdapter;
+
+        $output = json_encode([
+            'type' => 'result',
+            'session_id' => 'codex-summary-session-1',
+            'structured_output' => [
+                'summary_markdown' => 'Code analysis summary',
+                'goals' => ['Goal A'],
+                'constraints' => [],
+                'acceptance_criteria' => [],
+                'open_questions' => [],
+                'private_notes' => '',
+            ],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        $parsed = $adapter->parseSummaryResponse((string) $output);
+
+        $this->assertIsArray($parsed);
+        $this->assertSame('Code analysis summary', $parsed['summary_markdown'] ?? null);
+        $this->assertSame('codex-summary-session-1', $parsed['cli_session_id'] ?? null);
+    }
 }

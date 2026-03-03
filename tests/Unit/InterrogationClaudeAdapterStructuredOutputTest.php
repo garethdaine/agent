@@ -36,6 +36,7 @@ class InterrogationClaudeAdapterStructuredOutputTest extends TestCase
 
         $output = json_encode([
             'type' => 'result',
+            'session_id' => 'summary-session-1',
             'result' => json_encode([
                 'summary_markdown' => 'Summary content',
                 'goals' => ['Goal 1'],
@@ -47,5 +48,6 @@ class InterrogationClaudeAdapterStructuredOutputTest extends TestCase
         $this->assertIsArray($parsed);
         $this->assertSame('Summary content', $parsed['summary_markdown']);
         $this->assertSame(['Goal 1'], $parsed['goals']);
+        $this->assertSame('summary-session-1', $parsed['cli_session_id']);
     }
 }

@@ -45,21 +45,22 @@ class AiTaskRunner
         $environment = $adapter->buildEnvironment($bridgeSession);
 
         $process = new Process($command, (string) $session->project_directory, $environment);
-        $process->setTimeout((int) config('repo_analysis.ai.task_timeout_seconds', 1200));
+        $process->setTimeout((int) config('repo_analysis.ai.task_timeout_seconds', 3600));
         $process->start();
 
         $stdoutBuffer = '';
         $stderrBuffer = '';
+        $latestCliSessionId = null;
 
         while ($process->isRunning()) {
-            $stdoutBuffer = $this->consumeStreamChunk($adapter, $writer, $task, $stdoutBuffer, $process->getIncrementalOutput());
-            $stderrBuffer = $this->consumeStreamChunk($adapter, $writer, $task, $stderrBuffer, $process->getIncrementalErrorOutput());
+            $stdoutBuffer = $this->consumeStreamChunk($adapter, $writer, $session, $task, $stdoutBuffer, $process->getIncrementalOutput(), $latestCliSessionId);
+            $stderrBuffer = $this->consumeStreamChunk($adapter, $writer, $session, $task, $stderrBuffer, $process->getIncrementalErrorOutput(), $latestCliSessionId);
 
             usleep(200_000);
         }
 
-        $stdoutBuffer = $this->consumeStreamChunk($adapter, $writer, $task, $stdoutBuffer, $process->getIncrementalOutput(), true);
-        $stderrBuffer = $this->consumeStreamChunk($adapter, $writer, $task, $stderrBuffer, $process->getIncrementalErrorOutput(), true);
+        $stdoutBuffer = $this->consumeStreamChunk($adapter, $writer, $session, $task, $stdoutBuffer, $process->getIncrementalOutput(), $latestCliSessionId, true);
+        $stderrBuffer = $this->consumeStreamChunk($adapter, $writer, $session, $task, $stderrBuffer, $process->getIncrementalErrorOutput(), $latestCliSessionId, true);
 
         $stdout = (string) $process->getOutput();
         $stderr = (string) $process->getErrorOutput();
@@ -75,6 +76,14 @@ class AiTaskRunner
         $parsed = $adapter->parseSummaryResponse($stdout);
         if (! is_array($parsed) || trim((string) ($parsed['summary_markdown'] ?? '')) === '') {
             throw new \RuntimeException('Unable to parse AI runner response for code analysis task.');
+        }
+
+        $summaryCliSessionId = is_string($parsed['cli_session_id'] ?? null)
+            ? trim((string) $parsed['cli_session_id'])
+            : '';
+        if ($summaryCliSessionId !== '') {
+            $latestCliSessionId = $summaryCliSessionId;
+            $this->persistCliSessionId($session, $summaryCliSessionId);
         }
 
         $payload = [
@@ -99,7 +108,7 @@ class AiTaskRunner
             'payload' => $payload,
             'warnings' => [],
             'warning_artifact_path' => null,
-            'cli_session_id' => is_string($parsed['cli_session_id'] ?? null) ? $parsed['cli_session_id'] : null,
+            'cli_session_id' => is_string($latestCliSessionId) && $latestCliSessionId !== '' ? $latestCliSessionId : null,
         ];
 
         $result['output_hash'] = hash(
@@ -113,9 +122,11 @@ class AiTaskRunner
     private function consumeStreamChunk(
         object $adapter,
         EventWriter $writer,
+        RepoAnalysisSession $session,
         RepoAnalysisTask $task,
         string $buffer,
         string $chunk,
+        ?string &$latestCliSessionId,
         bool $flush = false,
     ): string {
         if ($chunk !== '') {
@@ -157,6 +168,14 @@ class AiTaskRunner
             }
 
             $payload = is_array($parsed['payload'] ?? null) ? $parsed['payload'] : [];
+            $streamCliSessionId = is_string($payload['cli_session_id'] ?? null)
+                ? trim((string) $payload['cli_session_id'])
+                : '';
+            if ($streamCliSessionId !== '' && $streamCliSessionId !== $latestCliSessionId) {
+                $latestCliSessionId = $streamCliSessionId;
+                $this->persistCliSessionId($session, $streamCliSessionId);
+            }
+
             $message = trim((string) ($payload['message'] ?? ''));
             if ($message === '') {
                 continue;
@@ -164,16 +183,34 @@ class AiTaskRunner
 
             $writer->append('task_progress', [
                 'task_key' => (string) $task->task_key,
-                'message' => mb_substr($message, 0, $maxLength),
-                'stream_type' => (string) ($parsed['type'] ?? 'message'),
-                'source' => (string) ($payload['source'] ?? 'ai_runner'),
-            ], [
-                'phase' => 3,
-                'status' => SessionStateTransitionService::STATUS_EXECUTING,
-            ]);
+                    'message' => mb_substr($message, 0, $maxLength),
+                    'stream_type' => (string) ($parsed['type'] ?? 'message'),
+                    'source' => (string) ($payload['source'] ?? 'ai_runner'),
+                    'cli_session_id' => $latestCliSessionId,
+                ], [
+                    'phase' => 3,
+                    'status' => SessionStateTransitionService::STATUS_EXECUTING,
+                ]);
         }
 
         return $buffer;
+    }
+
+    private function persistCliSessionId(RepoAnalysisSession $session, string $cliSessionId): void
+    {
+        if ($cliSessionId === '') {
+            return;
+        }
+
+        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $current = is_string($metadata['ai_cli_session_id'] ?? null) ? (string) $metadata['ai_cli_session_id'] : '';
+        if ($current === $cliSessionId) {
+            return;
+        }
+
+        $metadata['ai_cli_session_id'] = $cliSessionId;
+        $session->metadata_json = $metadata;
+        $session->save();
     }
 
     private function bridgeSession(RepoAnalysisSession $session): InterrogationSession

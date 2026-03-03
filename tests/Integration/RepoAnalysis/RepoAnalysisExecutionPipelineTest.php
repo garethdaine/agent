@@ -14,10 +14,13 @@ use App\Models\RepoAnalysisReport;
 use App\Models\RepoAnalysisSession;
 use App\Models\RepoAnalysisTask;
 use App\Models\User;
+use App\Support\RepoAnalysis\AiTaskRunner;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\TimeoutExceededException;
 use Illuminate\Support\Facades\File;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
+use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 class RepoAnalysisExecutionPipelineTest extends TestCase
@@ -249,6 +252,66 @@ class RepoAnalysisExecutionPipelineTest extends TestCase
         $this->assertSame('EXECUTE_TASK_TIMEOUT', (string) $failureEvent->error_code);
         $this->assertSame('failed', (string) $failureEvent->status);
         $this->assertTrue((bool) data_get($failureEvent->payload_json, 'timed_out'));
+    }
+
+    public function test_execute_job_timeout_uses_queue_timeout_with_ai_buffer_floor(): void
+    {
+        config()->set('repo_analysis.ai.task_timeout_seconds', 1800);
+        config()->set('repo_analysis.ai.queue_timeout_buffer_seconds', 120);
+        config()->set('repo_analysis.queue.supervisor.timeout_seconds', 0);
+
+        $jobUsingBuffer = new ExecuteRepoAnalysisTaskJob(123, false);
+        $this->assertSame(1920, $jobUsingBuffer->timeout);
+
+        config()->set('repo_analysis.queue.supervisor.timeout_seconds', 2400);
+
+        $jobUsingSupervisorTimeout = new ExecuteRepoAnalysisTaskJob(123, false);
+        $this->assertSame(2400, $jobUsingSupervisorTimeout->timeout);
+    }
+
+    public function test_process_level_timeout_is_mapped_to_execute_task_timeout_state(): void
+    {
+        config()->set('repo_analysis.ai.enabled', true);
+
+        $session = $this->createSession();
+
+        GenerateRepoSnapshotJob::dispatchSync($session->id, false);
+        PlanRepoAnalysisTasksJob::dispatchSync($session->id, false);
+
+        $session->tasks()->where('task_type', '!=', 'ai_analysis')->update([
+            'status' => 'completed',
+            'attempt_count' => 1,
+            'finished_at' => CarbonImmutable::now('UTC'),
+        ]);
+
+        $aiTask = $session->tasks()->where('task_type', 'ai_analysis')->orderBy('id')->firstOrFail();
+        $aiTask->update([
+            'status' => 'pending',
+            'attempt_count' => 0,
+            'started_at' => null,
+            'finished_at' => null,
+            'error_code' => null,
+            'error_summary' => null,
+        ]);
+
+        $mockRunner = \Mockery::mock(AiTaskRunner::class);
+        $mockRunner->shouldReceive('run')
+            ->once()
+            ->andThrow(new ProcessTimedOutException(new Process(['php', '-r', 'echo "timeout";']), ProcessTimedOutException::TYPE_GENERAL));
+        $this->app->instance(AiTaskRunner::class, $mockRunner);
+
+        ExecuteRepoAnalysisTaskJob::dispatchSync($session->id, false);
+
+        $session->refresh();
+        $aiTask->refresh();
+
+        $this->assertSame('failed', (string) $session->status);
+        $this->assertSame('EXECUTE_TASK_TIMEOUT', (string) $session->error_code);
+        $this->assertStringContainsString('timed out', (string) $session->error_summary);
+
+        $this->assertSame('failed', (string) $aiTask->status);
+        $this->assertSame('EXECUTE_TASK_TIMEOUT', (string) $aiTask->error_code);
+        $this->assertNotNull($aiTask->finished_at);
     }
 
     private function createSession(array $metadata = []): RepoAnalysisSession

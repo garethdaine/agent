@@ -12,6 +12,14 @@ Use this file to capture correction-driven lessons.
 
 ## Entry
 - Date: 2026-03-03
+- Source (job run id / interrogation session id): Code Analysis session 2 timeout failure (`ai_overview`)
+- Correction: User reported a failed analysis run and requested full root-cause investigation plus robust fix.
+- Pattern: Coupling AI process timeout and queue worker timeout to the same value (`1200s`) lets the worker hard-kill long-running AI tasks before graceful timeout handling; missing persisted runner `cli_session_id` weakens retry/resume continuity.
+- Prevention rule: For long-running AI jobs, always set queue timeout strictly above process timeout with explicit buffer, and persist runner session identifiers during stream ingestion so retries can resume prior context.
+- Applied in: `config/repo_analysis.php`, `config/horizon.php`, `app/Jobs/RepoAnalysis/ExecuteRepoAnalysisTaskJob.php`, `app/Support/RepoAnalysis/AiTaskRunner.php`, `app/Support/Interrogation/Adapters/CodexAdapter.php`, `app/Support/Interrogation/Adapters/ClaudeAdapter.php`
+
+## Entry
+- Date: 2026-03-03
 - Source (job run id / interrogation session id): User correction on permanent session deletion and stale realtime status updates
 - Correction: User required irreversible session cleanup (including related tasks/artifacts/reports/files) and flagged that realtime status/progress was not updating via Reverb/Echo.
 - Pattern: Soft-delete-only flows leave residual data/files that users expect removed; queued broadcasting can appear broken when broadcast workers are not guaranteed, and index surfaces without channel subscriptions stay stale.

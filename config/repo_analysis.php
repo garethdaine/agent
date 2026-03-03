@@ -2,6 +2,9 @@
 
 $defaultMaxActiveSessionsPerUser = 2;
 $defaultTaskArtifactsTtlDays = 30;
+$defaultAiTaskTimeoutSeconds = 3600;
+$defaultQueueTimeoutBufferSeconds = 180;
+$maxAiTaskTimeoutSeconds = 21600;
 
 $mandatoryExcludes = [
     'vendor/',
@@ -69,6 +72,25 @@ if ($excludePaths === []) {
     $excludePaths = $mandatoryExcludes;
 }
 
+$aiTaskTimeoutSeconds = $coerceBoundedInt(
+    env('REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS', $defaultAiTaskTimeoutSeconds),
+    $defaultAiTaskTimeoutSeconds,
+    60,
+    $maxAiTaskTimeoutSeconds,
+);
+
+$queueTimeoutBufferSeconds = $coerceBoundedInt(
+    env('REPO_ANALYSIS_QUEUE_TIMEOUT_BUFFER_SECONDS', $defaultQueueTimeoutBufferSeconds),
+    $defaultQueueTimeoutBufferSeconds,
+    30,
+    3600,
+);
+
+$defaultSupervisorTimeoutSeconds = min(
+    $maxAiTaskTimeoutSeconds,
+    max($aiTaskTimeoutSeconds + $queueTimeoutBufferSeconds, $aiTaskTimeoutSeconds + 30),
+);
+
 return [
     'enabled' => $coerceBoolean(env('REPO_ANALYSIS_ENABLED', false), false),
 
@@ -81,10 +103,10 @@ return [
             'tries' => 1,
             'backoff_seconds' => 0,
             'timeout_seconds' => $coerceBoundedInt(
-                env('HORIZON_REPO_ANALYSIS_TIMEOUT', env('REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS', 1200)),
-                1200,
-                60,
-                7200,
+                env('HORIZON_REPO_ANALYSIS_TIMEOUT', $defaultSupervisorTimeoutSeconds),
+                $defaultSupervisorTimeoutSeconds,
+                min($maxAiTaskTimeoutSeconds, $aiTaskTimeoutSeconds + 30),
+                $maxAiTaskTimeoutSeconds,
             ),
         ],
     ],
@@ -120,7 +142,8 @@ return [
 
     'ai' => [
         'enabled' => $coerceBoolean(env('REPO_ANALYSIS_AI_ENABLED', true), true),
-        'task_timeout_seconds' => $coerceBoundedInt(env('REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS', 1200), 1200, 60, 7200),
+        'task_timeout_seconds' => $aiTaskTimeoutSeconds,
+        'queue_timeout_buffer_seconds' => $queueTimeoutBufferSeconds,
         'max_stream_message_length' => $coerceBoundedInt(env('REPO_ANALYSIS_AI_MAX_STREAM_MESSAGE_LENGTH', 320), 320, 80, 4000),
     ],
 

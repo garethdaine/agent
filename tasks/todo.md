@@ -6,6 +6,37 @@
 
 ## Current — Open Items
 
+### Session 2 Hotfix — AI Task Timeout Root-Cause and Recovery Hardening (Completed)
+
+- [x] Collect and record runtime evidence for the failed `ai_overview` task in session `2` (failed_jobs + task/event timeline + queue timeout path).
+- [x] Implement timeout hardening: split AI process timeout from queue worker timeout with an explicit buffer and safer defaults.
+- [x] Implement AI session continuity hardening: persist runner `cli_session_id` during stream processing so retries can resume prior AI context.
+- [x] Add/adjust automated tests for timeout config semantics and summary/session-id parsing continuity.
+- [x] Run focused verification suite and document outcome in Review.
+
+Review
+- Root cause:
+  - Session `2` failed at `2026-03-03 10:42:14 UTC` with `Illuminate\Queue\TimeoutExceededException` after exactly `1200s` while `ai_overview` was still streaming progress events.
+  - Queue worker timeout and AI process timeout were both set to `1200s`, so the worker hard-killed the job before graceful timeout handling.
+  - AI summary parsing did not reliably persist `cli_session_id`; retries therefore lacked robust resume context continuity.
+- Fix summary:
+  - Introduced explicit timeout model in config:
+    - `repo_analysis.ai.task_timeout_seconds` default `3600`,
+    - `repo_analysis.ai.queue_timeout_buffer_seconds` default `180`,
+    - queue supervisor timeout now defaults to `task_timeout + buffer` (with floor/ceiling guards).
+  - Updated Horizon code-analysis supervisor default timeout derivation to match the buffered model.
+  - Updated `ExecuteRepoAnalysisTaskJob` to:
+    - resolve queue timeout from supervisor/buffered config,
+    - map `ProcessTimedOutException` to `EXECUTE_TASK_TIMEOUT` (task + session + event) instead of generic non-retryable failure.
+  - Updated `AiTaskRunner` to persist `ai_cli_session_id` during stream processing whenever a runner session id appears, and reuse it in final result metadata.
+  - Updated Codex/Claude summary parsing to preserve `cli_session_id` from structured/result envelopes (including top-level `session_id` propagation).
+- Verification:
+  - `php artisan test --filter=RepoAnalysisExecutionPipelineTest` (pass, includes new process-timeout mapping and timeout buffer test)
+  - `php artisan test --filter=RepoAnalysisApiLifecycleTest` (pass)
+  - `php artisan test --filter=RepoAnalysisConfigTest` (pass)
+  - `php artisan test --filter=InterrogationCodexAdapterCommandTest` (pass)
+  - `php artisan test --filter=InterrogationClaudeAdapterStructuredOutputTest` (pass)
+
 ### Session 16 Hotfix — Purge Sessions and Realtime Status Reliability (Completed)
 
 - [x] Add permanent purge API endpoint for Code Analysis sessions that force-deletes the session and all related records.

@@ -2,6 +2,10 @@
 
 use Illuminate\Support\Str;
 
+$repoAnalysisAiTimeout = max(60, (int) env('REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS', 3600));
+$repoAnalysisQueueTimeoutBuffer = max(30, (int) env('REPO_ANALYSIS_QUEUE_TIMEOUT_BUFFER_SECONDS', 180));
+$defaultRepoAnalysisTimeout = min(21600, max($repoAnalysisAiTimeout + $repoAnalysisQueueTimeoutBuffer, $repoAnalysisAiTimeout + 30));
+
 return [
 
     /*
@@ -314,7 +318,7 @@ return [
             'memory' => 128,
             'tries' => 1,
             'backoff' => 0,
-            'timeout' => (int) env('HORIZON_REPO_ANALYSIS_TIMEOUT', env('REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS', 1200)),
+            'timeout' => (int) env('HORIZON_REPO_ANALYSIS_TIMEOUT', $defaultRepoAnalysisTimeout),
             'nice' => 0,
         ],
     ],

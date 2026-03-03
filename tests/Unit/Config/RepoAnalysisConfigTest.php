@@ -55,16 +55,20 @@ class RepoAnalysisConfigTest extends TestCase
         $this->assertIsArray($ai);
         $this->assertArrayHasKey('enabled', $ai);
         $this->assertArrayHasKey('task_timeout_seconds', $ai);
+        $this->assertArrayHasKey('queue_timeout_buffer_seconds', $ai);
         $this->assertArrayHasKey('max_stream_message_length', $ai);
     }
 
-    public function test_queue_supervisor_timeout_defaults_align_with_ai_timeout(): void
+    public function test_queue_supervisor_timeout_defaults_include_ai_timeout_buffer(): void
     {
         $aiTimeout = (int) config('repo_analysis.ai.task_timeout_seconds');
+        $buffer = (int) config('repo_analysis.ai.queue_timeout_buffer_seconds');
         $queueTimeout = (int) config('repo_analysis.queue.supervisor.timeout_seconds');
 
-        $this->assertSame(1200, $aiTimeout);
-        $this->assertSame($aiTimeout, $queueTimeout);
+        $this->assertSame(3600, $aiTimeout);
+        $this->assertSame(180, $buffer);
+        $this->assertSame($aiTimeout + $buffer, $queueTimeout);
+        $this->assertGreaterThan($aiTimeout, $queueTimeout);
     }
 
     public function test_default_coverage_requirements_include_pattern_and_quality_artifacts(): void
@@ -89,6 +93,7 @@ class RepoAnalysisConfigTest extends TestCase
             'REPO_ANALYSIS_EXCLUDE_PATHS' => ' , , ',
             'REPO_ANALYSIS_AI_ENABLED' => 'not-a-bool',
             'REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS' => '999999',
+            'REPO_ANALYSIS_QUEUE_TIMEOUT_BUFFER_SECONDS' => '999999',
             'REPO_ANALYSIS_AI_MAX_STREAM_MESSAGE_LENGTH' => '1',
         ]);
 
@@ -97,7 +102,9 @@ class RepoAnalysisConfigTest extends TestCase
         $this->assertSame(2, $invalidOverridesConfig['user']['max_active_sessions_per_user']);
         $this->assertFalse($invalidOverridesConfig['user']['narrative_synthesis_default']);
         $this->assertTrue($invalidOverridesConfig['ai']['enabled']);
-        $this->assertSame(1200, $invalidOverridesConfig['ai']['task_timeout_seconds']);
+        $this->assertSame(3600, $invalidOverridesConfig['ai']['task_timeout_seconds']);
+        $this->assertSame(180, $invalidOverridesConfig['ai']['queue_timeout_buffer_seconds']);
+        $this->assertSame(3780, $invalidOverridesConfig['queue']['supervisor']['timeout_seconds']);
         $this->assertSame(320, $invalidOverridesConfig['ai']['max_stream_message_length']);
 
         foreach (['vendor/', 'node_modules/', 'storage/', 'bootstrap/cache/', '.git/'] as $path) {
@@ -119,6 +126,7 @@ class RepoAnalysisConfigTest extends TestCase
             'REPO_ANALYSIS_EXCLUDE_PATHS',
             'REPO_ANALYSIS_AI_ENABLED',
             'REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS',
+            'REPO_ANALYSIS_QUEUE_TIMEOUT_BUFFER_SECONDS',
             'REPO_ANALYSIS_AI_MAX_STREAM_MESSAGE_LENGTH',
             'HORIZON_REPO_ANALYSIS_TIMEOUT',
         ];

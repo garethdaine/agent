@@ -470,7 +470,7 @@ class CodexAdapter implements InterrogationRunnerAdapter
      */
     public function parseSummaryResponse(string $output): ?array
     {
-        $decoded = $this->decodeBestEffortJson($output);
+        $decoded = $this->decodeStructuredOutput($output);
 
         if (! is_array($decoded)) {
             return null;
@@ -487,6 +487,9 @@ class CodexAdapter implements InterrogationRunnerAdapter
             'acceptance_criteria' => is_array($decoded['acceptance_criteria'] ?? null) ? array_values($decoded['acceptance_criteria']) : [],
             'open_questions' => is_array($decoded['open_questions'] ?? null) ? array_values($decoded['open_questions']) : [],
             'private_notes' => (string) ($decoded['private_notes'] ?? ''),
+            'cli_session_id' => is_string($decoded['cli_session_id'] ?? null)
+                ? $decoded['cli_session_id']
+                : (is_string($decoded['session_id'] ?? null) ? $decoded['session_id'] : null),
         ]);
     }
 
@@ -591,6 +594,83 @@ class CodexAdapter implements InterrogationRunnerAdapter
         }
 
         return array_values(array_unique($items));
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function decodeStructuredOutput(string $output): ?array
+    {
+        $sessionId = $this->extractSessionIdFromOutput($output);
+        $decoded = $this->decodeBestEffortJson($output);
+
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        if (! isset($decoded['cli_session_id']) && is_string($sessionId) && $sessionId !== '') {
+            $decoded['cli_session_id'] = $sessionId;
+        }
+
+        if (is_array($decoded['structured_output'] ?? null)) {
+            $normalized = $decoded['structured_output'];
+
+            if (! isset($normalized['cli_session_id']) && is_string($sessionId) && $sessionId !== '') {
+                $normalized['cli_session_id'] = $sessionId;
+            }
+
+            return $normalized;
+        }
+
+        if (is_array($decoded['result'] ?? null)) {
+            $normalized = $decoded['result'];
+
+            if (! isset($normalized['cli_session_id']) && is_string($sessionId) && $sessionId !== '') {
+                $normalized['cli_session_id'] = $sessionId;
+            }
+
+            return $normalized;
+        }
+
+        if (is_string($decoded['result'] ?? null) && trim($decoded['result']) !== '') {
+            $parsedResult = $this->decodeBestEffortJson((string) $decoded['result']);
+            if (is_array($parsedResult)) {
+                if (! isset($parsedResult['cli_session_id']) && is_string($sessionId) && $sessionId !== '') {
+                    $parsedResult['cli_session_id'] = $sessionId;
+                }
+
+                return $parsedResult;
+            }
+        }
+
+        return $decoded;
+    }
+
+    private function extractSessionIdFromOutput(string $output): ?string
+    {
+        $trimmed = trim($output);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $decoded = json_decode($trimmed, true);
+        if (is_array($decoded) && is_string($decoded['session_id'] ?? null) && $decoded['session_id'] !== '') {
+            return $decoded['session_id'];
+        }
+
+        foreach (preg_split('/\R/', $trimmed) ?: [] as $line) {
+            $line = trim((string) $line);
+            if ($line === '') {
+                continue;
+            }
+
+            $lineDecoded = json_decode($line, true);
+            if (is_array($lineDecoded) && is_string($lineDecoded['session_id'] ?? null) && $lineDecoded['session_id'] !== '') {
+                return $lineDecoded['session_id'];
+            }
+        }
+
+        return null;
     }
 
     /**
