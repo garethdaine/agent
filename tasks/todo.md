@@ -2341,3 +2341,21 @@ Review
   - `npm run build` (pass)
 - Notes:
   - Initial parallel test run failed due shared Postgres test DB migration races; sequential reruns were green.
+
+## 2026-03-03 Code Analysis Timeout Failure Recovery
+- [x] Add `ExecuteRepoAnalysisTaskJob::failed(Throwable)` to reconcile timeout/job-failure state.
+- [x] Mark in-flight running task as failed with error details and finished timestamp.
+- [x] Transition session out of `executing` into terminal failed state on queue failure and persist error code/summary.
+- [x] Emit `task_failed` event envelope so websocket UI refreshes status and unlocks retry controls.
+- [x] Surface failure reasons in Code Analysis wizard/task graph UI.
+- [x] Align default code-analysis queue timeout with AI task timeout defaults.
+- [x] Add regression test for timeout failure path.
+- [x] Run verification commands.
+
+### Review
+- Verified commands:
+  - `php artisan test --filter=RepoAnalysisExecutionPipelineTest`
+  - `php artisan test --filter=RepoAnalysisApiLifecycleTest`
+  - `php artisan test --filter=RepoAnalysisConfigTest`
+  - `npm run build`
+- Result: all pass.

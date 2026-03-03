@@ -16,6 +16,7 @@ use App\Support\RepoAnalysis\SnapshotBuilder;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\TimeoutExceededException;
 use Throwable;
 
 class ExecuteRepoAnalysisTaskJob implements ShouldQueue
@@ -24,12 +25,15 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 900;
+    public int $timeout = 1200;
+
+    public bool $failOnTimeout = true;
 
     public function __construct(
         public int $sessionId,
         public bool $dispatchNext = true,
     ) {
+        $this->timeout = max(60, (int) config('repo_analysis.ai.task_timeout_seconds', 1200));
         $this->onConnection(config('repo_analysis.queue.connection', 'redis'));
         $this->onQueue(config('repo_analysis.queue.name', 'code-analysis'));
     }
@@ -213,6 +217,84 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
                 $writer,
             );
         }
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        $session = RepoAnalysisSession::query()->find($this->sessionId);
+        if (! $session instanceof RepoAnalysisSession) {
+            return;
+        }
+
+        $task = $this->latestRunningTask($session);
+        $errorCode = $this->queueFailureCode($exception);
+        $errorSummary = $this->queueFailureSummary($exception, $task);
+
+        if ($task instanceof RepoAnalysisTask) {
+            $metadata = is_array($task->metadata_json) ? $task->metadata_json : [];
+            $metadata['queue_failure'] = [
+                'class' => $exception::class,
+                'message' => $exception->getMessage(),
+                'failed_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ];
+
+            $task->status = 'failed';
+            $task->attempt_count = max(1, (int) $task->attempt_count);
+            $task->error_code = $errorCode;
+            $task->error_summary = $errorSummary;
+            $task->finished_at = CarbonImmutable::now('UTC');
+            $task->metadata_json = $metadata;
+            $task->save();
+        }
+
+        $orchestrator = app(RepoAnalysisExecutionOrchestrator::class);
+        $decisionDetails = [
+            'reason' => strtolower($errorCode),
+            'exception_class' => $exception::class,
+        ];
+
+        if ($task instanceof RepoAnalysisTask) {
+            $decisionDetails['task_key'] = (string) $task->task_key;
+        }
+
+        $orchestrator->markOperatorDecisionRequired($session, 'task_retry_decision_required', $decisionDetails);
+        $session->refresh();
+
+        $transitions = app(SessionStateTransitionService::class);
+        $transitioned = false;
+
+        if ((int) $session->phase === 3 && (string) $session->status === SessionStateTransitionService::STATUS_EXECUTING) {
+            $transitioned = $transitions->transitionTo($session->id, 3, SessionStateTransitionService::STATUS_FAILED, [
+                'error_code' => $errorCode,
+                'error_summary' => $errorSummary,
+                'metadata_json' => is_array($session->metadata_json) ? $session->metadata_json : [],
+            ]);
+        }
+
+        if (! $transitioned) {
+            RepoAnalysisSession::query()
+                ->whereKey($session->id)
+                ->update([
+                    'error_code' => $errorCode,
+                    'error_summary' => $errorSummary,
+                    'updated_at' => CarbonImmutable::now('UTC'),
+                ]);
+        }
+
+        $session->refresh();
+
+        $writer = new EventWriter($session);
+        $writer->append('task_failed', [
+            'task_key' => $task?->task_key,
+            'failure_class' => $exception::class,
+            'failure_message' => $exception->getMessage(),
+            'timed_out' => $exception instanceof TimeoutExceededException,
+        ], [
+            'phase' => (int) $session->phase,
+            'status' => (string) $session->status,
+            'error_code' => $errorCode,
+            'error_summary' => $errorSummary,
+        ]);
     }
 
     private function pauseForDriftIfNeeded(
@@ -422,5 +504,42 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
             'error_code' => 'EXECUTE_TASK_NON_RETRYABLE',
             'error_summary' => 'Non-retryable task failure paused execution.',
         ]);
+    }
+
+    private function latestRunningTask(RepoAnalysisSession $session): ?RepoAnalysisTask
+    {
+        return RepoAnalysisTask::query()
+            ->where('repo_analysis_session_id', $session->id)
+            ->where('status', 'running')
+            ->orderByDesc('started_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function queueFailureCode(Throwable $exception): string
+    {
+        if ($exception instanceof TimeoutExceededException) {
+            return 'EXECUTE_TASK_TIMEOUT';
+        }
+
+        return 'EXECUTE_TASK_JOB_FAILED';
+    }
+
+    private function queueFailureSummary(Throwable $exception, ?RepoAnalysisTask $task): string
+    {
+        if ($exception instanceof TimeoutExceededException) {
+            $taskLabel = $task instanceof RepoAnalysisTask
+                ? sprintf('Task %s timed out', (string) $task->task_key)
+                : 'Task execution timed out';
+
+            return sprintf('%s after %d seconds. Retry the failed task to continue.', $taskLabel, $this->timeout);
+        }
+
+        $message = trim($exception->getMessage());
+        if ($message !== '') {
+            return $message;
+        }
+
+        return 'Code analysis task execution failed due to an unexpected queue worker error.';
     }
 }

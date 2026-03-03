@@ -80,7 +80,12 @@ return [
             'memory_mb' => 128,
             'tries' => 1,
             'backoff_seconds' => 0,
-            'timeout_seconds' => 900,
+            'timeout_seconds' => $coerceBoundedInt(
+                env('HORIZON_REPO_ANALYSIS_TIMEOUT', env('REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS', 1200)),
+                1200,
+                60,
+                7200,
+            ),
         ],
     ],
 

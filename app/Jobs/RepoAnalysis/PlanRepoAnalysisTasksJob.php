@@ -273,9 +273,9 @@ class PlanRepoAnalysisTasksJob implements ShouldQueue
     {
         return [
             [
-                'analyzer_name' => 'ai_repo_overview',
+                'analyzer_name' => 'ai_overview',
                 'section_key' => 'overview',
-                'section_title' => 'Repository Overview',
+                'section_title' => 'Codebase Overview',
                 'depends_on' => ['filesystem_manifest', 'dependency_manifest'],
             ],
             [
@@ -313,7 +313,7 @@ class PlanRepoAnalysisTasksJob implements ShouldQueue
                 'section_key' => 'final_report',
                 'section_title' => 'Final Comprehensive Repository Report',
                 'depends_on' => [
-                    'ai_repo_overview',
+                    'ai_overview',
                     'ai_backend_surface',
                     'ai_frontend_surface',
                     'ai_design_patterns',

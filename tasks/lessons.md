@@ -520,3 +520,10 @@ Use this file to capture correction-driven lessons.
 - Rule:
   - Prefer `code-analysis` slugs for new user-facing paths and channels.
   - Keep legacy internal class/table identifiers only when renaming would be invasive, but never surface those terms in UI copy.
+
+## 2026-03-03 Queue Timeout State Recovery
+- Source: User reported Code Analysis task timed out in worker but UI remained stuck on running with no retry path.
+- Lesson: Any long-running queue job that mutates session/task lifecycle must implement `failed(Throwable)` to reconcile persistent state and broadcast a terminal event.
+- Rule:
+  - For lifecycle jobs, always set task/session terminal status + error metadata in `failed(Throwable)`.
+  - Emit a user-visible failure event (`task_failed` or equivalent) so realtime UI refreshes and retry controls unlock.

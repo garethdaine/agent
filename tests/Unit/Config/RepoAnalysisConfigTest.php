@@ -58,6 +58,15 @@ class RepoAnalysisConfigTest extends TestCase
         $this->assertArrayHasKey('max_stream_message_length', $ai);
     }
 
+    public function test_queue_supervisor_timeout_defaults_align_with_ai_timeout(): void
+    {
+        $aiTimeout = (int) config('repo_analysis.ai.task_timeout_seconds');
+        $queueTimeout = (int) config('repo_analysis.queue.supervisor.timeout_seconds');
+
+        $this->assertSame(1200, $aiTimeout);
+        $this->assertSame($aiTimeout, $queueTimeout);
+    }
+
     public function test_default_coverage_requirements_include_pattern_and_quality_artifacts(): void
     {
         $required = config('repo_analysis.coverage.required_artifact_classes');
@@ -111,6 +120,7 @@ class RepoAnalysisConfigTest extends TestCase
             'REPO_ANALYSIS_AI_ENABLED',
             'REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS',
             'REPO_ANALYSIS_AI_MAX_STREAM_MESSAGE_LENGTH',
+            'HORIZON_REPO_ANALYSIS_TIMEOUT',
         ];
 
         $originalValues = [];

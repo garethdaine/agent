@@ -16,6 +16,7 @@ use App\Models\RepoAnalysisTask;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Queue\TimeoutExceededException;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
@@ -204,6 +205,50 @@ class RepoAnalysisExecutionPipelineTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
         app()->call([$misroutedJob, 'handle']);
+    }
+
+    public function test_timed_out_execute_job_marks_session_and_task_failed_and_emits_failure_event(): void
+    {
+        $session = $this->createSession();
+
+        GenerateRepoSnapshotJob::dispatchSync($session->id, false);
+        PlanRepoAnalysisTasksJob::dispatchSync($session->id, false);
+
+        $task = $session->tasks()->where('status', 'pending')->orderBy('id')->firstOrFail();
+        $task->update([
+            'status' => 'running',
+            'attempt_count' => 1,
+            'started_at' => CarbonImmutable::now('UTC')->subMinutes(30),
+        ]);
+
+        $session->update([
+            'phase' => 3,
+            'status' => 'executing',
+            'error_code' => null,
+            'error_summary' => null,
+        ]);
+
+        $job = new ExecuteRepoAnalysisTaskJob($session->id, false);
+        $job->failed(new TimeoutExceededException('ExecuteRepoAnalysisTaskJob has timed out.'));
+
+        $session->refresh();
+        $task->refresh();
+
+        $this->assertSame('failed', (string) $session->status);
+        $this->assertSame('EXECUTE_TASK_TIMEOUT', (string) $session->error_code);
+        $this->assertStringContainsString('timed out', (string) $session->error_summary);
+        $this->assertSame('task_retry_decision_required', data_get($session->metadata_json, 'operator_action_required'));
+
+        $this->assertSame('failed', (string) $task->status);
+        $this->assertSame('EXECUTE_TASK_TIMEOUT', (string) $task->error_code);
+        $this->assertStringContainsString((string) $task->task_key, (string) $task->error_summary);
+        $this->assertNotNull($task->finished_at);
+
+        $failureEvent = $session->events()->where('event_type', 'task_failed')->latest('id')->first();
+        $this->assertNotNull($failureEvent);
+        $this->assertSame('EXECUTE_TASK_TIMEOUT', (string) $failureEvent->error_code);
+        $this->assertSame('failed', (string) $failureEvent->status);
+        $this->assertTrue((bool) data_get($failureEvent->payload_json, 'timed_out'));
     }
 
     private function createSession(array $metadata = []): RepoAnalysisSession

@@ -33,8 +33,15 @@ const emit = defineEmits(['retry-task']);
 
 const normalizeStatus = (status) => String(status ?? '').trim().toLowerCase();
 
+const normalizeAnalyzerLabel = (value) => String(value ?? '').replace(/^ai_repo_overview$/, 'ai_overview');
+const normalizeTaskKeyLabel = (value) => String(value ?? '').replace(/^ai_repo_overview:/, 'ai_overview:');
+
 const dependencySummary = (task) => {
-    const dependencies = Array.isArray(task?.depends_on_json) ? task.depends_on_json.filter(Boolean) : [];
+    const dependencies = Array.isArray(task?.depends_on_json)
+        ? task.depends_on_json
+            .filter(Boolean)
+            .map((dependency) => normalizeAnalyzerLabel(dependency))
+        : [];
     if (dependencies.length === 0) {
         return 'none';
     }
@@ -177,14 +184,23 @@ const statusBadgeClass = (status) => {
                         </TableCell>
                     </TableRow>
                     <TableRow v-for="task in tasks" :key="task.id ?? task.task_key">
-                        <TableCell class="font-medium">{{ task.task_key }}</TableCell>
-                        <TableCell class="text-xs text-muted-foreground">{{ task.analyzer_name }}</TableCell>
+                        <TableCell class="font-medium">{{ normalizeTaskKeyLabel(task.task_key) }}</TableCell>
+                        <TableCell class="text-xs text-muted-foreground">{{ normalizeAnalyzerLabel(task.analyzer_name) }}</TableCell>
                         <TableCell class="text-xs text-muted-foreground">{{ dependencySummary(task) }}</TableCell>
                         <TableCell class="text-xs">
-                            <Badge variant="outline" :class="statusBadgeClass(task.status)">
-                                <Spinner v-if="isActiveStatus(task.status)" size="sm" />
-                                {{ statusLabel(task.status) }}
-                            </Badge>
+                            <div class="space-y-1">
+                                <Badge variant="outline" :class="statusBadgeClass(task.status)">
+                                    <Spinner v-if="isActiveStatus(task.status)" size="sm" class="mr-1" />
+                                    {{ statusLabel(task.status) }}
+                                </Badge>
+                                <p
+                                    v-if="task.error_summary"
+                                    class="max-w-xs truncate text-[11px] text-destructive"
+                                    :title="task.error_summary"
+                                >
+                                    {{ task.error_summary }}
+                                </p>
+                            </div>
                         </TableCell>
                         <TableCell class="text-xs text-muted-foreground">{{ task.attempt_count ?? 0 }}</TableCell>
                         <TableCell class="text-right">

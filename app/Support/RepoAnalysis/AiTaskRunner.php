@@ -295,7 +295,7 @@ class AiTaskRunner
     private function sectionInstruction(string $taskName): string
     {
         return match ($taskName) {
-            'ai_repo_overview' => 'Produce a comprehensive repository overview: project purpose, primary features, overall architecture, tech stack, and dependency landscape.',
+            'ai_overview', 'ai_repo_overview' => 'Produce a comprehensive codebase overview: project purpose, primary features, overall architecture, tech stack, and dependency landscape.',
             'ai_backend_surface' => 'Analyze backend architecture in depth: domain structure, models, migrations, routing/API surfaces, queue/event patterns, and key backend flows.',
             'ai_frontend_surface' => 'Analyze frontend architecture in depth: page structure, component patterns, state/data flow, UI conventions, and integration points with backend APIs.',
             'ai_design_patterns' => 'Extract design and architecture patterns in depth: identify dominant patterns, where they appear, evidence files, consistency, and where patterns are mixed or violated.',

@@ -1,14 +1,8 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import TaskGraphPanel from '@/Components/CodeAnalysis/TaskGraphPanel.vue';
-import CoveragePanel from '@/Components/CodeAnalysis/CoveragePanel.vue';
 import ReportViewer from '@/Components/CodeAnalysis/ReportViewer.vue';
-import ArtifactInspector from '@/Components/CodeAnalysis/ArtifactInspector.vue';
 import Button from '@/Components/ui/Button.vue';
-import Card from '@/Components/ui/Card.vue';
-import CardHeader from '@/Components/ui/CardHeader.vue';
-import CardTitle from '@/Components/ui/CardTitle.vue';
-import CardContent from '@/Components/ui/CardContent.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { onMounted, onUnmounted, ref } from 'vue';
@@ -30,35 +24,18 @@ const props = defineProps({
             is_admin_override: false,
         }),
     },
-    actionVisibility: {
-        type: Object,
-        default: () => ({
-            pause: false,
-            resume: false,
-            retry: false,
-            restart: false,
-            export: false,
-        }),
-    },
 });
 
 const session = ref(props.initialSession);
 const events = ref([]);
 const tasks = ref([]);
-const artifacts = ref([]);
 const reports = ref([]);
 const loading = ref(false);
 const loadingCollections = ref(false);
 const error = ref('');
 const notice = ref('');
 const websocketActive = ref(false);
-const actionVisibility = ref({ ...props.actionVisibility });
 const actionBusy = ref({
-    pause: false,
-    resume: false,
-    retry: false,
-    restart: false,
-    runNext: false,
     export: false,
 });
 const optimisticExpectedStatus = ref(null);
@@ -68,28 +45,7 @@ const sessionRefreshTimer = ref(null);
 const collectionsRefreshTimer = ref(null);
 
 const activeStatusByPhase = {
-    1: 'snapshotting',
-    2: 'planning',
     3: 'executing',
-    4: 'validating',
-    5: 'reporting',
-    6: 'completed',
-};
-
-const runningStatuses = ['snapshotting', 'planning', 'executing', 'validating', 'reporting'];
-
-const deriveActionVisibility = () => {
-    const status = String(session.value?.status ?? '');
-    const canMutate = Boolean(props.viewer?.can_mutate);
-    const hasExport = reports.value.length > 0;
-
-    actionVisibility.value = {
-        pause: canMutate && runningStatuses.includes(status),
-        resume: canMutate && status === 'paused',
-        retry: canMutate && status === 'failed',
-        restart: canMutate,
-        export: hasExport,
-    };
 };
 
 const applySession = (nextSession) => {
@@ -108,7 +64,6 @@ const loadSession = async () => {
     try {
         const { data } = await axios.get(`/agent/api/v1/code-analysis/sessions/${props.sessionId}`);
         applySession(data?.data ?? null);
-        deriveActionVisibility();
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load session.';
     }
@@ -138,16 +93,13 @@ const loadCollections = async (options = {}) => {
     }
 
     try {
-        const [tasksResponse, artifactsResponse, reportsResponse] = await Promise.all([
+        const [tasksResponse, reportsResponse] = await Promise.all([
             axios.get(`/agent/api/v1/code-analysis/sessions/${props.sessionId}/tasks`, { params: { limit: 200 } }),
-            axios.get(`/agent/api/v1/code-analysis/sessions/${props.sessionId}/artifacts`, { params: { limit: 200 } }),
             axios.get(`/agent/api/v1/code-analysis/sessions/${props.sessionId}/reports`, { params: { limit: 50 } }),
         ]);
 
         tasks.value = tasksResponse?.data?.data ?? [];
-        artifacts.value = artifactsResponse?.data?.data ?? [];
         reports.value = reportsResponse?.data?.data ?? [];
-        deriveActionVisibility();
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load related code analysis data.';
     } finally {
@@ -237,7 +189,6 @@ const subscribeRealtime = () => {
                         ...session.value,
                         status: nextStatus,
                     };
-                    deriveActionVisibility();
                 }
 
                 const eventType = String(event?.event_type ?? '');
@@ -298,55 +249,6 @@ const postLifecycle = async (endpoint, options = {}) => {
     }
 };
 
-const runNextStep = async () => {
-    const phase = Number(session.value?.phase ?? 0);
-    const status = String(session.value?.status ?? '');
-
-    if (status === 'setup' && phase === 0) {
-        await postLifecycle('start-snapshot', {
-            busyKey: 'runNext',
-            expectedStatus: 'snapshotting',
-            successNotice: 'Snapshot queued.',
-        });
-        return;
-    }
-
-    if (phase === 2 && ['planning', 'failed', 'paused'].includes(status)) {
-        await postLifecycle('plan', {
-            busyKey: 'runNext',
-            expectedStatus: 'planning',
-            successNotice: 'Planning queued.',
-        });
-        return;
-    }
-
-    if (phase === 3 && ['executing', 'failed', 'paused'].includes(status)) {
-        await postLifecycle('execute', {
-            busyKey: 'runNext',
-            expectedStatus: 'executing',
-            successNotice: 'Execution queued.',
-        });
-        return;
-    }
-
-    if (phase === 4 && ['validating', 'failed', 'paused'].includes(status)) {
-        await postLifecycle('validate-coverage', {
-            busyKey: 'runNext',
-            expectedStatus: 'validating',
-            successNotice: 'Coverage validation queued.',
-        });
-        return;
-    }
-
-    if (phase === 5 && ['reporting', 'failed', 'paused'].includes(status)) {
-        await postLifecycle('generate-report', {
-            busyKey: 'runNext',
-            expectedStatus: 'reporting',
-            successNotice: 'Report generation queued.',
-        });
-    }
-};
-
 const maybeAutoStart = async () => {
     if (autoStartAttempted.value) {
         return;
@@ -379,7 +281,6 @@ const maybeAutoStart = async () => {
     autoStartAttempted.value = true;
 
     await postLifecycle('start-snapshot', {
-        busyKey: 'runNext',
         expectedStatus: 'snapshotting',
         successNotice: 'Snapshot auto-started.',
     });
@@ -468,117 +369,20 @@ onUnmounted(() => {
                     Realtime updates are unavailable. Connect Reverb/Echo to receive live task updates.
                 </div>
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ error }}</div>
+                <div v-if="session?.error_summary" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    <p class="font-medium">Latest failure</p>
+                    <p class="mt-1">{{ session.error_summary }}</p>
+                    <p v-if="session?.error_code" class="mt-1 text-xs opacity-90">Code: {{ session.error_code }}</p>
+                </div>
                 <div v-if="notice" class="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">{{ notice }}</div>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Session State</CardTitle>
-                    </CardHeader>
-                    <CardContent class="space-y-3">
-                        <div class="grid gap-3 md:grid-cols-5">
-                            <div class="rounded border border-border p-3">
-                                <p class="text-xs text-muted-foreground">Status</p>
-                                <p class="mt-1 text-sm font-medium">{{ session?.status ?? '—' }}</p>
-                            </div>
-                            <div class="rounded border border-border p-3">
-                                <p class="text-xs text-muted-foreground">Phase</p>
-                                <p class="mt-1 text-sm font-medium">{{ session?.phase ?? '—' }}</p>
-                            </div>
-                            <div class="rounded border border-border p-3">
-                                <p class="text-xs text-muted-foreground">Project</p>
-                                <p class="mt-1 text-sm font-medium truncate">{{ session?.project_directory ?? '—' }}</p>
-                            </div>
-                            <div class="rounded border border-border p-3">
-                                <p class="text-xs text-muted-foreground">Runner</p>
-                                <p class="mt-1 text-sm font-medium">{{ session?.runner_type ?? 'claude' }}</p>
-                            </div>
-                            <div class="rounded border border-border p-3">
-                                <p class="text-xs text-muted-foreground">Updated</p>
-                                <p class="mt-1 text-sm font-medium">{{ session?.updated_at ?? '—' }}</p>
-                            </div>
-                        </div>
-
-                        <div class="flex flex-wrap gap-2">
-                            <Button :disabled="loading || actionBusy.runNext" @click="runNextStep">
-                                {{ actionBusy.runNext ? 'Queueing…' : 'Run Next Step' }}
-                            </Button>
-
-                            <Button
-                                v-if="actionVisibility.pause"
-                                variant="outline"
-                                :disabled="actionBusy.pause"
-                                @click="postLifecycle('pause', { busyKey: 'pause', expectedStatus: 'paused', successNotice: 'Session paused.' })"
-                            >
-                                {{ actionBusy.pause ? 'Pausing…' : 'Pause' }}
-                            </Button>
-
-                            <Button
-                                v-if="actionVisibility.resume"
-                                variant="outline"
-                                :disabled="actionBusy.resume"
-                                @click="postLifecycle('resume', { busyKey: 'resume', expectedStatus: activeStatusByPhase[String(session?.phase ?? '')] ?? null, successNotice: 'Session resumed.' })"
-                            >
-                                {{ actionBusy.resume ? 'Resuming…' : 'Resume' }}
-                            </Button>
-
-                            <Button
-                                v-if="actionVisibility.retry"
-                                variant="outline"
-                                :disabled="actionBusy.retry"
-                                @click="postLifecycle('retry', { busyKey: 'retry', expectedStatus: activeStatusByPhase[String(session?.phase ?? '')] ?? null, successNotice: 'Session retry queued.' })"
-                            >
-                                {{ actionBusy.retry ? 'Retrying…' : 'Retry' }}
-                            </Button>
-
-                            <Button
-                                v-if="actionVisibility.restart"
-                                variant="outline"
-                                :disabled="actionBusy.restart"
-                                @click="postLifecycle('restart-from-beginning', { busyKey: 'restart', expectedStatus: 'setup', successNotice: 'Session restart queued.' })"
-                            >
-                                {{ actionBusy.restart ? 'Restarting…' : 'Restart' }}
-                            </Button>
-
-                            <Button
-                                v-if="actionVisibility.export"
-                                variant="outline"
-                                :disabled="actionBusy.export"
-                                @click="exportLatestReport"
-                            >
-                                {{ actionBusy.export ? 'Preparing…' : 'Export' }}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
 
                 <TaskGraphPanel
                     :tasks="tasks"
                     :loading="loadingCollections"
-                    :can-retry-failed-task="actionVisibility.retry || actionVisibility.resume || actionVisibility.pause"
+                    :can-retry-failed-task="viewer.can_mutate"
                     @retry-task="retryTask"
                 />
-
-                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    <CoveragePanel :events="events" :session="session" />
-                    <ArtifactInspector :artifacts="artifacts" />
-                </div>
-
-                <ReportViewer :reports="reports" :can-export="actionVisibility.export" @export-latest="exportLatestReport" />
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Event Stream</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div class="max-h-80 space-y-2 overflow-auto">
-                            <div v-for="event in events" :key="event.sequence" class="rounded border border-border p-2">
-                                <p class="text-xs font-medium">#{{ event.sequence }} · {{ event.event_type }}</p>
-                                <p class="mt-1 text-xs text-muted-foreground">phase {{ event.phase ?? '—' }} · status {{ event.status ?? '—' }}</p>
-                            </div>
-                            <p v-if="events.length === 0" class="text-sm text-muted-foreground">No events yet.</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <ReportViewer :reports="reports" :can-export="reports.length > 0" @export-latest="exportLatestReport" />
             </div>
         </div>
     </AppLayout>

@@ -23,6 +23,7 @@ use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\RepoAnalysis\EventWriter;
 use App\Support\RepoAnalysis\SessionStateTransitionService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -687,6 +688,9 @@ class RepoAnalysisSessionController extends Controller
         if ($forbidden = $this->forbiddenIfCannot($request, 'view', $session)) {
             return $forbidden;
         }
+
+        $this->reconcileStaleRunningTasks($session);
+
         $limit = min(200, max(1, (int) $request->integer('limit', 100)));
 
         $tasks = RepoAnalysisTask::query()
@@ -836,5 +840,64 @@ class RepoAnalysisSessionController extends Controller
         }
 
         return null;
+    }
+
+    private function reconcileStaleRunningTasks(RepoAnalysisSession $session): void
+    {
+        if (! in_array((string) $session->status, [
+            SessionStateTransitionService::STATUS_PAUSED,
+            SessionStateTransitionService::STATUS_FAILED,
+            SessionStateTransitionService::STATUS_COMPLETED,
+        ], true)) {
+            return;
+        }
+
+        $runningTasks = RepoAnalysisTask::query()
+            ->where('repo_analysis_session_id', $session->id)
+            ->where('status', 'running')
+            ->orderBy('id')
+            ->get();
+
+        if ($runningTasks->isEmpty()) {
+            return;
+        }
+
+        $writer = new EventWriter($session);
+        $defaultErrorCode = (string) $session->error_code === 'EXECUTE_TASK_TIMEOUT'
+            ? 'EXECUTE_TASK_TIMEOUT'
+            : 'EXECUTE_TASK_INTERRUPTED';
+
+        foreach ($runningTasks as $task) {
+            $metadata = is_array($task->metadata_json) ? $task->metadata_json : [];
+            $metadata['state_reconciled_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+            $metadata['state_reconciled_reason'] = 'stale_running_task_while_session_not_executing';
+
+            $errorCode = (string) ($task->error_code ?: $defaultErrorCode);
+            $errorSummary = (string) ($task->error_summary ?: sprintf(
+                'Task %s was still marked running while session is %s. Status reconciled to failed.',
+                (string) $task->task_key,
+                (string) $session->status
+            ));
+
+            $task->status = 'failed';
+            $task->attempt_count = max(1, (int) $task->attempt_count);
+            $task->error_code = $errorCode;
+            $task->error_summary = $errorSummary;
+            $task->finished_at = CarbonImmutable::now('UTC');
+            $task->metadata_json = $metadata;
+            $task->save();
+
+            $writer->append('task_failed', [
+                'task_key' => (string) $task->task_key,
+                'failure_class' => 'state_reconciled',
+                'failure_message' => $errorSummary,
+                'timed_out' => $errorCode === 'EXECUTE_TASK_TIMEOUT',
+            ], [
+                'phase' => (int) $session->phase,
+                'status' => (string) $session->status,
+                'error_code' => $errorCode,
+                'error_summary' => $errorSummary,
+            ]);
+        }
     }
 }

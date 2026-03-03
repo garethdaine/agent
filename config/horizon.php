@@ -314,7 +314,7 @@ return [
             'memory' => 128,
             'tries' => 1,
             'backoff' => 0,
-            'timeout' => (int) env('HORIZON_REPO_ANALYSIS_TIMEOUT', 900),
+            'timeout' => (int) env('HORIZON_REPO_ANALYSIS_TIMEOUT', env('REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS', 1200)),
             'nice' => 0,
         ],
     ],

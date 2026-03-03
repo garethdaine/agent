@@ -291,6 +291,49 @@ class RepoAnalysisApiLifecycleTest extends TestCase
             ->assertJsonPath('data.0.report_version', '1.0.0');
     }
 
+    public function test_tasks_endpoint_reconciles_running_tasks_immediately_when_session_is_not_executing(): void
+    {
+        $owner = User::factory()->create();
+        $this->actingAs($owner);
+
+        $session = $this->createSession($owner, [
+            'phase' => 3,
+            'status' => SessionStateTransitionService::STATUS_PAUSED,
+            'error_code' => 'EXECUTE_TASK_TIMEOUT',
+            'error_summary' => 'Task timed out.',
+        ]);
+
+        $task = RepoAnalysisTask::query()->create([
+            'repo_analysis_session_id' => $session->id,
+            'task_key' => 'ai_overview:abc123',
+            'task_type' => 'ai_analysis',
+            'status' => 'running',
+            'phase' => 3,
+            'analyzer_name' => 'ai_overview',
+            'analyzer_version' => 'ai-task-1.0.0',
+            'attempt_count' => 1,
+            'started_at' => now('UTC'),
+        ]);
+
+        $this->getJson('/agent/api/v1/code-analysis/sessions/'.$session->id.'/tasks')
+            ->assertOk()
+            ->assertJsonPath('meta.returned', 1)
+            ->assertJsonPath('data.0.id', $task->id)
+            ->assertJsonPath('data.0.status', 'failed')
+            ->assertJsonPath('data.0.error_code', 'EXECUTE_TASK_TIMEOUT');
+
+        $task->refresh();
+        $this->assertSame('failed', (string) $task->status);
+        $this->assertSame('EXECUTE_TASK_TIMEOUT', (string) $task->error_code);
+        $this->assertNotNull($task->finished_at);
+
+        $this->assertDatabaseHas('repo_analysis_events', [
+            'repo_analysis_session_id' => $session->id,
+            'event_type' => 'task_failed',
+            'error_code' => 'EXECUTE_TASK_TIMEOUT',
+        ]);
+    }
+
     public function test_owner_only_policy_with_admin_override_for_retry_and_restart_mutations(): void
     {
         Queue::fake();
