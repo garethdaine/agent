@@ -76,6 +76,10 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             return;
         }
 
+        if ((int) $session->phase !== InterrogationSession::PHASE_INTERROGATION) {
+            return;
+        }
+
         $writer = new InterrogationEventWriter($session);
 
         if (! $this->isSystemMessage && trim($this->userMessage) !== '') {

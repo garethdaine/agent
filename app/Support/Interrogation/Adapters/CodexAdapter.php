@@ -866,7 +866,7 @@ class CodexAdapter implements InterrogationRunnerAdapter
     {
         return json_encode([
             'type' => 'object',
-            'required' => ['question_id', 'question_text', 'answer_type', 'options', 'reasoning', 'category', 'progress_estimate', 'is_complete', 'cli_session_id'],
+            'required' => ['question_id', 'canonical_key', 'question_text', 'answer_type', 'options', 'reasoning', 'category', 'progress_estimate', 'is_complete', 'cli_session_id'],
             'additionalProperties' => false,
             'properties' => [
                 'question_id' => ['type' => 'string'],
@@ -887,7 +887,7 @@ class CodexAdapter implements InterrogationRunnerAdapter
     {
         return json_encode([
             'type' => 'object',
-            'required' => ['questions'],
+            'required' => ['questions', 'cli_session_id'],
             'additionalProperties' => false,
             'properties' => [
                 'questions' => [
