@@ -875,14 +875,17 @@ class InterrogationApiWorkflowTest extends TestCase
             ],
         ]);
 
+        $longNotes = str_repeat('A', 7000).' Please remove ambiguities and tighten acceptance criteria.';
+
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/revise-summary', [
-            'notes' => 'Please remove ambiguities and tighten acceptance criteria.',
+            'notes' => $longNotes,
         ])->assertStatus(202)
             ->assertJsonPath('data.accepted', true);
 
         Queue::assertPushed(ExecuteInterrogationSummaryJob::class, function (ExecuteInterrogationSummaryJob $job) use ($session) {
             return (int) $job->sessionId === (int) $session->id
                 && is_string($job->revisionNotes)
+                && mb_strlen($job->revisionNotes) > 6000
                 && str_contains($job->revisionNotes, 'tighten acceptance criteria');
         });
     }
@@ -1038,10 +1041,12 @@ class InterrogationApiWorkflowTest extends TestCase
             ],
         ]);
 
+        $longNotes = str_repeat('B', 6200).' Add migration details';
+
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/revise-plan', [
             'action' => 'expand',
             'section' => 'data model',
-            'notes' => 'Add migration details',
+            'notes' => $longNotes,
         ])->assertStatus(202)
             ->assertJsonPath('data.queued', true)
             ->assertJsonPath('data.revision_status', 'queued');
@@ -1050,7 +1055,9 @@ class InterrogationApiWorkflowTest extends TestCase
             return (int) $job->sessionId === (int) $session->id
                 && is_string($job->revisionPrompt)
                 && str_contains($job->revisionPrompt, 'Action: expand')
-                && str_contains($job->revisionPrompt, 'Section: data model');
+                && str_contains($job->revisionPrompt, 'Section: data model')
+                && str_contains($job->revisionPrompt, 'Add migration details')
+                && mb_strlen($job->revisionPrompt) > 5000;
         });
 
         $session->refresh();
@@ -1840,6 +1847,81 @@ class InterrogationApiWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_build_tasks_can_be_reordered_during_task_phase(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build task reorder session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_BUILD_TASKS,
+            'phase' => InterrogationSession::PHASE_BUILD_TASKS,
+            'approved_at' => now('UTC'),
+            'metadata_json' => [
+                'build' => [
+                    'status' => 'ready',
+                    'task_count' => 3,
+                    'tasks_approved_at' => now('UTC')->subMinute()->toIso8601String(),
+                    'task_provider_sync' => [
+                        'status' => 'synced',
+                        'driver' => 'linear',
+                    ],
+                ],
+            ],
+        ]);
+
+        $taskA = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Task A',
+            'description' => 'First',
+            'instructions_markdown' => 'First instructions',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+        ]);
+        $taskB = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 2,
+            'title' => 'Task B',
+            'description' => 'Second',
+            'instructions_markdown' => 'Second instructions',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+        ]);
+        $taskC = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 3,
+            'title' => 'Task C',
+            'description' => 'Third',
+            'instructions_markdown' => 'Third instructions',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+        ]);
+
+        $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/build-tasks/reorder', [
+            'task_ids' => [$taskC->id, $taskA->id, $taskB->id],
+        ])->assertOk()
+            ->assertJsonPath('data.tasks.0.id', (int) $taskC->id)
+            ->assertJsonPath('data.tasks.0.sequence', 1)
+            ->assertJsonPath('data.tasks.1.id', (int) $taskA->id)
+            ->assertJsonPath('data.tasks.1.sequence', 2)
+            ->assertJsonPath('data.tasks.2.id', (int) $taskB->id)
+            ->assertJsonPath('data.tasks.2.sequence', 3);
+
+        $session->refresh();
+        $orderedIds = InterrogationBuildTask::query()
+            ->where('interrogation_session_id', $session->id)
+            ->ordered()
+            ->pluck('id')
+            ->map(fn ($value): int => (int) $value)
+            ->all();
+
+        $this->assertSame([(int) $taskC->id, (int) $taskA->id, (int) $taskB->id], $orderedIds);
+        $this->assertNull(data_get($session->metadata_json, 'build.tasks_approved_at'));
+        $this->assertSame('idle', (string) data_get($session->metadata_json, 'build.task_provider_sync.status'));
+    }
+
     public function test_show_build_state_normalizes_structured_clarification_excerpt_and_exposes_effective_run_status(): void
     {
         $user = User::factory()->create();
@@ -2006,6 +2088,7 @@ class InterrogationApiWorkflowTest extends TestCase
 
         $this->postJson('/agent/api/v1/interrogation/sessions/'.$session->id.'/build-tasks/'.$task->id.'/regenerate', [
             'amend_notes' => 'Split this into API-first implementation with stricter acceptance checks.',
+            'additional_context' => 'Keep compatibility with legacy API clients and preserve existing response keys.',
         ])->assertStatus(202)
             ->assertJsonPath('data.queued', true)
             ->assertJsonPath('data.task_id', $task->id);
@@ -2013,7 +2096,8 @@ class InterrogationApiWorkflowTest extends TestCase
         Queue::assertPushed(RegenerateInterrogationBuildTaskJob::class, function (RegenerateInterrogationBuildTaskJob $job) use ($session, $task): bool {
             return (int) $job->sessionId === (int) $session->id
                 && (int) $job->taskId === (int) $task->id
-                && str_contains($job->amendNotes, 'API-first implementation');
+                && str_contains($job->amendNotes, 'API-first implementation')
+                && str_contains((string) $job->additionalContext, 'legacy API clients');
         });
 
         $task->refresh();
@@ -2021,6 +2105,7 @@ class InterrogationApiWorkflowTest extends TestCase
 
         $this->assertSame('queued', (string) data_get($task->metadata_json, 'regeneration.status'));
         $this->assertSame('Split this into API-first implementation with stricter acceptance checks.', (string) data_get($task->metadata_json, 'regeneration.amend_notes'));
+        $this->assertSame('Keep compatibility with legacy API clients and preserve existing response keys.', (string) data_get($task->metadata_json, 'regeneration.additional_context'));
         $this->assertNull(data_get($session->metadata_json, 'build.tasks_approved_at'));
         $this->assertSame('idle', (string) data_get($session->metadata_json, 'build.task_provider_sync.status'));
     }

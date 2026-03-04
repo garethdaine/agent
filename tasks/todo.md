@@ -6,6 +6,32 @@
 
 ## Current — Open Items
 
+### Session 21 Discovery — Build Task Ordering + Regeneration Controls (Completed)
+
+STAR
+- SITUATION: Discovery build tasks can be generated, edited, deleted, and individually regenerated, but there is no way to reorder tasks in sequence and no explicit workflow to regenerate the entire task list with additional context after initial generation.
+- TASK: Allow users to reorder build tasks, insert new tasks and position them correctly, regenerate a single task with richer feedback/context, and regenerate all build tasks with additional feedback/context passed through to AI generation.
+- ACTION:
+  - [x] Add backend API support to reorder tasks within a session and persist normalized sequences safely.
+  - [x] Add backend API support to regenerate all build tasks from build-tasks phase with amend feedback/context.
+  - [x] Extend single-task regeneration to accept optional additional context and pass it to the generation prompt.
+  - [x] Update Discovery Wizard + Build panel UI to expose reorder controls, insert-at-position support, and regenerate-all with context.
+  - [x] Add/adjust feature + unit tests for ordering and regeneration flows, then run targeted verification.
+- RESULT: Verified by API tests and UI wiring that users can move tasks up/down, add tasks at specific positions, regenerate one task with feedback/context, and regenerate all tasks with contextual feedback.
+
+Review
+- Implemented API endpoint `POST /agent/api/v1/interrogation/sessions/{id}/build-tasks/reorder` with full-list validation, deterministic resequencing, and approval invalidation.
+- Extended single-task regeneration API and queue payload to accept optional `additional_context`, persisted it in regeneration metadata, and injected it into task-regeneration prompts.
+- Enabled regenerate-all feedback/context via existing `generate-build-tasks` endpoint by wiring `notes` through Discovery UI payloads (JSON + multipart).
+- Updated discovery build panel UX:
+  - Added optional generation/regeneration feedback fields.
+  - Replaced button-based ordering with draggable task cards (handle-based drag-and-drop).
+  - Added regenerate-all button copy in task phase.
+- Verification:
+  - `php artisan test --filter=InterrogationApiWorkflowTest` (pass)
+  - `php artisan test --filter=BuildTaskGeneratorPromptTest` (pass)
+  - `npm run build` (pass)
+
 ### Session 20 Discovery — Native Research + Grounded Answer Brief (Completed)
 
 - [x] Define a native Perplexica-inspired research subsystem as a first-class bounded context inside Agent.

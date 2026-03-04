@@ -37,9 +37,10 @@ class BuildTaskGenerator
         InterrogationSession $session,
         InterrogationBuildTask $task,
         string $amendNotes,
+        ?string $additionalContext = null,
     ): array {
         $systemPrompt = $this->promptResolver->resolveForPhase($session, 'build_tasks');
-        $prompt = $this->buildTaskRegenerationPrompt($session, $task, $amendNotes);
+        $prompt = $this->buildTaskRegenerationPrompt($session, $task, $amendNotes, $additionalContext);
         $parsed = $this->runBuildTaskGeneration($session, $prompt, $systemPrompt);
 
         $candidate = is_array($parsed['tasks'][0] ?? null) ? $parsed['tasks'][0] : null;
@@ -127,6 +128,7 @@ class BuildTaskGenerator
         InterrogationSession $session,
         InterrogationBuildTask $task,
         string $amendNotes,
+        ?string $additionalContext = null,
     ): string {
         $plan = is_array($session->plan_json) ? $session->plan_json : [];
         $summary = is_array($session->summary_json) ? $session->summary_json : [];
@@ -151,6 +153,11 @@ class BuildTaskGenerator
             ."\nInstructions:\n".trim((string) ($task->instructions_markdown ?? '')),
             "\nAmend notes from user:\n".trim($amendNotes),
         ];
+
+        $additionalContext = trim((string) $additionalContext);
+        if ($additionalContext !== '') {
+            $parts[] = "\nAdditional user context:\n{$additionalContext}";
+        }
 
         if ($summaryMarkdown !== '') {
             $parts[] = "\nSummary context:\n{$summaryMarkdown}";

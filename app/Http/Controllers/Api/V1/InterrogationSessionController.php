@@ -37,6 +37,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -537,7 +538,7 @@ class InterrogationSessionController extends Controller
         }
 
         $validated = $request->validate([
-            'notes' => ['nullable', 'string', 'max:6000'],
+            'notes' => ['nullable', 'string'],
         ]);
 
         if ($session->status === InterrogationSession::STATUS_PAUSED) {
@@ -1129,6 +1130,102 @@ class InterrogationSessionController extends Controller
         ], 201);
     }
 
+    public function reorderBuildTasks(
+        Request $request,
+        int $id,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        if ($conflict = $this->buildTaskEditingConflict($session)) {
+            return $conflict;
+        }
+
+        $validated = $request->validate([
+            'task_ids' => ['required', 'array', 'min:1'],
+            'task_ids.*' => ['integer', 'distinct'],
+        ]);
+
+        $requestedIds = array_values(array_map(static fn (mixed $value): int => (int) $value, (array) $validated['task_ids']));
+        $tasks = $session->buildTasks()->ordered()->get(['id', 'sequence']);
+
+        if ($tasks->isEmpty()) {
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'No build tasks are available to reorder.', 409);
+        }
+
+        $existingIds = $tasks
+            ->pluck('id')
+            ->map(static fn (mixed $value): int => (int) $value)
+            ->values()
+            ->all();
+
+        $requestedSorted = $requestedIds;
+        $existingSorted = $existingIds;
+        sort($requestedSorted);
+        sort($existingSorted);
+
+        if (count($requestedIds) !== count($existingIds) || $requestedSorted !== $existingSorted) {
+            throw ValidationException::withMessages([
+                'task_ids' => 'Task order payload must include every build task exactly once.',
+            ]);
+        }
+
+        $beforeOrder = $tasks
+            ->sortBy('sequence')
+            ->values()
+            ->map(static fn (InterrogationBuildTask $task): int => (int) $task->id)
+            ->all();
+
+        $temporaryOffset = max(
+            100,
+            (int) $tasks->max('sequence') + count($requestedIds) + 10,
+        );
+
+        DB::transaction(function () use ($requestedIds, $temporaryOffset): void {
+
+            foreach ($requestedIds as $index => $taskId) {
+                InterrogationBuildTask::query()
+                    ->whereKey($taskId)
+                    ->update(['sequence' => $temporaryOffset + $index + 1]);
+            }
+
+            foreach ($requestedIds as $index => $taskId) {
+                InterrogationBuildTask::query()
+                    ->whereKey($taskId)
+                    ->update(['sequence' => $index + 1]);
+            }
+        });
+
+        $this->invalidateBuildTaskApproval($session);
+
+        $afterOrder = $session->buildTasks()
+            ->ordered()
+            ->get(['id'])
+            ->map(static fn (InterrogationBuildTask $task): int => (int) $task->id)
+            ->all();
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'interrogation.session.build_task.reorder',
+            targetType: 'interrogation_session',
+            targetId: (int) $session->id,
+            ownerUserId: (int) $session->user_id,
+            changedFields: ['build.tasks'],
+            before: ['task_ids' => $beforeOrder],
+            after: ['task_ids' => $afterOrder],
+        );
+
+        return response()->json([
+            'data' => [
+                'tasks' => $session->buildTasks()
+                    ->ordered()
+                    ->get()
+                    ->map(fn (InterrogationBuildTask $task): array => $this->transformBuildTask($task))
+                    ->values()
+                    ->all(),
+            ],
+        ]);
+    }
+
     public function updateBuildTask(
         Request $request,
         int $id,
@@ -1264,9 +1361,11 @@ class InterrogationSessionController extends Controller
 
         $validated = $request->validate([
             'amend_notes' => ['required', 'string', 'max:6000'],
+            'additional_context' => ['nullable', 'string', 'max:6000'],
         ]);
 
         $amendNotes = trim((string) ($validated['amend_notes'] ?? ''));
+        $additionalContext = $this->normalizedNullableText($validated['additional_context'] ?? null);
         if ($amendNotes === '') {
             throw ValidationException::withMessages([
                 'amend_notes' => 'Amend notes are required to regenerate a task.',
@@ -1275,11 +1374,12 @@ class InterrogationSessionController extends Controller
 
         $metadata = is_array($task->metadata_json) ? $task->metadata_json : [];
         $metadata['regeneration'] = [
-            'status' => 'queued',
-            'requested_at' => CarbonImmutable::now('UTC')->toIso8601String(),
-            'requested_by_user_id' => (int) $request->user()->id,
-            'amend_notes' => $amendNotes,
-        ];
+                'status' => 'queued',
+                'requested_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'requested_by_user_id' => (int) $request->user()->id,
+                'amend_notes' => $amendNotes,
+                'additional_context' => $additionalContext,
+            ];
         $task->metadata_json = $metadata;
         $task->save();
 
@@ -1289,6 +1389,7 @@ class InterrogationSessionController extends Controller
             (int) $session->id,
             (int) $task->id,
             $amendNotes,
+            $additionalContext,
         );
 
         $auditLogger->recordUserAction(

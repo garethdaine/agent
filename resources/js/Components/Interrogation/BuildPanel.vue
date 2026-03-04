@@ -4,6 +4,8 @@ import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import { formatInterrogationError } from '@/Components/Interrogation/errorFormatting';
 import { buildAgentRunEventPresentation } from '@/Support/agentRunEventFormatting';
 import { confirmDialog } from '@/Support/confirmDialog';
+import { GripVertical } from 'lucide-vue-next';
+import draggable from 'vuedraggable';
 import axios from 'axios';
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
@@ -43,6 +45,7 @@ const emit = defineEmits([
     'update-task',
     'delete-task',
     'regenerate-task',
+    'reorder-tasks',
 ]);
 
 const clarification = ref('');
@@ -63,6 +66,8 @@ const editTaskDraft = ref({
 });
 const regeneratingTaskId = ref(null);
 const regenerateAmendNotes = ref('');
+const regenerateAdditionalContext = ref('');
+const generationFeedback = ref('');
 
 const isRulesMode = computed(() => props.mode === 'rules');
 const isTasksMode = computed(() => props.mode === 'tasks');
@@ -114,6 +119,7 @@ const canResume = computed(() => !props.disabled && !props.actions.resumeBuild &
 const canRetry = computed(() => !props.disabled && !props.actions.startBuild && tasks.value.length > 0 && ['failed', 'completed'].includes(status.value));
 const canRerunAll = computed(() => !props.disabled && !props.actions.startBuild && tasks.value.length > 0 && ['failed', 'completed'].includes(status.value));
 const canManageTaskList = computed(() => isTasksMode.value && !props.disabled && status.value !== 'generating_tasks');
+const canReorderTasks = computed(() => canManageTaskList.value && !props.actions.reorderBuildTasks && tasks.value.length > 1);
 const retryLabel = computed(() => {
     if (props.actions.startBuild) {
         return status.value === 'completed' ? 'Re-running failed tasks...' : 'Retrying failed tasks...';
@@ -128,6 +134,7 @@ const isTaskDeleting = (taskId) => Boolean(taskDeleteState.value?.[taskId] || ta
 const isTaskRegenerating = (taskId) => Boolean(taskRegenerateState.value?.[taskId] || taskRegenerateState.value?.[String(taskId)]);
 const selectedExecutionTaskId = ref(null);
 const selectedTaskDetailsId = ref(null);
+const orderedTasks = ref([]);
 
 const normalizeTaskStatus = (value) => String(value ?? 'pending').trim().toLowerCase();
 const COMPLETED_TASK_STATUSES = new Set(['completed']);
@@ -305,6 +312,14 @@ watch(
         if (regeneratingTaskId.value !== null) {
             selectedTaskDetailsId.value = regeneratingTaskId.value;
         }
+    },
+    { deep: true, immediate: true }
+);
+
+watch(
+    tasks,
+    (nextTasks) => {
+        orderedTasks.value = Array.isArray(nextTasks) ? [...nextTasks] : [];
     },
     { deep: true, immediate: true }
 );
@@ -809,9 +824,12 @@ const submitTaskGeneration = () => {
         return;
     }
 
+    const notes = String(generationFeedback.value ?? '').trim();
+
     emit('generate-tasks', {
         project_rules: buildProjectRulesPayload(),
         project_rule_files: [...projectRuleFiles.value],
+        notes: notes !== '' ? notes : null,
     });
 };
 
@@ -932,11 +950,13 @@ const startTaskRegeneration = (task) => {
 
     regeneratingTaskId.value = task.id;
     regenerateAmendNotes.value = '';
+    regenerateAdditionalContext.value = '';
 };
 
 const cancelTaskRegeneration = () => {
     regeneratingTaskId.value = null;
     regenerateAmendNotes.value = '';
+    regenerateAdditionalContext.value = '';
 };
 
 const submitTaskRegeneration = (task) => {
@@ -952,9 +972,37 @@ const submitTaskRegeneration = (task) => {
     emit('regenerate-task', {
         task_id: task.id,
         amend_notes: amendNotes,
+        additional_context: String(regenerateAdditionalContext.value ?? '').trim() || null,
     });
 
     cancelTaskRegeneration();
+};
+
+const handleTaskDragEnd = (event) => {
+    if (!canReorderTasks.value) {
+        return;
+    }
+
+    const fromIndex = Number(event?.oldIndex ?? -1);
+    const toIndex = Number(event?.newIndex ?? -1);
+    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+        return;
+    }
+
+    const previousOrder = tasks.value
+        .map((task) => Number(task?.id))
+        .filter((id) => Number.isFinite(id));
+    const nextOrder = orderedTasks.value
+        .map((task) => Number(task?.id))
+        .filter((id) => Number.isFinite(id));
+
+    if (nextOrder.length === 0 || nextOrder.join(',') === previousOrder.join(',')) {
+        return;
+    }
+
+    emit('reorder-tasks', {
+        task_ids: nextOrder,
+    });
 };
 </script>
 
@@ -974,6 +1022,17 @@ const submitTaskRegeneration = (task) => {
             <p class="mt-1 text-xs text-muted-foreground ">
                 Add markdown rules that must be respected for build task generation and build execution context.
             </p>
+
+            <div class="mt-3">
+                <label class="block text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Generation Feedback / Context (Optional)</label>
+                <textarea
+                    v-model="generationFeedback"
+                    rows="3"
+                    class="mt-1 w-full rounded border border-input bg-input-background px-3 py-2 text-xs text-foreground"
+                    placeholder="Add additional context for task generation (scope, constraints, or priorities)."
+                />
+                <p class="mt-1 text-[11px] text-muted-foreground">Sent to the AI runner when generating build tasks.</p>
+            </div>
 
             <div class="mt-3">
                 <label class="block text-xs font-semibold uppercase tracking-wide text-muted-foreground ">Upload Rule Files</label>
@@ -1088,6 +1147,17 @@ const submitTaskRegeneration = (task) => {
                 </span>
             </div>
 
+            <div class="mt-3">
+                <label class="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Regeneration Feedback / Context (Optional)</label>
+                <textarea
+                    v-model="generationFeedback"
+                    rows="3"
+                    class="mt-1 w-full rounded border border-input bg-input-background px-3 py-2 text-xs text-foreground"
+                    placeholder="Add context before regenerating all tasks (priorities, constraints, acceptance criteria, sequencing guidance)."
+                />
+                <p class="mt-1 text-[11px] text-muted-foreground">Sent to the AI runner when regenerating all tasks.</p>
+            </div>
+
             <div class="mt-3 flex flex-wrap gap-2">
                 <button
                     type="button"
@@ -1095,7 +1165,7 @@ const submitTaskRegeneration = (task) => {
                     :disabled="!canGenerate"
                     @click="submitTaskGeneration"
                 >
-                    {{ actions.generateBuildTasks ? 'Generating...' : 'Generate Build Tasks' }}
+                    {{ actions.generateBuildTasks ? 'Generating...' : (tasks.length > 0 ? 'Regenerate Build Tasks' : 'Generate Build Tasks') }}
                 </button>
                 <button
                     type="button"
@@ -1481,137 +1551,167 @@ const submitTaskRegeneration = (task) => {
                 No build tasks generated yet.
             </div>
             <div v-else class="mt-2 space-y-2">
-                <div
-                    v-for="task in tasks"
-                    :key="`task-card-${task.id}`"
-                    class="rounded border border-border bg-card/70"
-                >
-                    <button
-                        type="button"
-                        class="w-full px-3 py-2 text-left"
-                        @click="toggleTaskDetails(task.id)"
-                    >
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div class="flex min-w-0 items-center gap-2">
-                                <span
-                                    class="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                                    :class="taskStatusBadgeClass(task.status)"
-                                >
-                                    {{ taskStatusLabel(task.status) }}
-                                </span>
-                                <span class="truncate text-sm font-medium text-foreground">#{{ task.sequence }} {{ task.title }}</span>
-                            </div>
-                            <span class="text-[11px] text-muted-foreground">{{ taskAttemptLabel(task) }}</span>
-                        </div>
-                    </button>
-
-                    <div
-                        v-if="selectedTaskDetailsId === task.id || editingTaskId === task.id || regeneratingTaskId === task.id"
-                        class="border-t border-border px-3 py-2"
-                    >
-                        <p v-if="task.description" class="text-xs text-muted-foreground">{{ task.description }}</p>
-                        <p v-if="task.last_error" class="mt-1 text-xs text-destructive">{{ task.last_error }}</p>
-                        <p v-if="task.metadata_json?.regeneration?.status === 'queued'" class="mt-1 text-xs text-primary">Regeneration queued...</p>
-                        <p v-if="task.metadata_json?.regeneration?.status === 'failed'" class="mt-1 text-xs text-destructive">
-                            Regeneration failed: {{ task.metadata_json?.regeneration?.error || 'Unknown error' }}
-                        </p>
-
-                        <div class="mt-2 flex flex-wrap gap-1">
-                            <button
-                                type="button"
-                                class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-                                :disabled="!canManageTaskList || isTaskUpdating(task.id)"
-                                @click="startTaskEdit(task)"
-                            >
-                                {{ isTaskUpdating(task.id) ? 'Saving...' : 'Edit' }}
-                            </button>
-                            <button
-                                type="button"
-                                class="rounded border border-destructive/30 px-2 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
-                                :disabled="!canManageTaskList || isTaskDeleting(task.id)"
-                                @click="confirmTaskDelete(task)"
-                            >
-                                {{ isTaskDeleting(task.id) ? 'Deleting...' : 'Delete' }}
-                            </button>
-                            <button
-                                type="button"
-                                class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-                                :disabled="!canManageTaskList || isTaskRegenerating(task.id)"
-                                @click="startTaskRegeneration(task)"
-                            >
-                                {{ isTaskRegenerating(task.id) ? 'Queueing...' : 'Regenerate' }}
-                            </button>
-                        </div>
-
-                        <div v-if="editingTaskId === task.id" class="mt-3 rounded border border-border bg-muted/30 p-2">
-                            <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground ">Edit Task #{{ task.sequence }}</p>
-                            <input
-                                v-model="editTaskDraft.title"
-                                type="text"
-                                class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
-                                placeholder="Task title"
-                            />
-                            <textarea
-                                v-model="editTaskDraft.description"
-                                rows="2"
-                                class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
-                                placeholder="Task description"
-                            />
-                            <textarea
-                                v-model="editTaskDraft.instructions_markdown"
-                                rows="4"
-                                class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
-                                placeholder="Task instructions in markdown"
-                            />
-                            <div class="mt-2 flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    class="rounded border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
-                                    :disabled="isTaskUpdating(task.id)"
-                                    @click="cancelTaskEdit"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    class="rounded bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:bg-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
-                                    :disabled="isTaskUpdating(task.id) || editTaskDraft.title.trim() === ''"
-                                    @click="submitTaskEdit(task)"
-                                >
-                                    {{ isTaskUpdating(task.id) ? 'Saving...' : 'Save Changes' }}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div v-if="regeneratingTaskId === task.id" class="mt-3 rounded border border-primary/30 bg-primary/5 p-2">
-                            <p class="text-[11px] font-semibold uppercase tracking-wide text-primary ">Regenerate Task #{{ task.sequence }} With Amend Notes</p>
-                            <textarea
-                                v-model="regenerateAmendNotes"
-                                rows="3"
-                                class="mt-2 w-full rounded border border-primary/30 bg-input-background px-2 py-1 text-xs text-foreground   "
-                                placeholder="Describe exactly what should change for this task..."
-                            />
-                            <div class="mt-2 flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    class="rounded border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
-                                    :disabled="isTaskRegenerating(task.id)"
-                                    @click="cancelTaskRegeneration"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    class="rounded bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                                    :disabled="isTaskRegenerating(task.id) || regenerateAmendNotes.trim() === ''"
-                                    @click="submitTaskRegeneration(task)"
-                                >
-                                    {{ isTaskRegenerating(task.id) ? 'Queueing...' : 'Regenerate Task' }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                <div v-if="actions.reorderBuildTasks" class="rounded border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-primary">
+                    Saving task order...
                 </div>
+                <p v-if="canReorderTasks" class="text-[11px] text-muted-foreground">
+                    Drag tasks by the grip handle to reorder execution.
+                </p>
+                <draggable
+                    v-model="orderedTasks"
+                    item-key="id"
+                    handle=".task-drag-handle"
+                    :disabled="!canReorderTasks"
+                    :animation="180"
+                    class="space-y-2"
+                    @end="handleTaskDragEnd"
+                >
+                    <template #item="{ element: task }">
+                        <div class="rounded border border-border bg-card/70">
+                            <button
+                                type="button"
+                                class="w-full px-3 py-2 text-left"
+                                @click="toggleTaskDetails(task.id)"
+                            >
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <div class="flex min-w-0 items-center gap-2">
+                                        <span
+                                            class="task-drag-handle inline-flex h-6 w-6 items-center justify-center rounded border border-input text-muted-foreground"
+                                            :class="canReorderTasks ? 'cursor-grab' : 'cursor-not-allowed opacity-50'"
+                                            title="Drag to reorder"
+                                            aria-hidden="true"
+                                            @mousedown.stop
+                                            @click.stop
+                                        >
+                                            <GripVertical class="h-3.5 w-3.5" />
+                                        </span>
+                                        <span
+                                            class="inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                                            :class="taskStatusBadgeClass(task.status)"
+                                        >
+                                            {{ taskStatusLabel(task.status) }}
+                                        </span>
+                                        <span class="truncate text-sm font-medium text-foreground">#{{ task.sequence }} {{ task.title }}</span>
+                                    </div>
+                                    <span class="text-[11px] text-muted-foreground">{{ taskAttemptLabel(task) }}</span>
+                                </div>
+                            </button>
+
+                            <div
+                                v-if="selectedTaskDetailsId === task.id || editingTaskId === task.id || regeneratingTaskId === task.id"
+                                class="border-t border-border px-3 py-2"
+                            >
+                                <p v-if="task.description" class="text-xs text-muted-foreground">{{ task.description }}</p>
+                                <p v-if="task.last_error" class="mt-1 text-xs text-destructive">{{ task.last_error }}</p>
+                                <p v-if="task.metadata_json?.regeneration?.status === 'queued'" class="mt-1 text-xs text-primary">Regeneration queued...</p>
+                                <p v-if="task.metadata_json?.regeneration?.status === 'failed'" class="mt-1 text-xs text-destructive">
+                                    Regeneration failed: {{ task.metadata_json?.regeneration?.error || 'Unknown error' }}
+                                </p>
+
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    <button
+                                        type="button"
+                                        class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+                                        :disabled="!canManageTaskList || isTaskUpdating(task.id)"
+                                        @click="startTaskEdit(task)"
+                                    >
+                                        {{ isTaskUpdating(task.id) ? 'Saving...' : 'Edit' }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded border border-destructive/30 px-2 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                        :disabled="!canManageTaskList || isTaskDeleting(task.id)"
+                                        @click="confirmTaskDelete(task)"
+                                    >
+                                        {{ isTaskDeleting(task.id) ? 'Deleting...' : 'Delete' }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded border border-primary/30 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+                                        :disabled="!canManageTaskList || isTaskRegenerating(task.id)"
+                                        @click="startTaskRegeneration(task)"
+                                    >
+                                        {{ isTaskRegenerating(task.id) ? 'Queueing...' : 'Regenerate' }}
+                                    </button>
+                                </div>
+
+                                <div v-if="editingTaskId === task.id" class="mt-3 rounded border border-border bg-muted/30 p-2">
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground ">Edit Task #{{ task.sequence }}</p>
+                                    <input
+                                        v-model="editTaskDraft.title"
+                                        type="text"
+                                        class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
+                                        placeholder="Task title"
+                                    />
+                                    <textarea
+                                        v-model="editTaskDraft.description"
+                                        rows="2"
+                                        class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
+                                        placeholder="Task description"
+                                    />
+                                    <textarea
+                                        v-model="editTaskDraft.instructions_markdown"
+                                        rows="4"
+                                        class="mt-2 w-full rounded border border-input bg-input-background px-2 py-1 text-xs text-foreground   "
+                                        placeholder="Task instructions in markdown"
+                                    />
+                                    <div class="mt-2 flex justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            class="rounded border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
+                                            :disabled="isTaskUpdating(task.id)"
+                                            @click="cancelTaskEdit"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="rounded bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:bg-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                            :disabled="isTaskUpdating(task.id) || editTaskDraft.title.trim() === ''"
+                                            @click="submitTaskEdit(task)"
+                                        >
+                                            {{ isTaskUpdating(task.id) ? 'Saving...' : 'Save Changes' }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div v-if="regeneratingTaskId === task.id" class="mt-3 rounded border border-primary/30 bg-primary/5 p-2">
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-primary ">Regenerate Task #{{ task.sequence }} With Amend Notes</p>
+                                    <textarea
+                                        v-model="regenerateAmendNotes"
+                                        rows="3"
+                                        class="mt-2 w-full rounded border border-primary/30 bg-input-background px-2 py-1 text-xs text-foreground   "
+                                        placeholder="Describe exactly what should change for this task..."
+                                    />
+                                    <textarea
+                                        v-model="regenerateAdditionalContext"
+                                        rows="2"
+                                        class="mt-2 w-full rounded border border-primary/30 bg-input-background px-2 py-1 text-xs text-foreground   "
+                                        placeholder="Optional additional context for the AI runner (constraints, references, sequencing)."
+                                    />
+                                    <div class="mt-2 flex justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            class="rounded border border-input px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
+                                            :disabled="isTaskRegenerating(task.id)"
+                                            @click="cancelTaskRegeneration"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="rounded bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                                            :disabled="isTaskRegenerating(task.id) || regenerateAmendNotes.trim() === ''"
+                                            @click="submitTaskRegeneration(task)"
+                                        >
+                                            {{ isTaskRegenerating(task.id) ? 'Queueing...' : 'Regenerate Task' }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </draggable>
             </div>
         </div>
 

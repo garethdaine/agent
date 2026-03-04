@@ -71,6 +71,7 @@ const actionState = ref({
     regeneratePlan: false,
     exportPlan: false,
     generateBuildTasks: false,
+    reorderBuildTasks: false,
     approveBuildTasks: false,
     startBuild: false,
     pauseBuild: false,
@@ -975,10 +976,16 @@ const generateBuildTasks = async (payload = {}) => {
     try {
         const rules = Array.isArray(payload?.project_rules) ? payload.project_rules : [];
         const files = Array.isArray(payload?.project_rule_files) ? payload.project_rule_files : [];
+        const notes = typeof payload?.notes === 'string' && payload.notes.trim() !== ''
+            ? payload.notes.trim()
+            : null;
 
         if (files.length > 0) {
             const form = new FormData();
             form.append('project_rules', JSON.stringify(rules));
+            if (notes !== null) {
+                form.append('notes', notes);
+            }
             files.forEach((file) => {
                 form.append('project_rule_files[]', file);
             });
@@ -991,6 +998,7 @@ const generateBuildTasks = async (payload = {}) => {
         } else {
             await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/generate-build-tasks`, {
                 project_rules: rules,
+                notes,
             });
         }
 
@@ -999,6 +1007,28 @@ const generateBuildTasks = async (payload = {}) => {
         error.value = e?.response?.data?.error?.message ?? 'Failed to generate build tasks.';
     } finally {
         actionState.value.generateBuildTasks = false;
+    }
+};
+
+const reorderBuildTasks = async (payload = {}) => {
+    const taskIds = Array.isArray(payload?.task_ids) ? payload.task_ids : [];
+    if (taskIds.length === 0) {
+        return;
+    }
+
+    actionState.value.reorderBuildTasks = true;
+    error.value = '';
+
+    try {
+        await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/build-tasks/reorder`, {
+            task_ids: taskIds,
+        });
+        notice.value = 'Build task order updated.';
+        await loadSession(false);
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to reorder build tasks.';
+    } finally {
+        actionState.value.reorderBuildTasks = false;
     }
 };
 
@@ -1091,6 +1121,7 @@ const regenerateBuildTask = async (payload = {}) => {
     try {
         await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/build-tasks/${taskId}/regenerate`, {
             amend_notes: payload?.amend_notes,
+            additional_context: payload?.additional_context ?? null,
         });
         notice.value = 'Task regeneration queued.';
         await loadSession(false);
@@ -1780,6 +1811,7 @@ onBeforeUnmount(() => {
                                     :actions="actionState"
                                     :disabled="busy"
                                     @generate-tasks="generateBuildTasks"
+                                    @reorder-tasks="reorderBuildTasks"
                                     @create-task="createBuildTask"
                                     @update-task="updateBuildTask"
                                     @delete-task="deleteBuildTask"

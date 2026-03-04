@@ -22,7 +22,7 @@ class RequestPlanRevisionRequest extends FormRequest
             'section' => ['nullable', 'string', 'max:255'],
             'sections' => ['nullable', 'array', 'max:50'],
             'sections.*' => ['string', 'max:255', 'distinct'],
-            'notes' => ['nullable', 'string', 'max:5000'],
+            'notes' => ['nullable', 'string'],
         ];
     }
 }

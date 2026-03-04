@@ -219,6 +219,14 @@ Use this file to capture correction-driven lessons.
 - Applied in: `resources/css/app.css`, `resources/js/Components/Interrogation/PlanViewer.vue`, `resources/js/Components/Interrogation/SummaryViewer.vue`, `resources/js/Components/Interrogation/BuildPanel.vue`
 
 ## Entry
+- Date: 2026-03-04
+- Source (job run id / interrogation session id): User correction on discovery task ordering UX
+- Correction: User required modern drag-and-drop reordering instead of move up/down button controls.
+- Pattern: Functional but mechanical ordering controls can miss product UX expectations when the workflow is sequence-centric and users expect direct manipulation.
+- Prevention rule: For reorder-heavy list workflows in modern UIs, default to accessible drag-and-drop interactions (handle-based) using maintained libraries; only ship stepwise up/down controls as fallback when DnD is technically blocked.
+- Applied in: `resources/js/Components/Interrogation/BuildPanel.vue`, `resources/js/Pages/Tools/Discovery/Wizard.vue`, `package.json`
+
+## Entry
 - Date: 2026-02-27
 - Source (job run id / interrogation session id): Discovery session 9 phase-9 parity check
 - Correction: User requested parity validation for the final build step after approving tasks; execution UI still used management-table layout instead of the Figma execution timeline pattern.
@@ -583,3 +591,19 @@ Use this file to capture correction-driven lessons.
 - Rule:
   - For lifecycle jobs, always set task/session terminal status + error metadata in `failed(Throwable)`.
   - Emit a user-visible failure event (`task_failed` or equivalent) so realtime UI refreshes and retry controls unlock.
+
+## Entry
+- Date: 2026-03-04
+- Source (job run id / interrogation session id): User correction on discovery summary revision note length (`/interrogation/sessions/{id}/revise-summary`)
+- Correction: User required removing the hard `notes` length cap because long amendment context is valid when storage supports it.
+- Pattern: Endpoint-specific hard caps drift from product intent and cause avoidable `422 VALIDATION_ERROR` for legitimate long-form inputs.
+- Prevention rule: For freeform amendment fields, avoid arbitrary per-endpoint hard limits; only enforce limits derived from real storage/transport constraints, and keep frontend/backend contracts aligned.
+- Applied in: `app/Http/Controllers/Api/V1/InterrogationSessionController.php`
+
+## Entry
+- Date: 2026-03-04
+- Source (job run id / interrogation session id): User correction on plan revision note length (`/interrogation/sessions/{id}/revise-plan`)
+- Correction: User required removing the hard `notes` cap so large plan revision context can be submitted.
+- Pattern: Inconsistent revision-note limits across endpoints create repeated `422 VALIDATION_ERROR` failures for valid long-form operator input.
+- Prevention rule: Keep revision/amendment note fields unbounded at request-validation level unless a verified storage/transport ceiling requires limits; enforce consistency across summary and plan revision endpoints.
+- Applied in: `app/Http/Requests/Interrogation/RequestPlanRevisionRequest.php`, `tests/Feature/InterrogationApiWorkflowTest.php`

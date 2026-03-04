@@ -188,7 +188,7 @@ Registered endpoints: 3
 
 ### Interrogation
 
-Registered endpoints: 45
+Registered endpoints: 46
 
 | Method | URI | Route Name |
 | --- | --- | --- |
@@ -204,6 +204,7 @@ Registered endpoints: 45
 | POST | `agent/api/v1/interrogation/sessions/{id}/approve-build-tasks` | `-` |
 | POST | `agent/api/v1/interrogation/sessions/{id}/approve-plan` | `-` |
 | POST | `agent/api/v1/interrogation/sessions/{id}/build-tasks` | `-` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/build-tasks/reorder` | `-` |
 | PATCH | `agent/api/v1/interrogation/sessions/{id}/build-tasks/{taskId}` | `-` |
 | DELETE | `agent/api/v1/interrogation/sessions/{id}/build-tasks/{taskId}` | `-` |
 | POST | `agent/api/v1/interrogation/sessions/{id}/build-tasks/{taskId}/regenerate` | `-` |

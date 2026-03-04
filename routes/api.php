@@ -122,6 +122,7 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::post('/interrogation/sessions/{id}/revise-plan', [InterrogationSessionController::class, 'requestRevision'])->middleware('throttle:interrogation');
             Route::post('/interrogation/sessions/{id}/generate-build-tasks', [InterrogationSessionController::class, 'generateBuildTasks'])->middleware('throttle:interrogation');
             Route::post('/interrogation/sessions/{id}/build-tasks', [InterrogationSessionController::class, 'storeBuildTask'])->middleware('throttle:interrogation');
+            Route::post('/interrogation/sessions/{id}/build-tasks/reorder', [InterrogationSessionController::class, 'reorderBuildTasks'])->middleware('throttle:interrogation');
             Route::patch('/interrogation/sessions/{id}/build-tasks/{taskId}', [InterrogationSessionController::class, 'updateBuildTask'])->middleware('throttle:interrogation');
             Route::delete('/interrogation/sessions/{id}/build-tasks/{taskId}', [InterrogationSessionController::class, 'destroyBuildTask'])->middleware('throttle:interrogation');
             Route::post('/interrogation/sessions/{id}/build-tasks/{taskId}/regenerate', [InterrogationSessionController::class, 'regenerateBuildTask'])->middleware('throttle:interrogation');

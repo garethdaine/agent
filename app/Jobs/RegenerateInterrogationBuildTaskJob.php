@@ -22,6 +22,7 @@ class RegenerateInterrogationBuildTaskJob implements ShouldQueue
         public int $sessionId,
         public int $taskId,
         public string $amendNotes,
+        public ?string $additionalContext = null,
     ) {
         $this->onConnection('redis');
         $this->onQueue('interrogation');
@@ -52,7 +53,7 @@ class RegenerateInterrogationBuildTaskJob implements ShouldQueue
         ]);
 
         try {
-            $payload = $buildTaskGenerator->regenerateTask($session, $task, $this->amendNotes);
+            $payload = $buildTaskGenerator->regenerateTask($session, $task, $this->amendNotes, $this->additionalContext);
 
             $task->title = trim((string) ($payload['title'] ?? $task->title));
             $task->description = $this->normalizedNullableText($payload['description'] ?? $task->description);
@@ -70,6 +71,7 @@ class RegenerateInterrogationBuildTaskJob implements ShouldQueue
                 'requested_at' => data_get($taskMetadata, 'regeneration.requested_at'),
                 'requested_by_user_id' => data_get($taskMetadata, 'regeneration.requested_by_user_id'),
                 'amend_notes' => $this->amendNotes,
+                'additional_context' => $this->normalizedNullableText($this->additionalContext),
                 'completed_at' => CarbonImmutable::now('UTC')->toIso8601String(),
                 'error' => null,
             ];
@@ -94,6 +96,7 @@ class RegenerateInterrogationBuildTaskJob implements ShouldQueue
                 'requested_at' => data_get($taskMetadata, 'regeneration.requested_at'),
                 'requested_by_user_id' => data_get($taskMetadata, 'regeneration.requested_by_user_id'),
                 'amend_notes' => $this->amendNotes,
+                'additional_context' => $this->normalizedNullableText($this->additionalContext),
                 'completed_at' => CarbonImmutable::now('UTC')->toIso8601String(),
                 'error' => $normalizedError,
             ];
