@@ -7,6 +7,7 @@ import CardDescription from '@/Components/ui/CardDescription.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
+import DirectoryPickerInput from '@/Components/ui/DirectoryPickerInput.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { onMounted, reactive, ref } from 'vue';
@@ -113,7 +114,7 @@ onMounted(load);
 
                         <div>
                             <label class="block text-sm font-medium">Project Directory</label>
-                            <Input v-model="form.project_directory" class="mt-1" type="text" :error="!!validation.project_directory" :disabled="loading || saving" />
+                            <DirectoryPickerInput v-model="form.project_directory" class="mt-1" :error="!!validation.project_directory" :disabled="loading || saving" />
                             <p v-if="validation.project_directory" class="mt-1 text-sm text-destructive">{{ validation.project_directory[0] }}</p>
                         </div>
 

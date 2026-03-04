@@ -2,6 +2,26 @@
 
 > Last updated: 2026-03-01
 
+## Canonical Phase 1 Status (Authoritative)
+
+We help companies deploy AI agents safely and keep them reliable in production.
+
+Canonical source of truth: `docs/system-overview.md`.
+
+This system targets a local-first Laravel runtime with provider-agnostic telemetry contract semantics.
+
+- Workflow key regex: `^[a-z0-9._-]+[.]v[1-9][0-9]*$`.
+- WeightedReliability = (sum(run_weight) / count(scored_runs)) * 100
+- Reliability gates use stricter-window enforcement across rolling `14-day` and rolling `50-run`.
+- Active build freshness is surfaced through `active_build_age_seconds`.
+- Projection read-scope is active-build only; projection tables are internal infrastructure data and not a direct external query surface.
+- Projection boundary enforcement uses the dedicated `agent_projection` schema with explicit least-privilege grants and reporting-role query denial.
+
+Known risk boundaries:
+- event-id stability
+- terminal catalog drift
+- projection query restrictions
+
 ## Completed Features
 
 All features below have been implemented, tested, and marked **Completed** in the discovery session tracker.

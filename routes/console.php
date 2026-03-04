@@ -23,6 +23,10 @@ Schedule::command('agent:backup-database')
     ->everyMinute()
     ->withoutOverlapping(10);
 
+Schedule::command('agent:reliability-assisted-sla')
+    ->hourly()
+    ->withoutOverlapping();
+
 Schedule::command('messenger:prune --deduplication')
     ->hourly()
     ->withoutOverlapping();

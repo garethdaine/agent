@@ -10,10 +10,10 @@ use App\Http\Controllers\Api\V1\ComplianceController;
 use App\Http\Controllers\Api\V1\DelegateeProfileController;
 use App\Http\Controllers\Api\V1\DelegationGraphController;
 use App\Http\Controllers\Api\V1\DelegationTaskController;
+use App\Http\Controllers\Api\V1\DeploymentCountingController;
 use App\Http\Controllers\Api\V1\Docs\DocsCoverageController;
 use App\Http\Controllers\Api\V1\Docs\DocsFragmentController;
 use App\Http\Controllers\Api\V1\Docs\DocsSearchController;
-use App\Http\Controllers\Docs\DiagnosticsController;
 use App\Http\Controllers\Api\V1\InterrogationSessionController;
 use App\Http\Controllers\Api\V1\InterrogationSettingsController;
 use App\Http\Controllers\Api\V1\InterrogationTaskProviderController;
@@ -29,7 +29,15 @@ use App\Http\Controllers\Api\V1\Messenger\WebhookController;
 use App\Http\Controllers\Api\V1\MessengerConnectorController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\Org;
+use App\Http\Controllers\Api\V1\ProjectionReplayBuildController;
 use App\Http\Controllers\Api\V1\RepoAnalysisSessionController;
+use App\Http\Controllers\Api\V1\SystemDirectoryPickerController;
+use App\Http\Controllers\Api\V1\WorkflowCostController;
+use App\Http\Controllers\Api\V1\WorkflowEscalationController;
+use App\Http\Controllers\Api\V1\WorkflowGateTransitionController;
+use App\Http\Controllers\Api\V1\WorkflowGovernanceController;
+use App\Http\Controllers\Api\V1\WorkflowReliabilityController;
+use App\Http\Controllers\Docs\DiagnosticsController;
 use App\Http\Controllers\Internal\NlScheduleController;
 use App\Http\Middleware\AgentApiVersionHeader;
 use App\Http\Middleware\Memory\MemoryEnabled;
@@ -53,6 +61,7 @@ Route::middleware([AgentApiVersionHeader::class])
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/jobs', [AgentJobController::class, 'index']);
             Route::get('/jobs/{id}', [AgentJobController::class, 'show']);
+            Route::get('/jobs/by-workflow/{workflowKey}', [AgentJobController::class, 'showByWorkflowKey']);
             Route::post('/jobs', [AgentJobController::class, 'store'])->middleware('throttle:agent-mutations');
             Route::put('/jobs/{id}', [AgentJobController::class, 'update'])->middleware('throttle:agent-mutations');
             Route::post('/jobs/{id}/toggle', [AgentJobController::class, 'toggle'])->middleware('throttle:agent-mutations');
@@ -60,6 +69,22 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::post('/jobs/{id}/restore', [AgentJobController::class, 'restore'])->middleware('throttle:agent-mutations');
             Route::post('/jobs/{id}/run-now', [AgentJobController::class, 'runNow'])->middleware('throttle:agent-mutations');
             Route::get('/jobs/{id}/runs', [AgentJobController::class, 'runs']);
+            Route::get('/workflows/{workflowKey}/reliability', [WorkflowReliabilityController::class, 'show']);
+            Route::get('/workflows/{workflowKey}/health', [WorkflowReliabilityController::class, 'show']);
+            Route::get('/workflows/{workflowKey}/cost', [WorkflowCostController::class, 'show']);
+            Route::get('/workflows/{workflowKey}/escalations', [WorkflowEscalationController::class, 'index']);
+            Route::get('/workflows/{workflowKey}/gate-transitions', [WorkflowGateTransitionController::class, 'index']);
+            Route::post('/workflows/{workflowKey}/pause', [WorkflowGovernanceController::class, 'pause'])
+                ->middleware('throttle:agent-mutations');
+            Route::post('/workflows/{workflowKey}/resume', [WorkflowGovernanceController::class, 'resume'])
+                ->middleware('throttle:agent-mutations');
+            Route::get('/deployments/counting', [DeploymentCountingController::class, 'index']);
+            Route::get('/telemetry/replay/active-build', [ProjectionReplayBuildController::class, 'activeBuild']);
+            Route::get('/telemetry/replay/builds/{buildId}', [ProjectionReplayBuildController::class, 'show']);
+            Route::post('/telemetry/replay/builds', [ProjectionReplayBuildController::class, 'store'])
+                ->middleware('throttle:agent-mutations');
+            Route::post('/telemetry/replay/builds/{buildId}/activate', [ProjectionReplayBuildController::class, 'activate'])
+                ->middleware('throttle:agent-mutations');
 
             Route::get('/runs', [AgentRunController::class, 'index']);
             Route::get('/runs/{id}', [AgentRunController::class, 'show']);
@@ -71,6 +96,8 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/dashboard/metrics', [AgentRunController::class, 'dashboardMetrics']);
             Route::get('/health/scheduler', [AgentRunController::class, 'schedulerHealth']);
             Route::get('/health/messenger', [MessengerHealthController::class, 'index']);
+            Route::post('/system/directory-picker', [SystemDirectoryPickerController::class, 'store'])
+                ->middleware('throttle:agent-mutations');
 
             Route::get('/messenger/metrics', [MessengerMetricsController::class, 'index']);
             Route::get('/notifications', [NotificationController::class, 'index']);

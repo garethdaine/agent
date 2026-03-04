@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import Button from '@/Components/ui/Button.vue';
 import Card from '@/Components/ui/Card.vue';
+import DirectoryPickerInput from '@/Components/ui/DirectoryPickerInput.vue';
 import NlScheduleInput from '@/Components/Agent/NlScheduleInput.vue';
 import ParseConfirmationModal from '@/Components/Agent/ParseConfirmationModal.vue';
 import LlmDegradationWarning from '@/Components/Agent/LlmDegradationWarning.vue';
@@ -900,7 +901,7 @@ const submit = () => {
 
             <div class="lg:col-span-2">
                 <label class="block text-sm font-medium text-foreground">Working Directory</label>
-                <input v-model="form.working_directory" type="text" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring" />
+                <DirectoryPickerInput v-model="form.working_directory" class="mt-1" :error="!!errors.working_directory" :disabled="isSubmitting" />
                 <p class="mt-1 text-xs text-muted-foreground">
                     Absolute directory where the command will execute. Paths with spaces are supported. If this path is outside allowed bases, add its parent via <code>AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES</code> in <code>.env</code>.
                 </p>

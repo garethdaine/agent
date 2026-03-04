@@ -607,3 +607,27 @@ Use this file to capture correction-driven lessons.
 - Pattern: Inconsistent revision-note limits across endpoints create repeated `422 VALIDATION_ERROR` failures for valid long-form operator input.
 - Prevention rule: Keep revision/amendment note fields unbounded at request-validation level unless a verified storage/transport ceiling requires limits; enforce consistency across summary and plan revision endpoints.
 - Applied in: `app/Http/Requests/Interrogation/RequestPlanRevisionRequest.php`, `tests/Feature/InterrogationApiWorkflowTest.php`
+
+## Entry
+- Date: 2026-03-04
+- Source (job run id / interrogation session id): User correction on Discovery Build false-positive rate-limit banner during structured command execution events.
+- Correction: Structured payloads with `type: "item"` were not classified as machine/non-runtime events, so keyword matching could set `rate_limit_detected` from command/tool output text.
+- Pattern: Structured stream envelope variants (`item` vs `item.*`) drift over time; partial type matching causes classifier blind spots and false operational alerts.
+- Prevention rule: For stream-event classifiers, normalize and handle both base and dotted event families (for example `item` + `item.*`), and require explicit regression tests for each envelope variant before shipping detector changes.
+- Applied in: `app/Support/Agent/RunEventWriter.php`, `tests/Feature/AgentRunnerLifecycleTest.php`
+
+## Entry
+- Date: 2026-03-04
+- Source (job run id / interrogation session id): User correction that Discovery Build job failure was not surfaced (UI still showed last task completed and no visible failure).
+- Correction: `ExecuteInterrogationBuildJob` lacked a `failed(Throwable)` reconciliation path, so queue-level build tick failures could leave metadata stale and invisible until manual intervention.
+- Pattern: Lifecycle queue jobs without failed callbacks can silently strand state between task-level transitions and session-level terminal reconciliation.
+- Prevention rule: Any queue job that drives orchestration/session lifecycle must implement `failed(Throwable)` to set terminal metadata, publish an operator-visible error event, and guard against stale callback overwrites.
+- Applied in: `app/Jobs/ExecuteInterrogationBuildJob.php`, `tests/Unit/ExecuteInterrogationBuildJobTest.php`
+
+## Entry
+- Date: 2026-03-04
+- Source (job run id / interrogation session id): User correction during Task 9 execution (tooling warning)
+- Correction: Patch edits must use the dedicated `apply_patch` tool directly, not `apply_patch` invoked through shell commands.
+- Pattern: Routing freeform patch grammar through shell wrappers introduces avoidable workflow warnings and risks malformed patch handling.
+- Prevention rule: For any file patch, call `functions.apply_patch` directly; reserve shell commands for read-only inspection, command execution, and non-patch file operations.
+- Applied in: Task workflow discipline (`tasks/todo.md` execution process)

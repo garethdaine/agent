@@ -15,9 +15,12 @@ class AgentJobFactory extends Factory
 
     public function definition(): array
     {
+        $workflowBase = (string) fake()->unique()->regexify('[a-z]{6}-[a-z]{6}');
+
         return [
             'user_id' => User::factory(),
             'name' => fake()->words(3, true),
+            'workflow_key' => $workflowBase.'.v1',
             'description' => fake()->sentence(),
             'cron_expression' => '0 * * * *',
             'timezone' => 'UTC',

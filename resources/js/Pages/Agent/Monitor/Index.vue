@@ -15,6 +15,7 @@ import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { formatAgentRunEventEntries } from '@/Support/agentRunEventFormatting';
+import { deriveActiveBuildFreshnessView } from './freshness';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
@@ -23,7 +24,17 @@ import { Heart, Gauge, Radio, RefreshCw, AlertTriangle, ShieldCheck, HelpCircle,
 const runs = ref([]);
 const events = ref([]);
 const selectedRunId = ref(null);
-const scheduler = ref({ status: 'unknown', age_seconds: null, last_seen_at: null });
+const scheduler = ref({
+    status: 'unknown',
+    age_seconds: null,
+    last_seen_at: null,
+    projection: {
+        active_build_activated_at: null,
+        active_build_age_seconds: null,
+        active_build_is_stale: null,
+        stale_after_seconds: null,
+    },
+});
 const loading = ref(true);
 const errorMessage = ref('');
 const failureCount = ref(0);
@@ -277,6 +288,12 @@ const queueLag = computed(() => {
         warning: oldestSeconds > 60 || queued.length > 10,
     };
 });
+
+const projectionFreshness = computed(() => deriveActiveBuildFreshnessView({
+    active_build_age_seconds: scheduler.value?.projection?.active_build_age_seconds ?? null,
+    stale_after_seconds: scheduler.value?.projection?.stale_after_seconds ?? null,
+    active_build_is_stale: scheduler.value?.projection?.active_build_is_stale ?? null,
+}));
 
 const pollInterval = () => {
     if (document.hidden) {
@@ -642,7 +659,7 @@ onBeforeUnmount(() => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 lg:grid-cols-3">
+            <div class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 lg:grid-cols-4">
                 <Card class="h-full">
                     <div class="flex h-full min-h-[136px] flex-col p-6">
                         <div class="flex items-center gap-2.5">
@@ -675,6 +692,27 @@ onBeforeUnmount(() => {
                             {{ queueLag.count }} queued / oldest {{ queueLag.oldestSeconds }}s
                         </div>
                         <p class="mt-3 text-xs leading-5 text-muted-foreground">Warning threshold: oldest &gt; 60s or queued &gt; 10</p>
+                    </div>
+                </Card>
+
+                <Card class="h-full">
+                    <div class="flex h-full min-h-[136px] flex-col p-6">
+                        <div class="flex items-center gap-2.5">
+                            <Gauge class="h-4 w-4 text-primary" />
+                            <span class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Active Build Freshness</span>
+                        </div>
+                        <div class="mt-4 flex items-center gap-2">
+                            <span class="text-[22px] font-bold leading-tight text-foreground">
+                                {{ projectionFreshness.ageSeconds ?? 'n/a' }}<span v-if="projectionFreshness.ageSeconds !== null" class="ml-0.5 text-base">s</span>
+                            </span>
+                            <Badge :variant="projectionFreshness.badgeVariant" :title="projectionFreshness.tooltip">
+                                {{ projectionFreshness.badgeLabel }}
+                            </Badge>
+                        </div>
+                        <div class="mt-3 space-y-1.5 text-xs leading-5 text-muted-foreground">
+                            <p>Activated: {{ scheduler.projection?.active_build_activated_at ?? 'n/a' }}</p>
+                            <p :title="projectionFreshness.tooltip">Threshold: {{ scheduler.projection?.stale_after_seconds ?? 'n/a' }}s</p>
+                        </div>
                     </div>
                 </Card>
 

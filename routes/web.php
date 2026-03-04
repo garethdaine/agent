@@ -1,12 +1,13 @@
 <?php
 
+use App\Http\Controllers\Agent\OperatorPageController;
+use App\Http\Controllers\Docs\DocsPageController;
 use App\Http\Controllers\Messenger\AccountLinkController;
 use App\Http\Controllers\Messenger\DeadLetterController;
 use App\Http\Controllers\Messenger\MessengerHealthController;
-use App\Support\Agent\FeatureFlagManager;
 use App\Http\Controllers\TaskProviderOAuthController;
-use App\Http\Controllers\Docs\DocsPageController;
 use App\Models\RepoAnalysisSession;
+use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
@@ -85,6 +86,21 @@ Route::middleware([
     Route::get('/agent/monitor', function () {
         return Inertia::render('Agent/Monitor/Index');
     })->name('agent.monitor.index');
+
+    Route::get('/agent/deployments', [OperatorPageController::class, 'deployments'])
+        ->name('agent.deployments.index');
+    Route::get('/agent/deployments/{workflowKey}', [OperatorPageController::class, 'deployment'])
+        ->name('agent.deployments.show');
+    Route::get('/agent/system-overview', [OperatorPageController::class, 'systemOverview'])
+        ->name('agent.system-overview.index');
+    Route::get('/agent/escalations', [OperatorPageController::class, 'escalations'])
+        ->name('agent.escalations.index');
+    Route::get('/agent/budgets', [OperatorPageController::class, 'budgets'])
+        ->name('agent.budgets.index');
+    Route::get('/agent/replay-builds', [OperatorPageController::class, 'replayBuilds'])
+        ->name('agent.replay-builds.index');
+    Route::get('/agent/replay-builds/{buildId}', [OperatorPageController::class, 'replayBuild'])
+        ->name('agent.replay-builds.show');
 
     Route::get('/tools', function () {
         $user = request()->user();

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ComplianceSummaryResource;
 use App\Models\AgentJobRun;
 use App\Models\SchedulerHeartbeat;
+use App\Services\Telemetry\ActiveBuildFreshnessService;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\Duration;
 use App\Support\Agent\ErrorEnvelope;
@@ -451,7 +452,7 @@ class AgentRunController extends Controller
                 'id' => $retryRun->id,
                 'status' => $retryRun->status,
                 'retry_of_run_id' => $run->id,
-            ]
+            ],
         ], 201);
     }
 
@@ -506,12 +507,14 @@ class AgentRunController extends Controller
     private function schedulerHealthSnapshot(): array
     {
         $heartbeat = SchedulerHeartbeat::query()->where('source', 'scheduler_dispatch')->first();
+        $freshness = app(ActiveBuildFreshnessService::class)->snapshot();
 
         if ($heartbeat === null) {
             return [
                 'status' => 'unknown',
                 'last_seen_at' => null,
                 'age_seconds' => null,
+                'projection' => $freshness,
             ];
         }
 
@@ -530,6 +533,7 @@ class AgentRunController extends Controller
             'last_seen_at' => $this->toRfc3339Millis($lastSeen),
             'age_seconds' => $ageSeconds,
             'meta' => $heartbeat->meta_json,
+            'projection' => $freshness,
         ];
     }
 

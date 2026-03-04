@@ -25,7 +25,9 @@ use App\Policies\OrgAgentProfilePolicy;
 use App\Policies\OrgRitualRunPolicy;
 use App\Policies\OrgRitualTemplatePolicy;
 use App\Policies\RepoAnalysisSessionPolicy;
+use App\Policies\WorkflowGovernancePolicy;
 use App\Support\Agent\ErrorEnvelope;
+use App\Support\Agent\WorkflowKey;
 use App\Support\Compliance\ComplexityClassifier;
 use App\Support\Compliance\ComplianceFlagResolver;
 use App\Support\Compliance\LessonsManager;
@@ -50,6 +52,7 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -88,6 +91,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(Dispatcher $events): void
     {
+        Route::pattern('workflowKey', WorkflowKey::routePattern());
+        Route::pattern('workflow_key', WorkflowKey::routePattern());
+
         if ($this->app->runningInConsole()) {
             app(InterrogationBuildCommandGuard::class)->enforceFromGlobals();
         }
@@ -118,6 +124,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-docs-diagnostics', function ($user) {
             return $user->hasRole(['admin', 'analytics']);
         });
+
+        Gate::define('workflow.pause', [WorkflowGovernancePolicy::class, 'pause']);
+        Gate::define('workflow.resume', [WorkflowGovernancePolicy::class, 'resume']);
+        Gate::define('workflow.override', [WorkflowGovernancePolicy::class, 'override']);
 
         RateLimiter::for('agent-mutations', function (Request $request) {
             return [

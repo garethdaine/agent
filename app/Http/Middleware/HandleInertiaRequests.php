@@ -43,6 +43,10 @@ class HandleInertiaRequests extends Middleware
             'delegationEnabled' => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::DELEGATION_UI_ENABLED),
             'orgLayerEnabled' => app(FeatureFlagManager::class)->isEnabled(FeatureFlagManager::ORG_ENABLED)
                 || config('agent.org.enabled', false),
+            'operatorNavigation' => [
+                'deployments' => '/agent/deployments',
+                'systemOverview' => '/agent/system-overview',
+            ],
             'notifications' => fn () => $this->notificationPayload($request),
         ];
     }

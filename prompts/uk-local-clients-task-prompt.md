@@ -1,13 +1,84 @@
-# Find Potential Local Clients for Agent
+# Find High-Probability Pilot Clients for Agent Ops Platform
 
-Our Agent system which is a local agent orchestration and planning tool will eventually be licensed to businesses in the UK for a monthly retainer and set up and managed by myself and my brother (Head of Product) to help businesses run agents and manage automation across their business operations.
+Agent is a local-first AI agent orchestration platform designed to help businesses safely automate internal workflows using AI agents while maintaining reliability, auditability, and cost controls.
 
-We will be focusing on UK companies who know they need and want to implement AI, AI agents, and automation in their company, but either know very little about it, or lack the expertise to set it up.
+The immediate goal is to identify UK companies that would be strong candidates for an early pilot deployment where we automate one internal workflow and demonstrate measurable operational improvement.
 
-Find 10 UK-based companies in any niche that suits this service/tool, along with their details, niche/industry, web address, contact details and any relevant information who would benefit from a service such as this and a tool such as Agent.
+## Target profile
 
-Use any resources you need, including X.com, web search and firecrawl to complete your task.
+Companies should:
+- Be UK-based
+- Have approximately 10–150 employees
+- Operate in industries with repetitive operational workflows
+- Be small enough to adopt new technology quickly
+- Benefit from automating internal processes
 
-Add these companies to a spreadsheet at `/Users/garethdaine/Code/agent/storage/app/public/agent-outreach.xlsx`
+Prioritise sectors:
+- Accountancy firms
+- Managed Service Providers (MSPs)
+- Logistics companies
+- Recruitment agencies
+- Construction management firms
+- Compliance or regulatory consultancies
+- Financial advisory firms
+- Professional services firms
 
-DO NOT ADD DUPLICATES.
+Avoid:
+- Very large enterprises
+- Very early startups (fewer than 5 employees)
+
+## Data to collect per company
+
+Capture:
+- Company name
+- Industry / niche
+- Website
+- Location
+- Estimated employee count (if available)
+- Key decision maker (Founder / Managing Director / Head of Ops / Head of IT)
+- LinkedIn profile (if available)
+- Contact email (if available)
+- Any signals they may benefit from automation (document-heavy work, reporting-heavy work, repetitive admin, compliance operations, etc.)
+
+## Additional fields to generate
+
+### Automation Opportunity Score
+- High / Medium / Low
+
+### Reason for score
+- Brief explanation of why they are a good pilot candidate
+
+### Potential workflow to automate
+- Suggest 1 realistic internal workflow to automate using AI agents (e.g. document processing, reporting generation, compliance monitoring, data reconciliation)
+
+## Data sources
+
+Use any resources required, including:
+- Web search
+- LinkedIn
+- Company websites
+- X.com
+- Firecrawl
+
+## Output
+
+Add results to:
+`/Users/garethdaine/Code/agent/storage/app/public/agent-outreach.xlsx`
+
+Required columns:
+- Company
+- Industry
+- Website
+- Location
+- Employee Estimate
+- Decision Maker
+- LinkedIn
+- Contact Email
+- Automation Opportunity Score
+- Reason for Score
+- Potential Workflow
+
+## Rules
+
+- Do not add duplicates
+- Add 10 new companies per run

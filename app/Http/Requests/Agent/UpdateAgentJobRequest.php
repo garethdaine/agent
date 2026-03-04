@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Agent;
 
 use App\Rules\NumericCronExpression;
+use App\Rules\WorkflowKeyRule;
 use App\Support\Agent\CommandPolicy;
 use App\Support\Agent\EnvPolicy;
 use App\Support\Agent\PathPolicy;
@@ -26,12 +27,20 @@ class UpdateAgentJobRequest extends FormRequest
         $workingDirectory = $this->input('working_directory');
         $taskMarkdownPath = $this->input('task_markdown_path');
         $commandTemplate = $this->input('command_template');
+        $workflowKeyProvided = $this->exists('workflow_key');
+        $workflowKey = $workflowKeyProvided ? $this->input('workflow_key') : null;
 
-        $this->merge([
+        $payload = [
             'working_directory' => is_string($workingDirectory) ? trim($workingDirectory) : $workingDirectory,
             'task_markdown_path' => is_string($taskMarkdownPath) ? trim($taskMarkdownPath) : $taskMarkdownPath,
             'command_template' => is_string($commandTemplate) ? trim($commandTemplate) : $commandTemplate,
-        ]);
+        ];
+
+        if ($workflowKeyProvided) {
+            $payload['workflow_key'] = is_string($workflowKey) ? trim($workflowKey) : $workflowKey;
+        }
+
+        $this->merge($payload);
     }
 
     /**
@@ -41,6 +50,7 @@ class UpdateAgentJobRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'min:3', 'max:120', 'regex:/^[^\p{C}]+$/u'],
+            'workflow_key' => ['nullable', 'string', 'max:160', new WorkflowKeyRule],
             'description' => ['nullable', 'string', 'max:4000'],
             'cron_expression' => ['required', 'string', 'max:100', new NumericCronExpression],
             'timezone' => ['required', 'string', 'max:64', 'timezone'],
@@ -71,6 +81,10 @@ class UpdateAgentJobRequest extends FormRequest
             $pathPolicy = app(PathPolicy::class);
             $envPolicy = app(EnvPolicy::class);
             $commandPolicy = app(CommandPolicy::class);
+
+            if ($this->exists('workflow_key') && $this->input('workflow_key') === null) {
+                $validator->errors()->add('workflow_key', 'The workflow key format is invalid.');
+            }
 
             if ($this->description !== null && preg_match('/\p{C}/u', (string) $this->description)) {
                 $validator->errors()->add('description', 'The description may not contain control characters.');

@@ -9,6 +9,7 @@ import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import Input from '@/Components/ui/Input.vue';
+import DirectoryPickerInput from '@/Components/ui/DirectoryPickerInput.vue';
 import Select from '@/Components/ui/Select.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
 import Button from '@/Components/ui/Button.vue';
@@ -251,12 +252,11 @@ onMounted(async () => {
 
                             <div class="space-y-2">
                                 <label class="block text-sm font-medium text-foreground">Working Directory</label>
-                                <Input
+                                <DirectoryPickerInput
                                     v-model="form.working_directory"
-                                    type="text"
-                                    class="font-mono"
                                     placeholder="/path/to/working/directory"
                                     :error="!!validationErrors.working_directory"
+                                    :disabled="submitting"
                                 />
                                 <p v-if="validationErrors.working_directory" class="text-xs text-destructive">{{ validationErrors.working_directory[0] }}</p>
                             </div>

@@ -12,6 +12,7 @@ use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Agent\TaskMarkdownStorage;
 use App\Support\Agent\UsageLimitState;
+use App\Support\Agent\WorkflowKey;
 use Carbon\CarbonImmutable;
 use Cron\CronExpression;
 use Illuminate\Database\QueryException;
@@ -48,6 +49,11 @@ class AgentJobController extends Controller
 
         if ($request->filled('runner_type')) {
             $query->where('runner_type', $request->string('runner_type')->toString());
+        }
+
+        $workflowKey = trim($request->string('workflow_key')->toString());
+        if ($workflowKey !== '') {
+            $query->where('workflow_key', $workflowKey);
         }
 
         $source = strtolower(trim($request->string('source')->toString()));
@@ -125,12 +131,27 @@ class AgentJobController extends Controller
         ]);
     }
 
+    public function showByWorkflowKey(Request $request, string $workflowKey): JsonResponse
+    {
+        $job = $request->user()->agentJobs()
+            ->where('workflow_key', $workflowKey)
+            ->firstOrFail();
+
+        return response()->json([
+            'data' => $this->transformJob($job),
+        ]);
+    }
+
     public function store(
         StoreAgentJobRequest $request,
         AuditLogger $auditLogger,
         TaskMarkdownStorage $taskMarkdownStorage
     ): JsonResponse {
         $validated = $request->validated();
+        $workflowKey = WorkflowKey::resolve(
+            $validated['workflow_key'] ?? null,
+            (string) $validated['name']
+        );
 
         $existing = $request->user()->agentJobs()
             ->whereNull('deleted_at')
@@ -143,10 +164,22 @@ class AgentJobController extends Controller
             ]);
         }
 
+        $workflowKeyExists = $request->user()->agentJobs()
+            ->whereNull('deleted_at')
+            ->where('workflow_key', $workflowKey)
+            ->exists();
+
+        if ($workflowKeyExists) {
+            return ErrorEnvelope::make('VALIDATION_ERROR', 'The given data was invalid.', 422, [
+                'workflow_key' => ['The workflow key has already been taken.'],
+            ]);
+        }
+
         $taskMarkdownPath = $this->resolveTaskMarkdownPath($request, $validated, $taskMarkdownStorage);
 
         $job = $request->user()->agentJobs()->create([
             'name' => $validated['name'],
+            'workflow_key' => $workflowKey,
             'description' => $validated['description'] ?? null,
             'cron_expression' => $validated['cron_expression'],
             'timezone' => $validated['timezone'],
@@ -176,6 +209,7 @@ class AgentJobController extends Controller
             after: $job->only([
                 'id',
                 'name',
+                'workflow_key',
                 'cron_expression',
                 'timezone',
                 'is_enabled',
@@ -201,6 +235,7 @@ class AgentJobController extends Controller
         $job = $request->user()->agentJobs()->withTrashed()->findOrFail($id);
         $before = $job->only([
             'name',
+            'workflow_key',
             'description',
             'cron_expression',
             'timezone',
@@ -229,10 +264,29 @@ class AgentJobController extends Controller
             ]);
         }
 
+        $workflowKey = WorkflowKey::resolve(
+            $validated['workflow_key'] ?? $job->workflow_key,
+            (string) $validated['name'],
+            (int) $job->id
+        );
+
+        $workflowKeyExists = $request->user()->agentJobs()
+            ->whereNull('deleted_at')
+            ->where('workflow_key', $workflowKey)
+            ->where('id', '!=', $job->id)
+            ->exists();
+
+        if ($workflowKeyExists) {
+            return ErrorEnvelope::make('VALIDATION_ERROR', 'The given data was invalid.', 422, [
+                'workflow_key' => ['The workflow key has already been taken.'],
+            ]);
+        }
+
         $taskMarkdownPath = $this->resolveTaskMarkdownPath($request, $validated, $taskMarkdownStorage);
 
         $data = [
             'name' => $validated['name'],
+            'workflow_key' => $workflowKey,
             'description' => $validated['description'] ?? null,
             'cron_expression' => $validated['cron_expression'],
             'timezone' => $validated['timezone'],
@@ -416,6 +470,20 @@ class AgentJobController extends Controller
             ], 202);
         }
 
+        if ($job->governance_paused_at !== null) {
+            return ErrorEnvelope::make(
+                'WORKFLOW_GOVERNANCE_PAUSED',
+                'This workflow is paused by governance policy and cannot start new runs.',
+                409,
+                [
+                    'job_id' => $job->id,
+                    'workflow_key' => $job->workflow_key,
+                    'governance_pause_reason' => $job->governance_pause_reason,
+                    'governance_paused_at' => $job->governance_paused_at?->toIso8601String(),
+                ]
+            );
+        }
+
         $activeHold = $this->usageLimitState->getActiveHold((int) $job->id);
         if (! $ignoreRateLimitHold && $activeHold !== null) {
             return ErrorEnvelope::make(
@@ -528,6 +596,7 @@ class AgentJobController extends Controller
         $payload = [
             'id' => $job->id,
             'name' => $job->name,
+            'workflow_key' => $job->workflow_key,
             'description' => $job->description,
             'cron_expression' => $job->cron_expression,
             'timezone' => $job->timezone,

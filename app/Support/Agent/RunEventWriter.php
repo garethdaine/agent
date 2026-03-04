@@ -412,6 +412,7 @@ class RunEventWriter
     {
         if (is_string($payload)) {
             $value = trim($payload);
+
             return $value === '' ? null : $value;
         }
 
@@ -633,10 +634,10 @@ class RunEventWriter
             return true;
         }
 
-        if (str_starts_with($type, 'item.')) {
+        if ($type === 'item' || str_starts_with($type, 'item.')) {
             $itemType = strtolower((string) (($decoded['item']['type'] ?? null) ?? ''));
 
-            return $itemType !== 'agent_message';
+            return ! in_array($itemType, ['agent_message', 'assistant_message', 'message'], true);
         }
 
         return false;

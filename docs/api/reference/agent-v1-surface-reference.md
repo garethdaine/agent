@@ -156,6 +156,14 @@ Registered endpoints: 21
 | POST | `agent/api/v1/delegation/graphs/{id}/start` | `-` |
 | POST | `agent/api/v1/delegation/graphs/{id}/validate` | `-` |
 
+### Deployments
+
+Registered endpoints: 1
+
+| Method | URI | Route Name |
+| --- | --- | --- |
+| GET | `agent/api/v1/deployments/counting` | `-` |
+
 ### Docs
 
 Registered endpoints: 4
@@ -241,12 +249,13 @@ Registered endpoints: 46
 
 ### Jobs
 
-Registered endpoints: 9
+Registered endpoints: 10
 
 | Method | URI | Route Name |
 | --- | --- | --- |
 | GET | `agent/api/v1/jobs` | `-` |
 | POST | `agent/api/v1/jobs` | `-` |
+| GET | `agent/api/v1/jobs/by-workflow/{workflowKey}` | `-` |
 | GET | `agent/api/v1/jobs/{id}` | `-` |
 | PUT | `agent/api/v1/jobs/{id}` | `-` |
 | DELETE | `agent/api/v1/jobs/{id}` | `-` |
@@ -345,6 +354,39 @@ Registered endpoints: 6
 | GET | `agent/api/v1/runs/{id}/events` | `-` |
 | POST | `agent/api/v1/runs/{id}/retry` | `-` |
 | POST | `agent/api/v1/runs/{id}/stop` | `-` |
+
+### System
+
+Registered endpoints: 1
+
+| Method | URI | Route Name |
+| --- | --- | --- |
+| POST | `agent/api/v1/system/directory-picker` | `-` |
+
+### Telemetry
+
+Registered endpoints: 4
+
+| Method | URI | Route Name |
+| --- | --- | --- |
+| GET | `agent/api/v1/telemetry/replay/active-build` | `-` |
+| POST | `agent/api/v1/telemetry/replay/builds` | `-` |
+| GET | `agent/api/v1/telemetry/replay/builds/{buildId}` | `-` |
+| POST | `agent/api/v1/telemetry/replay/builds/{buildId}/activate` | `-` |
+
+### Workflows
+
+Registered endpoints: 7
+
+| Method | URI | Route Name |
+| --- | --- | --- |
+| GET | `agent/api/v1/workflows/{workflowKey}/cost` | `-` |
+| GET | `agent/api/v1/workflows/{workflowKey}/escalations` | `-` |
+| GET | `agent/api/v1/workflows/{workflowKey}/gate-transitions` | `-` |
+| GET | `agent/api/v1/workflows/{workflowKey}/health` | `-` |
+| POST | `agent/api/v1/workflows/{workflowKey}/pause` | `-` |
+| GET | `agent/api/v1/workflows/{workflowKey}/reliability` | `-` |
+| POST | `agent/api/v1/workflows/{workflowKey}/resume` | `-` |
 
 ## Related Docs
 

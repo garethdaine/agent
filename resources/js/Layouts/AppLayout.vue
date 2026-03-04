@@ -18,6 +18,7 @@ import {
     Clock,
     LayoutDashboard,
     Briefcase,
+    Rocket,
     Activity,
     MessageSquare,
     Wrench,
@@ -279,6 +280,14 @@ onBeforeUnmount(() => {
                                     <Briefcase class="w-4 h-4 mr-1.5" />
                                     Jobs
                                 </NavLink>
+                                <NavLink :href="$page.props.operatorNavigation.deployments" :active="route().current('agent.deployments.*')">
+                                    <Rocket class="w-4 h-4 mr-1.5" />
+                                    Deployment
+                                </NavLink>
+                                <NavLink :href="$page.props.operatorNavigation.systemOverview" :active="route().current('agent.system-overview.*')">
+                                    <Activity class="w-4 h-4 mr-1.5" />
+                                    System
+                                </NavLink>
                                 <NavLink :href="route('agent.monitor.index')" :active="route().current('agent.monitor.*')">
                                     <Activity class="w-4 h-4 mr-1.5" />
                                     Monitor
@@ -480,6 +489,14 @@ onBeforeUnmount(() => {
                         <ResponsiveNavLink :href="route('agent.jobs.index')" :active="route().current('agent.jobs.*')">
                             <Briefcase class="w-5 h-5" />
                             Jobs
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="$page.props.operatorNavigation.deployments" :active="route().current('agent.deployments.*')">
+                            <Rocket class="w-5 h-5" />
+                            Deployment
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="$page.props.operatorNavigation.systemOverview" :active="route().current('agent.system-overview.*')">
+                            <Activity class="w-5 h-5" />
+                            System
                         </ResponsiveNavLink>
                         <ResponsiveNavLink :href="route('agent.monitor.index')" :active="route().current('agent.monitor.*')">
                             <Activity class="w-5 h-5" />

@@ -130,6 +130,53 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $this->finalizeBuildLifecycle($session, $writer);
     }
 
+    public function failed(\Throwable $throwable): void
+    {
+        $session = InterrogationSession::query()->find($this->sessionId);
+
+        if ($session === null) {
+            return;
+        }
+
+        $build = $this->buildMetadata($session);
+
+        // Ignore stale failures after the build has already left active execution.
+        if (($build['status'] ?? null) !== 'running') {
+            return;
+        }
+
+        $error = $this->normalizeJobFailure($throwable);
+        $failedAt = CarbonImmutable::now('UTC')->toIso8601String();
+
+        $activeTask = $session->buildTasks()
+            ->with('run')
+            ->where('status', InterrogationBuildTask::STATUS_IN_PROGRESS)
+            ->orderBy('sequence')
+            ->first();
+
+        $build['status'] = 'failed';
+        $build['error'] = $error;
+        $build['failed_at'] = $failedAt;
+        $build['active_task_id'] = $activeTask?->id;
+        $build['active_run_id'] = $activeTask?->agent_job_run_id;
+        $build['updated_at'] = $failedAt;
+        $this->saveBuildMetadata($session, $build);
+
+        $session->status = InterrogationSession::STATUS_FAILED;
+        $session->phase = InterrogationSession::PHASE_BUILD_EXECUTION;
+        $session->error_code = 'BUILD_EXECUTION_JOB_FAILED';
+        $session->error_summary = $error;
+        $session->finished_at = CarbonImmutable::now('UTC');
+        $session->save();
+
+        $writer = new InterrogationEventWriter($session);
+        $writer->appendError([
+            'code' => 'BUILD_EXECUTION_JOB_FAILED',
+            'message' => $error,
+            'at' => $failedAt,
+        ]);
+    }
+
     private function finalizeBuildLifecycle(InterrogationSession $session, InterrogationEventWriter $writer): void
     {
         $tasks = $session->buildTasks()->get();
@@ -1073,5 +1120,21 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         ]);
 
         return true;
+    }
+
+    private function normalizeJobFailure(\Throwable $throwable): string
+    {
+        $message = trim((string) $throwable->getMessage());
+        if ($message === '') {
+            return 'Build execution job failed unexpectedly.';
+        }
+
+        if (str_contains(strtolower($message), 'timed out')) {
+            return 'Build execution job timed out before reconciliation completed.';
+        }
+
+        $firstLine = trim((string) strtok($message, "\n"));
+
+        return mb_substr($firstLine !== '' ? $firstLine : $message, 0, 300);
     }
 }

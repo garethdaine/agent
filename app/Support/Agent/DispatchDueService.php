@@ -63,6 +63,7 @@ class DispatchDueService
         $skippedCooldownCount = 0;
         $skippedRateLimitedCount = 0;
         $skippedActiveHoursCount = 0;
+        $skippedGovernancePausedCount = 0;
         $errorCount = $reconcileError === null ? 0 : 1;
 
         foreach ($dispatchCandidates as $candidate) {
@@ -79,6 +80,8 @@ class DispatchDueService
                     $skippedRateLimitedCount++;
                 } elseif ($result === 'skipped_active_hours') {
                     $skippedActiveHoursCount++;
+                } elseif ($result === 'skipped_governance_paused') {
+                    $skippedGovernancePausedCount++;
                 }
             } catch (\Throwable $throwable) {
                 report($throwable);
@@ -104,6 +107,7 @@ class DispatchDueService
                     'skipped_cooldown_count' => $skippedCooldownCount,
                     'skipped_rate_limited_count' => $skippedRateLimitedCount,
                     'skipped_active_hours_count' => $skippedActiveHoursCount,
+                    'skipped_governance_paused_count' => $skippedGovernancePausedCount,
                     'error_count' => $errorCount,
                     'deferred_capacity_count' => $deferredCapacityCount,
                     'tick_started_at' => $tickStartedAt->toIso8601String(),
@@ -120,6 +124,7 @@ class DispatchDueService
             'skipped_cooldown_count' => $skippedCooldownCount,
             'skipped_rate_limited_count' => $skippedRateLimitedCount,
             'skipped_active_hours_count' => $skippedActiveHoursCount,
+            'skipped_governance_paused_count' => $skippedGovernancePausedCount,
             'error_count' => $errorCount,
             'deferred_capacity_count' => $deferredCapacityCount,
             'watermark_minute_utc' => $watermarkToPersist->toIso8601String(),
@@ -346,7 +351,15 @@ class DispatchDueService
             ->whereIn('status', AgentJobRun::ACTIVE_STATUSES)
             ->exists();
 
-        if ($hasActiveOverlap) {
+        if ($status !== AgentJobRun::STATUS_SKIPPED && $job->governance_paused_at !== null) {
+            $status = AgentJobRun::STATUS_SKIPPED;
+            $metadata['skip_reason'] = 'governance_paused';
+            $metadata['governance_pause_reason'] = $job->governance_pause_reason;
+            $metadata['governance_paused_at'] = $job->governance_paused_at?->toIso8601String();
+            $finishedAt = $tickTimestamp;
+        }
+
+        if ($status !== AgentJobRun::STATUS_SKIPPED && $hasActiveOverlap) {
             $status = AgentJobRun::STATUS_SKIPPED;
             $metadata['skip_reason'] = 'overlap';
             $finishedAt = $tickTimestamp;
@@ -368,7 +381,7 @@ class DispatchDueService
 
         // Active hours check - only if config exists (null = no restriction, backward compatible)
         if ($status !== AgentJobRun::STATUS_SKIPPED && $job->active_hours_config !== null) {
-            if (!$this->activeHoursEvaluator->isWithinActiveHours($dueWindow, $job->active_hours_config, $job->timezone)) {
+            if (! $this->activeHoursEvaluator->isWithinActiveHours($dueWindow, $job->active_hours_config, $job->timezone)) {
                 $status = AgentJobRun::STATUS_SKIPPED;
                 $metadata['skip_reason'] = 'outside_active_hours';
                 $metadata['active_hours_config'] = $job->active_hours_config;
@@ -421,6 +434,7 @@ class DispatchDueService
             'cooldown' => 'skipped_cooldown',
             'rate_limited' => 'skipped_rate_limited',
             'outside_active_hours' => 'skipped_active_hours',
+            'governance_paused' => 'skipped_governance_paused',
             default => 'skipped_cooldown',
         };
     }

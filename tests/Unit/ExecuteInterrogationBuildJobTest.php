@@ -794,6 +794,67 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         $this->assertSame('BUILD_EXECUTION_FAILED', (string) $session->error_code);
     }
 
+    public function test_failed_handler_marks_running_build_as_failed_and_surfaces_error(): void
+    {
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+            'active_task_id' => null,
+            'active_run_id' => null,
+        ]);
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $job->failed(new \RuntimeException('Queue worker crashed while reconciling build tick.'));
+
+        $session->refresh();
+
+        $this->assertSame('failed', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame(
+            'Queue worker crashed while reconciling build tick.',
+            data_get($session->metadata_json, 'build.error')
+        );
+        $this->assertNotNull(data_get($session->metadata_json, 'build.failed_at'));
+        $this->assertSame(InterrogationSession::STATUS_FAILED, (string) $session->status);
+        $this->assertSame('BUILD_EXECUTION_JOB_FAILED', (string) $session->error_code);
+        $this->assertSame('Queue worker crashed while reconciling build tick.', (string) $session->error_summary);
+
+        $failureEventExists = InterrogationEvent::query()
+            ->where('interrogation_session_id', (int) $session->id)
+            ->where('event_type', InterrogationEvent::TYPE_ERROR)
+            ->where('payload->code', 'BUILD_EXECUTION_JOB_FAILED')
+            ->exists();
+
+        $this->assertTrue($failureEventExists);
+    }
+
+    public function test_failed_handler_ignores_stale_failure_when_build_not_running(): void
+    {
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'completed',
+            'active_task_id' => null,
+            'active_run_id' => null,
+            'completion_summary' => 'Build complete.',
+            'error' => null,
+        ]);
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $job->failed(new \RuntimeException('stale queue failure'));
+
+        $session->refresh();
+
+        $this->assertSame('completed', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame(InterrogationSession::STATUS_COMPLETED, (string) $session->status);
+
+        $failureEventExists = InterrogationEvent::query()
+            ->where('interrogation_session_id', (int) $session->id)
+            ->where('event_type', InterrogationEvent::TYPE_ERROR)
+            ->where('payload->code', 'BUILD_EXECUTION_JOB_FAILED')
+            ->exists();
+
+        $this->assertFalse($failureEventExists);
+    }
+
     /**
      * @param  array<string, mixed>  $build
      */

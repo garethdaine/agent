@@ -6,6 +6,7 @@ import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
+import DirectoryPickerInput from '@/Components/ui/DirectoryPickerInput.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeft } from 'lucide-vue-next';
@@ -106,7 +107,7 @@ const submit = async () => {
 
                         <div>
                             <label class="block text-sm font-medium">Project Directory</label>
-                            <Input v-model="form.project_directory" type="text" class="mt-1" :error="!!validation.project_directory" />
+                            <DirectoryPickerInput v-model="form.project_directory" class="mt-1" :error="!!validation.project_directory" />
                             <p class="mt-1 text-xs text-muted-foreground">Absolute path where discovery commands run.</p>
                             <p v-if="validation.project_directory" class="mt-1 text-sm text-destructive">{{ validation.project_directory[0] }}</p>
                         </div>

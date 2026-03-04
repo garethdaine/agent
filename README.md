@@ -2,6 +2,19 @@
 
 Local-first Laravel app for managing and running scheduled agent jobs.
 
+## Phase 1 Positioning and Contract
+
+We help companies deploy AI agents safely and keep them reliable in production.
+
+Canonical Phase 1 contracts live in `docs/system-overview.md`.
+
+This Phase 1 approach is designed for a local-first Laravel runtime with provider-agnostic telemetry contract semantics across OpenAI, Anthropic, and local runtimes.
+
+Known risk boundaries tracked in the canonical contract:
+- event-id stability
+- terminal catalog drift
+- projection query restrictions
+
 ## Current Status
 - Laravel 12 scaffolded
 - Jetstream + Inertia + SSR + dark mode installed

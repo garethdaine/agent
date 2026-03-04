@@ -42,6 +42,62 @@ return [
         'codex' => $codexModel,
     ],
 
+    'workflow_key' => [
+        'regex' => '^[a-z0-9._-]+[.]v[1-9][0-9]*$',
+        'route_pattern' => '[a-z0-9]+(?:[._-][a-z0-9]+)*\\.v[1-9][0-9]*',
+    ],
+
+    'telemetry' => [
+        'terminal_event_catalog_version' => 'v1',
+        'terminal_event_types' => [
+            'run.completed',
+            'run.failed',
+            'run.aborted',
+            'run.cancelled',
+            'policy_blocked_terminal',
+            'guardrail_blocked_terminal',
+        ],
+        'synthetic_gap_event_type' => 'telemetry.synthetic.terminal_gap_audit',
+        'schema_registry' => [
+            'registry_revision' => (string) env('AGENT_TELEMETRY_REGISTRY_REVISION', 'registry-2026-03-04'),
+            'schemas' => [
+                'agent.telemetry.event' => [
+                    '1.0.0' => [
+                        'schema_hash' => str_repeat('a', 64),
+                        'normalizer_version' => 'telemetry-normalizer.v1',
+                    ],
+                ],
+            ],
+        ],
+    ],
+
+    'projections' => [
+        'stale_after_seconds' => (int) env('AGENT_PROJECTIONS_STALE_AFTER_SECONDS', 900),
+    ],
+
+    'reliability' => [
+        'weighted_reliability_threshold' => (float) env('AGENT_RELIABILITY_WEIGHTED_THRESHOLD', 95.0),
+        'degraded_rate_threshold' => (float) env('AGENT_RELIABILITY_DEGRADED_THRESHOLD', 3.0),
+        'low_volume_min_scored_runs' => (int) env('AGENT_RELIABILITY_LOW_VOLUME_MIN_RUNS', 5),
+        'assisted_sla_hours' => (int) env('AGENT_RELIABILITY_ASSISTED_SLA_HOURS', 24),
+    ],
+
+    'cost_governance' => [
+        'system_actor_id' => (string) env('AGENT_COST_GOVERNANCE_SYSTEM_ACTOR_ID', 'system:budget-enforcer'),
+        'default_warning_threshold_percent' => (float) env('AGENT_COST_WARNING_THRESHOLD_PERCENT', 80.0),
+        'default_enforcement_threshold_percent' => (float) env('AGENT_COST_ENFORCEMENT_THRESHOLD_PERCENT', 100.0),
+        'rate_cards' => [
+            'default' => [
+                'models' => [
+                    '*' => [
+                        'input_cost_per_thousand_usd' => 0.0,
+                        'output_cost_per_thousand_usd' => 0.0,
+                    ],
+                ],
+            ],
+        ],
+    ],
+
     'default_templates' => [
         'claude' => trim($claudeExecutable.' --verbose -p --output-format stream-json --include-partial-messages {{task_markdown_path}}'),
         'codex' => trim($codexExecutable.$codexModelArgs.' exec --json {{task_markdown_path}}'),
@@ -153,6 +209,9 @@ return [
     'roles' => [
         'admin_user_ids' => $parseEnvCsvList('AGENT_ADMIN_USER_IDS'),
         'analytics_user_ids' => $parseEnvCsvList('AGENT_ANALYTICS_USER_IDS'),
+        'central_on_call_user_ids' => $parseEnvCsvList('AGENT_CENTRAL_ON_CALL_USER_IDS'),
+        'workflow_delegate_user_ids' => $parseEnvCsvList('AGENT_WORKFLOW_DELEGATE_USER_IDS'),
+        'workflow_delegate_user_ids_by_workflow' => [],
     ],
 
     'org' => [

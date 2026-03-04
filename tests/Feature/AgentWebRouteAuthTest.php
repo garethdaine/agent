@@ -18,6 +18,7 @@ class AgentWebRouteAuthTest extends TestCase
             '/agent/jobs/create',
             '/agent/jobs/1/edit',
             '/agent/monitor',
+            '/agent/system-overview',
         ];
 
         foreach ($routes as $route) {
@@ -37,6 +38,7 @@ class AgentWebRouteAuthTest extends TestCase
             '/agent/jobs/create',
             '/agent/jobs/1/edit',
             '/agent/monitor',
+            '/agent/system-overview',
         ];
 
         foreach ($routes as $route) {

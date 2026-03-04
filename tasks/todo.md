@@ -6,6 +6,411 @@
 
 ## Current — Open Items
 
+### Session 17 Build Task 13 — Implement Canonical Cost Governance (Completed)
+
+Assumptions and Scope Boundary
+- Model/versioned rate cards are available at enforcement time and can be pinned immutably per run rollup.
+- Scope is cost governance only: deterministic canonical cost calculation, monthly per-workflow budget rollups, warning/block thresholds, and breach trigger emission.
+- Non-goals: deployment counting, UI route/page additions, replay lifecycle changes, and non-cost reliability policy changes.
+
+Pre-Execution Goal Articulation
+- SITUATION: Telemetry ledger and governance pause/escalation primitives exist, but no canonical cost service, no immutable cost projection rows, and no monthly budget enforcement path that blocks new runs at 100%.
+- TASK: Ensure internal deterministic canonical cost (not provider billed cost) drives monthly workflow budget enforcement, warning at 80%, blocking new runs at 100%, while in-flight runs remain unaffected.
+- ACTION:
+  - [x] Add tests first:
+  - [x] `tests/Unit/Cost/CanonicalCostCalculatorTest.php`
+  - [x] `tests/Feature/Cost/BudgetEnforcementTest.php`
+  - [x] `tests/Feature/Cost/RateCardVersionImmutabilityTest.php`
+  - [x] Run `php artisan test --filter=Cost` and confirm initial failures are from missing cost-governance implementation.
+  - [x] Implement minimum code:
+  - [x] Add `app/Services/Cost/*` for canonical calculator + monthly budget enforcer.
+  - [x] Add/extend migrations for immutable projection cost rollups and workflow monthly budget policies.
+  - [x] Emit `budget_breach` trigger with policy snapshot and use governance pause for block-new-runs semantics.
+  - [x] Ensure provider billed cost is stored separately and never overrides canonical enforcement cost.
+  - [x] Re-run `php artisan test --filter=Cost` and confirm green.
+- RESULT: Monthly workflow budgets are enforced using pinned canonical cost + immutable rate-card version lineage, warnings fire at 80%, hard block occurs at 100%, in-flight runs continue, and breach trigger evidence is persisted.
+
+Mandatory Failure Modes to Cover Before Coding
+- Malicious-caller mode: payloads with misleading provider billed totals attempt to bypass canonical enforcement.
+- Tired-maintainer mode: mutable rollup rows allow retroactive rate-card edits, changing historical budget utilization and policy decisions.
+
+Plan Check
+- Internal check complete: test-first plan is scoped to cost governance and includes explicit verification before completion.
+
+Review
+- Added tests:
+  - `tests/Unit/Cost/CanonicalCostCalculatorTest.php`
+  - `tests/Feature/Cost/BudgetEnforcementTest.php`
+  - `tests/Feature/Cost/RateCardVersionImmutabilityTest.php`
+- Added cost governance services:
+  - `app/Services/Cost/CanonicalCostCalculator.php`
+  - `app/Services/Cost/WorkflowBudgetEnforcer.php`
+  - `app/Services/Cost/WorkflowBudgetEnforcementResult.php`
+- Added cost persistence schema:
+  - `database/migrations/2026_03_04_180000_create_cost_governance_tables.php`
+  - Public table: `workflow_monthly_budget_policies`
+  - Projection tables: `agent_projection.workflow_cost_rollups`, `agent_projection.workflow_budget_events`
+- Integrated breach escalation/governance behavior:
+  - `app/Services/Escalation/IncidentLifecycleService.php` now accepts optional metadata snapshot on open/refresh.
+  - `app/Http/Controllers/Api/V1/AgentJobController.php` now blocks `run-now` when workflow governance pause is active (`WORKFLOW_GOVERNANCE_PAUSED`).
+  - `config/agent.php` now includes `cost_governance` rate-card and threshold configuration.
+- Verification evidence:
+  - Red-first: `php artisan test --filter=Cost` failed for missing `App\Services\Cost\CanonicalCostCalculator` and missing `workflow_monthly_budget_policies` table.
+  - Green: `php artisan test --filter=Cost` -> `16 passed (49 assertions)`.
+  - Regression: `php artisan test tests/Feature/AgentApiWorkflowTest.php tests/Feature/AgentApiContractCoverageTest.php` -> `14 passed (73 assertions)`.
+  - Formatting: `./vendor/bin/pint --dirty` (4 style fixes applied on new cost files).
+- Correctness conditions:
+  - Canonical enforcement uses deterministic internal token-cost from pinned model rate-card version.
+  - Provider billed cost is persisted separately and does not affect warning/breach enforcement.
+  - 80% emits warning event; 100% emits breach event + incident with policy snapshot and pauses workflow.
+  - In-flight runs remain active; new scheduled/manual runs are blocked while paused.
+- Non-goals retained:
+  - No deployment counting implementation.
+  - No operator UI or replay orchestration changes in this task.
+
+### Session 17 Build Task 11 — Implement Reliability Classification and Gate Evaluation v1 (Completed)
+
+Assumptions and Scope Boundary
+- Run classification is derived from telemetry ledger signals plus run verification metadata already stored on run records/events.
+- Scope is reliability engine v1 only: classification, weighted scoring, stricter gate evaluation, hard-fail overrides, assisted SLA expiry reclassification, and transition audit persistence.
+- Non-goals: cost/budget enforcement, operator UI expansion, deployment counting automation, and replay lifecycle changes.
+
+Pre-Execution Goal Articulation
+- SITUATION: Telemetry ingestion, active-build projection scoping, and reliability read endpoints exist, but deterministic reliability classification/scoring services and gate transition persistence with source are not implemented yet.
+- TASK: Ensure run outcomes are deterministically classified (`Success|Assisted|Degraded|Failed`), weighted reliability math excludes skipped runs, stricter 14-day vs 50-run gate is applied with low-volume handling, hard-fail bursts hard-gate immediately, and every gate transition persists an auditable source record.
+- ACTION:
+  - [x] Add tests first:
+  - [x] `tests/Unit/Reliability/ClassificationContractTest.php`
+  - [x] `tests/Unit/Reliability/WeightedReliabilityMathTest.php`
+  - [x] `tests/Feature/Reliability/GateTransitionAuditTest.php`
+  - [x] `tests/Feature/Reliability/AssistedSlaExpiryTest.php`
+  - [x] Run `php artisan test --filter=Reliability` and `php artisan test --filter=AssistedSla` to confirm intended failures.
+  - [x] Implement minimum code:
+  - [x] Add reliability services in `app/Services/Reliability` (classifier, scorer, gate evaluator).
+  - [x] Add reliability enums/reason codes and hard-fail mapping.
+  - [x] Add gate transition persistence table/model/repository with transition source.
+  - [x] Add assisted SLA expiry reconciler (scheduler/command callable).
+  - [x] Re-run `php artisan test --filter=Reliability` and `php artisan test --filter=AssistedSla` and confirm green.
+- RESULT: Reliability decisions are deterministic per contract, skipped runs are excluded from weighted math, hard-fail bursts trigger immediate hard gate, low-volume windows are marked `insufficient_data` without auto-pause, assisted SLA breaches reclassify to `Failed`, and gate transitions are fully auditable with source.
+
+Mandatory Failure Modes to Cover Before Coding
+- Malicious-caller mode: payloads that try to classify a run as success despite hard-fail/policy-blocked/guardrail-blocked indicators must always resolve to `Failed`.
+- Tired-maintainer mode: gate-state flips can silently lose source provenance; transition writes must be append-only and include previous/new state, source, reason, actor context, and timestamps.
+
+Plan Check
+- Internal check complete: plan is test-first, bounded to reliability engine scope, and includes explicit verification commands before completion.
+
+Review
+- Added tests:
+  - `tests/Unit/Reliability/ClassificationContractTest.php`
+  - `tests/Unit/Reliability/WeightedReliabilityMathTest.php`
+  - `tests/Feature/Reliability/GateTransitionAuditTest.php`
+  - `tests/Feature/Reliability/AssistedSlaExpiryTest.php`
+- Added reliability services:
+  - `app/Services/Reliability/RunClassifier.php`
+  - `app/Services/Reliability/FailureTaxonomyMapper.php`
+  - `app/Services/Reliability/WeightedReliabilityScorer.php`
+  - `app/Services/Reliability/GateEvaluator.php`
+  - `app/Services/Reliability/GateTransitionRecorder.php`
+  - `app/Services/Reliability/AssistedSlaExpiryReclassifier.php`
+  - plus result value objects in `app/Services/Reliability/*Result.php`.
+- Added enums/models:
+  - `app/Enums/ReliabilityRunClassification.php`
+  - `app/Enums/ReliabilityReasonCode.php`
+  - `app/Enums/GateTransitionSource.php`
+  - `app/Models/RunClassification.php`
+  - `app/Models/WorkflowGateTransition.php`
+- Added migration and runtime hooks:
+  - `database/migrations/2026_03_04_160000_create_reliability_classification_and_gate_transition_tables.php`
+  - `app/Console/Commands/AgentReclassifyAssistedSlaCommand.php`
+  - `routes/console.php` hourly schedule for `agent:reliability-assisted-sla`
+  - `config/agent.php` reliability thresholds and low-volume/SLA config.
+- Verification evidence:
+  - `php artisan test --filter=Reliability` (initial red before implementation: missing reliability service/model classes; final green: 53 passed)
+  - `php artisan test --filter=AssistedSla` (initial red before implementation; final green: 2 passed)
+- Correctness conditions:
+  - Classification remains deterministic from telemetry + verification signals.
+  - Skipped runs are excluded from weighted denominator/numerator.
+  - Hard-fail burst logic (`2` consecutive or `3` in 24h) applies before score/degraded thresholds.
+  - Gate transitions are append-only audit entries with persisted `source`.
+  - Assisted runs with missing verification beyond SLA are reclassified by scheduled command.
+- Non-goals:
+  - No budget/cost enforcement changes in this task.
+  - No operator dashboard or API surface expansion beyond required reliability internals.
+
+### Session 17 Build Task 8 — Single Rebuild Concurrency Guard (Completed)
+
+Assumptions and Scope Boundary
+- Projection rebuild orchestration is not yet exposed via a dedicated API/service in this branch, so this task introduces the minimal start-rebuild path.
+- Scope is limited to: single-active-rebuild DB/index guarantees, transactional service conflict handling, deterministic API conflict response, and observability on conflicts.
+- Non-goals for this task: replay parity/activation workflow, operator UI pages, and full replay lifecycle state machine.
+
+Pre-Execution Goal Articulation
+- SITUATION: Projection build tables exist and include a rebuilding-status uniqueness intent, but there is no `ProjectionBuildManager` transactional start flow or deterministic API-level conflict contract.
+- TASK: Ensure only one rebuild can run at a time, and make every competing rebuild request return a deterministic conflict payload containing active/rebuilding build identifiers.
+- ACTION:
+  - [x] Add failing tests first for rebuild start conflict behavior and index-enforced single `rebuilding` row behavior.
+  - [x] Implement transactional `ProjectionBuildManager` that checks existing rebuild, creates rebuild when clear, and returns deterministic conflict when blocked.
+  - [x] Add API endpoint + response envelope for rebuild start, including deterministic conflict details.
+  - [x] Add conflict observability (structured log + counter, plus optional audit event).
+  - [x] Run targeted tests red->green and record exact outputs.
+- RESULT: At most one `rebuilding` projection build exists, repeated/concurrent rebuild starts cannot both succeed, and conflict responses include required identifiers.
+
+Mandatory Failure Modes to Cover Before Coding
+- Malicious-caller mode: rapid repeated `POST` requests attempt to force concurrent rebuild creation; service must remain deterministic and return conflict without creating extra rebuilding rows.
+- Tired-maintainer mode: stale `rebuilding_build_id` pointers or generic DB exceptions could lead to ambiguous conflicts; service must resolve/return explicit active+rebuilding ids and stable error code.
+
+Plan Check
+- Internal check complete: plan is test-first, enforces DB + service layers, and includes verification before completion.
+
+Review
+- Added feature tests:
+  - `tests/Feature/Telemetry/ProjectionRebuildConcurrencyTest.php`
+  - Covers deterministic conflict payload (`active_build_id`, `rebuilding_build_id`, message), sequential start conflict behavior, and uniqueness-enforced single rebuilding row.
+- Added transactional rebuild manager:
+  - `app/Services/Telemetry/ProjectionBuildManager.php`
+  - `app/Services/Telemetry/ProjectionRebuildStartResult.php`
+  - Enforces start flow in DB transaction, checks existing rebuilding build, creates one rebuild build when clear, handles race/unique-index conflict deterministically.
+- Added API endpoint + controller:
+  - `app/Http/Controllers/Api/V1/ProjectionReplayBuildController.php`
+  - `routes/api.php` (`POST /agent/api/v1/telemetry/replay/builds`)
+  - Returns `202` with rebuild build id on success, `409` deterministic error envelope on conflict.
+- Observability implemented on conflict:
+  - Structured warning log: `telemetry.projection_rebuild.conflict`
+  - Metrics counter increment: `agent:telemetry:projection_rebuild_conflicts`
+  - Optional audit event via `AuditLogger::recordSystemAction` (best-effort, non-fatal).
+- Verification evidence:
+  - `php artisan test --filter=ProjectionRebuildConcurrencyTest` (red before implementation: endpoint returned `404`; green after implementation: 3 passed)
+  - `php artisan test --filter='(ProjectionRebuildConcurrencyTest|ActiveBuildReadScopingApiTest|ActiveBuildScopedRepositoryTest)'` (green: 6 passed)
+  - `php artisan route:list --path=agent/api/v1/telemetry/replay/builds` (route present)
+- Correctness conditions:
+  - Unique partial index `telemetry_projection_builds_one_rebuilding_idx` exists and remains enforced.
+  - Rebuild start calls route through `ProjectionBuildManager` transactional path.
+  - Conflict responses are consumed via API error envelope with deterministic identifiers.
+- Non-goals:
+  - No replay activation/parity workflow implementation.
+  - No operator UI/replay dashboards in this task.
+
+### Session 17 Build Task 7 — Active Build Pointer and Active-Build Read Scoping (In Progress)
+
+Assumptions and Scope Boundary
+- Existing telemetry/projection groundwork remains in place; this task adds deterministic active-build scoping only.
+- Scope is limited to projection build state, projection lineage columns, scoped repositories, and one runtime API read path proving active-build filtering.
+- Non-goals for this task: full reliability-scoring engine, cost-governance rollout, and replay orchestration parity checks.
+
+STAR
+- SITUATION: The codebase has telemetry ingestion and projection schema hardening, but no active projection build pointer service and no repository abstraction enforcing active-build-only runtime reads.
+- TASK: Introduce a single active-build state service and repository-level scoping so runtime projection reads only serve rows where `projection_build_id` matches the active build.
+- ACTION:
+  - [x] Add failing tests first for:
+  - [x] repository scoping helper behavior
+  - [x] repository filtering by active build
+  - [x] API mixed-build isolation (active build rows served, historical rows hidden)
+  - [x] Add migration(s) to create projection build state tables and ensure projection lineage (`projection_build_id`) exists on projection read tables used by runtime APIs.
+  - [x] Implement `ActiveProjectionBuildStateService` as single active-build resolver.
+  - [x] Implement `ActiveBuildScopedRepository` base abstraction plus concrete scoped repository for workflow reliability reads.
+  - [x] Route runtime controller/API through scoped repository only (no direct projection-table query in controller).
+  - [x] Re-run targeted tests and document exact outputs.
+- RESULT: Runtime reads are deterministically scoped to `active_projection_build_id`, historical projection builds remain stored, and API payloads expose both active build pointer and row lineage build id.
+
+Plan Check
+- Internal check complete: task plan is test-first, minimal to objective, and includes verification gates before completion.
+
+Review
+- Added tests:
+  - `tests/Unit/Telemetry/ActiveBuildScopedRepositoryTest.php`
+  - `tests/Feature/Telemetry/ActiveBuildReadScopingApiTest.php`
+- Added migration:
+  - `database/migrations/2026_03_04_150000_create_projection_build_state_and_active_scoped_reliability_table.php`
+  - Creates `telemetry_projection_builds` + `telemetry_projection_build_state` with active/rebuilding pointers and activation timestamps.
+  - Ensures projection lineage column `projection_build_id` exists across known projection tables when present.
+  - Creates `workflow_reliability_current` with build lineage for runtime scoped reads.
+- Added active-build scoping implementation:
+  - `app/Services/Telemetry/ActiveProjectionBuildStateService.php`
+  - `app/Repositories/Projection/ActiveBuildScopedRepository.php`
+  - `app/Repositories/Projection/WorkflowReliabilityCurrentRepository.php`
+  - `app/Support/Telemetry/ProjectionTable.php`
+- Added scoped API read path (controller does not query projection table directly):
+  - `app/Http/Controllers/Api/V1/WorkflowReliabilityController.php`
+  - `routes/api.php` (`GET /agent/api/v1/workflows/{workflowKey}/reliability`)
+- Verification evidence:
+  - `php artisan test --filter=ActiveBuild` (initial red: missing projection build tables)
+  - `php artisan test --filter=ActiveBuild` (green: 3 passed)
+  - `php artisan test --filter=ProjectionSchemaAuthorizationTest` (green: 2 passed)
+  - `php artisan test --filter=Telemetry` (green: 29 passed)
+- Correctness conditions:
+  - Active build pointer row exists in `telemetry_projection_build_state` (`id=1`) and points to a valid build id.
+  - Runtime projection consumers query through scoped repositories so `projection_build_id` filtering is always applied.
+  - Projection tables carry lineage via `projection_build_id` so historical builds can coexist safely.
+- Non-goals:
+  - Does not implement full replay orchestration, parity validation flow, or reliability/cost governance engines.
+
+### Session 17 Build Task 5 — Implement Telemetry Ingestion Contract (Completed)
+
+Assumptions and Scope Boundary
+- Producers provide stable attempt-scoped `event_id` with stable `run_id` and `run_attempt_id`.
+- Scope is limited to ingestion, normalization pinning, projector ordering, and terminal-gap audit behavior.
+- Scoring and cost-governance enforcement are explicitly out of scope.
+
+STAR
+- SITUATION: The append-only telemetry ledger and dedupe constraint exist, but ingestion service logic for schema pinning, idempotent insert behavior, sequence-violation reasoning, terminalization-gap synthetic audit writes, and deterministic projection ordering is not implemented in application services/tests.
+- TASK: Implement ingestion and ordering behavior so telemetry ingest is idempotent and deterministic, schema metadata is pinned per ingest, sequence issues are explicitly reasoned, terminal gap behavior emits a synthetic audit row once per terminal event, and missing provider-cost fields are accepted with estimation flags.
+- ACTION:
+  - [x] Add tests first:
+  - [x] `tests/Feature/Telemetry/IngestionDedupeTest.php`
+  - [x] `tests/Feature/Telemetry/TerminalizationGapTest.php`
+  - [x] `tests/Unit/Telemetry/ProjectionOrderingTest.php`
+  - [x] Run `php artisan test --filter=Ingestion` and confirm failures map to missing logic.
+  - [x] Implement minimum code changes:
+  - [x] `app/Services/Telemetry/IngestionService.php`
+  - [x] `app/Services/Telemetry/VersionedSchemaRegistry.php`
+  - [x] `app/Services/Telemetry/TerminalizationGapProjector.php`
+  - [x] `app/Services/Telemetry/ProjectionOrderingService.php`
+  - [x] `config/agent.php` terminal catalog + telemetry registry config.
+  - [x] Cover edge/failure behavior: out-of-order accepted, explicit sequence reasons recorded, missing provider cost fields set `telemetry_estimated=true`.
+  - [x] Verify with `php artisan test --filter=Ingestion` and `php artisan test --filter=Telemetry`.
+- RESULT: Ingestion is idempotent and append-only safe, schema pins are deterministic per event, ordering is deterministic across input order, and terminalization gap audit rows are emitted by catalog-driven rules.
+
+Plan Check
+- Internal check complete: plan is minimal, test-first, and confined to ingestion/normalization/projector ordering only.
+
+Review
+- Added tests:
+  - `tests/Feature/Telemetry/IngestionDedupeTest.php`
+  - `tests/Feature/Telemetry/TerminalizationGapTest.php`
+  - `tests/Unit/Telemetry/ProjectionOrderingTest.php`
+- Added services:
+  - `app/Services/Telemetry/IngestionService.php`
+  - `app/Services/Telemetry/VersionedSchemaRegistry.php`
+  - `app/Services/Telemetry/TerminalizationGapProjector.php`
+  - `app/Services/Telemetry/ProjectionOrderingService.php`
+- Updated config:
+  - `config/agent.php` (`telemetry.terminal_event_types`, `telemetry.synthetic_gap_event_type`, `telemetry.schema_registry`)
+- Verification evidence:
+  - `php artisan test --filter=Ingestion` (red before implementation: missing `App\Services\Telemetry\IngestionService`)
+  - `php artisan test --filter=Ingestion` (green after implementation: 3 passed)
+  - `php artisan test --filter=Telemetry` (green: 26 passed)
+- Correctness conditions:
+  - Producers keep stable `event_id` per `run_attempt_id`.
+  - Terminalization gap audit runs only when `terminal=true` and event type is in configured terminal catalog.
+  - Schema registry defaults remain deterministic for fallback pin resolution.
+- Non-goals:
+  - No reliability scoring, budget enforcement, escalation, or broader projection build lifecycle changes.
+
+### Session 17 Build Task 4 — Create Append-Only Telemetry Ledger v1 (In Progress)
+
+STAR
+- SITUATION: A baseline telemetry ledger migration and immutability test already exist, but canonical v1 envelope fields and explicit telemetry enums are not yet covered by task-specific tests or DB enum alignment.
+- TASK: Ensure ledger rows are insert-only at DB layer, dedupe is deterministic on `(event_id, run_attempt_id)`, canonical v1 schema fields exist, and PHP enum values serialize consistently with Postgres enum definitions.
+- ACTION:
+  - [x] Add `TelemetryLedgerAppendOnlyTest` for blocked `UPDATE/DELETE`, deterministic dedupe conflict, and trigger enforcement.
+  - [x] Add `TelemetryEnumSerializationTest` for new telemetry enum values/round-trip serialization.
+  - [x] Run `php artisan test --filter=TelemetryLedger` to confirm red state before implementation.
+  - [x] Implement minimal enums in `app/Enums` plus matching Postgres enum types and canonical ledger columns in migration(s).
+  - [x] Re-run `php artisan test --filter=TelemetryLedgerAppendOnlyTest`.
+  - [x] Re-run `php artisan test --filter=TelemetryEnumSerializationTest`.
+  - [x] Document review outcomes, correctness conditions, and non-goals.
+- RESULT: Telemetry ledger contract is enforced at database level (append-only + dedupe), required v1 fields exist, and enum contracts are deterministic across PHP and Postgres.
+
+Review
+- Added feature test: `tests/Feature/Telemetry/TelemetryLedgerAppendOnlyTest.php`.
+- Added unit test: `tests/Unit/Telemetry/TelemetryEnumSerializationTest.php`.
+- Added enums:
+  - `app/Enums/TelemetryFailureClass.php`
+  - `app/Enums/TelemetryFailureReasonCode.php`
+- Expanded telemetry ledger migration with canonical v1 columns and PostgreSQL enum support:
+  - `database/migrations/2026_03_04_130000_create_telemetry_event_ledger_table.php`
+  - Added PG enum types: `agent_telemetry_failure_class_enum`, `agent_telemetry_failure_reason_code_enum`
+  - Cast `failure_class` and `failure_reason_code` columns to enum types
+  - Kept append-only trigger + grant revocation enforcement intact
+- Verification evidence:
+  - `php artisan test --filter=TelemetryLedger` (red before implementation: missing `schema_name`/v1 fields)
+  - `php artisan test --filter=TelemetryEnumSerializationTest` (red before implementation: enum classes missing)
+  - `php artisan test --filter=TelemetryLedgerAppendOnlyTest` (green: 5 passed)
+  - `php artisan test --filter=TelemetryEnumSerializationTest` (green: 3 passed)
+  - `php artisan test --filter=TelemetryLedger` (green: 11 passed)
+- Correctness conditions:
+  - Works when ledger writes are inserts only and DB trigger remains installed.
+  - Works when dedupe uniqueness on `(event_id, run_attempt_id)` remains enforced.
+  - Works when PostgreSQL is available for enum type creation/casting and trigger behavior.
+- Non-goals:
+  - No ingestion pipeline, normalization logic, or projection/read-model behavior changes.
+  - No API/runtime contract expansion beyond schema + enums + DB immutability guarantees.
+
+### Session 17 Build Task 2 — Enforce Canonical workflow_key Contract (Completed)
+
+STAR
+- SITUATION: The repository currently has no `workflow_key` column/contract, so DB, API validation, and runtime route selection are not deterministic for canonical workflow identifiers.
+- TASK: Enforce canonical `workflow_key` (`^[a-z0-9._-]+[.]v[1-9][0-9]*$`) consistently across config, API validation, DB constraints, and route guards while remediating legacy/non-compliant records before strict DB checks.
+- ACTION:
+  - [x] Add `WorkflowKeyRegexTest` unit coverage for valid/invalid canonical keys.
+  - [x] Add `WorkflowKeyValidationTest` feature coverage that API rejects invalid keys (uppercase, missing `.vN`, empty, malformed separators).
+  - [x] Run `php artisan test --filter=WorkflowKey` and capture failing state before implementation.
+  - [x] Implement minimal contract changes (config regex constant, request validation, route guard helper/binding, runtime normalization fallback).
+  - [x] Add migration to remediate legacy keys and enforce Postgres `CHECK` for each `workflow_key` column.
+  - [x] Re-run `php artisan test --filter=WorkflowKey` and ensure green.
+  - [x] Run `php artisan route:list | rg workflow` to verify route guard compatibility.
+  - [x] Record review notes with verification output and known non-goals/limits.
+- RESULT: All writes/read paths use regex-compliant workflow keys, invalid keys fail fast with deterministic validation errors, and DB checks prevent future drift.
+
+Review
+- Added unit test: `tests/Unit/Agent/WorkflowKeyRegexTest.php`.
+- Added feature test: `tests/Feature/Agent/WorkflowKeyValidationTest.php`.
+- Added workflow key contract helper + validation rule:
+  - `app/Support/Agent/WorkflowKey.php`
+  - `app/Rules/WorkflowKeyRule.php`
+- Applied request validation and empty-string rejection in:
+  - `app/Http/Requests/Agent/StoreAgentJobRequest.php`
+  - `app/Http/Requests/Agent/UpdateAgentJobRequest.php`
+- Added runtime route guard and lookup endpoint:
+  - `Route::pattern()` guards in `app/Providers/AppServiceProvider.php`
+  - `GET /agent/api/v1/jobs/by-workflow/{workflowKey}` in `routes/api.php`
+  - `showByWorkflowKey` + payload/filter updates in `app/Http/Controllers/Api/V1/AgentJobController.php`
+- Added model/factory support:
+  - Auto-derivation + enforcement on save in `app/Models/AgentJob.php`
+  - Factory default key in `database/factories/AgentJobFactory.php`
+- Added remediation + DB constraints migration:
+  - `database/migrations/2026_03_04_120000_add_workflow_key_to_agent_jobs_table.php`
+- Added config contract:
+  - `config/agent.php` (`workflow_key.regex`, `workflow_key.route_pattern`)
+- Verification:
+  - `php artisan test --filter=WorkflowKey` (initial red: class missing + API accepted invalid keys)
+  - `php artisan test --filter=WorkflowKey` (final green: 7 passed)
+  - `php artisan test --filter=AgentJobValidationTest` (green: 7 passed)
+  - `php artisan route:list | rg workflow` (shows `GET agent/api/v1/jobs/by-workflow/{workflowKey}`)
+- Non-goals/limits:
+  - This change does not implement broader reliability/cost/governance telemetry contracts outside `workflow_key`.
+  - DB strict `CHECK` is explicitly enforced for PostgreSQL (current active target).
+
+
+### Session 17 Build Task 1 — Canonical Docs Parity Gates (Completed with External Test Failure Not in Scope)
+
+STAR
+- SITUATION: Canonical Phase 1 contract documentation is not consolidated across root docs, there is no dedicated `DocsParity` gate, and no PR template enforces parity-related reviewer checks.
+- TASK: Publish authoritative docs for runtime/operator contracts and add a parity test/check that blocks drift across `README.md`, `docs/PROJECT-STATUS.md`, `docs/system-overview.md`, and PR review requirements.
+- ACTION:
+  - [x] Add `DocsParity` feature test that enforces canonical contract markers and PR checklist coverage.
+  - [x] Run `php artisan test --filter=DocsParity` and capture failing state before docs edits.
+  - [x] Update root/docs markdown and create missing canonical files required by parity assertions.
+  - [x] Re-run `php artisan test --filter=DocsParity` and confirm pass.
+  - [x] Run `php artisan test --filter='(Api|AgentUi|Reliability|Cost|Governance|Telemetry|DocsParity)'`.
+  - [x] Add Review notes with verification evidence and known limitations.
+- RESULT: A red→green docs parity gate with aligned canonical docs and enforceable PR checks that block contract drift.
+
+Review
+- Added docs parity test: `tests/Feature/Documentation/DocsParityTest.php`.
+- Added canonical source file: `docs/system-overview.md`.
+- Updated canonical references and Phase 1 contract summary in:
+  - `README.md`
+  - `docs/PROJECT-STATUS.md`
+- Added PR checklist policy file: `.github/pull_request_template.md`.
+- Verification:
+  - `php artisan test --filter=DocsParity` (expected fail before docs updates: missing USP marker + missing PR template)
+  - `php artisan test --filter=DocsParity` (pass after docs updates)
+  - `php artisan test --filter='(Api|AgentUi|Reliability|Cost|Governance|Telemetry|DocsParity)'` (fails outside this task scope at `Tests\Feature\Memory\MemoryApiTest::returns_503_when_memory_disabled`, expected 503 got 200)
+- Known limitations:
+  - Targeted regression currently has an existing Memory API behavior mismatch unrelated to docs parity changes.
+
 ### Session 21 Discovery — Build Task Ordering + Regeneration Controls (Completed)
 
 STAR
@@ -2616,3 +3021,689 @@ Review
   - `php artisan test --filter=RepoAnalysisConfigTest`
   - `npm run build`
 - Result: all pass.
+
+## 2026-03-04 Discovery Build: Rate-Limit False Positive Guard (Completed)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- Discovery Build UI surfaced `Rate limit detected` while active run log showed structured command execution items, not actual upstream throttling failures.
+- Structured payloads with `type: "item"` were not classified as machine events, allowing keyword-based rate-limit detection to evaluate non-error command/tool output.
+
+TASK
+- Prevent `rate_limit_detected` from being set by structured non-error machine events (`type: "item"` command/tool events).
+- Preserve true-positive detection for structured error events (`type: "error"`, `turn.failed`, `result` with rate-limit signals).
+
+ACTION
+- [x] Updated machine-event classifier to treat structured `type: "item"` payloads as non-runtime when `item.type` is not assistant message.
+- [x] Added regression test for `type: "item"` + `item.type: "command_execution"` payload containing rate-limit terms.
+- [x] Re-ran targeted lifecycle tests for both false-positive and true-positive structured rate-limit scenarios.
+
+RESULT
+- Structured command execution item payloads no longer trigger rate-limit detection.
+- Structured error events still trigger rate-limit metadata and hold behavior correctly.
+
+### Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Code change: `app/Support/Agent/RunEventWriter.php`
+    - `isStructuredMachineEventWithoutAssistantIntent()` now handles `type === 'item'` in addition to `item.*`.
+    - Assistant message item types remain eligible for runtime intent detection.
+  - Regression test: `tests/Feature/AgentRunnerLifecycleTest.php`
+    - Added `test_rate_limit_phrase_inside_structured_item_command_event_does_not_trigger_detection`.
+  - Verification commands:
+    - `php artisan test tests/Feature/AgentRunnerLifecycleTest.php --filter="structured_(item_command_event|rate_limit_error_event)"` (pass)
+    - `php artisan test tests/Feature/AgentRunnerLifecycleTest.php --filter="rate_limit_phrase_inside_structured"` (pass)
+- Conditions where this works:
+  - Runner outputs structured JSON payloads in stream events.
+  - Command/tool machine events continue to arrive under `type: "item"` or `item.*`.
+- Explicit non-goals / limitations:
+  - Does not alter keyword detection for plain text runtime stderr/stdout without structured envelopes.
+  - Does not change hold policy timing or build pause/resume flow.
+
+## 2026-03-04 Discovery Build: Surface Queue-Level Build Tick Failures (Completed)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- A build tick queue job can fail after the last task transitions to completed, leaving build/session metadata stale (`running`) and no visible failure banner in Discovery Build.
+- Manual pause/resume triggers a new tick and can mask the underlying reconciliation gap.
+
+TASK
+- Ensure queue-level failures in `ExecuteInterrogationBuildJob` are always surfaced to the operator.
+- Prevent stale failed callbacks from overriding already terminal build states.
+
+ACTION
+- [x] Added `failed(Throwable)` handler to `ExecuteInterrogationBuildJob`.
+- [x] On active (`running`) build, reconcile to failed state with explicit build/session error metadata and an interrogation error event.
+- [x] Guarded handler to ignore stale failures when build status is no longer `running`.
+- [x] Added unit tests for both active-failure reconciliation and stale-failure ignore behavior.
+
+RESULT
+- Queue-level build job failures now become visible in build metadata/session state without requiring manual pause/resume.
+- Stale callbacks do not clobber already completed/paused build outcomes.
+
+### Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Code change: `app/Jobs/ExecuteInterrogationBuildJob.php`
+    - Added `failed(Throwable)` reconciliation path (`BUILD_EXECUTION_JOB_FAILED`).
+    - Added failure message normalizer with timeout-specific message.
+  - Tests: `tests/Unit/ExecuteInterrogationBuildJobTest.php`
+    - `test_failed_handler_marks_running_build_as_failed_and_surfaces_error`
+    - `test_failed_handler_ignores_stale_failure_when_build_not_running`
+  - Verification commands:
+    - `php artisan test tests/Unit/ExecuteInterrogationBuildJobTest.php --filter="failed_handler|marks_running_build_as_failed|ignores_stale_failure"` (pass)
+    - `php artisan test tests/Unit/ExecuteInterrogationBuildJobTest.php` (pass)
+- Conditions where this works:
+  - Build metadata status is `running` when queue calls `failed(Throwable)`.
+  - Session/task records remain accessible at callback time.
+- Explicit non-goals / limitations:
+  - Does not retry failed queue ticks automatically (`tries` remains `1`).
+  - Does not infer “completed” from tasks during failed callback; it surfaces the queue failure explicitly.
+
+## 2026-03-04 Session 17 Task 3 — Ledger Immutability Guard (DB-Level)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- `telemetry_event_ledger` is not present in this branch yet, so immutability enforcement does not exist at the database layer.
+- The task requires DB-native protection (not app-only) plus observability for blocked mutation attempts.
+- The test environment is PostgreSQL (`DB_CONNECTION=pgsql_testing`) and migrations must remain safe for CI/local.
+
+TASK
+- Deliver a database migration that provides an append-only telemetry ledger contract where `UPDATE`/`DELETE` are blocked and mutation attempts are auditable.
+- Deliver feature tests proving blocked mutations, persisted mutation-attempt audit rows, and successful `INSERT` behavior.
+
+ACTION
+- [x] Add feature tests for `telemetry_event_ledger` immutability behavior (fail-first).
+- [x] Add migration creating `telemetry_event_ledger` and `telemetry_ledger_mutation_attempts`.
+- [x] Add a `BEFORE UPDATE OR DELETE` trigger function that records attempt context and blocks mutation.
+- [x] Revoke `UPDATE`/`DELETE` privileges from non-admin roles (`PUBLIC` + configured roles when present), preserving `SELECT`/`INSERT` grants where applicable.
+- [x] Add schema comment documenting append-only contract.
+- [x] Run targeted tests and record exact verification output.
+
+RESULT
+- `UPDATE`/`DELETE` attempts against `telemetry_event_ledger` fail with database exceptions.
+- `telemetry_ledger_mutation_attempts` stores attempt metadata (`operation`, actor/session context, row identifier, optional query/context).
+- `INSERT` into ledger remains functional.
+- Migration runs safely in local/CI test execution.
+
+Assumptions
+- PostgreSQL is the active test/runtime DB for this task.
+- `telemetry_event_ledger` can be introduced by this migration because it does not yet exist in current migrations.
+- For durable audit rows on blocked mutations, DB-level logging may require PostgreSQL facilities beyond a plain in-transaction insert.
+
+Failure Modes Considered
+- Malicious caller: attempts direct SQL `UPDATE`/`DELETE` on ledger rows; trigger must block and emit auditable evidence.
+- Tired maintainer: future schema change accidentally drops/renames trigger/function; tests must fail and signal guard regression.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Added migration: `database/migrations/2026_03_04_130000_create_telemetry_event_ledger_table.php`
+    - Creates `telemetry_event_ledger` and `telemetry_ledger_mutation_attempts`.
+    - Adds PG trigger function + trigger: `telemetry_event_ledger_block_mutations`.
+    - Revokes `UPDATE`/`DELETE` from `PUBLIC` and configured non-admin roles; grants `SELECT`/`INSERT` for constrained roles.
+    - Adds schema comment documenting append-only contract.
+  - Added feature test suite: `tests/Feature/Database/TelemetryLedgerImmutabilityTest.php`.
+  - Fail-first verification:
+    - `php artisan test tests/Feature/Database/TelemetryLedgerImmutabilityTest.php`
+    - Result before implementation: failures due missing `telemetry_event_ledger` relation and missing schema comment.
+  - Final verification:
+    - `php artisan test tests/Feature/Database/TelemetryLedgerImmutabilityTest.php`
+    - Result: `6 passed (17 assertions)`.
+- Conditions where this works:
+  - PostgreSQL runtime with trigger support (`pgsql`).
+  - `dblink` extension available so audit inserts persist independently when mutation statement is aborted.
+  - Application attempts mutate `telemetry_event_ledger` via SQL `UPDATE`/`DELETE`.
+- Explicit non-goals / limitations:
+  - Migration introduces a minimal telemetry ledger schema for this guard task; full telemetry normalization/projection contracts are out of scope.
+  - Durable mutation-audit persistence relies on `dblink`; without it, fallback inserts occur in-transaction and can be rolled back by the raised exception.
+
+## 2026-03-04 Session 17 Task 6 — Projection Schema Boundary and Role Hardening (Completed)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- Projection schema hardening is not implemented yet.
+- The dedicated `agent_projection` schema does not exist in current migrations.
+- Projection relation names are documented, but those projection tables are not yet materialized in this branch.
+- Existing DB hardening patterns exist for telemetry ledger mutation controls and role-aware grants/revokes.
+
+TASK
+- Enforce a database-level projection boundary by introducing `agent_projection`, moving known projection relations into it when present, and locking access so reporting/analytics roles cannot query projection relations.
+- Preserve least privilege: app role read-only, projector role write, migration/admin role full.
+- Add automated verification that fails when reporting roles can `SELECT` projection relations.
+
+ACTION
+- [x] Add/extend database authorization tests for projection schema privilege rules (fail-first).
+- [x] Add migration to create `agent_projection` schema and move known projection relations into it if present.
+- [x] Add migration privilege logic: revoke reporting access, grant app read-only, grant projector writes, grant admin full.
+- [x] Add migration assertions that reporting roles cannot `SELECT` projection relations.
+- [x] Update docs with explicit projection schema boundary and access policy details.
+- [x] Run targeted tests and capture exact results.
+
+RESULT
+- Projection schema boundary is enforced at DB layer.
+- Reporting roles are denied direct projection relation access.
+- App/projector/admin roles retain only intended privileges.
+- Tests verify the contract and fail if drift occurs.
+
+Assumptions
+- PostgreSQL is the authoritative runtime for this task.
+- Projection tables may not yet exist in this branch; migration must remain idempotent and future-safe.
+- Role names may be environment-driven and not always present in every environment.
+
+Scope Boundaries
+- In scope: schema boundary migration, privilege controls, migration-time assertions, and authorization tests.
+- Out of scope: implementing full projection table schemas/projectors/repositories for reliability and cost domains.
+
+Failure Modes Considered
+- Malicious caller: analytics/reporting role attempts direct SQL reads against projection relations.
+- Tired maintainer: future permission drift accidentally grants `SELECT` to reporting role.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Added migration: `database/migrations/2026_03_04_140000_harden_projection_schema_boundary.php`
+    - Creates schema `agent_projection`.
+    - Moves known projection relations from `public` into `agent_projection` when present.
+    - Applies least-privilege grants/revokes for reporting/app/projector/admin role sets.
+    - Verifies reporting roles do not retain `SELECT/INSERT/UPDATE/DELETE` on projection relations and fails migration if violated.
+  - Added DB authorization tests: `tests/Feature/Database/ProjectionSchemaAuthorizationTest.php`
+    - `test_migration_creates_projection_schema_and_moves_known_tables`
+    - `test_projection_role_permissions_enforce_reporting_denial_and_least_privilege`
+  - Updated docs:
+    - `docs/system-overview.md`
+    - `docs/PROJECT-STATUS.md`
+  - Fail-first verification:
+    - `php artisan test tests/Feature/Database/ProjectionSchemaAuthorizationTest.php`
+    - Result before migration: failed because migration file did not exist.
+  - Final verification:
+    - `php artisan test tests/Feature/Database/ProjectionSchemaAuthorizationTest.php` (pass: `2 passed (23 assertions)`).
+    - `php artisan test tests/Feature/Database/TelemetryLedgerImmutabilityTest.php tests/Feature/Telemetry/TelemetryLedgerAppendOnlyTest.php` (pass: `11 passed (26 assertions)`).
+    - `php artisan test tests/Feature/Documentation/DocsParityTest.php` (pass: `2 passed (42 assertions)`).
+- Conditions where this works:
+  - PostgreSQL runtime where roles are available or created before applying grants.
+  - Projection relations are created inside `agent_projection` (or moved there by migration) so default privilege policy applies.
+  - Runtime access remains via service/repository paths instead of direct controller-table queries.
+- Explicit non-goals / limitations:
+  - This task does not define full schemas for all projection relations listed in the plan; it enforces boundary and permissions.
+  - If reporting/app/projector roles are absent from environment/cluster, migration skips grants for those missing roles.
+
+## 2026-03-04 Session 17 Task 9 — Active Build Freshness Signal (Completed)
+
+Pre-Execution Goal Articulation (STAR)
+
+SITUATION
+- Projection build state currently tracks `active_projection_build_id` and `activated_at`, but API payloads and operator UI do not consistently expose projection freshness age.
+- There is no centralized UTC clock abstraction used by projection freshness calculations yet.
+- Replay API currently supports rebuild start, but not a build-status payload with freshness fields.
+
+TASK
+- Expose `active_build_age_seconds` computed from centralized UTC clock and active build `activated_at`, including null behavior when no active build exists.
+- Surface the field in workflow health/reliability API responses, replay build status API response, and operator UI with stale indication using `agent.projections.stale_after_seconds`.
+- Emit freshness gauge metric (`active_build_age_seconds`) for observability.
+
+ACTION
+- [x] Add unit test coverage for age calculation service with UTC clock + null/no-active-build behavior.
+- [x] Add API feature tests verifying `active_build_age_seconds` in workflow reliability/health payload and replay build status payload.
+- [x] Add UI behavior test for stale indicator logic.
+- [x] Implement centralized UTC clock service and build freshness calculator/metric emitter.
+- [x] Integrate freshness field into API controllers and add replay build status endpoint.
+- [x] Add `agent.projections.stale_after_seconds` config and wire UI stale badge + tooltip on operator monitor/system overview surface.
+- [x] Run targeted tests (PHP + UI unit) and record exact results.
+
+RESULT
+- Freshness age is deterministically computed from UTC clock and active build activation timestamp.
+- API and operator UI expose freshness with stale threshold semantics.
+- Tests prove null behavior, API field presence, and stale indicator behavior.
+
+Assumptions
+- `Agent/Monitor` is the current operator health surface and acceptable system-overview equivalent in this codebase.
+- API additivity is allowed under `/agent/api/v1` routes.
+
+Scope Boundaries
+- In scope: projection freshness signal, replay build status read endpoint, operator freshness UI state, tests, and config wiring.
+- Out of scope: full replay activation/parity workflow changes or broad dashboard redesign.
+
+Failure Modes Considered
+- Malicious caller: requests replay status when no active build exists; API must return deterministic null freshness without erroring.
+- Tired maintainer: future direct `now()` usage drifts from UTC standard; freshness service must centralize UTC time access.
+
+Review
+- [x] Evidence summary with exact command outputs.
+- [x] Conditions where this works.
+- [x] Explicit non-goals / limitations.
+- Evidence summary:
+  - Added UTC clock service: `app/Support/Time/AgentClock.php`.
+  - Added freshness calculator + gauge emission: `app/Services/Telemetry/ActiveBuildFreshnessService.php`.
+  - Added config threshold: `config/agent.php` -> `agent.projections.stale_after_seconds`.
+  - Extended workflow reliability/health API payload with freshness fields:
+    - `app/Http/Controllers/Api/V1/WorkflowReliabilityController.php`
+    - `routes/api.php` (`/workflows/{workflowKey}/health` alias).
+  - Added replay build status API for active build freshness:
+    - `app/Http/Controllers/Api/V1/ProjectionReplayBuildController.php` (`activeBuild`)
+    - `routes/api.php` (`GET /agent/api/v1/telemetry/replay/active-build`).
+  - Extended scheduler health snapshot payload used by operator UI:
+    - `app/Http/Controllers/Api/V1/AgentRunController.php` (`data.projection.*`).
+  - Added operator UI stale badge + tooltip rendering:
+    - `resources/js/Pages/Agent/Monitor/Index.vue`
+    - `resources/js/Pages/Agent/Monitor/freshness.ts`
+    - `resources/js/Pages/Agent/Monitor/__tests__/freshness.spec.ts`
+    - Added alias route: `routes/web.php` (`/agent/system-overview`).
+  - Added/updated tests:
+    - `tests/Unit/Telemetry/ActiveBuildFreshnessServiceTest.php`
+    - `tests/Feature/Telemetry/ActiveBuildReadScopingApiTest.php`
+    - `tests/Feature/Telemetry/ProjectionReplayBuildStatusApiTest.php`
+    - `tests/Feature/AgentWebRouteAuthTest.php`
+  - Fail-first verification:
+    - `php artisan test tests/Unit/Telemetry/ActiveBuildFreshnessServiceTest.php tests/Feature/Telemetry/ActiveBuildReadScopingApiTest.php tests/Feature/Telemetry/ProjectionReplayBuildStatusApiTest.php` (failed: missing `ActiveBuildFreshnessService`, missing replay status route, missing API field).
+    - `npm run test:unit -- resources/js/Pages/Agent/Monitor/__tests__/freshness.spec.ts` (failed: missing `freshness` module).
+  - Final verification:
+    - `php artisan test tests/Unit/Telemetry/ActiveBuildFreshnessServiceTest.php tests/Feature/Telemetry/ActiveBuildReadScopingApiTest.php tests/Feature/Telemetry/ProjectionReplayBuildStatusApiTest.php tests/Feature/AgentWebRouteAuthTest.php tests/Feature/AgentApiWorkflowTest.php tests/Feature/Telemetry/ProjectionRebuildConcurrencyTest.php` (pass: `20 passed (119 assertions)`).
+    - `npm run test:unit -- resources/js/Pages/Agent/Monitor/__tests__/freshness.spec.ts` (pass: `2 passed`).
+    - `./vendor/bin/pint --dirty` (pass; formatting applied).
+- Conditions where this works:
+  - Active build state is persisted in `telemetry_projection_build_state` with `active_projection_build_id` and `activated_at`.
+  - Server UTC clock remains authoritative through `AgentClock`.
+  - Operator monitor pulls `/agent/api/v1/health/scheduler` payload with embedded `projection` object.
+- Explicit non-goals / limitations:
+  - Gauge emission is currently cache-backed (`agent:telemetry:active_build_age_seconds`) and does not push to an external metrics backend directly.
+  - This task does not implement replay parity/activation orchestration beyond exposing active-build status and freshness fields.
+
+### Session 17 Build Task 10 — Projection Build Isolation and Active-Build Read Scoping (Completed)
+
+Assumptions and Scope Boundary
+- Projection replay is asynchronous and can safely write to non-serving build scopes.
+- Scope is limited to build isolation/read scoping behavior and deterministic conflict handling.
+- Non-goals: new operator endpoints, replay parity engine, or UI expansion.
+
+STAR
+- SITUATION: Projection build tables, manager, and scoped repository abstractions already exist, but this task must enforce the exact contract with requested test coverage and explicit missing-active-build reason states.
+- TASK: Ensure only one `rebuilding` build is active at a time and ensure runtime responses are scoped to the active projection build only, including explicit reason state when no active build exists.
+- ACTION:
+  - [x] Add required tests first:
+  - [x] `tests/Feature/Telemetry/ProjectionBuildConcurrencyTest.php`
+  - [x] `tests/Integration/Telemetry/ActiveBuildReadScopeTest.php`
+  - [x] Run `php artisan test --filter=ProjectionBuild` and capture expected failures.
+  - [x] Implement minimum runtime deltas for explicit missing-active-build reason state and deterministic conflict behavior.
+  - [x] Re-run `php artisan test --filter=ActiveBuild` and `php artisan test --filter=ProjectionBuild`.
+- RESULT: single rebuild lock enforced, runtime reads never mix build scopes, and missing active build paths return explicit reason state.
+
+Mandatory Failure Modes Before Coding
+- Malicious-caller mode: repeated/concurrent rebuild start requests race to create multiple rebuilding rows.
+- Tired-maintainer mode: active-build pointer missing/blank causes silent empty reads without explicit reason diagnostics.
+
+Plan Check
+- Internal check complete: tests-first sequence and verification gates are set before implementation changes.
+
+Review
+- Added required tests:
+  - `tests/Feature/Telemetry/ProjectionBuildConcurrencyTest.php`
+  - `tests/Integration/Telemetry/ActiveBuildReadScopeTest.php`
+- Implemented minimal runtime deltas:
+  - `app/Http/Controllers/Api/V1/ProjectionReplayBuildController.php`
+  - `app/Http/Controllers/Api/V1/WorkflowReliabilityController.php`
+- Test-first red evidence:
+  - `php artisan test --filter=ProjectionBuild`
+  - Failed before implementation with: `error.details.conflict_reason_state` expected `rebuilding_build_exists`, got `null`.
+- Green verification:
+  - `php artisan test --filter=ProjectionBuild` -> 2 passed
+  - `php artisan test --filter=ActiveBuild` -> 7 passed
+- Correctness conditions validated:
+  - Conflict responses now include explicit `conflict_reason_state=rebuilding_build_exists`.
+  - Runtime reliability read paths remain active-build scoped and do not serve historical build rows.
+  - Missing active build now returns explicit `reason_state=missing_active_projection_build` and `active_projection_build_id=null` in error details.
+- Non-goals retained:
+  - No new operator endpoints.
+  - No replay parity/activation flow changes.
+
+Checklist Status
+- [x] Add required tests first.
+- [x] Run `php artisan test --filter=ProjectionBuild` and confirm expected failure.
+- [x] Implement minimum runtime changes.
+- [x] Re-run `php artisan test --filter=ActiveBuild` and `php artisan test --filter=ProjectionBuild`.
+
+### Session 17 Build Task 12 — Implement Escalation Lifecycle and Pause/Resume Governance (Completed)
+
+Assumptions and Scope Boundary
+- Authenticated actor identity is available from `auth:sanctum` user context for governance actions.
+- Scope is limited to governance/escalation backend behavior; no UI wiring is included.
+- Existing scheduler and run execution flow must be preserved, with pause affecting only newly dispatched runs.
+
+STAR
+- SITUATION: Reliability/gate-transition scaffolding exists, but there is no workflow governance policy, no escalation incident lifecycle service, no suppression-by-day lifecycle, and no dedicated manual override audit schema with required fields.
+- TASK: Role-gate pause/resume governance, persist manual override audits (including denied attempts), enforce incident uniqueness + day-bucket suppression, and ensure scheduler records paused skip reasons for new runs.
+- ACTION:
+  - [x] Add fail-first tests:
+  - [x] `tests/Feature/Governance/PauseResumeAuthorizationTest.php`
+  - [x] `tests/Feature/Governance/ManualOverrideAuditTest.php`
+  - [x] `tests/Feature/Escalation/IncidentUniquenessAndSuppressionTest.php`
+  - [x] Run `php artisan test --filter=Governance` and capture failing reasons.
+  - [x] Implement minimum backend changes:
+  - [x] Governance policy + gate bindings (`WorkflowGovernancePolicy`).
+  - [x] Escalation schema/services for incidents + suppression-by-day.
+  - [x] Pause/resume APIs and manual override audit persistence.
+  - [x] Scheduler skip-on-pause with persisted skip reason.
+  - [x] Re-run governance/escalation tests and targeted verification commands.
+- RESULT: Governance and escalation actions are role-gated, auditable, and deterministic under conflict/repeat conditions.
+
+Mandatory Failure Modes Before Coding
+- Malicious-caller mode: unauthorized actor repeatedly attempts resume/override to bypass pause.
+- Tired-maintainer mode: duplicate incident creation and same-day alert storms due to missing uniqueness/suppression constraints.
+
+Plan Check
+- Internal check complete: tests-first, minimal-change implementation, and explicit verification gates are defined before code changes.
+
+Review
+- Added fail-first tests:
+  - `tests/Feature/Governance/PauseResumeAuthorizationTest.php`
+  - `tests/Feature/Governance/ManualOverrideAuditTest.php`
+  - `tests/Feature/Escalation/IncidentUniquenessAndSuppressionTest.php`
+- Added governance/escalation runtime changes:
+  - `database/migrations/2026_03_04_170000_create_governance_and_escalation_tables.php`
+  - `app/Policies/WorkflowGovernancePolicy.php`
+  - `app/Http/Controllers/Api/V1/WorkflowGovernanceController.php`
+  - `app/Services/Escalation/WorkflowGovernanceService.php`
+  - `app/Services/Escalation/IncidentLifecycleService.php`
+  - `app/Services/Escalation/DailyAlertSuppressionService.php`
+  - `app/Models/EscalationIncident.php`
+  - `routes/api.php`, `app/Providers/AppServiceProvider.php`, `config/agent.php`
+  - `app/Support/Agent/DispatchDueService.php`, `app/Models/AgentJob.php`
+- Red-first evidence:
+  - `php artisan test --filter=Governance` failed initially for missing governance routes/columns (`/workflows/{workflowKey}/pause` 404, missing `agent_jobs.governance_paused_at`) and also included pre-existing `OrgCostGovernanceServiceTest` DB bootstrap failures due broad filter match.
+- Green verification:
+  - `php artisan test --filter=PauseResumeAuthorizationTest` → pass.
+  - `php artisan test tests/Feature/Governance/ManualOverrideAuditTest.php tests/Feature/Escalation/IncidentUniquenessAndSuppressionTest.php` → pass.
+  - `php artisan test tests/Feature/Governance tests/Feature/Escalation` → pass (`6 passed`).
+- Required behavior validated:
+  - Pause/resume actions are role-gated.
+  - Unauthorized resume/override attempts are denied and audited.
+  - Incident lifecycle enforces one unresolved incident per workflow+trigger.
+  - Suppression is enforced per UTC day bucket.
+  - Scheduler emits `skipped` runs with `skip_reason=governance_paused` and persisted pause reason.
+- Conditions where this works:
+  - Governance actions provide `reason` and `run_id`.
+  - Actor identity is available via authenticated user context.
+  - Escalation tables are available in `agent_projection` (Postgres) or fallback tables for non-Postgres.
+- Non-goals:
+  - No UI wiring.
+  - No expansion into messenger/provider governance domains.
+
+Checklist Status
+- [x] Tests added first.
+- [x] `php artisan test --filter=Governance` executed red-first.
+- [x] Minimal implementation completed.
+- [x] Governance/Escalation verification commands executed green.
+
+### Session 17 Build Task 13 — Fix failed migration `2026_03_04_160000_create_reliability_classification_and_gate_transition_tables` (In Progress)
+
+Assumptions and Scope Boundary
+- The failure is caused by this migration or ordering/compatibility assumptions around dependent tables.
+- Scope is limited to fixing migration reliability and preserving intended schema behavior.
+- Existing successful migrations must remain unaffected.
+
+STAR
+- SITUATION: The migration `2026_03_04_160000_create_reliability_classification_and_gate_transition_tables` fails during execution.
+- TASK: Make the migration run successfully in supported environments while keeping schema intent intact.
+- ACTION:
+  - [ ] Reproduce the failure and capture the exact DB error.
+  - [ ] Inspect migration dependencies/order and identify root cause.
+  - [ ] Patch migration(s) with minimal, robust fix.
+  - [ ] Re-run migration (and rollback path if needed) to verify.
+  - [ ] Document review results and verification evidence.
+- RESULT: Migration applies cleanly without regressions in neighboring migrations.
+
+Mandatory Failure Modes Before Coding
+- Malicious-caller mode: migration rerun paths (partial state) leave schema inconsistent.
+- Tired-maintainer mode: environment-specific SQL differences (SQLite/Postgres/MySQL) cause hidden breakage.
+
+Plan Check
+- Pending: reproduce exact error and confirm root cause before editing.
+
+### Session 18 — Directory Picker for Working/Project Directory Inputs (In Progress)
+
+Assumptions and Scope Boundary
+- Users are authenticated when interacting with directory picker controls.
+- The app runs locally with OS dialog capability; when unavailable, users can still type paths manually.
+- Scope includes all editable `working_directory` / `project_directory` fields in the current Vue UI.
+
+STAR
+- SITUATION: Directory fields currently require manual absolute path entry across jobs, delegation profiles, and discovery/code-analysis session forms.
+- TASK: Replace manual-only directory entry UX with a standard folder selection dialog accessible from every directory input surface.
+- ACTION:
+  - [x] Add an authenticated API endpoint that opens the OS-native directory chooser and returns the selected absolute path.
+  - [x] Build a reusable `DirectoryPickerInput` Vue component with `Browse...` behavior and graceful cancellation/failure handling.
+  - [x] Wire all directory-edit forms to the shared picker component (`JobForm`, `Delegation Profile`, `Discovery Create`, `Code Analysis Create`, `Code Analysis Settings`).
+  - [x] Add/adjust API tests for directory picker endpoint behavior.
+  - [x] Run targeted test suite and frontend build checks.
+- RESULT: Every directory selection flow supports standard folder browsing without requiring manual path typing.
+
+Mandatory Failure Modes Before Coding
+- Malicious-caller mode: unauthenticated requests invoke system dialog endpoint.
+- Tired-maintainer mode: picker cancellation or unsupported OS state causes hard form failure instead of recoverable UX.
+
+Plan Check
+- Internal check complete: implementation and verification gates are defined before code changes.
+
+Review
+- Added backend directory picker flow:
+  - `app/Support/System/DirectoryPicker.php`
+  - `app/Support/System/DirectoryPickerException.php`
+  - `app/Http/Controllers/Api/V1/SystemDirectoryPickerController.php`
+  - `routes/api.php` (`POST /agent/api/v1/system/directory-picker`, auth-protected)
+- Added reusable UI control:
+  - `resources/js/Components/ui/DirectoryPickerInput.vue`
+- Replaced directory text entry with browse-enabled picker in:
+  - `resources/js/Pages/Agent/Jobs/Partials/JobForm.vue`
+  - `resources/js/Pages/Agent/Delegation/ProfileForm.vue`
+  - `resources/js/Pages/Tools/Discovery/Create.vue`
+  - `resources/js/Pages/Tools/CodeAnalysis/Create.vue`
+  - `resources/js/Pages/Tools/CodeAnalysis/Settings.vue`
+- Verification evidence:
+  - `php artisan test --filter=SystemDirectoryPickerApiTest` -> pass (`4 passed`)
+  - `npm run build` -> pass (client + SSR build successful)
+- Behavior outcomes:
+  - All editable working/project directory fields now support a standard `Browse...` workflow.
+  - Picker cancellation is non-fatal for users.
+  - Endpoint remains authenticated and returns absolute resolved directories only.
+
+### Session 17 Build Task 14 — Expose Reliability/Cost/Governance API Contracts (Completed)
+
+Assumptions and Scope Boundary
+- Existing API versioning and auth under `/agent/api/v1` and `auth:sanctum` remain authoritative.
+- Scope is API contracts/controllers/requests/serializers only for this task; no frontend page work.
+- Changes must be additive and must not break existing response shapes.
+
+STAR
+- SITUATION: Reliability health/replay-start/pause-resume APIs exist, but additive v1 contracts for cost, escalations, gate transitions, deployment counting, replay build detail, and replay activation are not fully exposed.
+- TASK: Ship additive endpoints and serializers that expose deterministic governance, lineage, and build-scope fields (`active_projection_build_id`, `projection_build_id`, `active_build_age_seconds`, gate/countability states), with deterministic failure behavior.
+- ACTION:
+  - [x] Add tests first:
+  - [x] `tests/Feature/Api/V1/WorkflowHealthApiTest.php`
+  - [x] `tests/Feature/Api/V1/ReplayBuildApiTest.php`
+  - [x] `tests/Feature/Api/V1/GateTransitionsApiTest.php`
+  - [x] Run `php artisan test --filter=Api/V1` and capture red-first failures tied to missing routes/fields.
+  - [x] Implement minimal additive runtime changes in `routes/api.php`, `app/Http/Controllers/Api/V1`, and `app/Http/Requests/Agent`.
+  - [x] Ensure response payloads expose build pointer and lineage fields plus gate/countability state surfaces.
+  - [x] Cover edge behavior:
+  - [x] Invalid workflow keys rejected deterministically.
+  - [x] Replay activation denied when parity pass is absent.
+  - [x] Re-run targeted API tests and run `php artisan route:list --path=agent/api/v1`.
+- RESULT: External consumers can read deterministic health/governance/cost/escalation/replay/counting contracts with additive compatibility and explicit failure semantics.
+
+Mandatory Failure Modes Before Coding
+- Malicious-caller mode: attempts to activate arbitrary replay builds or bypass parity preconditions.
+- Tired-maintainer mode: active-build scoping fields omitted or mixed-build data served without explicit lineage.
+
+Plan Check
+- Internal check complete: STAR, tests-first flow, and verification gates are defined before implementation edits.
+
+Review
+- Added tests first:
+  - `tests/Feature/Api/V1/WorkflowHealthApiTest.php`
+  - `tests/Feature/Api/V1/ReplayBuildApiTest.php`
+  - `tests/Feature/Api/V1/GateTransitionsApiTest.php`
+- Red-first evidence:
+  - `php artisan test --filter=Api/V1` returned `No tests found` (filter literal does not match PHPUnit test names in this suite).
+  - `php artisan test tests/Feature/Api/V1/WorkflowHealthApiTest.php tests/Feature/Api/V1/ReplayBuildApiTest.php tests/Feature/Api/V1/GateTransitionsApiTest.php` failed on missing routes and missing serializer fields (`gate_state`, replay build detail/activate routes, gate-transitions route).
+- Runtime implementation:
+  - Added additive API controllers:
+    - `app/Http/Controllers/Api/V1/WorkflowCostController.php`
+    - `app/Http/Controllers/Api/V1/WorkflowEscalationController.php`
+    - `app/Http/Controllers/Api/V1/WorkflowGateTransitionController.php`
+    - `app/Http/Controllers/Api/V1/DeploymentCountingController.php`
+  - Extended replay controller/contracts:
+    - `app/Http/Controllers/Api/V1/ProjectionReplayBuildController.php`
+    - `app/Services/Telemetry/ProjectionBuildManager.php`
+    - `app/Services/Telemetry/ProjectionBuildActivationResult.php`
+  - Added validation requests:
+    - `app/Http/Requests/Agent/GateTransitionsIndexRequest.php`
+    - `app/Http/Requests/Agent/ActivateReplayBuildRequest.php`
+  - Added governance/countability snapshot service and health serializer extension:
+    - `app/Services/Reliability/WorkflowGovernanceSnapshotService.php`
+    - `app/Http/Controllers/Api/V1/WorkflowReliabilityController.php`
+  - Registered additive routes in `routes/api.php` for:
+    - `GET workflows/{workflowKey}/cost`
+    - `GET workflows/{workflowKey}/escalations`
+    - `GET workflows/{workflowKey}/gate-transitions`
+    - `GET deployments/counting`
+    - `GET telemetry/replay/builds/{buildId}`
+    - `POST telemetry/replay/builds/{buildId}/activate`
+- Green verification:
+  - `php artisan test tests/Feature/Api/V1/WorkflowHealthApiTest.php tests/Feature/Api/V1/ReplayBuildApiTest.php tests/Feature/Api/V1/GateTransitionsApiTest.php` -> `7 passed`.
+  - `php artisan test --filter='Api\\\\V1'` -> `100 passed`.
+  - `php artisan route:list --path=agent/api/v1 | rg \"workflows/\\{workflowKey\\}/(health|reliability|cost|escalations|gate-transitions|pause|resume)|deployments/counting|telemetry/replay/(active-build|builds)\"` confirms all required additive endpoints are registered.
+- Conditions where this works:
+  - Workflow keys must match canonical route pattern (`[a-z0-9]+(?:[._-][a-z0-9]+)*\\.v[1-9][0-9]*`).
+  - Replay activation requires build status `parity_passed` (or already `active`); otherwise API returns deterministic `REPLAY_PARITY_REQUIRED`.
+  - Cost/escalation/counting projections resolve using the active projection build pointer and return deterministic governance/countability fields.
+- Non-goals:
+  - No frontend/operator page implementation in this task.
+  - No telemetry ingest/replay projector parity computation implementation beyond activation precondition enforcement.
+
+### Session 17 Build Task 15 — Wire Operator Surfaces and Navigation Discoverability (In Progress)
+
+Assumptions and Scope Boundary
+- Inertia + auth middleware remain unchanged and are already active for Agent pages.
+- Scope is limited to web routes, page/controller wiring, top-level/deep-link discoverability, and role-gated control visibility.
+- Non-goals: changing core reliability/cost/escalation business rules, adding new API contracts, or replay engine logic changes.
+
+STAR
+- SITUATION: Agent APIs for reliability/cost/escalation/replay exist, but operator-facing web surfaces and navigation discoverability are incomplete for deployments, system overview, escalations, budgets, and replay builds.
+- TASK: Authorized users must reach each operator surface from in-app navigation, see required reliability/cost/escalation/build signals, and only see governance controls allowed by role.
+- ACTION:
+  - [ ] Add tests first:
+  - [ ] `tests/Feature/AgentUi/OperatorRouteReachabilityTest.php`
+  - [ ] `tests/Feature/AgentUi/NavigationDiscoverabilityTest.php`
+  - [ ] `tests/Feature/AgentUi/GovernanceVisibilityTest.php`
+  - [ ] Run `php artisan test --filter=AgentUi` and capture red-state failures.
+  - [ ] Add web routes and operator controllers for deployments, detail, system overview, escalations, budgets, replay builds, replay build detail.
+  - [ ] Add/adjust Inertia props for top-level nav discoverability and deep-link discoverability.
+  - [ ] Implement pages:
+  - [ ] `resources/js/Pages/Agent/Deployments/*`
+  - [ ] `resources/js/Pages/Agent/SystemOverview/Show.vue`
+  - [ ] `resources/js/Pages/Agent/Escalations/Index.vue`
+  - [ ] `resources/js/Pages/Agent/Budgets/Index.vue`
+  - [ ] `resources/js/Pages/Agent/ReplayBuilds/*`
+  - [ ] Update `resources/js/Layouts/AppLayout.vue` navigation.
+  - [ ] Re-run `php artisan test --filter=AgentUi` to green.
+- RESULT: Operator surfaces are reachable in-app within two clicks, nav/deep links are discoverable by feature tests, governance controls are role-gated, and required signals/copy render including delayed vs unobservable reason-code split, stale active-build age indicator, and `not countable (incident open)`.
+
+Mandatory Failure Modes to Cover Before Coding
+- Malicious-caller mode: unauthorized users should not see governance action controls that imply privileged state mutation paths.
+- Tired-maintainer mode: pages that are URL-accessible but not linked from navigation/deep links create hidden operational paths and failed discoverability.
+
+Plan Check
+- Internal check complete: this plan is test-first and includes explicit verification before completion.
+
+Review
+- [x] Added tests first under `tests/Feature/AgentUi/*`.
+- [x] Captured red state with `php artisan test --filter=AgentUi` (404 routes, missing navigation props).
+- [x] Implemented operator web routes and controller wiring.
+- [x] Implemented Inertia pages for deployments, system overview, escalations, budgets, replay builds.
+- [x] Updated main and responsive navigation in `AppLayout.vue` with top-level `Agent Deployments` and `System Overview` links.
+- [x] Added shared `operatorNavigation` props in `HandleInertiaRequests` for discoverability assertions.
+- [x] Verified green with `php artisan test --filter=AgentUi`.
+
+Verification Evidence
+- Red (before implementation): `php artisan test --filter=AgentUi`
+  - 8 failed
+  - Missing operator routes (`/agent/deployments`, `/agent/escalations`, `/agent/budgets`, `/agent/replay-builds`), missing `operatorNavigation` props, and missing deployment detail deep links.
+- Green (after implementation): `php artisan test --filter=AgentUi`
+  - 8 passed (166 assertions)
+
+Conditions for Correctness
+- Authenticated users can reach:
+  - `/agent/deployments`
+  - `/agent/system-overview`
+  - `/agent/escalations`
+  - `/agent/budgets`
+  - `/agent/replay-builds`
+- Dashboard exposes discoverable top-level operator nav props for Deployments/System Overview.
+- Deployments detail exposes required deep links:
+  - health, reliability, cost, attempt lineage, gate transitions, escalation history, replay builds.
+- Role-gated controls render by role:
+  - admin: pause/resume + escalation + replay controls.
+  - central on-call: pause/resume + escalation controls, no replay control.
+  - non-privileged: no governance controls.
+- UI renders required copy/signal surfaces:
+  - `not countable (incident open)` when countability reason is `incident_open`.
+  - delayed/unobservable telemetry split with reason codes on System Overview/Escalations.
+  - `active_build_age_seconds` and stale-state indicator on System Overview and Replay Builds pages.
+
+Known Limitations / Non-goals
+- Governance buttons are visibility-only in these pages; this task does not implement new action handlers.
+- System overview delayed/unobservable lists are derived from escalation incidents in active-build scope; no new telemetry aggregation API was introduced.
+- Existing `/agent/monitor` route remains available and unchanged as a separate operational surface.
+
+Implementation Progress
+- [x] Reproduce the failure and capture the exact DB error.
+- [x] Inspect migration dependencies/order and identify root cause.
+- [x] Patch migration(s) with minimal, robust fix.
+- [x] Re-run migration (and rollback path if needed) to verify.
+- [x] Document review results and verification evidence.
+
+Review
+- Root cause confirmed: migration `2026_03_04_160000_create_reliability_classification_and_gate_transition_tables` referenced Postgres enum types (`agent_telemetry_failure_class_enum`, `agent_telemetry_failure_reason_code_enum`) that were missing in the current DB state.
+- Applied fix in `database/migrations/2026_03_04_160000_create_reliability_classification_and_gate_transition_tables.php`:
+  - Added defensive creation of telemetry failure enums before creating `agent_projection.run_classifications`.
+  - Kept gate-source enum creation explicit and idempotent.
+  - Hardened enum creation with `duplicate_object` exception guards to avoid concurrent-run races.
+- Verification evidence:
+  - `php artisan migrate --database=pgsql --path=database/migrations/2026_03_04_160000_create_reliability_classification_and_gate_transition_tables.php --force` -> DONE.
+  - `php artisan migrate --database=pgsql --force` -> remaining pending migrations (`170000`, `180000`) DONE.
+  - `php artisan migrate:status --database=pgsql` shows `160000`, `170000`, `180000` all Ran.
+  - Postgres type check via Laravel DB confirms presence of:
+    - `public.agent_telemetry_failure_class_enum`
+    - `public.agent_telemetry_failure_reason_code_enum`
+    - `public.agent_gate_transition_source_enum`
+  - Projection table check confirms expected tables exist in `agent_projection`, including `run_classifications` and `workflow_gate_transitions`.
+
+Plan Check
+- Complete: failure reproduced, fix implemented, migrations verified, and DB state validated.
+
+Post-Fix Addendum
+- Discovered additional DB drift during validation: `public.telemetry_event_ledger` had only 8 legacy columns while current runtime/services expect v1 contract columns.
+- Added reconciliation migration:
+  - `database/migrations/2026_03_04_190000_reconcile_telemetry_event_ledger_schema.php`
+- Reconciliation actions performed:
+  - Backfilled missing telemetry columns with safe defaults.
+  - Ensured telemetry enum types exist.
+  - Cast `failure_class`/`failure_reason_code` to enum types safely.
+  - Added missing `run_id`/`run_attempt_id` indexes.
+
+Additional Verification
+- `php artisan migrate --database=pgsql --path=database/migrations/2026_03_04_190000_reconcile_telemetry_event_ledger_schema.php --force` -> DONE.
+- `php artisan test tests/Feature/Telemetry/IngestionDedupeTest.php tests/Feature/Telemetry/TelemetryLedgerAppendOnlyTest.php` -> 8 passed.
+- Schema checks confirm `telemetry_event_ledger` now has expected v1 columns and enum-typed failure columns.

@@ -103,6 +103,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/delegation/graphs/{id}/restore` | `-` | `DelegationGraphController@restore` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, delegation, throttle:agent-mutations` |
 | POST | `agent/api/v1/delegation/graphs/{id}/start` | `-` | `DelegationGraphController@start` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, delegation, throttle:agent-mutations` |
 | POST | `agent/api/v1/delegation/graphs/{id}/validate` | `-` | `DelegationGraphController@validate` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, delegation` |
+| GET | `agent/api/v1/deployments/counting` | `-` | `DeploymentCountingController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/docs/coverage` | `-` | `DocsCoverageController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, can:view-docs-coverage` |
 | GET | `agent/api/v1/docs/diagnostics` | `-` | `DiagnosticsController` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, can:view-docs-diagnostics` |
 | GET | `agent/api/v1/docs/fragments/{uiKey}` | `-` | `DocsFragmentController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
@@ -160,6 +161,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | PUT | `agent/api/v1/interrogation/settings/{key}` | `-` | `InterrogationSettingsController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:interrogation` |
 | GET | `agent/api/v1/jobs` | `-` | `AgentJobController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/jobs` | `-` | `AgentJobController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/jobs/by-workflow/{workflowKey}` | `-` | `AgentJobController@showByWorkflowKey` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/jobs/{id}` | `-` | `AgentJobController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | PUT | `agent/api/v1/jobs/{id}` | `-` | `AgentJobController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | DELETE | `agent/api/v1/jobs/{id}` | `-` | `AgentJobController@destroy` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
@@ -223,6 +225,18 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/runs/{id}/events` | `-` | `AgentRunController@events` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/runs/{id}/retry` | `-` | `AgentRunController@retry` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/runs/{id}/stop` | `-` | `AgentRunController@stop` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/system/directory-picker` | `-` | `SystemDirectoryPickerController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/telemetry/replay/active-build` | `-` | `ProjectionReplayBuildController@activeBuild` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/telemetry/replay/builds` | `-` | `ProjectionReplayBuildController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/telemetry/replay/builds/{buildId}` | `-` | `ProjectionReplayBuildController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/telemetry/replay/builds/{buildId}/activate` | `-` | `ProjectionReplayBuildController@activate` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/workflows/{workflowKey}/cost` | `-` | `WorkflowCostController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/workflows/{workflowKey}/escalations` | `-` | `WorkflowEscalationController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/workflows/{workflowKey}/gate-transitions` | `-` | `WorkflowGateTransitionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/workflows/{workflowKey}/health` | `-` | `WorkflowReliabilityController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/workflows/{workflowKey}/pause` | `-` | `WorkflowGovernanceController@pause` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/workflows/{workflowKey}/reliability` | `-` | `WorkflowReliabilityController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/workflows/{workflowKey}/resume` | `-` | `WorkflowGovernanceController@resume` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
