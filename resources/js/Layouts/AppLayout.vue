@@ -261,7 +261,7 @@ onBeforeUnmount(() => {
                                     <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                                         <Clock class="w-4 h-4 text-primary-foreground" />
                                     </div>
-                                    <span class="text-foreground font-semibold text-[15px]">Agent Scheduler</span>
+                                    <span class="text-foreground font-semibold text-[15px]">Agent Ops</span>
                                 </Link>
                             </div>
 

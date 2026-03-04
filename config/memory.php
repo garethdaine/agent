@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  * Memory System Configuration
  *
- * Four-layer memory architecture integrated into the Agent Scheduler.
+ * Four-layer memory architecture integrated into the Agent Ops.
  * Provides agents with persistent context across runs through:
  * - Core Memory: Editable identity blocks
  * - Working Memory: Short-lived conversational state

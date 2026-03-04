@@ -1,4 +1,4 @@
-# Agent Scheduler (Laravel 12 + Jetstream)
+# Agent Ops (Laravel 12 + Jetstream)
 
 Local-first Laravel app for managing and running scheduled agent jobs.
 

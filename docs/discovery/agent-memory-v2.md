@@ -5,7 +5,7 @@ Session: 14
 # Agent Memory v3 — Implementation-Ready Specification
 
 ## Overview
-Four-layer memory architecture (Layers 1–3 in v1, Layer 4 deferred to v2) integrated into existing PHP 8.3 / Laravel 12 Agent Scheduler. Provides agents with persistent context across runs: editable identity blocks (Core Memory), short-lived conversational state (Working Memory), and durable knowledge with semantic + keyword + graph retrieval (Long-term Memory).
+Four-layer memory architecture (Layers 1–3 in v1, Layer 4 deferred to v2) integrated into existing PHP 8.3 / Laravel 12 Agent Ops. Provides agents with persistent context across runs: editable identity blocks (Core Memory), short-lived conversational state (Working Memory), and durable knowledge with semantic + keyword + graph retrieval (Long-term Memory).
 
 ## Operating Modes
 
@@ -196,7 +196,7 @@ Technical entities: File, Function, Class, API, Error, Dependency
 
 ## Goals
 
-- Implement four-layer memory architecture (Layers 1-3) integrated into PHP 8.3 / Laravel 12 Agent Scheduler
+- Implement four-layer memory architecture (Layers 1-3) integrated into PHP 8.3 / Laravel 12 Agent Ops
 - Enable agents to maintain persistent context across runs via Core Memory (identity + operational blocks)
 - Provide short-lived conversational state via Redis-backed Working Memory with 15-message logical turn retention
 - Build hybrid Long-term Memory retrieval combining pgvector semantic search, PostgreSQL BM25 keyword search, and Neo4j knowledge graph with RRF fusion

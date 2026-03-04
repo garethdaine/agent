@@ -4,7 +4,7 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 ## Project Overview
 
-Agent Scheduler is a local-first Laravel 12 + Jetstream application for managing and running scheduled agent jobs. It dispatches jobs to queue workers that spawn local subprocesses (Claude, Codex, or custom runners) and monitors their execution in near real-time.
+Agent Ops is a local-first Laravel 12 + Jetstream application for managing and running scheduled agent jobs. It dispatches jobs to queue workers that spawn local subprocesses (Claude, Codex, or custom runners) and monitors their execution in near real-time.
 
 ## Development Commands
 

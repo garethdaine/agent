@@ -1,10 +1,10 @@
-# Figma Make Prompt: Agent Scheduler Full UI Redesign
+# Figma Make Prompt: Agent Ops Full UI Redesign
 
 Use this prompt in Figma Make to redesign the entire product interface from scratch.
 
 ---
 
-You are designing a complete, production-ready UI system and full-screen set for a web app called **Agent Scheduler**.
+You are designing a complete, production-ready UI system and full-screen set for a web app called **Agent Ops**.
 
 ## 1) Project Goal
 

@@ -1,6 +1,6 @@
 # Directory Data Pipeline — Agent Companion Plan
 
-A structured implementation plan for building automated directory businesses powered by the Agent Scheduler. Distilled from the [Startup Ideas Podcast episode](https://www.youtube.com/watch?v=I_wbc5ND79o) with Greg Isenberg and Frey Chu (Feb 15, 2026), and mapped to our existing Agent infrastructure.
+A structured implementation plan for building automated directory businesses powered by the Agent Ops. Distilled from the [Startup Ideas Podcast episode](https://www.youtube.com/watch?v=I_wbc5ND79o) with Greg Isenberg and Frey Chu (Feb 15, 2026), and mapped to our existing Agent infrastructure.
 
 ---
 
@@ -8,7 +8,7 @@ A structured implementation plan for building automated directory businesses pow
 
 ### 1.1 Why Directories as an Agent Use Case
 
-The Agent Scheduler already handles scheduled subprocess execution, approval workflows, rate-limit detection, and multi-phase orchestration. Directory businesses are a natural fit because the entire data lifecycle — scrape, clean, verify, enrich, publish — is a series of scheduled, repeatable agent jobs with human-in-the-loop approval gates.
+The Agent Ops already handles scheduled subprocess execution, approval workflows, rate-limit detection, and multi-phase orchestration. Directory businesses are a natural fit because the entire data lifecycle — scrape, clean, verify, enrich, publish — is a series of scheduled, repeatable agent jobs with human-in-the-loop approval gates.
 
 The podcast lays out a proven playbook: directories built on high-quality, hard-to-obtain data generate passive revenue through lead generation, premium listings, vertical SaaS upsells, and display ads. The gap has always been the manual labour of data curation. Agent + Claude Code + Crawl4AI closes that gap.
 
@@ -38,7 +38,7 @@ Key selection criteria from the episode:
 
 ## 2. Seven-Step Data Pipeline
 
-This is Frey's process, restructured as a repeatable pipeline that maps to Agent Scheduler jobs.
+This is Frey's process, restructured as a repeatable pipeline that maps to Agent Ops jobs.
 
 ### Step 1: Raw Data Scrape
 
@@ -73,7 +73,7 @@ This is the breakthrough step. Crawl4AI visits every website in the cleaned data
 
 **Result:** 20K → 725 verified luxury restroom trailer businesses (with confidence scores).
 
-**Agent mapping:** This is the heaviest job in the pipeline. It runs for hours (Frey's took ~3 hours for 20K sites). Perfect for the Agent Scheduler's long-running subprocess support (`max_runtime_seconds` up to 86400). The rate-limit detection and temporary hold policy protects against API throttling during the Claude analysis phase.
+**Agent mapping:** This is the heaviest job in the pipeline. It runs for hours (Frey's took ~3 hours for 20K sites). Perfect for the Agent Ops's long-running subprocess support (`max_runtime_seconds` up to 86400). The rate-limit detection and temporary hold policy protects against API throttling during the Claude analysis phase.
 
 **Prompt pattern:**
 
@@ -132,7 +132,7 @@ Extract service areas broken down by city, region, and radius. Important for loc
 
 ## 3. Agent Job Configuration
 
-Here's how the seven-step pipeline maps to Agent Scheduler job definitions:
+Here's how the seven-step pipeline maps to Agent Ops job definitions:
 
 | Job Name | Runner | Schedule | Max Runtime | Notes |
 |---|---|---|---|---|
@@ -148,7 +148,7 @@ Here's how the seven-step pipeline maps to Agent Scheduler job definitions:
 
 ### Future: Job Chaining
 
-The pipeline above is sequential — each step depends on the previous step's output. The Agent Scheduler currently supports individual job scheduling but not explicit job chaining/DAGs. This is a natural extension:
+The pipeline above is sequential — each step depends on the previous step's output. The Agent Ops currently supports individual job scheduling but not explicit job chaining/DAGs. This is a natural extension:
 
 - A `depends_on` or `triggers` relationship between jobs
 - Pipeline-level status tracking (the Interrogation Session model's phase progression is a precedent)
@@ -275,11 +275,11 @@ Estimated time saved: **2,000+ hours** of manual data cleaning, verification, an
 
 ---
 
-## 8. Integration with Agent Scheduler
+## 8. Integration with Agent Ops
 
 ### What Already Exists
 
-The Agent Scheduler provides everything needed to operationalise this pipeline:
+The Agent Ops provides everything needed to operationalise this pipeline:
 
 - **Scheduled execution** — cron-based dispatch for periodic data refresh jobs
 - **Long-running subprocess support** — `max_runtime_seconds` up to 86,400s handles multi-hour crawl jobs
@@ -334,7 +334,7 @@ Directory ideas from the episode, ranked by feasibility for this pipeline:
 
 ### Phase A: Single Directory Proof of Concept
 
-Pick one niche. Run the seven-step pipeline manually using Agent Scheduler jobs. Validate the full cycle from raw scrape to published directory. Target: working directory with 500+ verified, enriched listings.
+Pick one niche. Run the seven-step pipeline manually using Agent Ops jobs. Validate the full cycle from raw scrape to published directory. Target: working directory with 500+ verified, enriched listings.
 
 ### Phase B: Pipeline Automation
 
@@ -346,7 +346,7 @@ Abstract the pipeline into a niche-agnostic template. Swap in different Outscrap
 
 ### Phase D: Monetisation Layer
 
-Add lead capture forms, premium listing tiers, or affiliate integrations to the directory frontend. Use Agent Scheduler to automate lead routing, follow-up sequences, and listing claim outreach.
+Add lead capture forms, premium listing tiers, or affiliate integrations to the directory frontend. Use Agent Ops to automate lead routing, follow-up sequences, and listing claim outreach.
 
 ---
 

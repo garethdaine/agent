@@ -2,10 +2,10 @@
 
 Session: 3
 
-# Four-Layer Memory Architecture — Agent Scheduler
+# Four-Layer Memory Architecture — Agent Ops
 
 ## Overview
-A modular, four-layer memory system integrated directly into the existing PHP 8.3 / Laravel 12 Agent Scheduler codebase at `/Users/garethdaine/Code/agent`. Layers 1–3 ship in v1; Layer 4 (Delegation Memory) defers to v2. Memory formation is fully async via Laravel Horizon queues, decoupled from the agent response path. Provider abstraction uses the **Laravel AI SDK** (`laravel/ai`) for multi-provider support. Memory provider/model/key selection is managed by Memory Settings + Laravel AI SDK adapter resolution; avoid duplicating provider credentials in legacy service config unless explicitly required by package internals. Informed by Letta/Mem0/Graphiti production patterns and Tomasev et al. (arXiv:2602.11865).
+A modular, four-layer memory system integrated directly into the existing PHP 8.3 / Laravel 12 Agent Ops codebase at `/Users/garethdaine/Code/agent`. Layers 1–3 ship in v1; Layer 4 (Delegation Memory) defers to v2. Memory formation is fully async via Laravel Horizon queues, decoupled from the agent response path. Provider abstraction uses the **Laravel AI SDK** (`laravel/ai`) for multi-provider support. Memory provider/model/key selection is managed by Memory Settings + Laravel AI SDK adapter resolution; avoid duplicating provider credentials in legacy service config unless explicitly required by package internals. Informed by Letta/Mem0/Graphiti production patterns and Tomasev et al. (arXiv:2602.11865).
 
 ---
 
@@ -36,7 +36,7 @@ When only Anthropic API key configured (no embeddings provider):
 ## Resolved Architectural Decisions (22 total)
 
 ### D1: Runtime & Integration
-- **PHP 8.3 + Laravel 12** — integrated into existing Agent Scheduler, not a separate service
+- **PHP 8.3 + Laravel 12** — integrated into existing Agent Ops, not a separate service
 - **Laravel AI SDK** (`laravel/ai`) for provider abstraction — replaces custom HTTP clients
 - Laravel Horizon with dedicated `supervisor-memory` queue
 - Already running on **PostgreSQL** (`DB_CONNECTION=pgsql` confirmed)
@@ -489,7 +489,7 @@ Immutable append-only, consistent with `AgentAuditLog` model.
 
 ## Goals
 
-- G1: Build a four-layer memory architecture (Layers 1–3 in v1, Layer 4 deferred) integrated into the existing PHP 8.3 / Laravel 12 Agent Scheduler codebase at /Users/garethdaine/Code/agent
+- G1: Build a four-layer memory architecture (Layers 1–3 in v1, Layer 4 deferred) integrated into the existing PHP 8.3 / Laravel 12 Agent Ops codebase at /Users/garethdaine/Code/agent
 - G2: Layer 1 (Core Memory) — Letta-style editable structured blocks (hybrid: freeform text for identity blocks agent_persona/user_profile, schema-enforced JSON for operational blocks task_state/tool_results_cache/active_goals) with self-edit via HTTP API tool calls, version tracking, and sleep-time async consolidation via MemoryConsolidationJob
 - G3: Layer 2 (Working Memory) — Redis sorted sets (DB 2) keyed by memory:run:{run_id}:working, last 15 messages verbatim, eviction via LLM summarization (API mode with separate summarization model) or oldest-first truncation (no-API mode), TTL 2 hours post terminal status
 - G4: Layer 3 (Long-term Memory) — Hybrid persistent store: pgvector embeddings (1536d HNSW, requires pgvector extension), Neo4j 5.x LTS Community bi-temporal knowledge graph (current-state queries in v1, temporal metadata stored from day one), PostgreSQL conversation logs (always populated)
@@ -508,7 +508,7 @@ Immutable append-only, consistent with `AgentAuditLog` model.
 
 ## Constraints
 
-- C1: Runtime is PHP 8.3 + Laravel 12 integrated into existing Agent Scheduler — no separate Python/Node services for v1
+- C1: Runtime is PHP 8.3 + Laravel 12 integrated into existing Agent Ops — no separate Python/Node services for v1
 - C2: PostgreSQL 18 is active; pgvector 0.8.1 is a deployment prerequisite/target for semantic vector features. Until extension install, run in BM25 + graph mode
 - C3: Neo4j 5.x LTS Community Edition — application-level access control enforced in Neo4jGraphStore (no built-in RBAC); upgrade to Enterprise only if DB-native RBAC, tenant isolation, or HA clustering needed
 - C4: Memory formation is fully async via Horizon queues, decoupled from agent response path — memory failures must NEVER block or fail agent runs

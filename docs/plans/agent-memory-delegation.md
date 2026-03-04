@@ -5,7 +5,7 @@ Derived from discovery session 3.
 # Implementation Plan: Four-Layer Memory Architecture
 
 ## Summary
-Phased implementation of Layers 1–3 of the memory architecture into the existing Laravel 12 / PHP 8.3 Agent Scheduler codebase. The plan is organized into 8 sequential phases with a total of ~45 implementation tasks. Each phase builds on the prior one and is independently testable. Layer 4 (Delegation Memory) is deferred to v2.
+Phased implementation of Layers 1–3 of the memory architecture into the existing Laravel 12 / PHP 8.3 Agent Ops codebase. The plan is organized into 8 sequential phases with a total of ~45 implementation tasks. Each phase builds on the prior one and is independently testable. Layer 4 (Delegation Memory) is deferred to v2.
 
 ---
 

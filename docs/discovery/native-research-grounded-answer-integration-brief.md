@@ -7,7 +7,7 @@
 - Reference Architecture: [Perplexica](https://github.com/ItzCrazyKns/Perplexica)
 
 ## Executive Summary
-Treat Perplexica as a reference architecture, not as a dependency. Build the same core capability natively inside Agent Scheduler as a first-class `Research` subsystem.
+Treat Perplexica as a reference architecture, not as a dependency. Build the same core capability natively inside Agent Ops as a first-class `Research` subsystem.
 
 This subsystem should power scheduled jobs and agent workflows with grounded, citable research outputs:
 - ranked sources,
@@ -39,8 +39,8 @@ The target is not a chat product. It is a reusable research toolchain that can b
 - Real-time collaborative annotations.
 - Browser extension and end-user search interface.
 
-## Why Native in Agent Scheduler
-Agent Scheduler has capabilities Perplexica-style apps do not natively optimize for:
+## Why Native in Agent Ops
+Agent Ops has capabilities Perplexica-style apps do not natively optimize for:
 - scheduled re-verification of sources,
 - persistent project research memory,
 - job-run artifact lineage and auditability,
@@ -188,7 +188,7 @@ Support real-time lifecycle over SSE/WebSocket or persisted events:
 - `token_delta`
 - `done`
 
-## Agent Scheduler Integration
+## Agent Ops Integration
 ### Step Contract
 Add reusable workflow step:
 - `ResearchStep`

@@ -187,7 +187,7 @@ Update `resources/js/Layouts/AppLayout.vue`:
 - Max width: `max-w-[1440px]` (replacing max-w-7xl)
 - Height: h-14 (replacing h-16)
 - Logo: Replace ApplicationLogo with Clock icon in 32x32 primary rounded-lg container
-- App name: "Agent Scheduler" with font-semibold at 15px
+- App name: "Agent Ops" with font-semibold at 15px
 
 Nav links:
 - Desktop: horizontal with active indicator (bottom border primary, bg-primary/8)

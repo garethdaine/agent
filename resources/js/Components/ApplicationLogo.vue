@@ -4,7 +4,7 @@
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         class="text-slate-900 dark:text-slate-100"
-        aria-label="Agent Scheduler"
+        aria-label="Agent Ops"
     >
         <defs>
             <linearGradient id="agentLogoGradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
@@ -33,7 +33,7 @@
             font-weight="700"
             letter-spacing="-0.5"
         >
-            Agent Scheduler
+            Agent Ops
         </text>
     </svg>
 </template>

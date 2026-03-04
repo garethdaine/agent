@@ -8,7 +8,7 @@ Derived from: agent-memory-delegation-v2 discovery + codebase verification audit
 
 ## Executive Summary
 
-Implement a four-layer memory architecture (Layers 1–3 in v1) integrated into the existing PHP 8.3 / Laravel 12 Agent Scheduler. The system gives agents persistent context across runs: editable identity blocks (Core Memory), short-lived conversational state (Working Memory), and durable knowledge with semantic + keyword + graph retrieval (Long-term Memory). Layer 4 (Delegation Memory) defers to v2.
+Implement a four-layer memory architecture (Layers 1–3 in v1) integrated into the existing PHP 8.3 / Laravel 12 Agent Ops. The system gives agents persistent context across runs: editable identity blocks (Core Memory), short-lived conversational state (Working Memory), and durable knowledge with semantic + keyword + graph retrieval (Long-term Memory). Layer 4 (Delegation Memory) defers to v2.
 
 Two operating modes ensure the feature is useful without any third-party API keys:
 - **No-API Mode**: Core Memory + Working Memory + BM25 keyword retrieval + conversation logs. Zero LLM calls.

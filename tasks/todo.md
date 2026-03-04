@@ -10,7 +10,7 @@
 
 - [x] Define a native Perplexica-inspired research subsystem as a first-class bounded context inside Agent.
 - [x] Specify modular pipeline architecture (query planning, retrieval, acquisition, chunking, ranking, grounded generation, streaming).
-- [x] Map the subsystem to current Agent Scheduler primitives (jobs, runs, events, artifacts, queue workers).
+- [x] Map the subsystem to current Agent Ops primitives (jobs, runs, events, artifacts, queue workers).
 - [x] Publish implementation brief with phased delivery, acceptance criteria, and verification gates.
 
 Review

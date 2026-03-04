@@ -168,7 +168,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <Head title="Agent Scheduler" />
+    <Head title="Agent Ops" />
 
     <div class="landing-root relative min-h-screen overflow-x-hidden text-slate-900 dark:text-slate-100">
         <div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
@@ -183,7 +183,7 @@ onBeforeUnmount(() => {
                 <Link :href="'/'" class="flex items-center gap-3">
                     <ApplicationMark class="h-9 w-9" />
                     <div>
-                        <p class="brand-title text-[1.05rem] font-extrabold leading-none text-slate-900 dark:text-slate-100">Agent Scheduler</p>
+                        <p class="brand-title text-[1.05rem] font-extrabold leading-none text-slate-900 dark:text-slate-100">Agent Ops</p>
                         <p class="mono mt-1 text-[11px] tracking-[0.18em] text-slate-500 dark:text-slate-400">LOCAL-FIRST ORCHESTRATION</p>
                     </div>
                 </Link>
@@ -226,7 +226,7 @@ onBeforeUnmount(() => {
                             <span class="text-sky-600 dark:text-sky-400">delegate intelligently, and orchestrate every agent workflow in one place.</span>
                         </h1>
                         <p class="mt-6 max-w-2xl text-lg leading-relaxed text-slate-700 dark:text-slate-300">
-                            Agent Scheduler gives your team an execution-safe control plane that spans scheduling, discovery, provider sync, memory-aware delegation, and secure runtime governance.
+                            Agent Ops gives your team an execution-safe control plane that spans scheduling, discovery, provider sync, memory-aware delegation, and secure runtime governance.
                         </p>
 
                         <div class="mt-8 flex flex-wrap gap-3">
@@ -406,7 +406,7 @@ onBeforeUnmount(() => {
                         <div>
                             <h2 class="text-2xl font-bold sm:text-3xl">Security is part of execution, not an afterthought.</h2>
                             <p class="mt-3 max-w-2xl text-slate-300">
-                                Agent Scheduler enforces policy at command, path, environment, API, and queue boundaries so autonomous workflows stay controlled under pressure.
+                                Agent Ops enforces policy at command, path, environment, API, and queue boundaries so autonomous workflows stay controlled under pressure.
                             </p>
                         </div>
                         <ul class="space-y-3">

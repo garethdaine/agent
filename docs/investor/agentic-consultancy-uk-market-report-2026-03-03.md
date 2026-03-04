@@ -1,6 +1,6 @@
 # Agentic Consultancy Economy (UK) — Investor Research Report
 Date: 3 March 2026  
-Prepared for: Agent Scheduler investment narrative and deck development
+Prepared for: Agent Ops investment narrative and deck development
 
 ## 1) Executive Summary
 
@@ -92,7 +92,7 @@ Assumption set grounded in observed day-rates + market retainers:
 
 Note: the scenarios are modeled estimates based on observed current rates/pricing; they are not a claim about any specific firm’s actual P&L.
 
-## 5) Business Model Fit for Agent Scheduler
+## 5) Business Model Fit for Agent Ops
 
 ## 5.1 Recommended commercial structure
 
@@ -145,7 +145,7 @@ Note: the scenarios are modeled estimates based on observed current rates/pricin
 
 - Problem: UK firms want AI automation, but delivery fails on governance, skills, and reliability.
 - Market timing: UK AI adoption has crossed majority in target business sizes; consulting and AI budgets are active.
-- Product + service wedge: Agent Scheduler + implementation + ongoing managed reliability.
+- Product + service wedge: Agent Ops + implementation + ongoing managed reliability.
 - Revenue model: project cash + retainer MRR + software ARR.
 - Proof of monetization: current day rates, current package pricing, enterprise AI booking evidence.
 - Defensibility: operational know-how, reusable playbooks, governance rails, domain-specific rollout patterns.

@@ -1,10 +1,10 @@
-# Figma Make Prompt: Close UI Gaps + Modernize Agent Scheduler
+# Figma Make Prompt: Close UI Gaps + Modernize Agent Ops
 
 Use this prompt in Figma Make to update the existing design (do not start from generic templates).
 
 ---
 
-You are redesigning and completing the **Agent Scheduler** product UI.
+You are redesigning and completing the **Agent Ops** product UI.
 
 Your goal is to keep what already works in the current Figma design, but close all feature/screen/control gaps versus the real app and deliver a polished, modern, high-clarity interface.
 
