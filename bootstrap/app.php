@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'onboarding' => \App\Http\Middleware\EnsureOnboardingCompleted::class,
             'org' => \App\Http\Middleware\OrgFeatureGate::class,
             'org.ui' => \App\Http\Middleware\OrgUiFeatureGate::class,
+            'office.ui' => \App\Http\Middleware\OfficeUiFeatureGate::class,
             'outage.protect' => \App\Http\Middleware\OutageAutoProtect::class,
         ]);
     })

@@ -9,10 +9,28 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::factory()->create([
-            'name' => 'Gareth Daine',
-            'email' => 'gareth@garethdaine.com',
-            'password' => env('ADMIN_PASSWORD'),
-        ]);
+        $adminPassword = env('ADMIN_PASSWORD');
+        if ($adminPassword) {
+            User::query()->updateOrCreate(
+                ['email' => 'gareth@garethdaine.com'],
+                [
+                    'name' => 'Gareth Daine',
+                    'password' => $adminPassword,
+                ]
+            );
+        }
+
+        if (env('E2E_SEED_USER', false)) {
+            $email = env('TEST_USER_EMAIL', 'test@example.com');
+            $password = env('TEST_USER_PASSWORD', 'password');
+            User::query()->updateOrCreate(
+                ['email' => $email],
+                [
+                    'name' => 'E2E Test User',
+                    'password' => $password,
+                    'onboarding_completed_at' => now(),
+                ]
+            );
+        }
     }
 }

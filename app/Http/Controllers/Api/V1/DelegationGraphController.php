@@ -104,6 +104,8 @@ class DelegationGraphController extends Controller
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
         }
 
+        $graph->load(['tasks.dependencies']);
+
         return response()->json([
             'data' => $this->transformGraph($graph, true),
         ]);
@@ -541,6 +543,10 @@ class DelegationGraphController extends Controller
                 'status' => $task->status,
                 'sequence_order' => $task->sequence_order,
                 'assigned_profile_id' => $task->assigned_delegatee_profile_id,
+                'contract_json' => $task->contract_json,
+                'depends_on_task_ids' => $task->relationLoaded('dependencies')
+                    ? $task->dependencies->pluck('id')->values()->all()
+                    : [],
                 'error_code' => $task->error_code,
                 'error_summary' => $task->error_summary,
                 'started_at' => optional($task->started_at)?->toIso8601String(),

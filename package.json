@@ -32,6 +32,9 @@
         "vue": "^3.3.13"
     },
     "dependencies": {
+        "@vue-flow/background": "^1.3.0",
+        "@vue-flow/controls": "^1.1.0",
+        "@vue-flow/core": "^1.48.0",
         "@crazydos/vue-markdown": "^1.1.4",
         "@tiptap/extension-link": "^3.19.0",
         "@tiptap/extension-placeholder": "^3.19.0",
@@ -40,6 +43,7 @@
         "@tiptap/vue-3": "^3.19.0",
         "lucide-vue-next": "^0.575.0",
         "remark-gfm": "^4.0.1",
+        "three": "^0.170.0",
         "vuedraggable": "^4.1.0"
     }
 }

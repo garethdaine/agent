@@ -16,7 +16,7 @@ class DelegationUiAccessTest extends TestCase
     public function test_delegation_nav_visible_when_ui_enabled(): void
     {
         config(['delegation.ui_enabled' => true]);
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
 
         $response = $this->actingAs($user)->get('/dashboard');
 
@@ -29,7 +29,7 @@ class DelegationUiAccessTest extends TestCase
     public function test_delegation_nav_hidden_when_ui_disabled(): void
     {
         config(['delegation.ui_enabled' => false]);
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
 
         $response = $this->actingAs($user)->get('/dashboard');
 
@@ -42,7 +42,7 @@ class DelegationUiAccessTest extends TestCase
     public function test_delegation_index_accessible_when_enabled(): void
     {
         config(['delegation.ui_enabled' => true]);
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
 
         $response = $this->actingAs($user)->get('/agent/delegation');
 
@@ -52,9 +52,29 @@ class DelegationUiAccessTest extends TestCase
     public function test_delegation_index_blocked_when_disabled(): void
     {
         config(['delegation.ui_enabled' => false]);
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
 
         $response = $this->actingAs($user)->get('/agent/delegation');
+
+        $response->assertForbidden();
+    }
+
+    public function test_delegation_graph_builder_accessible_when_enabled(): void
+    {
+        config(['delegation.ui_enabled' => true]);
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
+
+        $response = $this->actingAs($user)->get('/agent/delegation/graphs/builder');
+
+        $response->assertOk();
+    }
+
+    public function test_delegation_graph_builder_blocked_when_disabled(): void
+    {
+        config(['delegation.ui_enabled' => false]);
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
+
+        $response = $this->actingAs($user)->get('/agent/delegation/graphs/builder');
 
         $response->assertForbidden();
     }
@@ -68,7 +88,7 @@ class DelegationUiAccessTest extends TestCase
             'is_enabled' => true,
         ]);
 
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
 
         $response = $this->actingAs($user)->get('/dashboard');
         $response->assertOk();

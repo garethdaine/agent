@@ -233,6 +233,8 @@ return [
         'workflow_delegate_user_ids_by_workflow' => [],
     ],
 
+    'office_3d_enabled' => env('AGENT_OFFICE_3D_ENABLED', true),
+
     'org' => [
         'enabled' => env('ORG_LAYER_ENABLED', false),
         'features' => [

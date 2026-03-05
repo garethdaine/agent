@@ -16,6 +16,7 @@ import {
     Wrench,
     GitBranch,
     Bot,
+    Building2,
     Database,
     Key,
     ToggleLeft,
@@ -197,6 +198,17 @@ const page = usePage();
                         <Bot class="h-4 w-4 shrink-0" />
                     </template>
                     Agents
+                </SidebarNavLink>
+                <SidebarNavLink
+                    v-if="page.props.office3dEnabled"
+                    :href="route('agent.office')"
+                    :active="route().current('agent.office')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <Building2 class="h-4 w-4 shrink-0" />
+                    </template>
+                    3D Office
                 </SidebarNavLink>
             </SidebarNavGroup>
 

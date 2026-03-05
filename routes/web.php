@@ -367,6 +367,8 @@ Route::middleware([
     Route::middleware(['org.ui'])->prefix('agent/org')->group(function () {
         Route::get('/', fn () => Inertia::render('Agent/Org/Index'))
             ->name('org.index');
+        Route::get('/builder', fn () => Inertia::render('Agent/Org/OrgLayerBuilder'))
+            ->name('org.builder');
         Route::get('/agents', fn () => Inertia::render('Agent/Org/Agents/Index'))
             ->name('org.agents.index');
         Route::get('/agents/create', fn () => Inertia::render('Agent/Org/Agents/Create'))
@@ -395,6 +397,10 @@ Route::middleware([
             ->name('agent.delegation.index');
         Route::get('/agent/delegation/create', fn () => Inertia::render('Agent/Delegation/Create'))
             ->name('agent.delegation.create');
+        Route::get('/agent/delegation/graphs/builder', fn () => Inertia::render('Agent/Delegation/GraphBuilder'))
+            ->name('agent.delegation.graphs.builder');
+        Route::get('/agent/delegation/{id}/builder', fn (int $id) => Inertia::render('Agent/Delegation/GraphBuilder', ['graphId' => $id]))
+            ->name('agent.delegation.graphs.builder.edit');
         Route::get('/agent/delegation/{id}', fn (int $id) => Inertia::render('Agent/Delegation/Show', ['graphId' => $id]))
             ->name('agent.delegation.show');
         Route::get('/agent/delegation/{graphId}/tasks/{taskId}', fn (int $graphId, int $taskId) => Inertia::render('Agent/Delegation/TaskDetail', ['graphId' => $graphId, 'taskId' => $taskId]))
@@ -407,5 +413,10 @@ Route::middleware([
             ->name('agent.delegation.profiles.create');
         Route::get('/agent/delegatee-profiles/{id}/edit', fn (int $id) => Inertia::render('Agent/Delegation/ProfileForm', ['profileId' => $id]))
             ->name('agent.delegation.profiles.edit');
+    });
+
+    Route::middleware(['office.ui'])->group(function () {
+        Route::get('/agent/office', fn () => Inertia::render('Agent/Office/Office3D'))
+            ->name('agent.office');
     });
 });

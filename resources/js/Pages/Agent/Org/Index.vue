@@ -7,7 +7,7 @@ import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
-import { Users, Calendar, Scale, AlertTriangle, DollarSign, Bot } from 'lucide-vue-next';
+import { Users, Calendar, Scale, AlertTriangle, DollarSign, Bot, GitBranch } from 'lucide-vue-next';
 </script>
 
 <template>
@@ -43,6 +43,22 @@ import { Users, Calendar, Scale, AlertTriangle, DollarSign, Bot } from 'lucide-v
                                     <div>
                                         <CardTitle>Agents</CardTitle>
                                         <CardDescription>Manage AI agent profiles</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                        </Card>
+                    </Link>
+
+                    <Link :href="route('org.builder')">
+                        <Card class="cursor-pointer transition-colors hover:bg-muted/50">
+                            <CardHeader>
+                                <div class="flex items-center gap-3">
+                                    <div class="rounded-lg bg-primary/10 p-2">
+                                        <GitBranch class="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <CardTitle>Org Layer Builder</CardTitle>
+                                        <CardDescription>Visual reporting structure</CardDescription>
                                     </div>
                                 </div>
                             </CardHeader>

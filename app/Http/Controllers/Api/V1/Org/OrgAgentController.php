@@ -36,8 +36,13 @@ class OrgAgentController extends Controller
                 $query->active();
             }
 
+            $with = ['delegateeProfile'];
+            if ($request->boolean('with_reporting')) {
+                $with[] = 'reportingEdge';
+            }
+
             return response()->json([
-                'data' => $query->with('delegateeProfile')->get(),
+                'data' => $query->with($with)->get(),
             ]);
         } catch (Throwable $e) {
             report($e);

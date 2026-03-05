@@ -85,12 +85,19 @@ onMounted(load);
                         />
                     </div>
                 </div>
-                <Link :href="route('agent.delegation.create')">
-                    <Button>
-                        <Plus class="mr-2 h-4 w-4" />
-                        Create Graph
-                    </Button>
-                </Link>
+                <div class="flex gap-2">
+                    <Link :href="route('agent.delegation.graphs.builder')">
+                        <Button variant="outline">
+                            Visual builder
+                        </Button>
+                    </Link>
+                    <Link :href="route('agent.delegation.create')">
+                        <Button>
+                            <Plus class="mr-2 h-4 w-4" />
+                            Create Graph
+                        </Button>
+                    </Link>
+                </div>
             </div>
         </template>
 
