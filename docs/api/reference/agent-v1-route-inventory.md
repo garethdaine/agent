@@ -232,6 +232,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/runs/{id}/events` | `-` | `AgentRunController@events` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/runs/{id}/retry` | `-` | `AgentRunController@retry` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/runs/{id}/stop` | `-` | `AgentRunController@stop` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/security/audit` | `-` | `SecurityAuditController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/system/directory-picker` | `-` | `SystemDirectoryPickerController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/telemetry/replay/active-build` | `-` | `ProjectionReplayBuildController@activeBuild` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/telemetry/replay/builds` | `-` | `ProjectionReplayBuildController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |

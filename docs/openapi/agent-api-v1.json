@@ -25641,6 +25641,79 @@
                 }
             }
         },
+        "\/agent\/api\/v1\/security\/audit": {
+            "get": {
+                "operationId": "securityAudit.index",
+                "tags": [
+                    "SecurityAudit"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "findings": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0,
+                                                    "additionalItems": false
+                                                },
+                                                "summary": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "total": {
+                                                            "type": "integer"
+                                                        },
+                                                        "critical": {
+                                                            "type": "integer"
+                                                        },
+                                                        "warn": {
+                                                            "type": "integer"
+                                                        },
+                                                        "info": {
+                                                            "type": "integer"
+                                                        },
+                                                        "ok": {
+                                                            "type": "boolean"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "total",
+                                                        "critical",
+                                                        "warn",
+                                                        "info",
+                                                        "ok"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "findings",
+                                                "summary"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
         "\/agent\/api\/v1\/system\/directory-picker": {
             "post": {
                 "operationId": "systemDirectoryPicker.store",

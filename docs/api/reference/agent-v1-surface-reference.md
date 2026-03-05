@@ -376,6 +376,14 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | POST | `agent/api/v1/runs/{id}/retry` | `-` | `AgentRunController@retry` | `auth:sanctum` |
 | POST | `agent/api/v1/runs/{id}/stop` | `-` | `AgentRunController@stop` | `auth:sanctum` |
 
+### Security
+
+**1 endpoint(s)** registered under `/agent/api/v1/security`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/security/audit` | `-` | `SecurityAuditController@index` | `auth:sanctum` |
+
 ### System
 
 **1 endpoint(s)** registered under `/agent/api/v1/system`.
