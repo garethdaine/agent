@@ -44,6 +44,14 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ## Domain Groups
 
+### Audit Log
+
+**1 endpoint(s)** registered under `/agent/api/v1/audit-log`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/audit-log` | `-` | `AuditLogController@index` | `auth:sanctum` |
+
 ### Backups
 
 **3 endpoint(s)** registered under `/agent/api/v1/backups`.
@@ -73,6 +81,18 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | GET | `agent/api/v1/chat/sessions/{id}` | `-` | `ChatSessionController@show` | `auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}/actions` | `-` | `ChatSessionController@actions` | `auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}/messages` | `-` | `ChatSessionController@messages` | `auth:sanctum` |
+
+### Chat Sessions
+
+**5 endpoint(s)** registered under `/agent/api/v1/chat-sessions`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/chat-sessions` | `-` | `ChatSessionController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/chat-sessions/{id}` | `-` | `ChatSessionController@show` | `auth:sanctum` |
+| POST | `agent/api/v1/chat-sessions/{id}/archive` | `-` | `ChatSessionController@archive` | `auth:sanctum` |
+| GET | `agent/api/v1/chat-sessions/{id}/history` | `-` | `ChatSessionController@history` | `auth:sanctum` |
+| POST | `agent/api/v1/chat-sessions/{id}/send` | `-` | `ChatSessionController@send` | `auth:sanctum` |
 
 ### Code Analysis
 
@@ -111,6 +131,15 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | GET | `agent/api/v1/compliance/metrics` | `-` | `ComplianceController@metrics` | `auth:sanctum` |
 | GET | `agent/api/v1/compliance/status` | `-` | `ComplianceController@status` | `auth:sanctum` |
 
+### Configuration
+
+**2 endpoint(s)** registered under `/agent/api/v1/configuration`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/configuration` | `-` | `ConfigurationController@index` | `auth:sanctum` |
+| PUT | `agent/api/v1/configuration` | `-` | `ConfigurationController@update` | `auth:sanctum` |
+
 ### Connectors
 
 **4 endpoint(s)** registered under `/agent/api/v1/connectors`.
@@ -140,12 +169,21 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | --- | --- | --- | --- | --- |
 | GET | `agent/api/v1/dashboard/metrics` | `-` | `AgentRunController@dashboardMetrics` | `auth:sanctum` |
 
-### Delegation
+### Debug
 
-**21 endpoint(s)** registered under `/agent/api/v1/delegation`.
+**1 endpoint(s)** registered under `/agent/api/v1/debug`.
 
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/debug` | `-` | `DebugPanelController@index` | `auth:sanctum` |
+
+### Delegation
+
+**22 endpoint(s)** registered under `/agent/api/v1/delegation`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/delegation/capabilities` | `-` | `DelegateeProfileController@capabilities` | `auth:sanctum` |
 | GET | `agent/api/v1/delegation/delegatee-profiles` | `-` | `DelegateeProfileController@index` | `auth:sanctum` |
 | POST | `agent/api/v1/delegation/delegatee-profiles` | `-` | `DelegateeProfileController@store` | `auth:sanctum` |
 | GET | `agent/api/v1/delegation/delegatee-profiles/{id}` | `-` | `DelegateeProfileController@show` | `auth:sanctum` |
@@ -175,6 +213,14 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
 | GET | `agent/api/v1/deployments/counting` | `-` | `DeploymentCountingController@index` | `auth:sanctum` |
+
+### Diagnostics
+
+**1 endpoint(s)** registered under `/agent/api/v1/diagnostics`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/diagnostics` | `-` | `DiagnosticsController@index` | `auth:sanctum` |
 
 ### Docs
 
@@ -276,6 +322,15 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | GET | `agent/api/v1/jobs/{id}/runs` | `-` | `AgentJobController@runs` | `auth:sanctum` |
 | POST | `agent/api/v1/jobs/{id}/toggle` | `-` | `AgentJobController@toggle` | `auth:sanctum` |
 
+### Logs
+
+**2 endpoint(s)** registered under `/agent/api/v1/logs`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/logs` | `-` | `LogTailController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/logs/export` | `-` | `LogTailController@export` | `auth:sanctum` |
+
 ### Memory
 
 **12 endpoint(s)** registered under `/agent/api/v1/memory`.
@@ -297,7 +352,7 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ### Messenger
 
-**9 endpoint(s)** registered under `/agent/api/v1/messenger`.
+**14 endpoint(s)** registered under `/agent/api/v1/messenger`.
 
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
@@ -307,9 +362,14 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | GET | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@show` | `auth:sanctum` |
 | PUT | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@update` | `auth:sanctum` |
 | DELETE | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@destroy` | `auth:sanctum` |
+| GET | `agent/api/v1/messenger/connectors/{id}/policy` | `-` | `ConnectorPolicyController@show` | `auth:sanctum` |
+| PUT | `agent/api/v1/messenger/connectors/{id}/policy` | `-` | `ConnectorPolicyController@update` | `auth:sanctum` |
 | GET,PUT | `agent/api/v1/messenger/connectors/{id}/soul` | `-` | `MessengerConnectorController@soul` | `auth:sanctum` |
 | POST | `agent/api/v1/messenger/connectors/{id}/test` | `-` | `MessengerConnectorController@test` | `auth:sanctum` |
 | GET | `agent/api/v1/messenger/metrics` | `-` | `MessengerMetricsController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/messenger/pairings` | `-` | `PairingController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/messenger/pairings/{id}/approve` | `-` | `PairingController@approve` | `auth:sanctum` |
+| POST | `agent/api/v1/messenger/pairings/{id}/revoke` | `-` | `PairingController@revoke` | `auth:sanctum` |
 
 ### N8N
 
@@ -329,6 +389,14 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | DELETE | `agent/api/v1/notifications` | `-` | `NotificationController@clearAll` | `auth:sanctum` |
 | POST | `agent/api/v1/notifications/read-all` | `-` | `NotificationController@markAllAsRead` | `auth:sanctum` |
 | POST | `agent/api/v1/notifications/{id}/read` | `-` | `NotificationController@markAsRead` | `auth:sanctum` |
+
+### Office
+
+**1 endpoint(s)** registered under `/agent/api/v1/office`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/office/state` | `-` | `OfficeStateController` | `auth:sanctum` |
 
 ### Org
 
@@ -375,6 +443,14 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | GET | `agent/api/v1/runs/{id}/events` | `-` | `AgentRunController@events` | `auth:sanctum` |
 | POST | `agent/api/v1/runs/{id}/retry` | `-` | `AgentRunController@retry` | `auth:sanctum` |
 | POST | `agent/api/v1/runs/{id}/stop` | `-` | `AgentRunController@stop` | `auth:sanctum` |
+
+### Runtime
+
+**1 endpoint(s)** registered under `/agent/api/v1/runtime`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/runtime/policy` | `-` | `RuntimePolicyController@index` | `auth:sanctum` |
 
 ### Security
 

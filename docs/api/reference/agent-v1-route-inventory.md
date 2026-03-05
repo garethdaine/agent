@@ -40,9 +40,15 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 
 | Method | URI | Route Name | Controller | Middleware |
 | --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/audit-log` | `-` | `AuditLogController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/backups/run-now` | `-` | `AgentBackupSettingsController@runNow` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/backups/settings` | `-` | `AgentBackupSettingsController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | PUT | `agent/api/v1/backups/settings` | `-` | `AgentBackupSettingsController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/chat-sessions` | `-` | `ChatSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/chat-sessions/{id}` | `-` | `ChatSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/chat-sessions/{id}/archive` | `-` | `ChatSessionController@archive` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/chat-sessions/{id}/history` | `-` | `ChatSessionController@history` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/chat-sessions/{id}/send` | `-` | `ChatSessionController@send` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/chat/actions/{id}` | `-` | `ChatActionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/chat/actions/{id}/cancel` | `-` | `ChatActionController@cancel` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/chat/actions/{id}/confirm` | `-` | `ChatActionController@confirm` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
@@ -79,6 +85,8 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/code-analysis/sessions/{id}/validate-coverage` | `-` | `RepoAnalysisSessionController@validateCoverage` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/compliance/metrics` | `-` | `ComplianceController@metrics` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/compliance/status` | `-` | `ComplianceController@status` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/configuration` | `-` | `ConfigurationController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| PUT | `agent/api/v1/configuration` | `-` | `ConfigurationController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/connectors/discord/webhook` | `agent.api.connectors.discord.webhook` | `WebhookController@handleDiscord` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
 | POST | `agent/api/v1/connectors/slack/webhook` | `agent.api.connectors.slack.webhook` | `WebhookController@handleSlack` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
 | POST | `agent/api/v1/connectors/telegram/webhook/{accountKey}` | `agent.api.connectors.telegram.webhook` | `WebhookController@handleTelegram` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
@@ -87,6 +95,8 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/credentials` | `-` | `CredentialsController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | DELETE | `agent/api/v1/credentials` | `-` | `CredentialsController@destroy` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/dashboard/metrics` | `-` | `AgentRunController@dashboardMetrics` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/debug` | `-` | `DebugPanelController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/delegation/capabilities` | `-` | `DelegateeProfileController@capabilities` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, delegation` |
 | GET | `agent/api/v1/delegation/delegatee-profiles` | `-` | `DelegateeProfileController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, delegation` |
 | POST | `agent/api/v1/delegation/delegatee-profiles` | `-` | `DelegateeProfileController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, delegation, throttle:agent-mutations` |
 | GET | `agent/api/v1/delegation/delegatee-profiles/{id}` | `-` | `DelegateeProfileController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, delegation` |
@@ -109,6 +119,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/delegation/graphs/{id}/start` | `-` | `DelegationGraphController@start` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, delegation, throttle:agent-mutations` |
 | POST | `agent/api/v1/delegation/graphs/{id}/validate` | `-` | `DelegationGraphController@validate` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, delegation` |
 | GET | `agent/api/v1/deployments/counting` | `-` | `DeploymentCountingController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/diagnostics` | `-` | `DiagnosticsController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/docs/coverage` | `-` | `DocsCoverageController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, can:view-docs-coverage` |
 | GET | `agent/api/v1/docs/diagnostics` | `-` | `DiagnosticsController` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, can:view-docs-diagnostics` |
 | GET | `agent/api/v1/docs/fragments/{uiKey}` | `-` | `DocsFragmentController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
@@ -174,6 +185,8 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/jobs/{id}/run-now` | `-` | `AgentJobController@runNow` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/jobs/{id}/runs` | `-` | `AgentJobController@runs` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/jobs/{id}/toggle` | `-` | `AgentJobController@toggle` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/logs` | `-` | `LogTailController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/logs/export` | `-` | `LogTailController@export` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/memory/core-blocks` | `-` | `MemoryCoreBlockController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, App\Http\Middleware\Memory\MemoryEnabled, throttle:memory-reads` |
 | GET | `agent/api/v1/memory/core-blocks/{key}` | `-` | `MemoryCoreBlockController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, App\Http\Middleware\Memory\MemoryEnabled, throttle:memory-reads` |
 | PUT | `agent/api/v1/memory/core-blocks/{key}` | `-` | `MemoryCoreBlockController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, App\Http\Middleware\Memory\MemoryEnabled, throttle:memory-writes` |
@@ -192,14 +205,20 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | PUT | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | DELETE | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@destroy` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/messenger/connectors/{id}/policy` | `-` | `ConnectorPolicyController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| PUT | `agent/api/v1/messenger/connectors/{id}/policy` | `-` | `ConnectorPolicyController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET,PUT | `agent/api/v1/messenger/connectors/{id}/soul` | `-` | `MessengerConnectorController@soul` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/messenger/connectors/{id}/test` | `-` | `MessengerConnectorController@test` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/messenger/metrics` | `-` | `MessengerMetricsController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/messenger/pairings` | `-` | `PairingController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/messenger/pairings/{id}/approve` | `-` | `PairingController@approve` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/messenger/pairings/{id}/revoke` | `-` | `PairingController@revoke` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/n8n/webhook` | `-` | `N8nWebhookController` | `api, App\Http\Middleware\AgentApiVersionHeader` |
 | GET | `agent/api/v1/notifications` | `-` | `NotificationController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | DELETE | `agent/api/v1/notifications` | `-` | `NotificationController@clearAll` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/notifications/read-all` | `-` | `NotificationController@markAllAsRead` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/notifications/{id}/read` | `-` | `NotificationController@markAsRead` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/office/state` | `-` | `OfficeStateController` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/org/agents` | `-` | `OrgAgentController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, org` |
 | POST | `agent/api/v1/org/agents` | `-` | `OrgAgentController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, org, throttle:agent-mutations` |
 | GET | `agent/api/v1/org/agents/{id}` | `-` | `OrgAgentController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, org` |
@@ -232,6 +251,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/runs/{id}/events` | `-` | `AgentRunController@events` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/runs/{id}/retry` | `-` | `AgentRunController@retry` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/runs/{id}/stop` | `-` | `AgentRunController@stop` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET | `agent/api/v1/runtime/policy` | `-` | `RuntimePolicyController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/security/audit` | `-` | `SecurityAuditController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/system/directory-picker` | `-` | `SystemDirectoryPickerController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/telemetry/replay/active-build` | `-` | `ProjectionReplayBuildController@activeBuild` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |

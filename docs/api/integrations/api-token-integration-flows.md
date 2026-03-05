@@ -98,6 +98,13 @@ The following API endpoints are available for this feature:
   - Controller: `MessengerConnectorController@destroy`
   - Auth: `auth:sanctum`
   - Rate limit: `throttle:agent-mutations`
+- **`GET agent/api/v1/messenger/connectors/{id}/policy`**
+  - Controller: `ConnectorPolicyController@show`
+  - Auth: `auth:sanctum`
+- **`PUT agent/api/v1/messenger/connectors/{id}/policy`**
+  - Controller: `ConnectorPolicyController@update`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
 - **`GET,PUT agent/api/v1/messenger/connectors/{id}/soul`**
   - Controller: `MessengerConnectorController@soul`
   - Auth: `auth:sanctum`
@@ -109,6 +116,17 @@ The following API endpoints are available for this feature:
 - **`GET agent/api/v1/messenger/metrics`**
   - Controller: `MessengerMetricsController@index`
   - Auth: `auth:sanctum`
+- **`GET agent/api/v1/messenger/pairings`**
+  - Controller: `PairingController@index`
+  - Auth: `auth:sanctum`
+- **`POST agent/api/v1/messenger/pairings/{id}/approve`**
+  - Controller: `PairingController@approve`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`POST agent/api/v1/messenger/pairings/{id}/revoke`**
+  - Controller: `PairingController@revoke`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
 
 ### Configuration Reference
 

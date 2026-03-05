@@ -73,6 +73,9 @@ The default seed set includes OpenClaw-aligned domains (e.g. `browser`, `filesys
 
 The following API endpoints are available for this feature:
 
+- **`GET agent/api/v1/delegation/capabilities`**
+  - Controller: `DelegateeProfileController@capabilities`
+  - Auth: `auth:sanctum`
 - **`GET agent/api/v1/delegation/delegatee-profiles`**
   - Controller: `DelegateeProfileController@index`
   - Auth: `auth:sanctum`
