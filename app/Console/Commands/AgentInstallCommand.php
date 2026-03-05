@@ -127,6 +127,14 @@ class AgentInstallCommand extends Command
             );
         }
 
+        $mode = in_array($mode, [ConnectorAccount::MODE_LOCAL, ConnectorAccount::MODE_WEBHOOK], true)
+            ? $mode
+            : ConnectorAccount::MODE_LOCAL;
+
+        if (! empty($connectors)) {
+            $this->info(sprintf('Using ingress mode: %s', $mode));
+        }
+
         if (empty($connectors)) {
             $this->warn('No connectors selected. Skipping connector configuration.');
         } else {
@@ -398,7 +406,9 @@ class AgentInstallCommand extends Command
 
         // Determine connection mode
         // WhatsApp is always webhook mode (Cloud API is webhook-only)
-        $resolvedMode = $connector === 'whatsapp' ? ConnectorAccount::MODE_WEBHOOK : $mode;
+        $resolvedMode = $connector === 'whatsapp'
+            ? ConnectorAccount::MODE_WEBHOOK
+            : (strtolower((string) $mode) === ConnectorAccount::MODE_WEBHOOK ? ConnectorAccount::MODE_WEBHOOK : ConnectorAccount::MODE_LOCAL);
 
         // For webhook mode, validate webhook endpoint with ingress probe
         if ($resolvedMode === ConnectorAccount::MODE_WEBHOOK) {
@@ -424,12 +434,16 @@ class AgentInstallCommand extends Command
 
         $accountKey = $this->generateAccountKey($connector, $credentials);
 
-        $existingAccount = ConnectorAccount::where('provider', $connector)
+        $existingAccount = ConnectorAccount::withTrashed()
+            ->where('provider', $connector)
             ->where('account_key', $accountKey)
             ->first();
 
         if ($existingAccount) {
             $this->warn(sprintf('  Updating existing %s connector account...', ucfirst($connector)));
+            if ($existingAccount->trashed()) {
+                $existingAccount->restore();
+            }
             $existingAccount->update([
                 'name' => $name,
                 'credentials' => $credentials,
