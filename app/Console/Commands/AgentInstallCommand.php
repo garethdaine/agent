@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\password;
+use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 
 class AgentInstallCommand extends Command
@@ -114,11 +115,23 @@ class AgentInstallCommand extends Command
 
         $connectors = $this->normalizeConnectors($connectors);
 
+        $mode = $this->option('mode');
+        if (! empty($connectors) && ! $this->option('non-interactive')) {
+            $mode = select(
+                label: 'Ingress mode',
+                options: [
+                    'local' => 'Local (Socket Mode / Long Polling)',
+                    'webhook' => 'Webhook (public endpoints)',
+                ],
+                default: $mode,
+            );
+        }
+
         if (empty($connectors)) {
             $this->warn('No connectors selected. Skipping connector configuration.');
         } else {
             foreach ($connectors as $connector) {
-                if (! $this->configureConnector($connector, $connectorManager)) {
+                if (! $this->configureConnector($connector, $connectorManager, $mode)) {
                     $this->error(sprintf('Failed to configure %s connector.', ucfirst($connector)));
 
                     return self::FAILURE;
@@ -130,7 +143,6 @@ class AgentInstallCommand extends Command
 
         // Step 3: Configure Ingress Mode
         $this->info('[3/6] Configuring ingress mode...');
-        $mode = $this->option('mode');
 
         if ($this->configureIngressMode($mode)) {
             $this->info(sprintf('Ingress mode set to: %s', $mode));
@@ -331,7 +343,7 @@ class AgentInstallCommand extends Command
         ));
     }
 
-    private function configureConnector(string $connector, ConnectorManager $connectorManager): bool
+    private function configureConnector(string $connector, ConnectorManager $connectorManager, string $mode): bool
     {
         $this->newLine();
         $this->info(sprintf('Configuring %s connector...', ucfirst($connector)));
@@ -368,7 +380,7 @@ class AgentInstallCommand extends Command
         // Validate credentials with provider API
         $this->line('  Validating credentials...');
 
-        $validationResult = $this->validateProviderCredentials($connector, $credentials);
+        $validationResult = $this->validateProviderCredentials($connector, $credentials, $mode);
 
         if (! $validationResult['valid']) {
             $this->error(sprintf('  Credential validation failed: %s', $validationResult['error']));
@@ -386,10 +398,10 @@ class AgentInstallCommand extends Command
 
         // Determine connection mode
         // WhatsApp is always webhook mode (Cloud API is webhook-only)
-        $mode = $connector === 'whatsapp' ? ConnectorAccount::MODE_WEBHOOK : $this->option('mode');
+        $resolvedMode = $connector === 'whatsapp' ? ConnectorAccount::MODE_WEBHOOK : $mode;
 
         // For webhook mode, validate webhook endpoint with ingress probe
-        if ($mode === ConnectorAccount::MODE_WEBHOOK) {
+        if ($resolvedMode === ConnectorAccount::MODE_WEBHOOK) {
             $webhookUrl = $this->getWebhookUrl($connector);
 
             if (! empty($webhookUrl)) {
@@ -421,7 +433,7 @@ class AgentInstallCommand extends Command
             $existingAccount->update([
                 'name' => $name,
                 'credentials' => $credentials,
-                'connection_mode' => $mode,
+                'connection_mode' => $resolvedMode,
                 'status' => ConnectorAccount::STATUS_DISCONNECTED,
                 'config' => array_merge(
                     config(sprintf('messenger.providers.%s', $connector), []),
@@ -435,7 +447,7 @@ class AgentInstallCommand extends Command
                 'provider' => $connector,
                 'name' => $name,
                 'credentials' => $credentials,
-                'connection_mode' => $mode,
+                'connection_mode' => $resolvedMode,
                 'status' => ConnectorAccount::STATUS_DISCONNECTED,
                 'account_key' => $accountKey,
                 'config' => array_merge(
@@ -572,15 +584,15 @@ class AgentInstallCommand extends Command
      * @param  array<string, string>  $credentials
      * @return array{valid: bool, error: ?string, details: ?string, suggested_name: ?string}
      */
-    private function validateProviderCredentials(string $connector, array $credentials): array
+    private function validateProviderCredentials(string $connector, array $credentials, ?string $mode = null): array
     {
         try {
-            $mode = $this->option('mode');
+            $modeToUse = $mode ?? $this->option('mode');
 
             return match ($connector) {
                 'slack' => $this->validateSlackCredentials($credentials),
                 'telegram' => $this->validateTelegramCredentials($credentials),
-                'discord' => $this->validateDiscordCredentials($credentials, $mode),
+                'discord' => $this->validateDiscordCredentials($credentials, $modeToUse),
                 'whatsapp' => $this->validateWhatsAppCredentials($credentials),
                 default => ['valid' => true, 'error' => null, 'details' => 'Validation skipped', 'suggested_name' => null],
             };
