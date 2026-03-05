@@ -186,6 +186,10 @@ Route::middleware([
         return Inertia::render('Tools/Features/Settings');
     })->name('tools.features.settings');
 
+    Route::get('/tools/security', function () {
+        return Inertia::render('Tools/Security/Index');
+    })->name('tools.security.index');
+
     Route::get('/tools/messenger', function () {
         return Inertia::render('Tools/Messenger/Index');
     })->name('tools.messenger.index');

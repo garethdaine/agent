@@ -361,7 +361,35 @@ Execute these in order; each produces a short “findings + actions” note.
 
 ---
 
-## 6. Execution Notes
+## 6. UI Surfacing (Surface Everything as Features Complete)
+
+**Rule:** For every capability we add or parity we close, **surface it in the UI** so operators and users can manage it without reading config or CLI only.
+
+### 6.1 Where to Surface What
+
+| Capability area | Primary UI location | Secondary |
+|-----------------|---------------------|-----------|
+| Security & audit | Settings → Security; Dashboard → Audit (or dedicated Audit page) | CLI: `agent:security-audit` |
+| Gateway / API tokens | Settings → API or Settings → Gateway | — |
+| Runtime sessions & approvals | Messenger → Runtime (list + session detail with pending approvals) | Messenger slash: `/runs`, `/approve`, `/deny`, `/mode` |
+| Tool policy (mode, deny/allow list) | Settings → Runtime; per-session mode in Runtime → [Session] | Messenger: `/mode` |
+| Connectors & channels | Tools → Messenger (existing); Connectors → [connector] for DM/group policy | — |
+| Pairing (DM access) | Messenger → Pairing or Connectors → [connector] → Pairing | CLI: `messenger:pairing` |
+| Config (runtime, messenger) | Settings → Runtime, Settings → Messenger (forms + validation) | — |
+| Diagnostics / doctor | Settings → Diagnostics or Dashboard → Health | CLI: `agent:doctor` (when added) |
+| Cron / scheduled jobs | Existing Jobs UI | — |
+| Logs | Settings → Logs or Dashboard → Logs (when added) | — |
+
+### 6.2 Checklist When Completing a Feature
+
+- [ ] Feature is implemented and tested.
+- [ ] **UI:** Added to the appropriate screen (Settings, Messenger, Dashboard) per table above.
+- [ ] **API:** If needed, REST/API endpoint exists and is documented.
+- [ ] **Messenger:** If user-facing, slash command or in-chat flow exists where applicable.
+- [ ] **Docs:** Product/docs updated (or linked from discovery doc).
+- [ ] **Master gap list:** Item marked complete and UI location noted in [openclaw-parity-gap-list.md](openclaw-parity-gap-list.md).
+
+### 6.3 Execution Notes
 
 - **Browser / Firecrawl:** Use when a doc page is large or needs screenshots (e.g. Control UI “What it can do”). Prefer `mcp_web_fetch` for text; use browser for interactive or visual verification.
 - **Repo:** Use GitHub (or clone) to inspect `packages/`, `src/`, `ui/`; no need to clone entire repo for high-level parity.

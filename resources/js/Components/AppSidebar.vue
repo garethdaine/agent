@@ -21,6 +21,7 @@ import {
     ToggleLeft,
     Brain,
     FileCode,
+    ShieldCheck,
 } from 'lucide-vue-next';
 
 defineProps({
@@ -200,6 +201,16 @@ const page = usePage();
             </SidebarNavGroup>
 
             <SidebarNavGroup label="Settings" :collapsed="collapsed" :default-open="false">
+                <SidebarNavLink
+                    :href="route('tools.security.index')"
+                    :active="route().current('tools.security.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <ShieldCheck class="h-4 w-4 shrink-0" />
+                    </template>
+                    Security
+                </SidebarNavLink>
                 <SidebarNavLink
                     :href="route('tools.credentials.index')"
                     :active="route().current('tools.credentials.*')"

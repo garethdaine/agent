@@ -34,6 +34,7 @@ use App\Http\Controllers\Api\V1\ProjectionReplayBuildController;
 use App\Http\Controllers\Api\V1\RepoAnalysisSessionController;
 use App\Http\Controllers\Api\V1\Runtime\RuntimeSessionController;
 use App\Http\Controllers\Api\V1\Runtime\RuntimeToolCallController;
+use App\Http\Controllers\Api\V1\SecurityAuditController;
 use App\Http\Controllers\Api\V1\SystemDirectoryPickerController;
 use App\Http\Controllers\Api\V1\WorkflowCostController;
 use App\Http\Controllers\Api\V1\WorkflowEscalationController;
@@ -118,6 +119,8 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/credentials', [CredentialsController::class, 'index']);
             Route::post('/credentials', [CredentialsController::class, 'store'])->middleware('throttle:agent-mutations');
             Route::delete('/credentials', [CredentialsController::class, 'destroy'])->middleware('throttle:agent-mutations');
+
+            Route::get('/security/audit', [SecurityAuditController::class, 'index']);
 
             Route::prefix('docs')->group(function (): void {
                 Route::get('/search', [DocsSearchController::class, 'index']);
