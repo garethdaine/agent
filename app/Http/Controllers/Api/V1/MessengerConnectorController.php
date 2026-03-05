@@ -313,24 +313,24 @@ class MessengerConnectorController extends Controller
         $connector = ConnectorAccount::findOrFail($id);
 
         $before = $connector->only(['id', 'provider', 'name', 'status']);
+        $connectorId = $connector->id;
 
-        $connector->update(['status' => ConnectorAccount::STATUS_DISCONNECTED]);
-        $connector->delete();
+        $connector->forceDelete();
 
         $auditLogger->recordUserAction(
             request: $request,
             action: 'connector.delete',
             targetType: 'connector_account',
-            targetId: $connector->id,
+            targetId: $connectorId,
             ownerUserId: $request->user()->id,
-            changedFields: ['deleted_at'],
+            changedFields: ['deleted'],
             before: $before,
             after: null,
         );
 
         return response()->json([
             'data' => [
-                'id' => $connector->id,
+                'id' => $connectorId,
                 'deleted' => true,
             ],
         ]);
@@ -418,13 +418,18 @@ class MessengerConnectorController extends Controller
 
             $derivedAccountKey = trim((string) ($result['derived_account_key'] ?? ''));
             if ($derivedAccountKey !== '') {
-                $duplicate = ConnectorAccount::query()
+                $duplicate = ConnectorAccount::withTrashed()
                     ->where('provider', $provider)
                     ->where('account_key', $derivedAccountKey)
                     ->where('id', '!=', $connector->id)
-                    ->exists();
+                    ->first();
 
-                if (! $duplicate) {
+                if ($duplicate !== null) {
+                    if ($duplicate->trashed()) {
+                        $duplicate->forceDelete();
+                        $updates['account_key'] = $derivedAccountKey;
+                    }
+                } else {
                     $updates['account_key'] = $derivedAccountKey;
                 }
             }

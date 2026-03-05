@@ -98,7 +98,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Configuration for the agent-browser sidecar process that provides
-    | browser automation capabilities.
+    | browser automation capabilities. Set headed=true or AGENT_BROWSER_HEADED=1
+    | to show a visible browser window so you can watch what the agent is doing.
     |
     */
 
@@ -106,6 +107,7 @@ return [
         'sidecar_binary' => env('AGENT_BROWSER_PATH', '/usr/local/bin/agent-browser'),
         'default_persistence' => 'ephemeral',
         'allowed_commands' => ['navigate', 'click', 'type', 'screenshot', 'extract'],
+        'headed' => (bool) env('AGENT_BROWSER_HEADED', false),
     ],
 
     /*
@@ -167,18 +169,40 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Runtime LLM (Turn Execution)
+    | Runtime Execution: CLI vs In-App LLM
     |--------------------------------------------------------------------------
     |
-    | Configuration for the LLM used by the runtime orchestrator to process
-    | turns with tool use. Uses Anthropic Messages API when api_key is set.
+    | When use_cli is true (default), the runtime runs the normal CLI (claude/codex)
+    | with the user message as a task. The CLI has the same abilities (browser, MCP,
+    | etc.) and uses the API key from the credential manager. When false, turns are
+    | executed in-app via the Anthropic API; the key is still from the credential
+    | manager, not from .env.
+    |
+    */
+
+    'use_cli' => env('RUNTIME_USE_CLI', true),
+
+    'cli' => [
+        'runner_type' => env('RUNTIME_CLI_RUNNER', 'claude'),
+        'timeout_seconds' => (int) env('RUNTIME_CLI_TIMEOUT', 300),
+    ],
+
+    'queue' => env('RUNTIME_QUEUE', 'agent'), // Use "default" to process runtime with `php artisan queue:work` (no Horizon).
+
+    /*
+    |--------------------------------------------------------------------------
+    | Runtime LLM (In-App Turn Execution Fallback)
+    |--------------------------------------------------------------------------
+    |
+    | Only used when use_cli is false. API key is resolved from the credential
+    | manager for the session user; env('ANTHROPIC_API_KEY') is not used.
     |
     */
 
     'llm' => [
         'provider' => env('RUNTIME_LLM_PROVIDER', 'anthropic'),
         'anthropic' => [
-            'api_key' => env('ANTHROPIC_API_KEY'),
+            'api_key' => null,
             'model' => env('RUNTIME_LLM_MODEL', 'claude-sonnet-4-20250514'),
             'max_tokens' => (int) env('RUNTIME_LLM_MAX_TOKENS', 8192),
         ],

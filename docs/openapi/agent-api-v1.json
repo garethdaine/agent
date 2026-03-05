@@ -6,7 +6,7 @@
     },
     "servers": [
         {
-            "url": "https:\/\/agent.test\/api"
+            "url": "https:\/\/agent.test"
         }
     ],
     "security": [

@@ -100,26 +100,24 @@ class MessengerConnectorApiTest extends TestCase
         ], $connector->credentials);
     }
 
-    public function test_delete_connector_soft_deletes(): void
+    public function test_delete_connector_force_deletes(): void
     {
         $user = User::factory()->create();
         $connector = ConnectorAccount::factory()->create([
             'provider' => 'discord',
             'status' => ConnectorAccount::STATUS_CONNECTED,
         ]);
+        $connectorId = $connector->id;
 
         $this->actingAs($user);
 
-        $response = $this->deleteJson("/agent/api/v1/messenger/connectors/{$connector->id}");
+        $response = $this->deleteJson("/agent/api/v1/messenger/connectors/{$connectorId}");
 
         $response->assertOk()
-            ->assertJsonPath('data.id', $connector->id)
+            ->assertJsonPath('data.id', $connectorId)
             ->assertJsonPath('data.deleted', true);
 
-        // Verify soft delete occurred
-        $connector->refresh();
-        $this->assertNotNull($connector->deleted_at);
-        $this->assertEquals(ConnectorAccount::STATUS_DISCONNECTED, $connector->status);
+        $this->assertNull(ConnectorAccount::find($connectorId));
     }
 
     public function test_test_connector_validates_connection(): void

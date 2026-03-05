@@ -17,7 +17,7 @@ class RuntimeWebPagesTest extends TestCase
 
     public function test_runtime_sessions_index_page_loads(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
         RuntimeSession::factory()->count(2)->create(['user_id' => $user->id]);
 
         $response = $this->actingAs($user)->get('/messenger/runtime');
@@ -31,7 +31,7 @@ class RuntimeWebPagesTest extends TestCase
 
     public function test_runtime_session_detail_page_loads(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
         $session = RuntimeSession::factory()->create(['user_id' => $user->id]);
         RuntimeTurn::factory()->count(3)->create(['runtime_session_id' => $session->id]);
 
@@ -47,7 +47,7 @@ class RuntimeWebPagesTest extends TestCase
 
     public function test_runtime_sessions_route_is_registered(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
 
         // Verify the route name exists and resolves to correct URL
         $this->assertEquals('/messenger/runtime', route('messenger.runtime.index', [], false));
@@ -60,7 +60,7 @@ class RuntimeWebPagesTest extends TestCase
 
     public function test_session_detail_shows_pending_approvals(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
         $session = RuntimeSession::factory()->create(['user_id' => $user->id]);
         $turn = RuntimeTurn::factory()->create(['runtime_session_id' => $session->id]);
         $toolCall = RuntimeToolCall::factory()->create([
@@ -89,8 +89,8 @@ class RuntimeWebPagesTest extends TestCase
 
     public function test_runtime_session_detail_returns_404_for_other_user(): void
     {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
+        $otherUser = User::factory()->create(['onboarding_completed_at' => now()]);
         $session = RuntimeSession::factory()->create(['user_id' => $otherUser->id]);
 
         $response = $this->actingAs($user)->get("/messenger/runtime/{$session->id}");
@@ -100,8 +100,8 @@ class RuntimeWebPagesTest extends TestCase
 
     public function test_runtime_sessions_index_only_shows_user_sessions(): void
     {
-        $user = User::factory()->create();
-        $otherUser = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
+        $otherUser = User::factory()->create(['onboarding_completed_at' => now()]);
 
         RuntimeSession::factory()->count(2)->create(['user_id' => $user->id]);
         RuntimeSession::factory()->count(3)->create(['user_id' => $otherUser->id]);

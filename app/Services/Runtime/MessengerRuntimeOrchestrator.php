@@ -16,10 +16,12 @@ class MessengerRuntimeOrchestrator
     public function __construct(
         private ToolGateway $toolGateway,
         private RuntimeLlmClient $llmClient,
+        private CliRuntimeExecutor $cliExecutor,
     ) {}
 
     /**
-     * Execute one turn: create turn, call LLM with tools, loop on tool calls, return result.
+     * Execute one turn. When runtime.use_cli is true, runs the CLI (normal runtime);
+     * otherwise runs in-app LLM with tools. API key always from credential manager.
      *
      * @return array{status: 'completed'|'failed'|'pending_approval', text?: string, tool_call_id?: string, error?: string}
      */
@@ -40,6 +42,17 @@ class MessengerRuntimeOrchestrator
             'status' => RuntimeTurnStatus::Running,
         ]);
 
+        if (config('runtime.use_cli', true)) {
+            $result = $this->cliExecutor->executeTurn($session, $userMessage);
+            $summary = $result['text'] ?? $result['error'] ?? null;
+            $turn->update([
+                'status' => $result['status'] === 'completed' ? RuntimeTurnStatus::Completed : RuntimeTurnStatus::Failed,
+                'summary' => $summary !== null && strlen($summary) > 500 ? substr($summary, 0, 497).'...' : $summary,
+            ]);
+
+            return $result;
+        }
+
         $policy = $this->getPolicyForSession($session);
         $context = new RuntimeContext(
             session: $session,
@@ -57,7 +70,7 @@ class MessengerRuntimeOrchestrator
 
         try {
             for ($iter = 0; $iter < self::MAX_TOOL_ITERATIONS; $iter++) {
-                $response = $this->llmClient->complete($messages, $systemPrompt);
+                $response = $this->llmClient->complete($messages, $systemPrompt, $user);
                 $content = $response['content'];
                 $stopReason = $response['stop_reason'];
                 $totalInputTokens += $response['usage']['input_tokens'];

@@ -9,6 +9,7 @@ use App\Messenger\Gateway\Workers\DiscordGatewayWorker;
 use App\Messenger\Gateway\Workers\SlackSocketWorker;
 use App\Messenger\Gateway\Workers\TelegramPollingWorker;
 use App\Models\ConnectorAccount;
+use App\Services\Messenger\SlashCommandRegistrar;
 use Closure;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -106,6 +107,10 @@ class MessengerGatewayManager
             ]);
 
             return;
+        }
+
+        if ($account->provider === ConnectorAccount::PROVIDER_DISCORD) {
+            $this->syncDiscordSlashCommandsIfNeeded($account);
         }
 
         $worker = $this->createWorker($account);
@@ -400,6 +405,34 @@ class MessengerGatewayManager
     /**
      * Create a worker for the given connector account.
      */
+    private function syncDiscordSlashCommandsIfNeeded(ConnectorAccount $account): void
+    {
+        $registrar = app(SlashCommandRegistrar::class);
+        if (! $registrar->needsUpdate($account)) {
+            return;
+        }
+
+        try {
+            $result = $registrar->register($account);
+            if ($result->isSuccessful()) {
+                Log::info('Discord slash commands synced on worker start', [
+                    'connector_id' => $account->id,
+                    'command_count' => $result->getCommandCount(),
+                ]);
+            } else {
+                Log::warning('Discord slash command sync failed on worker start', [
+                    'connector_id' => $account->id,
+                    'message' => $result->getMessage(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Discord slash command sync exception on worker start', [
+                'connector_id' => $account->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     private function createWorker(ConnectorAccount $account): GatewayWorkerInterface
     {
         if ($this->workerFactory) {

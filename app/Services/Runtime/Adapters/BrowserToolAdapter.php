@@ -108,7 +108,11 @@ class BrowserToolAdapter extends AbstractToolAdapter
      */
     private function buildCommand(string $binary, string $operation, array $args): array
     {
-        $cmd = [$binary, $operation];
+        $cmd = [$binary];
+        if (config('runtime.browser.headed', false)) {
+            $cmd[] = '--headed';
+        }
+        $cmd[] = $operation;
 
         foreach ($args as $key => $value) {
             if ($key === 'operation' || $value === null || $value === '') {

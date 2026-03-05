@@ -31,7 +31,7 @@ class ProcessRuntimeTurnJob implements ShouldQueue
         public string|int|null $chatSessionId = null,
         public string|int|null $connectorAccountId = null,
     ) {
-        $this->onQueue('agent');
+        $this->onQueue(config('runtime.queue', 'agent'));
     }
 
     public function handle(
@@ -51,8 +51,18 @@ class ProcessRuntimeTurnJob implements ShouldQueue
             return;
         }
 
+        Log::info('ProcessRuntimeTurnJob: Starting turn', [
+            'runtime_session_id' => $this->runtimeSessionId,
+            'message_length' => strlen($this->userMessage),
+        ]);
+
         try {
             $result = $orchestrator->executeTurn($session, $this->userMessage);
+
+            Log::info('ProcessRuntimeTurnJob: Turn finished', [
+                'runtime_session_id' => $this->runtimeSessionId,
+                'status' => $result['status'] ?? 'unknown',
+            ]);
         } catch (\Throwable $e) {
             Log::error('ProcessRuntimeTurnJob: Turn execution failed', [
                 'runtime_session_id' => $this->runtimeSessionId,

@@ -48,6 +48,11 @@ class AgentRestartCommandTest extends TestCase
             ->once()
             ->andReturn(true);
 
+        $processManager->shouldReceive('stopService')
+            ->with('messenger-gateway', Mockery::any(), 30)
+            ->once()
+            ->andReturn(true);
+
         $this->app->instance(ProcessManager::class, $processManager);
 
         // Use --stop-only to avoid actual process spawning in test
@@ -108,6 +113,11 @@ class AgentRestartCommandTest extends TestCase
             ->once()
             ->andReturn(true);
 
+        $processManager->shouldReceive('stopService')
+            ->with('messenger-gateway', Mockery::any(), 30)
+            ->once()
+            ->andReturn(true);
+
         // Serve should NOT be stopped when --exclude-web is used
         $processManager->shouldNotReceive('stopService')
             ->with('serve', Mockery::any(), Mockery::any());
@@ -138,6 +148,11 @@ class AgentRestartCommandTest extends TestCase
 
         $processManager->shouldReceive('stopService')
             ->with('scheduler', 'artisan schedule:work', $customTimeout)
+            ->once()
+            ->andReturn(true);
+
+        $processManager->shouldReceive('stopService')
+            ->with('messenger-gateway', Mockery::any(), $customTimeout)
             ->once()
             ->andReturn(true);
 
@@ -190,6 +205,11 @@ class AgentRestartCommandTest extends TestCase
     public function test_restart_handles_failed_stop(): void
     {
         $processManager = Mockery::mock(ProcessManager::class);
+
+        $processManager->shouldReceive('stopService')
+            ->with('messenger-gateway', Mockery::any(), 30)
+            ->once()
+            ->andReturn(true);
 
         // First service fails to stop
         $processManager->shouldReceive('stopService')
@@ -257,6 +277,10 @@ class AgentRestartCommandTest extends TestCase
 
         $processManager->shouldReceive('stopService')
             ->with('scheduler', Mockery::any(), Mockery::any())
+            ->andReturn(true);
+
+        $processManager->shouldReceive('stopService')
+            ->with('messenger-gateway', Mockery::any(), Mockery::any())
             ->andReturn(true);
 
         // Dev services (serve, vite) should NOT be touched by default

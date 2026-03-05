@@ -246,7 +246,15 @@ class AgentRestartCommand extends Command
                 // Brief pause to let the service initialize
                 usleep(500_000); // 500ms
 
-                // Verify it's running
+                // Verify it's running (captured PID may be the wrapper shell; resolve actual process if needed)
+                if (! $processManager->isRunning($pid)) {
+                    $commandSignature = $this->getCommandSignature($name, $config['command']);
+                    $foundPid = $processManager->findByCommand($commandSignature);
+                    if ($foundPid !== null) {
+                        $pid = $foundPid;
+                    }
+                }
+
                 if ($processManager->isRunning($pid)) {
                     $processManager->writePidFile($name, $pid);
                     $results[$name] = [
@@ -257,7 +265,10 @@ class AgentRestartCommand extends Command
                 } else {
                     $results[$name] = [
                         'success' => false,
-                        'message' => 'Started but process exited immediately',
+                        'message' => sprintf(
+                            'Started but process exited immediately. Run manually to see errors: %s',
+                            $config['command']
+                        ),
                     ];
                 }
             } catch (\Throwable $e) {
@@ -273,45 +284,19 @@ class AgentRestartCommand extends Command
 
     private function startService(string $name, string $command, ProcessManager $processManager): int
     {
-        // Build the full command based on service type
-        $fullCommand = match ($name) {
-            'horizon' => sprintf(
-                'cd %s && %s > /dev/null 2>&1 &',
-                escapeshellarg(base_path()),
-                $command
-            ),
-            'reverb' => sprintf(
-                'cd %s && %s > /dev/null 2>&1 &',
-                escapeshellarg(base_path()),
-                $command
-            ),
-            'scheduler' => sprintf(
-                'cd %s && %s > /dev/null 2>&1 &',
-                escapeshellarg(base_path()),
-                $command
-            ),
-            'serve' => sprintf(
-                'cd %s && %s > /dev/null 2>&1 &',
-                escapeshellarg(base_path()),
-                $command
-            ),
-            'vite' => sprintf(
-                'cd %s && %s > /dev/null 2>&1 &',
-                escapeshellarg(base_path()),
-                $command
-            ),
-            default => sprintf(
-                'cd %s && %s > /dev/null 2>&1 &',
-                escapeshellarg(base_path()),
-                $command
-            ),
-        };
+        $commandSignature = $this->getCommandSignature($name, $command);
+        $basePath = escapeshellarg(base_path());
 
-        // Start the process and capture PID
-        $result = Process::run(sprintf(
-            'nohup sh -c %s & echo $!',
-            escapeshellarg($fullCommand)
-        ));
+        // Start the real process in the background, then resolve its PID via pgrep so we track
+        // the actual service process (not the wrapper shell which exits immediately).
+        $startAndResolvePid = sprintf(
+            'cd %s && nohup %s > /dev/null 2>&1 & sleep 0.5 && pgrep -f %s 2>/dev/null | head -1',
+            $basePath,
+            $command,
+            escapeshellarg($commandSignature)
+        );
+
+        $result = Process::run($startAndResolvePid);
 
         if (! $result->successful()) {
             throw new \RuntimeException(sprintf(
@@ -324,9 +309,7 @@ class AgentRestartCommand extends Command
         $pid = (int) trim($result->output());
 
         if ($pid <= 0) {
-            // Try to find the actual process PID
             usleep(200_000); // 200ms
-            $commandSignature = $this->getCommandSignature($name, $command);
             $foundPid = $processManager->findByCommand($commandSignature);
 
             if ($foundPid !== null) {

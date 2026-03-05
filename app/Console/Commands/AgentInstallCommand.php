@@ -197,7 +197,7 @@ class AgentInstallCommand extends Command
         $this->info('=== Installation Complete ===');
         $this->newLine();
 
-        $this->printNextSteps();
+        $this->printNextSteps($mode);
 
         return self::SUCCESS;
     }
@@ -1031,13 +1031,19 @@ class AgentInstallCommand extends Command
         file_put_contents($envPath, $content);
     }
 
-    private function printNextSteps(): void
+    private function printNextSteps(string $mode): void
     {
         $this->info('Next steps:');
         $this->line('');
         $this->line('  1. Start the runtime services:');
         $this->line('     php artisan agent:restart');
         $this->line('');
+        if ($mode === ConnectorAccount::MODE_LOCAL) {
+            $this->line('     For local mode, agent:restart starts the messenger gateway (Discord/Slack/Telegram).');
+            $this->line('     If you run Horizon only, start the gateway in a separate terminal:');
+            $this->line('     php artisan agent:messenger-gateway');
+            $this->line('');
+        }
         $this->line('  2. Monitor the services:');
         $this->line('     php artisan horizon');
         $this->line('');
