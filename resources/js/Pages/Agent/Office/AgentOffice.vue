@@ -11,10 +11,12 @@ import { useAgentAvatars } from '@/Composables/Office/useAgentAvatars.js';
 import { useOfficeRealtime } from '@/Composables/Office/useOfficeRealtime.js';
 import { useOfficeZones } from '@/Composables/Office/useOfficeZones.js';
 import { useOfficeInteraction } from '@/Composables/Office/useOfficeInteraction.js';
+import { useOfficeEnvironment } from '@/Composables/Office/useOfficeEnvironment.js';
 import OfficeDetailPanel from '@/Components/Office/OfficeDetailPanel.vue';
 import { buildOfficeFloor, buildOfficeWalls, buildZoneLabels, buildZoneFurniture, ZONE_DEFS, WORKSTATION_POSITIONS } from '@/Support/Office/officeFloorplan.js';
 import { ParticleEmitter, SpeechBubble, AmbientAnimations } from '@/Support/Office/animations/visualEffects.js';
 import { Vector3 } from 'three';
+import { Sun, Moon, MonitorCog } from 'lucide-vue-next';
 
 const page = usePage();
 const containerRef = ref(null);
@@ -29,12 +31,14 @@ let sceneApi = null;
 let avatarApi = null;
 let zoneController = null;
 let interactionApi = null;
+let envApi = null;
 let particles = null;
 let speechBubbles = null;
 let ambientAnims = null;
 const realtime = useOfficeRealtime();
 const panelVisible = ref(false);
 const panelData = ref(null);
+const envOverride = ref(null);
 
 function addZoneLighting(api) {
     api.addZoneLight(-10.5, 2.5, -8.5, 0x00ff44, 0.15, 6);
@@ -108,6 +112,10 @@ onMounted(async () => {
     try {
         sceneApi = useOfficeScene(containerRef, {
             onFrame(delta, time) {
+                if (envApi) {
+                    envApi.update(delta);
+                    sceneApi.setCeilingLightsEnabled(envApi.ceilingLightsEnabled);
+                }
                 if (avatarApi) avatarApi.updateAll(delta);
                 if (zoneController) zoneController.updateZones(time);
                 if (particles) particles.update(delta);
@@ -128,6 +136,9 @@ onMounted(async () => {
         scene.add(buildZoneFurniture());
         scene.add(buildZoneLabels());
 
+        envApi = useOfficeEnvironment(sceneApi, { override: envOverride });
+        envApi.install(scene);
+
         avatarApi = useAgentAvatars(scene);
         agents.value.forEach((agent, i) => {
             if (i >= WORKSTATION_POSITIONS.length) return;
@@ -143,6 +154,14 @@ onMounted(async () => {
         particles = new ParticleEmitter(sceneApi.scene);
         speechBubbles = new SpeechBubble(sceneApi.scene);
         ambientAnims = new AmbientAnimations(sceneApi.scene);
+
+        const getAgentsByWorkstation = () => {
+            const map = {};
+            agents.value.forEach((agent, i) => {
+                if (i < WORKSTATION_POSITIONS.length) map[i] = agent;
+            });
+            return map;
+        };
 
         interactionApi = useOfficeInteraction(sceneApi.scene, sceneApi.camera, sceneApi.renderer, {
             onAgentClick(data) {
@@ -160,7 +179,7 @@ onMounted(async () => {
                 panelVisible.value = false;
                 panelData.value = null;
             },
-        });
+        }, getAgentsByWorkstation);
         interactionApi.attach();
 
         realtime.start(page.props.auth?.user?.id);
@@ -213,6 +232,7 @@ onMounted(async () => {
 onUnmounted(() => {
     window.removeEventListener('resize', sceneApi?.resize);
     interactionApi?.detach();
+    envApi?.dispose();
     particles?.dispose();
     speechBubbles?.dispose();
     ambientAnims?.dispose();
@@ -297,16 +317,45 @@ onUnmounted(() => {
                             <span class="text-xs text-muted-foreground whitespace-nowrap">{{ thought.text }}</span>
                         </div>
                     </div>
-                    <div class="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground/70 ml-4 shrink-0">
-                        <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">W</kbd>
-                        <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">A</kbd>
-                        <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">S</kbd>
-                        <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">D</kbd>
-                        <span class="ml-0.5">Move</span>
-                        <span class="mx-1 text-border">|</span>
-                        <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">Q</kbd>
-                        <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">E</kbd>
-                        <span class="ml-0.5">Height</span>
+                    <div class="hidden sm:flex items-center gap-3 ml-4 shrink-0">
+                        <div class="flex items-center gap-1 rounded-lg border border-border/50 bg-muted/30 p-0.5">
+                            <button
+                                @click="envOverride = null"
+                                class="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors"
+                                :class="envOverride === null ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground'"
+                            >
+                                <MonitorCog class="h-3 w-3" />
+                                Auto
+                            </button>
+                            <button
+                                @click="envOverride = 'day'"
+                                class="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors"
+                                :class="envOverride === 'day' ? 'bg-amber-500/20 text-amber-400' : 'text-muted-foreground hover:text-foreground'"
+                            >
+                                <Sun class="h-3 w-3" />
+                                Day
+                            </button>
+                            <button
+                                @click="envOverride = 'night'"
+                                class="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors"
+                                :class="envOverride === 'night' ? 'bg-indigo-500/20 text-indigo-400' : 'text-muted-foreground hover:text-foreground'"
+                            >
+                                <Moon class="h-3 w-3" />
+                                Night
+                            </button>
+                        </div>
+                        <span class="text-border">|</span>
+                        <div class="flex items-center gap-1.5 text-xs text-muted-foreground/70">
+                            <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">W</kbd>
+                            <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">A</kbd>
+                            <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">S</kbd>
+                            <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">D</kbd>
+                            <span class="ml-0.5">Move</span>
+                            <span class="mx-1 text-border">|</span>
+                            <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">Q</kbd>
+                            <kbd class="rounded border border-border/60 bg-muted/40 px-1 py-0.5 font-mono text-[10px]">E</kbd>
+                            <span class="ml-0.5">Height</span>
+                        </div>
                     </div>
                 </div>
                 <OfficeDetailPanel

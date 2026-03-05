@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Events\AgentJobRunFinished;
+use App\Events\RunStatusChanged;
 use App\Jobs\Memory\MemoryFormationJob;
 use App\Models\AgentJobRun;
 use App\Services\Cost\WorkflowBudgetEnforcer;
@@ -641,6 +642,10 @@ class ExecuteAgentRunJob implements ShouldQueue
         }
 
         AgentJobRunFinished::dispatch($run, $status);
+
+        if ($run->user_id) {
+            event(RunStatusChanged::fromRun($run, $status));
+        }
     }
 
     /**

@@ -7,7 +7,7 @@ import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import {
     MessageSquare,
     RefreshCw,
@@ -18,7 +18,7 @@ import {
     Clock,
 } from 'lucide-vue-next';
 import axios from 'axios';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 
 const sessions = ref([]);
 const meta = ref({});
@@ -108,7 +108,31 @@ const relativeTime = (ts) => {
     return `${Math.round(diff / 86400000)}d ago`;
 };
 
-onMounted(load);
+let echoUserId = null;
+
+onMounted(() => {
+    load();
+
+    const userId = usePage().props.auth?.user?.id;
+    if (window.Echo && userId) {
+        echoUserId = userId;
+        window.Echo.private(`user.${userId}`)
+            .listen('.chat.message_received', (e) => {
+                if (expandedSession.value === e.session_id) {
+                    axios.get(`/agent/api/v1/chat/sessions/${e.session_id}/messages`)
+                        .then((response) => { history.value = response.data.data; })
+                        .catch(() => {});
+                }
+                load(meta.value.current_page ?? 1);
+            });
+    }
+});
+
+onBeforeUnmount(() => {
+    if (window.Echo && echoUserId) {
+        window.Echo.leave(`user.${echoUserId}`);
+    }
+});
 </script>
 
 <template>

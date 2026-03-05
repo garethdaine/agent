@@ -177,12 +177,32 @@ export class AvatarAnimator {
         }
     }
 
+    _applySittingPose() {
+        const drop = 0.08;
+        if (this._bodyRef) this._bodyRef.position.y = this._baseY.body - drop;
+        if (this._headRef) this._headRef.position.y = this._baseY.head - drop;
+        if (this._armsRef.left) this._armsRef.left.position.y = (this._baseY.leftArm ?? 0.55) - drop;
+        if (this._armsRef.right) this._armsRef.right.position.y = (this._baseY.rightArm ?? 0.55) - drop;
+        if (this._legsRef.left) {
+            this._legsRef.left.rotation.x = -Math.PI / 2.2;
+            this._legsRef.left.position.y = (this._baseY.leftLeg ?? 0.15) + 0.12;
+            this._legsRef.left.position.z = 0.12;
+        }
+        if (this._legsRef.right) {
+            this._legsRef.right.rotation.x = -Math.PI / 2.2;
+            this._legsRef.right.position.y = (this._baseY.rightLeg ?? 0.15) + 0.12;
+            this._legsRef.right.position.z = 0.12;
+        }
+        this.group.rotation.y = Math.PI;
+    }
+
     _animateTyping(delta) {
+        this._applySittingPose();
         if (this._armsRef.left) {
-            this._armsRef.left.rotation.x = -0.5 + Math.sin(this.stateTime * 12) * 0.08;
+            this._armsRef.left.rotation.x = -0.7 + Math.sin(this.stateTime * 12) * 0.08;
         }
         if (this._armsRef.right) {
-            this._armsRef.right.rotation.x = -0.5 + Math.cos(this.stateTime * 14) * 0.08;
+            this._armsRef.right.rotation.x = -0.7 + Math.cos(this.stateTime * 14) * 0.08;
         }
         if (this._headRef) {
             this._headRef.rotation.x = -0.1 + Math.sin(this.stateTime * 0.5) * 0.02;
@@ -190,12 +210,11 @@ export class AvatarAnimator {
     }
 
     _animateReading(delta) {
+        this._applySittingPose();
         if (this._headRef) {
             this._headRef.rotation.x = -0.15;
             this._headRef.rotation.y = Math.sin(this.stateTime * 0.8) * 0.1;
         }
-        const bob = Math.sin(this.stateTime * 1.0) * 0.005;
-        if (this._bodyRef) this._bodyRef.position.y = this._baseY.body + bob;
     }
 
     _animateWaiting(delta) {
@@ -227,11 +246,28 @@ export class AvatarAnimator {
     }
 
     _resetPose() {
-        if (this._armsRef.left) { this._armsRef.left.rotation.set(0, 0, 0); }
-        if (this._armsRef.right) { this._armsRef.right.rotation.set(0, 0, 0); }
-        if (this._legsRef.left) { this._legsRef.left.rotation.set(0, 0, 0); }
-        if (this._legsRef.right) { this._legsRef.right.rotation.set(0, 0, 0); }
-        if (this._headRef) { this._headRef.rotation.set(0, 0, 0); }
+        if (this._armsRef.left) {
+            this._armsRef.left.rotation.set(0, 0, 0);
+            this._armsRef.left.position.y = this._baseY.leftArm ?? 0.55;
+        }
+        if (this._armsRef.right) {
+            this._armsRef.right.rotation.set(0, 0, 0);
+            this._armsRef.right.position.y = this._baseY.rightArm ?? 0.55;
+        }
+        if (this._legsRef.left) {
+            this._legsRef.left.rotation.set(0, 0, 0);
+            this._legsRef.left.position.y = this._baseY.leftLeg ?? 0.15;
+            this._legsRef.left.position.z = 0;
+        }
+        if (this._legsRef.right) {
+            this._legsRef.right.rotation.set(0, 0, 0);
+            this._legsRef.right.position.y = this._baseY.rightLeg ?? 0.15;
+            this._legsRef.right.position.z = 0;
+        }
+        if (this._headRef) {
+            this._headRef.rotation.set(0, 0, 0);
+            this._headRef.position.y = this._baseY.head ?? 0.95;
+        }
         if (this._bodyRef) {
             this._bodyRef.position.x = 0;
             this._bodyRef.position.y = this._baseY.body ?? 0.55;

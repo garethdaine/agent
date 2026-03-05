@@ -5,6 +5,7 @@ namespace App\Services\Runtime;
 use App\Enums\Runtime\RuntimeApprovalState;
 use App\Enums\Runtime\RuntimeMode;
 use App\Enums\Runtime\RuntimeToolCallStatus;
+use App\Events\RuntimeApprovalRequested;
 use App\Models\Runtime\RuntimeApproval;
 use App\Models\Runtime\RuntimeSession;
 use App\Models\Runtime\RuntimeToolCall;
@@ -100,12 +101,20 @@ class ApprovalGate
      */
     public function createApprovalRequest(RuntimeToolCall $toolCall, User $requestedBy): RuntimeApproval
     {
-        return RuntimeApproval::create([
+        $approval = RuntimeApproval::create([
             'runtime_tool_call_id' => $toolCall->id,
             'requested_by' => $requestedBy->id,
             'state' => RuntimeApprovalState::Pending,
             'expires_at' => now()->addMinutes(self::APPROVAL_TTL_MINUTES),
         ]);
+
+        try {
+            event(RuntimeApprovalRequested::fromApproval($approval, (int) $requestedBy->id));
+        } catch (\Throwable) {
+            // Broadcasting should never block the approval flow
+        }
+
+        return $approval;
     }
 
     /**

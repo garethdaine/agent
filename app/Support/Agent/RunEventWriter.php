@@ -2,10 +2,12 @@
 
 namespace App\Support\Agent;
 
+use App\Events\RunEventsAvailable;
 use App\Jobs\Memory\MemoryWorkingBufferJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentRunEvent;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class RunEventWriter
@@ -227,14 +229,35 @@ class RunEventWriter
 
     private function createEvent(string $eventType, string $payload, ?string $reasoningStep = null): void
     {
+        $sequence = $this->nextSequence++;
+
         AgentRunEvent::query()->create([
             'agent_job_run_id' => $this->run->id,
             'event_type' => $eventType,
-            'sequence' => $this->nextSequence++,
+            'sequence' => $sequence,
             'payload' => $payload,
             'reasoning_step' => $reasoningStep,
             'event_ts' => CarbonImmutable::now('UTC'),
         ]);
+
+        $this->broadcastEventsAvailable($sequence);
+    }
+
+    private function broadcastEventsAvailable(int $sequence): void
+    {
+        $cacheKey = 'run_events_broadcast:'.$this->run->id;
+
+        if (Cache::has($cacheKey)) {
+            return;
+        }
+
+        Cache::put($cacheKey, true, 2);
+
+        try {
+            RunEventsAvailable::dispatch($this->run->id, $sequence);
+        } catch (\Throwable) {
+            // Never block the event write loop
+        }
     }
 
     private function redact(string $payload, int &$redactionCount): string

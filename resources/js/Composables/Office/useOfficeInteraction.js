@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import { Raycaster, Vector2 } from 'three';
 import { ZONE_DEFS } from '@/Support/Office/officeFloorplan.js';
 
-export function useOfficeInteraction(scene, camera, renderer, options = {}) {
+export function useOfficeInteraction(scene, camera, renderer, options = {}, agentsByWorkstation = {}) {
     const hoveredObject = ref(null);
     const selectedObject = ref(null);
     const selectedType = ref(null);
@@ -21,6 +21,30 @@ export function useOfficeInteraction(scene, camera, renderer, options = {}) {
         let current = object;
         while (current) {
             if (current.userData?.interactive) return current;
+            current = current.parent;
+        }
+        return null;
+    }
+
+    function resolveWorkstationAgent(object) {
+        let current = object;
+        while (current) {
+            if (current.userData?.type === 'workstation' && current.userData?.workstationIndex !== undefined) {
+                const wsIdx = current.userData.workstationIndex;
+                const agentMap = typeof agentsByWorkstation === 'function' ? agentsByWorkstation() : agentsByWorkstation;
+                return agentMap?.[wsIdx] ?? null;
+            }
+            if (current.userData?.type === 'monitor') {
+                let parent = current.parent;
+                while (parent) {
+                    if (parent.userData?.workstationIndex !== undefined) {
+                        const wsIdx = parent.userData.workstationIndex;
+                        const agentMap = typeof agentsByWorkstation === 'function' ? agentsByWorkstation() : agentsByWorkstation;
+                        return agentMap?.[wsIdx] ?? null;
+                    }
+                    parent = parent.parent;
+                }
+            }
             current = current.parent;
         }
         return null;
@@ -116,7 +140,18 @@ export function useOfficeInteraction(scene, camera, renderer, options = {}) {
 
         const interactive = getInteractiveAncestor(intersects[0].object);
 
-        if (interactive) {
+        const wsAgent = resolveWorkstationAgent(intersects[0].object);
+
+        if (wsAgent) {
+            selectedObject.value = interactive || intersects[0].object;
+            selectedType.value = 'agent';
+            selectedData.value = {
+                type: 'agent',
+                agentId: wsAgent.id,
+                agentName: wsAgent.name,
+            };
+            if (options.onAgentClick) options.onAgentClick(selectedData.value);
+        } else if (interactive) {
             selectedObject.value = interactive;
             const type = interactive.userData.type;
             selectedType.value = type;

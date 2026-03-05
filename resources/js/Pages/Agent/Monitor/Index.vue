@@ -16,9 +16,9 @@ import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { formatAgentRunEventEntries } from '@/Support/agentRunEventFormatting';
 import { deriveActiveBuildFreshnessView } from './freshness';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Monitor, Heart, Gauge, Radio, RefreshCw, AlertTriangle, ShieldCheck, HelpCircle, Square } from 'lucide-vue-next';
 
 const runs = ref([]);
@@ -54,7 +54,9 @@ const retryModalRunId = ref(null);
 const retryBusy = ref(false);
 const retryError = ref('');
 
+const echoConnected = ref(false);
 const BASE_POLL_MS = 2000;
+const ECHO_POLL_MS = 15000;
 const INACTIVE_POLL_MS = 10000;
 const HIDDEN_POLL_MS = 15000;
 const BACKOFF = [2000, 4000, 8000, 15000];
@@ -304,7 +306,7 @@ const pollInterval = () => {
         return INACTIVE_POLL_MS;
     }
 
-    return BASE_POLL_MS;
+    return echoConnected.value ? ECHO_POLL_MS : BASE_POLL_MS;
 };
 
 const scheduleNext = () => {
@@ -618,10 +620,46 @@ const handleVisibility = () => {
     scheduleNext();
 };
 
+// Echo subscriptions
+const currentRunChannel = ref(null);
+
+const subscribeToRunChannel = (runId) => {
+    if (currentRunChannel.value) {
+        window.Echo?.leave(`run.${currentRunChannel.value}`);
+        currentRunChannel.value = null;
+    }
+
+    if (!runId || !window.Echo) return;
+
+    currentRunChannel.value = runId;
+    window.Echo.private(`run.${runId}`)
+        .listen('.events.available', () => {
+            loadEvents();
+        });
+};
+
+watch(selectedRunId, (newId) => {
+    subscribeToRunChannel(newId);
+});
+
 onMounted(() => {
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('focus', handleVisibility);
     window.addEventListener('blur', handleVisibility);
+
+    const userId = usePage().props.auth?.user?.id;
+    if (window.Echo && userId) {
+        echoConnected.value = true;
+
+        window.Echo.private(`user.${userId}`)
+            .listen('.run.status_changed', () => {
+                loadMonitor(true);
+            })
+            .listen('.runtime.approval_requested', () => {
+                loadMonitor(true);
+            });
+    }
+
     loadMonitor();
 });
 
@@ -630,6 +668,14 @@ onBeforeUnmount(() => {
     document.removeEventListener('visibilitychange', handleVisibility);
     window.removeEventListener('focus', handleVisibility);
     window.removeEventListener('blur', handleVisibility);
+
+    const userId = usePage().props.auth?.user?.id;
+    if (window.Echo && userId) {
+        window.Echo.leave(`user.${userId}`);
+    }
+    if (currentRunChannel.value) {
+        window.Echo?.leave(`run.${currentRunChannel.value}`);
+    }
 });
 </script>
 

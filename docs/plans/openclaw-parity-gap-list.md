@@ -93,7 +93,7 @@
 | # | Gap | Priority | Status | UI surface when complete |
 |---|-----|----------|--------|---------------------------|
 | G1 | Config reference (keys we support) + schema for UI | P2 | Done | **API:** `GET /configuration` now returns `schema` key with full field definitions (type, options, min/max, descriptions) alongside current `values`. Schema auto-documents all editable config keys. Combined with credential-storage-map.md for secrets |
-| G2 | Gateway protocol (WS methods we might adopt) | P3 | Open | API/WS if we add real-time dashboard |
+| G2 | Gateway protocol (WS methods we might adopt) | P3 | Done | **WebSocket:** Laravel Reverb + Echo. 5 broadcast events: `RunStatusChanged`, `RunEventsAvailable` (2s throttle), `RuntimeApprovalRequested`, `NotificationCreated`, `ChatMessageReceived`. Channels: `user.{userId}` (private), `run.{runId}` (private). **UI:** Monitor, AppLayout notifications, BuildPanel, Chat Sessions all subscribe via Echo; polling demoted to long-interval fallback |
 
 ---
 

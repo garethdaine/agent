@@ -1,4 +1,4 @@
-import { Group, Mesh, BoxGeometry, PlaneGeometry, MeshStandardMaterial, DoubleSide, CanvasTexture, SpriteMaterial, Sprite } from 'three';
+import { Group, Mesh, BoxGeometry, PlaneGeometry, MeshStandardMaterial, MeshPhysicalMaterial, DoubleSide, CanvasTexture, SpriteMaterial, Sprite } from 'three';
 import {
     createWorkstation, createServerRack, createConferenceTable, createConferenceChair,
     createWhiteboard, createBookshelf, createBarrierGate, createTrafficLight,
@@ -60,6 +60,37 @@ function makeTextSprite(text, scale = 1.5) {
     return sprite;
 }
 
+function buildWallWithGaps(totalLength, wallH, wallThickness, fixedCoord, gapCenters, gapWidth, axis) {
+    const halfTotal = totalLength / 2;
+    const gaps = gapCenters.map((c) => ({ start: c - gapWidth / 2, end: c + gapWidth / 2 })).sort((a, b) => a.start - b.start);
+
+    const segments = [];
+    let cursor = -halfTotal;
+
+    gaps.forEach((gap) => {
+        if (gap.start > cursor) {
+            const segW = gap.start - cursor;
+            const segCenter = cursor + segW / 2;
+            segments.push(axis === 'x'
+                ? { w: segW, x: segCenter }
+                : { w: segW, z: segCenter },
+            );
+        }
+        cursor = gap.end;
+    });
+
+    if (cursor < halfTotal) {
+        const segW = halfTotal - cursor;
+        const segCenter = cursor + segW / 2;
+        segments.push(axis === 'x'
+            ? { w: segW, x: segCenter }
+            : { w: segW, z: segCenter },
+        );
+    }
+
+    return segments;
+}
+
 export function buildOfficeFloor() {
     const group = new Group();
     group.name = 'officeFloor';
@@ -84,6 +115,11 @@ export function buildOfficeWalls() {
     group.name = 'officeWalls';
     const wallH = 3.2;
     const wallMat = new MeshStandardMaterial({ color: 0x0f3460 });
+    const frameMat = new MeshStandardMaterial({ color: 0x222233 });
+    const glassMat = new MeshPhysicalMaterial({
+        transmission: 0.85, roughness: 0.1, thickness: 0.1,
+        color: 0xaaddff, transparent: true, opacity: 0.3,
+    });
 
     const addWall = (w, h, d, x, y, z) => {
         const m = new Mesh(new BoxGeometry(w, h, d), wallMat);
@@ -93,9 +129,75 @@ export function buildOfficeWalls() {
         group.add(m);
     };
 
-    addWall(FLOOR_WIDTH + 1, wallH, 0.15, 0, wallH / 2, -FLOOR_DEPTH / 2 - 0.5);
+    const addWindow = (x, y, z, w, h, d, rotY = 0) => {
+        const glass = new Mesh(new BoxGeometry(w, h, d), glassMat);
+        glass.position.set(x, y, z);
+        glass.rotation.y = rotY;
+        glass.userData = { type: 'window' };
+        glass.raycast = () => {};
+        group.add(glass);
+
+        const frameW = 0.06;
+        const addFrame = (fw, fh, fd, fx, fy, fz) => {
+            const f = new Mesh(new BoxGeometry(fw, fh, fd), frameMat);
+            f.position.set(fx, fy, fz);
+            f.rotation.y = rotY;
+            group.add(f);
+        };
+        addFrame(w + frameW, frameW, d + 0.02, x, y + h / 2, z);
+        addFrame(w + frameW, frameW, d + 0.02, x, y - h / 2, z);
+        if (rotY === 0) {
+            addFrame(frameW, h, d + 0.02, x - w / 2, y, z);
+            addFrame(frameW, h, d + 0.02, x + w / 2, y, z);
+        } else {
+            addFrame(d + 0.02, h, frameW, x, y, z - w / 2);
+            addFrame(d + 0.02, h, frameW, x, y, z + w / 2);
+        }
+
+        const belowH = y - h / 2;
+        if (belowH > 0.01) {
+            if (rotY === 0) {
+                addWall(w, belowH, 0.15, x, belowH / 2, z);
+            } else {
+                addWall(0.15, belowH, w, x, belowH / 2, z);
+            }
+        }
+        const aboveBottom = y + h / 2;
+        const aboveH = wallH - aboveBottom;
+        if (aboveH > 0.01) {
+            if (rotY === 0) {
+                addWall(w, aboveH, 0.15, x, aboveBottom + aboveH / 2, z);
+            } else {
+                addWall(0.15, aboveH, w, x, aboveBottom + aboveH / 2, z);
+            }
+        }
+    };
+
+    const winH = 1.5;
+    const winY = 1.8;
+    const winD = 0.15;
+    const northZ = -FLOOR_DEPTH / 2 - 0.5;
+    const eastX = FLOOR_WIDTH / 2 + 0.5;
+
+    const northWindows = [-9, -3, 3, 9];
+    const northWinW = 2.5;
+    const northWallSegments = buildWallWithGaps(
+        FLOOR_WIDTH + 1, wallH, 0.15, northZ,
+        northWindows, northWinW, 'x',
+    );
+    northWallSegments.forEach(({ w, x }) => addWall(w, wallH, 0.15, x, wallH / 2, northZ));
+    northWindows.forEach((wx) => addWindow(wx, winY, northZ, northWinW, winH, winD));
+
+    const eastWindows = [-6, 0, 6];
+    const eastWinW = 2.5;
+    const eastWallSegments = buildWallWithGaps(
+        FLOOR_DEPTH + 1, wallH, 0.15, eastX,
+        eastWindows, eastWinW, 'z',
+    );
+    eastWallSegments.forEach(({ w, z }) => addWall(0.15, wallH, w, eastX, wallH / 2, z));
+    eastWindows.forEach((wz) => addWindow(eastX, winY, wz, eastWinW, winH, winD, Math.PI / 2));
+
     addWall(0.15, wallH, FLOOR_DEPTH + 1, -FLOOR_WIDTH / 2 - 0.5, wallH / 2, 0);
-    addWall(0.15, wallH, FLOOR_DEPTH + 1, FLOOR_WIDTH / 2 + 0.5, wallH / 2, 0);
     addWall(FLOOR_WIDTH + 1, 0.6, 0.15, 0, 0.3, FLOOR_DEPTH / 2 + 0.5);
 
     const partitions = [
@@ -185,13 +287,20 @@ export function buildZoneFurniture() {
     const confTable = createConferenceTable({ length: 4, width: 1.4 });
     confTable.position.set(-2, 0, 7);
     group.add(confTable);
-    const chairPositions = [
-        [-4.5, 7, 0], [-3, 7, 0], [-1.5, 7, 0], [0, 7, 0], [1.5, 7, 0],
+    const confChairs = [
+        { x: -3.2, z: 8.0, ry: Math.PI },
+        { x: -2,   z: 8.0, ry: Math.PI },
+        { x: -0.8, z: 8.0, ry: Math.PI },
+        { x: -3.2, z: 6.0, ry: 0 },
+        { x: -2,   z: 6.0, ry: 0 },
+        { x: -0.8, z: 6.0, ry: 0 },
+        { x: -4.3, z: 7.0, ry: -Math.PI / 2 },
+        { x:  0.3, z: 7.0, ry: Math.PI / 2 },
     ];
-    chairPositions.forEach(([cx, cz, side]) => {
+    confChairs.forEach(({ x, z, ry }) => {
         const c = createConferenceChair();
-        c.position.set(cx, 0, cz + (side === 0 ? 1.2 : -1.2));
-        c.rotation.y = side === 0 ? 0 : Math.PI;
+        c.position.set(x, 0, z);
+        c.rotation.y = ry;
         group.add(c);
     });
     const wb = createWhiteboard();

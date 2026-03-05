@@ -25,6 +25,7 @@ export function useOfficeScene(containerRef, options = {}) {
     const _move = new Vector3();
 
     const ceilingLights = new Map();
+    let _ceilingLightsEnabled = true;
 
     function init() {
         const container = containerRef?.value ?? containerRef?.current;
@@ -172,11 +173,15 @@ export function useOfficeScene(containerRef, options = {}) {
         ceilingLights.get(zoneId).push(entry);
     }
 
+    function setCeilingLightsEnabled(enabled) {
+        _ceilingLightsEnabled = enabled;
+    }
+
     function setZoneOccupied(zoneId, occupied) {
         const lights = ceilingLights.get(zoneId);
         if (!lights) return;
         lights.forEach((entry) => {
-            entry.targetIntensity = occupied ? entry.maxIntensity : 0;
+            entry.targetIntensity = (_ceilingLightsEnabled && occupied) ? entry.maxIntensity : 0;
         });
     }
 
@@ -286,6 +291,7 @@ export function useOfficeScene(containerRef, options = {}) {
         addZoneLight,
         addCeilingLight,
         setZoneOccupied,
+        setCeilingLightsEnabled,
         focusOnPosition,
     };
 }

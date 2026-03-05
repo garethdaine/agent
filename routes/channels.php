@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AgentJobRun;
 use App\Models\DelegationGraph;
 use App\Models\InterrogationSession;
 use App\Models\RepoAnalysisSession;
@@ -51,6 +52,14 @@ Broadcast::channel('code-analysis.{sessionId}', function ($user, $sessionId) {
 // Memory system channels
 Broadcast::channel('memory.diagnostics.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
+});
+
+// Run event stream channel
+Broadcast::channel('run.{runId}', function ($user, $runId) {
+    return AgentJobRun::query()
+        ->whereKey((int) $runId)
+        ->where('user_id', (int) $user->id)
+        ->exists();
 });
 
 // Agent Office real-time channel

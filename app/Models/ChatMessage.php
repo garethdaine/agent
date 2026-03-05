@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Observers\ChatMessageObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @mixin Builder
  */
+#[ObservedBy(ChatMessageObserver::class)]
 class ChatMessage extends Model
 {
     use HasFactory;

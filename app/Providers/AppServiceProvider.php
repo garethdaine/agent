@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Listeners\DelegationBroadcastSubscriber;
+use App\Observers\DatabaseNotificationObserver;
 use App\Listeners\DelegationCoordinator;
 use App\Listeners\DelegationRecoveryHandler;
 use App\Listeners\Documentation\DocumentationTelemetrySubscriber;
@@ -63,6 +64,7 @@ use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Gate;
@@ -126,6 +128,8 @@ class AppServiceProvider extends ServiceProvider
             app(InterrogationBuildCommandGuard::class)->enforceFromGlobals();
             app(DatabaseDestructionGuard::class)->enforceFromGlobals();
         }
+
+        DatabaseNotification::observe(DatabaseNotificationObserver::class);
 
         $events->subscribe(DelegationCoordinator::class);
         $events->subscribe(DelegationRecoveryHandler::class);

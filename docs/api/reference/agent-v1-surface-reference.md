@@ -64,7 +64,7 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ### Chat
 
-**13 endpoint(s)** registered under `/agent/api/v1/chat`.
+**15 endpoint(s)** registered under `/agent/api/v1/chat`.
 
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
@@ -80,19 +80,9 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | GET | `agent/api/v1/chat/sessions` | `-` | `ChatSessionController@index` | `auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}` | `-` | `ChatSessionController@show` | `auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}/actions` | `-` | `ChatSessionController@actions` | `auth:sanctum` |
+| POST | `agent/api/v1/chat/sessions/{id}/archive` | `-` | `ChatSessionController@archive` | `auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}/messages` | `-` | `ChatSessionController@messages` | `auth:sanctum` |
-
-### Chat Sessions
-
-**5 endpoint(s)** registered under `/agent/api/v1/chat-sessions`.
-
-| Method | URI | Route Name | Controller | Auth |
-| --- | --- | --- | --- | --- |
-| GET | `agent/api/v1/chat-sessions` | `-` | `ChatSessionController@index` | `auth:sanctum` |
-| GET | `agent/api/v1/chat-sessions/{id}` | `-` | `ChatSessionController@show` | `auth:sanctum` |
-| POST | `agent/api/v1/chat-sessions/{id}/archive` | `-` | `ChatSessionController@archive` | `auth:sanctum` |
-| GET | `agent/api/v1/chat-sessions/{id}/history` | `-` | `ChatSessionController@history` | `auth:sanctum` |
-| POST | `agent/api/v1/chat-sessions/{id}/send` | `-` | `ChatSessionController@send` | `auth:sanctum` |
+| POST | `agent/api/v1/chat/sessions/{id}/send` | `-` | `ChatSessionController@send` | `auth:sanctum` |
 
 ### Code Analysis
 
@@ -481,14 +471,13 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ### Workflows
 
-**7 endpoint(s)** registered under `/agent/api/v1/workflows`.
+**6 endpoint(s)** registered under `/agent/api/v1/workflows`.
 
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
 | GET | `agent/api/v1/workflows/{workflowKey}/cost` | `-` | `WorkflowCostController@show` | `auth:sanctum` |
 | GET | `agent/api/v1/workflows/{workflowKey}/escalations` | `-` | `WorkflowEscalationController@index` | `auth:sanctum` |
 | GET | `agent/api/v1/workflows/{workflowKey}/gate-transitions` | `-` | `WorkflowGateTransitionController@index` | `auth:sanctum` |
-| GET | `agent/api/v1/workflows/{workflowKey}/health` | `-` | `WorkflowReliabilityController@show` | `auth:sanctum` |
 | POST | `agent/api/v1/workflows/{workflowKey}/pause` | `-` | `WorkflowGovernanceController@pause` | `auth:sanctum` |
 | GET | `agent/api/v1/workflows/{workflowKey}/reliability` | `-` | `WorkflowReliabilityController@show` | `auth:sanctum` |
 | POST | `agent/api/v1/workflows/{workflowKey}/resume` | `-` | `WorkflowGovernanceController@resume` | `auth:sanctum` |

@@ -78,10 +78,19 @@ export function createMonitor(options = {}) {
     const { screenColor = 0x001a0a, width = 0.5, height = 0.35 } = options;
     const g = new Group();
     g.userData = { type: 'monitor' };
-    addBox(g, width, height, 0.02, mat(0x222222), 0, 0.94, -0.1);
-    addBox(g, width - 0.04, height - 0.04, 0.005, mat(screenColor, { emissive: screenColor, emissiveIntensity: 0.3 }), 0, 0.94, -0.09);
-    addCylinder(g, 0.03, 0.03, 0.16, mat(0x333333), 0, 0.83, -0.1);
-    addBox(g, 0.15, 0.01, 0.1, mat(0x333333), 0, 0.76, -0.1);
+
+    const casingMat = mat(0x1a1a1a);
+    const casingDepth = 0.05;
+    const centerY = 0.94;
+    const centerZ = -0.1;
+
+    addBox(g, width, height, casingDepth, casingMat, 0, centerY, centerZ);
+    addBox(g, width - 0.03, height - 0.03, 0.003,
+        mat(screenColor, { emissive: screenColor, emissiveIntensity: 0.3 }),
+        0, centerY, centerZ + casingDepth / 2 + 0.002);
+
+    addCylinder(g, 0.03, 0.03, 0.16, mat(0x333333), 0, 0.83, centerZ);
+    addBox(g, 0.15, 0.01, 0.1, mat(0x333333), 0, 0.76, centerZ);
     return g;
 }
 
@@ -94,6 +103,7 @@ export function createWorkstation(options = {}) {
     g.add(monitor);
     const chair = createChair();
     chair.position.set(0, 0, 0.6);
+    chair.rotation.y = Math.PI;
     g.add(chair);
     return g;
 }

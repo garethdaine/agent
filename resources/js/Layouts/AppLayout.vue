@@ -210,9 +210,22 @@ onMounted(() => {
         }
     }
 
-    notificationPollInterval = window.setInterval(() => {
-        fetchNotifications({ silent: true });
-    }, 30000);
+    const userId = page.props.auth?.user?.id;
+
+    if (window.Echo && userId) {
+        window.Echo.private(`user.${userId}`)
+            .listen('.notification.created', () => {
+                fetchNotifications({ silent: true });
+            });
+
+        notificationPollInterval = window.setInterval(() => {
+            fetchNotifications({ silent: true });
+        }, 60000);
+    } else {
+        notificationPollInterval = window.setInterval(() => {
+            fetchNotifications({ silent: true });
+        }, 30000);
+    }
 
     fetchNotifications({ silent: true });
 });
@@ -229,6 +242,11 @@ onBeforeUnmount(() => {
     if (notificationPollInterval !== null) {
         window.clearInterval(notificationPollInterval);
         notificationPollInterval = null;
+    }
+
+    const userId = page.props.auth?.user?.id;
+    if (window.Echo && userId) {
+        window.Echo.leave(`user.${userId}`);
     }
 });
 </script>

@@ -104,6 +104,8 @@ const showHeartbeatEntries = ref(false);
 
 const TERMINAL_RUN_STATUSES = new Set(['succeeded', 'failed', 'killed', 'timed_out', 'skipped']);
 const ACTIVE_RUN_POLL_MS = 2000;
+const ECHO_ACTIVE_RUN_POLL_MS = 10000;
+const echoRunChannelId = ref(null);
 const LOG_PREVIEW_CHAR_LIMIT = 800;
 
 const canGenerate = computed(() => !props.disabled && !props.actions.generateBuildTasks && status.value !== 'generating_tasks');
@@ -496,16 +498,23 @@ const scheduleActiveRunEventsPoll = () => {
         return;
     }
 
+    const pollMs = echoRunChannelId.value === runId ? ECHO_ACTIVE_RUN_POLL_MS : ACTIVE_RUN_POLL_MS;
     activeRunEventsPollTimer.value = setTimeout(async () => {
         await fetchRunEvents(runId, { bootstrap: false });
         scheduleActiveRunEventsPoll();
-    }, ACTIVE_RUN_POLL_MS);
+    }, pollMs);
 };
 
 watch(
     activeRunId,
     async (nextRunId) => {
         clearActiveRunEventsPollTimer();
+
+        if (echoRunChannelId.value) {
+            window.Echo?.leave(`run.${echoRunChannelId.value}`);
+            echoRunChannelId.value = null;
+        }
+
         activeRunEvents.value = [];
         activeRunEventsAfterSequence.value = 0;
         activeRunEventsError.value = '';
@@ -522,6 +531,15 @@ watch(
         activeRunEventsRunId.value = Number(nextRunId);
         mergeActiveRunEvents(activeRun.value?.log_tail ?? [], { replace: true });
         await fetchRunEvents(Number(nextRunId), { bootstrap: true });
+
+        if (window.Echo && Number.isFinite(nextRunId) && nextRunId > 0) {
+            echoRunChannelId.value = nextRunId;
+            window.Echo.private(`run.${nextRunId}`)
+                .listen('.events.available', () => {
+                    fetchRunEvents(nextRunId, { bootstrap: false });
+                });
+        }
+
         scheduleActiveRunEventsPoll();
     },
     { immediate: true }
@@ -739,6 +757,9 @@ watch(
 
 onBeforeUnmount(() => {
     clearActiveRunEventsPollTimer();
+    if (echoRunChannelId.value) {
+        window.Echo?.leave(`run.${echoRunChannelId.value}`);
+    }
 });
 
 const addProjectRule = () => {

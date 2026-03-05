@@ -44,11 +44,6 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/backups/run-now` | `-` | `AgentBackupSettingsController@runNow` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/backups/settings` | `-` | `AgentBackupSettingsController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | PUT | `agent/api/v1/backups/settings` | `-` | `AgentBackupSettingsController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| GET | `agent/api/v1/chat-sessions` | `-` | `ChatSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
-| GET | `agent/api/v1/chat-sessions/{id}` | `-` | `ChatSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
-| POST | `agent/api/v1/chat-sessions/{id}/archive` | `-` | `ChatSessionController@archive` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
-| GET | `agent/api/v1/chat-sessions/{id}/history` | `-` | `ChatSessionController@history` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
-| POST | `agent/api/v1/chat-sessions/{id}/send` | `-` | `ChatSessionController@send` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/chat/actions/{id}` | `-` | `ChatActionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/chat/actions/{id}/cancel` | `-` | `ChatActionController@cancel` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/chat/actions/{id}/confirm` | `-` | `ChatActionController@confirm` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
@@ -61,7 +56,9 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/chat/sessions` | `-` | `ChatSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}` | `-` | `ChatSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}/actions` | `-` | `ChatSessionController@actions` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/chat/sessions/{id}/archive` | `-` | `ChatSessionController@archive` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/chat/sessions/{id}/messages` | `-` | `ChatSessionController@messages` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/chat/sessions/{id}/send` | `-` | `ChatSessionController@send` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/code-analysis/sessions` | `-` | `RepoAnalysisSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/code-analysis/sessions` | `-` | `RepoAnalysisSessionController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/code-analysis/sessions/{id}` | `-` | `RepoAnalysisSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
@@ -261,7 +258,6 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/workflows/{workflowKey}/cost` | `-` | `WorkflowCostController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/workflows/{workflowKey}/escalations` | `-` | `WorkflowEscalationController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/workflows/{workflowKey}/gate-transitions` | `-` | `WorkflowGateTransitionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
-| GET | `agent/api/v1/workflows/{workflowKey}/health` | `-` | `WorkflowReliabilityController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/workflows/{workflowKey}/pause` | `-` | `WorkflowGovernanceController@pause` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/workflows/{workflowKey}/reliability` | `-` | `WorkflowReliabilityController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | POST | `agent/api/v1/workflows/{workflowKey}/resume` | `-` | `WorkflowGovernanceController@resume` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |

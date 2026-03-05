@@ -40,18 +40,67 @@ function updateDeskLamp(workstation, status) {
     });
 }
 
+const monitorCanvases = new Map();
+const MONITOR_CANVAS_W = 128;
+const MONITOR_CANVAS_H = 96;
+
+function getOrCreateMonitorCanvas(workstationIndex) {
+    if (monitorCanvases.has(workstationIndex)) return monitorCanvases.get(workstationIndex);
+    const canvas = document.createElement('canvas');
+    canvas.width = MONITOR_CANVAS_W;
+    canvas.height = MONITOR_CANVAS_H;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, MONITOR_CANVAS_W, MONITOR_CANVAS_H);
+    const texture = new CanvasTexture(canvas);
+    monitorCanvases.set(workstationIndex, { canvas, ctx, texture });
+    return { canvas, ctx, texture };
+}
+
+function animateCodeCanvas(ctx, canvas) {
+    const imgData = ctx.getImageData(0, 1, canvas.width, canvas.height - 1);
+    ctx.putImageData(imgData, 0, 0);
+
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, canvas.height - 1, canvas.width, 1);
+
+    if (Math.random() < 0.7) {
+        const indent = Math.floor(Math.random() * 5) * 8;
+        const lineLen = 10 + Math.floor(Math.random() * 60);
+        const hue = Math.random() < 0.3 ? '#66dd88' : Math.random() < 0.5 ? '#88aaff' : '#aaddaa';
+        ctx.fillStyle = hue;
+        ctx.fillRect(indent, canvas.height - 1, lineLen, 1);
+
+        if (Math.random() < 0.3) {
+            ctx.fillStyle = '#dd8844';
+            ctx.fillRect(indent + lineLen + 4, canvas.height - 1, 15 + Math.floor(Math.random() * 20), 1);
+        }
+    }
+}
+
 function updateMonitorScreen(workstation, activity, time) {
+    const wsIndex = workstation.userData?.workstationIndex;
+
     workstation.traverse((child) => {
         if (child.isMesh && child.material?.emissive) {
             const geom = child.geometry?.parameters;
             if (geom && geom.depth < 0.01 && geom.width > 0.3) {
-                const color = activity === 'writing_code'
-                    ? new Color(0x00ff44)
-                    : activity === 'waiting'
+                if (activity === 'writing_code' && wsIndex !== undefined) {
+                    const mc = getOrCreateMonitorCanvas(wsIndex);
+                    animateCodeCanvas(mc.ctx, mc.canvas);
+                    mc.texture.needsUpdate = true;
+                    child.material.map = mc.texture;
+                    child.material.emissive.copy(new Color(0x00ff44));
+                    child.material.emissiveIntensity = 0.3;
+                } else {
+                    child.material.map = null;
+                    const color = activity === 'waiting'
                         ? new Color(0xffaa00)
                         : new Color(0x003322);
-                child.material.emissive.copy(color);
-                child.material.emissiveIntensity = activity === 'idle' ? 0.1 : 0.4;
+                    child.material.emissive.copy(color);
+                    child.material.emissiveIntensity = activity === 'idle' ? 0.05 : 0.4;
+                }
+                child.material.needsUpdate = true;
             }
         }
     });
