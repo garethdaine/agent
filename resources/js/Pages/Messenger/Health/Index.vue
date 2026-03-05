@@ -92,7 +92,7 @@ const formatDateTime = (isoString) => {
                         <HeartPulse class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Messenger Health Dashboard</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">Messenger Health Dashboard</h2>
                         <HelpHint
                             ui-key="messenger.health"
                             short-text="Monitor connector health and uptime status."

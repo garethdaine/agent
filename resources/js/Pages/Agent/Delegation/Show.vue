@@ -130,7 +130,7 @@ onMounted(() => {
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h2 class="text-xl font-semibold leading-tight text-foreground">{{ graph?.name ?? 'Loading...' }}</h2>
+                            <h2 class="text-base font-semibold text-foreground truncate">{{ graph?.name ?? 'Loading...' }}</h2>
                             <HelpHint
                                 ui-key="delegation.detail"
                                 short-text="Inspect delegation graph structure and task assignments."

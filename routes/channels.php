@@ -52,3 +52,8 @@ Broadcast::channel('code-analysis.{sessionId}', function ($user, $sessionId) {
 Broadcast::channel('memory.diagnostics.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
 });
+
+// Agent Office real-time channel
+Broadcast::channel('office.{userId}', function ($user, $userId) {
+    return (int) $user->id === (int) $userId;
+});

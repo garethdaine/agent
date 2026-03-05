@@ -13,6 +13,7 @@ import Textarea from '@/Components/ui/Textarea.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
+import DelegateeProfileCreateModal from '@/Components/Delegation/DelegateeProfileCreateModal.vue';
 import { Save } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -30,6 +31,7 @@ const validationErrors = ref({});
 
 const delegateeProfiles = ref([]);
 const orgAgents = ref([]);
+const showCreateProfileModal = ref(false);
 
 const form = ref({
     name: '',
@@ -101,6 +103,11 @@ const parentAgentOptions = computed(() => [
 const selectedDelegatee = computed(() =>
     delegateeProfiles.value.find((profile) => String(profile.id) === String(form.value.delegatee_profile_id))
 );
+
+const onProfileCreated = (profile) => {
+    delegateeProfiles.value = [...delegateeProfiles.value, profile];
+    form.value.delegatee_profile_id = String(profile.id);
+};
 
 const availableCapabilities = computed(() => selectedDelegatee.value?.capabilities ?? []);
 
@@ -440,11 +447,16 @@ onMounted(async () => {
                     </div>
 
                     <div class="space-y-2">
-                        <label class="block text-sm font-medium text-foreground">Delegatee Profile</label>
+                        <div class="flex items-center justify-between gap-2">
+                            <label class="text-sm font-medium text-foreground">Delegatee Profile</label>
+                            <Button type="button" variant="outline" size="sm" @click="showCreateProfileModal = true">
+                                Create profile
+                            </Button>
+                        </div>
                         <Select v-model="form.delegatee_profile_id" :options="delegateeOptions" />
                         <p v-if="validationErrors.delegatee_profile_id" class="text-xs text-destructive">{{ validationErrors.delegatee_profile_id[0] }}</p>
-                        <p v-if="delegateeProfiles.length === 0" class="text-xs text-muted-foreground">
-                            No delegatee profiles available. Create one under Delegation first.
+                        <p v-if="delegateeProfiles.length === 0 && !showCreateProfileModal" class="text-xs text-muted-foreground">
+                            No delegatee profiles available. Create one with the button above or under Delegation → Delegatee Profiles.
                         </p>
                     </div>
 
@@ -549,5 +561,11 @@ onMounted(async () => {
                 </CardContent>
             </Card>
         </template>
+
+        <DelegateeProfileCreateModal
+            :show="showCreateProfileModal"
+            @close="showCreateProfileModal = false"
+            @created="onProfileCreated"
+        />
     </div>
 </template>

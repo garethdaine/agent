@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Onboarding;
 
 use App\Http\Controllers\Controller;
+use App\Models\ConnectorAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,8 +13,13 @@ class OnboardingController extends Controller
 {
     public function welcome(Request $request): Response
     {
+        $connectorCount = ConnectorAccount::count();
+        $connectedCount = ConnectorAccount::where('status', ConnectorAccount::STATUS_CONNECTED)->count();
+
         return Inertia::render('Onboarding/Welcome', [
             'hasJobs' => $request->user()->agentJobs()->exists(),
+            'hasConnectors' => $connectorCount > 0,
+            'hasConnectedChannel' => $connectedCount > 0,
         ]);
     }
 

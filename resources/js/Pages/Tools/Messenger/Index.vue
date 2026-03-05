@@ -43,6 +43,8 @@ const editSaving = ref(false);
 const editError = ref('');
 const editForm = ref({
     name: '',
+    runner_type: 'claude',
+    approval_mode: 'autonomous',
     soul: {
         name: '',
         personality: '',
@@ -77,6 +79,7 @@ const connectForm = ref({
     name: '',
     connection_mode: 'webhook',
     credentials: {},
+    runner_type: 'claude',
     confirmation_required: true,
     default_verbosity: 'summary',
 });
@@ -169,6 +172,7 @@ const initializeConnectForm = () => {
     connectForm.value.name = `${firstProvider.label} Connector`;
     connectForm.value.connection_mode = firstProvider.default_connection_mode ?? 'webhook';
     connectForm.value.credentials = createEmptyCredentialState(firstProvider.key);
+    connectForm.value.runner_type = 'claude';
     connectForm.value.confirmation_required = true;
     connectForm.value.default_verbosity = 'summary';
 };
@@ -367,6 +371,7 @@ const submitConnector = async () => {
             config: {
                 confirmation_required: Boolean(connectForm.value.confirmation_required),
                 default_verbosity: String(connectForm.value.default_verbosity ?? 'summary'),
+                runner_type: String(connectForm.value.runner_type ?? 'claude'),
             },
         });
 
@@ -451,10 +456,31 @@ const getConnectorStatusVariant = (status) => {
     return 'outline';
 };
 
+const connectorPolicies = ref({});
+const policyLoading = ref({});
+
+const loadConnectorPolicy = async (connectorId) => {
+    policyLoading.value[connectorId] = true;
+    try {
+        const { data } = await axios.get(`/agent/api/v1/messenger/connectors/${connectorId}/policy`);
+        connectorPolicies.value[connectorId] = data.data;
+    } catch {
+        connectorPolicies.value[connectorId] = null;
+    } finally {
+        policyLoading.value[connectorId] = false;
+    }
+};
+
+const loadAllPolicies = async () => {
+    await Promise.all(connectors.value.map(c => loadConnectorPolicy(c.id)));
+};
+
 const startEditing = async (connector) => {
     editingConnectorId.value = connector.id;
     editError.value = '';
     editForm.value.name = connector.name ?? '';
+    editForm.value.runner_type = connector.config?.runner_type ?? 'claude';
+    editForm.value.approval_mode = connector.config?.approval_mode ?? 'autonomous';
 
     try {
         const soulResponse = await axios.get(`/agent/api/v1/messenger/connectors/${connector.id}/soul`);
@@ -486,6 +512,10 @@ const saveEditing = async () => {
 
         await axios.put(`/agent/api/v1/messenger/connectors/${connectorId}`, {
             name: editForm.value.name,
+            config: {
+                runner_type: editForm.value.runner_type,
+                approval_mode: editForm.value.approval_mode,
+            },
         });
         await axios.put(`/agent/api/v1/messenger/connectors/${connectorId}/soul`, editForm.value.soul);
 
@@ -537,6 +567,7 @@ watch(
 onMounted(async () => {
     await loadConnectorSchema();
     await loadOverview();
+    await loadAllPolicies();
 });
 </script>
 
@@ -551,7 +582,7 @@ onMounted(async () => {
                         <MessageSquare class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Messenger Control Plane</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">Messenger Control Plane</h2>
                         <HelpHint
                         ui-key="messenger.control-plane"
                         short-text="Use connector health, session activity, and dead-letter workflows safely."
@@ -641,6 +672,20 @@ onMounted(async () => {
                                 </select>
                             </label>
 
+                            <label class="text-sm text-muted-foreground">
+                                Runner type (CLI for chat)
+                                <select
+                                    v-model="connectForm.runner_type"
+                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="connectSubmitting"
+                                >
+                                    <option value="claude">Claude</option>
+                                    <option value="codex">Codex</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                                <p class="mt-0.5 text-xs text-muted-foreground">CLI process used when chatting via this connector.</p>
+                            </label>
+
                             <label
                                 v-for="field in selectedProviderFields"
                                 :key="field.key"
@@ -728,6 +773,7 @@ onMounted(async () => {
                                         <TableHead>Provider</TableHead>
                                         <TableHead>Mode</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead>Policy</TableHead>
                                         <TableHead>Sessions</TableHead>
                                         <TableHead>Actions</TableHead>
                                     </TableRow>
@@ -752,6 +798,14 @@ onMounted(async () => {
                                                 ></span>
                                                 <span class="capitalize">{{ connector.runtime_state || connector.status }}</span>
                                             </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div v-if="connectorPolicies[connector.id]" class="flex flex-wrap gap-1">
+                                                <Badge variant="outline" class="text-[10px]">DM: {{ connectorPolicies[connector.id].dm_policy }}</Badge>
+                                                <Badge variant="outline" class="text-[10px]">Scope: {{ connectorPolicies[connector.id].dm_session_scope }}</Badge>
+                                                <Badge v-if="connectorPolicies[connector.id].group_policy?.require_mention" variant="outline" class="text-[10px]">@mention</Badge>
+                                            </div>
+                                            <span v-else class="text-xs text-muted-foreground">—</span>
                                         </TableCell>
                                         <TableCell class="text-muted-foreground">{{ connector.sessions_count ?? 0 }}</TableCell>
                                         <TableCell>
@@ -785,7 +839,7 @@ onMounted(async () => {
                                         </TableCell>
                                     </TableRow>
                                     <TableRow v-if="editingConnectorId === connector.id" :key="'edit-' + connector.id">
-                                        <TableCell colspan="6" class="bg-muted/30 p-0">
+                                        <TableCell colspan="7" class="bg-muted/30 p-0">
                                             <div class="px-4 py-4 space-y-4">
                                                 <div class="flex items-center justify-between">
                                                     <h4 class="text-sm font-semibold text-foreground">Edit {{ connector.name }}</h4>
@@ -802,6 +856,30 @@ onMounted(async () => {
                                                     <label class="text-sm text-muted-foreground">
                                                         Agent Name
                                                         <Input v-model="editForm.soul.name" type="text" class="mt-1" :disabled="editSaving" placeholder="e.g. AxiomSpark" />
+                                                    </label>
+                                                    <label class="text-sm text-muted-foreground">
+                                                        Runner type (CLI for chat)
+                                                        <select
+                                                            v-model="editForm.runner_type"
+                                                            class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                            :disabled="editSaving"
+                                                        >
+                                                            <option value="claude">Claude</option>
+                                                            <option value="codex">Codex</option>
+                                                            <option value="custom">Custom</option>
+                                                        </select>
+                                                    </label>
+                                                    <label class="text-sm text-muted-foreground">
+                                                        Approval Mode
+                                                        <select
+                                                            v-model="editForm.approval_mode"
+                                                            class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                            :disabled="editSaving"
+                                                        >
+                                                            <option value="autonomous">Autonomous (auto-approve all tools)</option>
+                                                            <option value="supervised">Supervised (prompt for approval)</option>
+                                                            <option value="restricted">Restricted (read-only tools)</option>
+                                                        </select>
                                                     </label>
                                                 </div>
                                                 <label class="block text-sm text-muted-foreground">
@@ -846,7 +924,7 @@ onMounted(async () => {
                                     </TableRow>
                                     </template>
                                     <TableRow v-if="connectors.length === 0">
-                                        <TableCell colspan="6" class="text-center text-muted-foreground">No connectors found.</TableCell>
+                                        <TableCell colspan="7" class="text-center text-muted-foreground">No connectors found.</TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>

@@ -6,12 +6,14 @@ use App\Contracts\Messenger\ConnectorAdapterInterface;
 use App\DTOs\Messenger\OutboundPayload;
 use App\DTOs\Messenger\ProviderResponse;
 use App\Enums\Messenger\ChatActionType;
+use App\Enums\Runtime\RuntimeToolCallStatus;
+use App\Jobs\Runtime\ProcessRuntimeTurnJob;
 use App\Models\ChatAction;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\ConnectorAccount;
+use App\Models\Runtime\RuntimeToolCall;
 use App\Models\User;
-use App\Jobs\Runtime\ProcessRuntimeTurnJob;
 use App\Services\Messenger\AgentRouter;
 use App\Services\Messenger\ChatActionExecutor;
 use App\Services\Messenger\ChatIntentParser;
@@ -19,6 +21,7 @@ use App\Services\Messenger\ChatResponseFormatter;
 use App\Services\Messenger\CommandRouter;
 use App\Services\Messenger\ConfirmationManager;
 use App\Services\Messenger\StreamingResponseWriter;
+use App\Services\Runtime\ApprovalGate;
 use App\Services\Runtime\RuntimeSessionManager;
 use App\Support\Messenger\ConnectorManager;
 use Illuminate\Bus\Queueable;
@@ -82,6 +85,13 @@ class ProcessChatIntent implements ShouldQueue
 
         $adapter = $connectorManager->resolve($account->provider);
 
+        // 0. Button callbacks (Discord interactive components)
+        if (str_starts_with($message->content, 'button:')) {
+            $this->handleButtonCallback($message->content, $session, $account, $adapter, $user, $confirmationManager);
+
+            return;
+        }
+
         // Acknowledge receipt with eyes emoji so the user knows we received it
         if ($adapter->supportsReactions() && $message->provider_message_id) {
             try {
@@ -137,20 +147,24 @@ class ProcessChatIntent implements ShouldQueue
         if ($agentRouter->shouldRouteToRuntime($user, $session->id)) {
             $runtimeSession = $agentRouter->getActiveSessionForChat($user, $session->id);
             if ($runtimeSession !== null) {
+                $placeholder = $adapter->supportsMessageEditing()
+                    ? $this->sendPlaceholder($session, $account, $adapter)
+                    : null;
+                $placeholderMessageId = $placeholder?->providerMessageId;
+
+                if ($placeholderMessageId) {
+                    $adapter->editMessage($session, $placeholderMessageId, '⏳ Processing request…');
+                } else {
+                    $this->sendResponse('⏳ Processing request. I\'ll reply when done.', $session, $account, $adapter);
+                }
+
                 ProcessRuntimeTurnJob::dispatch(
                     $runtimeSession->id,
                     $message->content,
                     $session->id,
-                    $account->id
+                    $account->id,
+                    $placeholderMessageId,
                 );
-                $placeholder = $adapter->supportsMessageEditing()
-                    ? $this->sendPlaceholder($session, $account, $adapter)
-                    : null;
-                if ($placeholder?->providerMessageId) {
-                    $adapter->editMessage($session, $placeholder->providerMessageId, '⏳ Processing in runtime…');
-                } else {
-                    $this->sendResponse('⏳ Processing in runtime. I\'ll reply when done.', $session, $account, $adapter);
-                }
 
                 return;
             }
@@ -203,12 +217,31 @@ class ProcessChatIntent implements ShouldQueue
             return;
         }
 
-        // Inject soul config into general task parameters
+        // Route free-form (GENERAL_TASK) to runtime so conversation context is maintained across turns
         if ($parsedAction->type === ChatActionType::GENERAL_TASK) {
-            $soulConfig = $account->config['soul'] ?? null;
-            if ($soulConfig !== null) {
-                $parsedAction = $parsedAction->withMergedParameters(['_soul' => $soulConfig]);
+            $runtimeSessionManager = app(RuntimeSessionManager::class);
+            $runtimeSession = $runtimeSessionManager->getOrCreateSessionForChat($user, $session->id, $account, []);
+
+            $placeholder = $adapter->supportsMessageEditing()
+                ? $this->sendPlaceholder($session, $account, $adapter)
+                : null;
+            $placeholderMessageId = $placeholder?->providerMessageId;
+
+            if ($placeholderMessageId) {
+                $adapter->editMessage($session, $placeholderMessageId, '⏳ Processing request…');
+            } else {
+                $this->sendResponse('⏳ Processing request. I\'ll reply when done.', $session, $account, $adapter);
             }
+
+            ProcessRuntimeTurnJob::dispatch(
+                $runtimeSession->id,
+                $message->content,
+                $session->id,
+                $account->id,
+                $placeholderMessageId,
+            );
+
+            return;
         }
 
         $action = ChatAction::create([
@@ -424,7 +457,13 @@ class ProcessChatIntent implements ShouldQueue
         );
 
         try {
-            return $adapter->sendMessage($session, $payload);
+            $response = $adapter->sendMessage($session, $payload);
+            Log::info('ProcessChatIntent: Placeholder sent', [
+                'session_id' => $session->id,
+                'provider_message_id' => $response?->providerMessageId,
+            ]);
+
+            return $response;
         } catch (\Throwable $e) {
             Log::warning('ProcessChatIntent: Failed to send placeholder', [
                 'session_id' => $session->id,
@@ -499,6 +538,96 @@ class ProcessChatIntent implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function handleButtonCallback(
+        string $content,
+        ChatSession $session,
+        ConnectorAccount $account,
+        ConnectorAdapterInterface $adapter,
+        User $user,
+        ConfirmationManager $confirmationManager,
+    ): void {
+        $customId = substr($content, strlen('button:'));
+
+        // Tool approval buttons: tool_approve:{id} / tool_deny:{id}
+        if (str_starts_with($customId, 'tool_approve:') || str_starts_with($customId, 'tool_deny:')) {
+            $isApproval = str_starts_with($customId, 'tool_approve:');
+            $toolCallId = substr($customId, $isApproval ? strlen('tool_approve:') : strlen('tool_deny:'));
+
+            $toolCall = RuntimeToolCall::find($toolCallId);
+
+            if ($toolCall === null || $toolCall->status !== RuntimeToolCallStatus::PendingApproval) {
+                $this->sendResponse('This approval request is no longer active.', $session, $account, $adapter);
+
+                return;
+            }
+
+            $approval = $toolCall->approval;
+
+            if ($approval !== null) {
+                $approvalGate = app(ApprovalGate::class);
+                if ($isApproval) {
+                    $approvalGate->approve($approval, $user);
+                } else {
+                    $approvalGate->deny($approval, $user);
+                }
+            } else {
+                $toolCall->update([
+                    'status' => $isApproval ? RuntimeToolCallStatus::Approved : RuntimeToolCallStatus::Denied,
+                    'approved_at' => $isApproval ? now() : null,
+                ]);
+            }
+
+            $action = $isApproval ? 'approved' : 'denied';
+            $this->sendResponse("Tool **{$toolCall->tool_name}** {$action}.", $session, $account, $adapter);
+
+            Log::info('ProcessChatIntent: Tool approval button handled', [
+                'tool_call_id' => $toolCallId,
+                'approved' => $isApproval,
+                'user_id' => $user->id,
+            ]);
+
+            return;
+        }
+
+        // Confirmation buttons: confirm:{id}:yes / confirm:{id}:no
+        if (str_starts_with($customId, 'confirm:')) {
+            $parts = explode(':', $customId);
+            if (count($parts) >= 3) {
+                $confirmationId = $parts[1];
+                $isConfirmed = $parts[2] === 'yes';
+
+                $confirmedAction = $confirmationManager->processCallbackConfirmation(
+                    $confirmationId,
+                    $isConfirmed,
+                    $account
+                );
+
+                if ($confirmedAction !== null) {
+                    $this->executeAction(
+                        $confirmedAction,
+                        $user,
+                        $session,
+                        $account,
+                        app(ChatActionExecutor::class),
+                        app(ChatResponseFormatter::class),
+                        app(ConnectorManager::class)
+                    );
+                } else {
+                    $this->sendResponse(
+                        $isConfirmed ? 'This confirmation is no longer active.' : 'Action cancelled.',
+                        $session,
+                        $account,
+                        $adapter
+                    );
+                }
+
+                return;
+            }
+        }
+
+        Log::debug('ProcessChatIntent: Unrecognized button callback', ['custom_id' => $customId]);
     }
 
     public function tags(): array

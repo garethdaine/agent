@@ -45,6 +45,12 @@ php artisan test --filter=AgentJobValidationTest  # Single test class
 php artisan route:list --path=agent/api/v1  # List API routes
 ```
 
+### Creating agent jobs from CLI
+```bash
+php artisan agent:job:create --name="My Job" --cron="0 9 * * 1-5" --runner-type=claude --user=1 --working-directory=/path/to/work --task-markdown-path=/path/to/task.md
+```
+Optional: `--runner-type=claude|codex|custom` (default: codex), `--user=<id|email>`, `--timezone=UTC`, `--max-runtime=300`, `--cooldown=0`, `--task-file=/path/to/file.md` (persist content inline), `--disabled`.
+
 ## Architecture
 
 ### Core Domain Models

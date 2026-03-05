@@ -140,7 +140,7 @@ onMounted(load);
                         <Search class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Requirements Discovery</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">Requirements Discovery</h2>
                         <HelpHint
                             ui-key="discovery.sessions"
                             short-text="Find guidance for setup, interview flow, planning, and build handoff."

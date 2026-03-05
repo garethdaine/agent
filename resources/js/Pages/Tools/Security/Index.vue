@@ -66,7 +66,7 @@ const severityVariant = (severity) => {
                         <ShieldCheck class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">
+                        <h2 class="text-base font-semibold text-foreground truncate">
                             Security
                         </h2>
                         <HelpHint

@@ -71,13 +71,13 @@ onMounted(load);
         <Head title="Delegation Graphs" />
 
         <template #header>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <GitBranch class="h-5 w-5 text-primary" />
+            <div class="flex items-center justify-between gap-4 min-w-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <GitBranch class="h-4 w-4 text-primary" />
                     </div>
-                    <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Delegation Graphs</h2>
+                    <div class="flex items-center gap-2 min-w-0">
+                        <h2 class="text-base font-semibold text-foreground truncate">Delegation</h2>
                         <HelpHint
                             ui-key="delegation.graphs"
                             short-text="Understand graph lifecycle, task states, and verification checkpoints."
@@ -85,15 +85,15 @@ onMounted(load);
                         />
                     </div>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex shrink-0 gap-2">
                     <Link :href="route('agent.delegation.graphs.builder')">
-                        <Button variant="outline">
+                        <Button variant="outline" size="sm">
                             Visual builder
                         </Button>
                     </Link>
                     <Link :href="route('agent.delegation.create')">
-                        <Button>
-                            <Plus class="mr-2 h-4 w-4" />
+                        <Button size="sm">
+                            <Plus class="mr-1.5 h-4 w-4" />
                             Create Graph
                         </Button>
                     </Link>
@@ -101,7 +101,24 @@ onMounted(load);
             </div>
         </template>
 
-        <div class="px-4 py-6 sm:px-6 lg:px-8">
+        <nav class="flex gap-1 border-b border-border pb-2 mb-4" aria-label="Delegation sections">
+            <Link
+                :href="route('agent.delegation.index')"
+                class="border-b-2 px-3 py-2 text-sm font-medium transition-colors"
+                :class="route().current('agent.delegation.index') ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'"
+            >
+                Graphs
+            </Link>
+            <Link
+                :href="route('agent.delegation.profiles.index')"
+                class="border-b-2 px-3 py-2 text-sm font-medium transition-colors"
+                :class="route().current('agent.delegation.profiles.*') ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'"
+            >
+                Delegatee Profiles
+            </Link>
+        </nav>
+
+        <div class="space-y-4">
             <div class="space-y-4">
                 <div class="flex items-center gap-2">
                     <Button

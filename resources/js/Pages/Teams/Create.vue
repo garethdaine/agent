@@ -11,7 +11,7 @@ import { Users } from 'lucide-vue-next';
                 <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                     <Users class="h-5 w-5 text-primary" />
                 </div>
-                <h2 class="font-semibold text-xl text-foreground leading-tight">
+                <h2 class="text-base font-semibold text-foreground truncate">
                     Create Team
                 </h2>
             </div>

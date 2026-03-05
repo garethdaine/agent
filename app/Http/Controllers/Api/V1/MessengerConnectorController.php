@@ -107,6 +107,11 @@ class MessengerConnectorController extends Controller
             'webhook_secret' => ['nullable', 'string', 'max:255'],
             'connection_mode' => ['nullable', 'string', Rule::in([ConnectorAccount::MODE_LOCAL, ConnectorAccount::MODE_WEBHOOK])],
             'config' => ['nullable', 'array'],
+            'config.runner_type' => ['nullable', 'string', Rule::in(['claude', 'codex', 'custom'])],
+            'config.approval_mode' => ['nullable', 'string', Rule::in(['autonomous', 'supervised', 'restricted'])],
+            'config.confirmation_required' => ['nullable', 'boolean'],
+            'config.session_history_limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'config.default_verbosity' => ['nullable', 'string', Rule::in(['brief', 'summary', 'detailed'])],
             'account_key' => ['nullable', 'string', 'max:64'],
         ]);
 
@@ -206,6 +211,11 @@ class MessengerConnectorController extends Controller
             'webhook_secret' => ['nullable', 'string', 'max:255'],
             'connection_mode' => ['sometimes', 'string', Rule::in([ConnectorAccount::MODE_LOCAL, ConnectorAccount::MODE_WEBHOOK])],
             'config' => ['sometimes', 'array'],
+            'config.runner_type' => ['nullable', 'string', Rule::in(['claude', 'codex', 'custom'])],
+            'config.approval_mode' => ['nullable', 'string', Rule::in(['autonomous', 'supervised', 'restricted'])],
+            'config.confirmation_required' => ['nullable', 'boolean'],
+            'config.session_history_limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'config.default_verbosity' => ['nullable', 'string', Rule::in(['brief', 'summary', 'detailed'])],
             'account_key' => ['sometimes', 'string', 'max:64'],
             'status' => ['sometimes', 'string', Rule::in([ConnectorAccount::STATUS_CONNECTED, ConnectorAccount::STATUS_DISCONNECTED, ConnectorAccount::STATUS_ERROR])],
         ]);

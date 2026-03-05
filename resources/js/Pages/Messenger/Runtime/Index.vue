@@ -62,7 +62,7 @@ const refresh = () => {
                         <Play class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Sessions</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">Sessions</h2>
                         <HelpHint
                             ui-key="sessions.overview"
                             short-text="View and manage active agent runtime sessions."

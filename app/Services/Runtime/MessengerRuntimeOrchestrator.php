@@ -4,9 +4,11 @@ namespace App\Services\Runtime;
 
 use App\DTOs\Runtime\RuntimeContext;
 use App\DTOs\Runtime\ToolResult;
+use App\Enums\Messenger\ApprovalMode;
 use App\Enums\Runtime\RuntimeTurnStatus;
 use App\Models\Runtime\RuntimeSession;
 use App\Models\Runtime\RuntimeTurn;
+use App\Services\Credentials\CredentialsManager;
 use Illuminate\Support\Facades\Log;
 
 class MessengerRuntimeOrchestrator
@@ -17,15 +19,19 @@ class MessengerRuntimeOrchestrator
         private ToolGateway $toolGateway,
         private RuntimeLlmClient $llmClient,
         private CliRuntimeExecutor $cliExecutor,
+        private SessionProcessManager $sessionProcessManager,
+        private CredentialsManager $credentialsManager,
     ) {}
 
     /**
      * Execute one turn. When runtime.use_cli is true, runs the CLI (normal runtime);
      * otherwise runs in-app LLM with tools. API key always from credential manager.
      *
+     * @param  string|null  $runnerTypeOverride  When set (e.g. from connector config), use this CLI runner instead of config.
+     * @param  string|null  $systemPrompt  Connector soul text (identity, personality, user context) for CLI --system-prompt.
      * @return array{status: 'completed'|'failed'|'pending_approval', text?: string, tool_call_id?: string, error?: string}
      */
-    public function executeTurn(RuntimeSession $session, string $userMessage): array
+    public function executeTurn(RuntimeSession $session, string $userMessage, ?string $runnerTypeOverride = null, ?string $systemPrompt = null, ApprovalMode $approvalMode = ApprovalMode::Autonomous): array
     {
         $session->load(['user', 'policySnapshots']);
         $user = $session->user;
@@ -43,11 +49,21 @@ class MessengerRuntimeOrchestrator
         ]);
 
         if (config('runtime.use_cli', true)) {
-            $result = $this->cliExecutor->executeTurn($session, $userMessage);
+            if ($this->sessionProcessManager->isWrapperEnabled()) {
+                $result = $this->executeViaWrapper($session, $userMessage, $runnerTypeOverride, $systemPrompt, $approvalMode);
+            } else {
+                $runnerSessionId = $this->sessionProcessManager->getRunnerSessionId($session->id);
+                $result = $this->cliExecutor->executeTurn($session, $userMessage, $runnerTypeOverride, $runnerSessionId, $systemPrompt, $approvalMode);
+
+                if ($result['status'] === 'completed' && isset($result['runner_session_id'])) {
+                    $this->sessionProcessManager->setRunnerSessionId($session->id, $result['runner_session_id']);
+                }
+            }
+
             $summary = $result['text'] ?? $result['error'] ?? null;
             $turn->update([
                 'status' => $result['status'] === 'completed' ? RuntimeTurnStatus::Completed : RuntimeTurnStatus::Failed,
-                'summary' => $summary !== null && strlen($summary) > 500 ? substr($summary, 0, 497).'...' : $summary,
+                'summary' => $summary !== null && mb_strlen($summary) > 500 ? mb_substr($summary, 0, 497).'...' : $summary,
             ]);
 
             return $result;
@@ -83,7 +99,7 @@ class MessengerRuntimeOrchestrator
                     $finalText = implode("\n", $textBlocks);
                     $turn->update([
                         'status' => RuntimeTurnStatus::Completed,
-                        'summary' => strlen($finalText) > 500 ? substr($finalText, 0, 497).'...' : $finalText,
+                        'summary' => mb_strlen($finalText) > 500 ? mb_substr($finalText, 0, 497).'...' : $finalText,
                         'input_tokens' => $totalInputTokens,
                         'output_tokens' => $totalOutputTokens,
                     ]);
@@ -163,6 +179,54 @@ class MessengerRuntimeOrchestrator
                 'error' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * @return array{status: 'completed'|'failed', text?: string, runner_session_id?: string, error?: string}
+     */
+    private function executeViaWrapper(RuntimeSession $session, string $userMessage, ?string $runnerTypeOverride = null, ?string $systemPrompt = null, ApprovalMode $approvalMode = ApprovalMode::Autonomous): array
+    {
+        $user = $session->user;
+        if ($user === null) {
+            return ['status' => 'failed', 'error' => 'Runtime session has no user.'];
+        }
+
+        $apiKey = $this->credentialsManager->get($user, 'anthropic', 'api_key');
+        if ($apiKey === null || $apiKey === '') {
+            return ['status' => 'failed', 'error' => 'Anthropic API key not found.'];
+        }
+
+        $runnerType = $runnerTypeOverride ?? config('runtime.cli.runner_type', 'claude');
+        $executables = config('agent.runner_executables', []);
+        $executable = $executables[$runnerType] ?? null;
+
+        if ($executable === null) {
+            return ['status' => 'failed', 'error' => "Runner executable not configured for '{$runnerType}'."];
+        }
+
+        $workingDir = $session->workspace_root !== null && $session->workspace_root !== ''
+            ? $session->workspace_root
+            : (config('agent.allowed_working_directory_bases', [])[0] ?? base_path());
+
+        if (! $this->sessionProcessManager->hasActiveWrapper($session->id)) {
+            $started = $this->sessionProcessManager->startWrapper(
+                runtimeSessionId: $session->id,
+                runnerExecutable: $executable,
+                runnerType: $runnerType,
+                workingDirectory: $workingDir,
+                apiKey: $apiKey,
+                systemPrompt: $systemPrompt,
+                approvalMode: $approvalMode,
+            );
+
+            if (! $started) {
+                return ['status' => 'failed', 'error' => 'Failed to start wrapper process.'];
+            }
+        }
+
+        $timeout = (int) config('runtime.cli.timeout_seconds', 300);
+
+        return $this->sessionProcessManager->sendMessage($session->id, $userMessage, $timeout);
     }
 
     private function getPolicyForSession(RuntimeSession $session): array

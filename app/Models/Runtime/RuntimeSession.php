@@ -8,10 +8,10 @@ use App\Enums\Runtime\RuntimeSessionStatus;
 use App\Models\ChatSession;
 use App\Models\Team;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -29,6 +29,7 @@ class RuntimeSession extends Model
         'title',
         'workspace_root',
         'browser_persistence_mode',
+        'tool_auto_approvals',
         'started_at',
         'ended_at',
         'total_input_tokens',
@@ -42,12 +43,36 @@ class RuntimeSession extends Model
             'status' => RuntimeSessionStatus::class,
             'mode' => RuntimeMode::class,
             'browser_persistence_mode' => BrowserPersistenceMode::class,
+            'tool_auto_approvals' => 'array',
             'started_at' => 'datetime',
             'ended_at' => 'datetime',
             'total_input_tokens' => 'integer',
             'total_output_tokens' => 'integer',
             'total_cost_usd' => 'decimal:6',
         ];
+    }
+
+    public function isToolAutoApproved(string $toolName): bool
+    {
+        return in_array($toolName, $this->tool_auto_approvals ?? [], true);
+    }
+
+    public function addToolAutoApproval(string $toolName): void
+    {
+        $list = $this->tool_auto_approvals ?? [];
+        if (! in_array($toolName, $list, true)) {
+            $list[] = $toolName;
+            $this->update(['tool_auto_approvals' => $list]);
+        }
+    }
+
+    public function removeToolAutoApproval(string $toolName): void
+    {
+        $list = array_values(array_filter(
+            $this->tool_auto_approvals ?? [],
+            fn (string $t) => $t !== $toolName,
+        ));
+        $this->update(['tool_auto_approvals' => $list]);
     }
 
     public function user(): BelongsTo

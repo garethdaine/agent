@@ -123,4 +123,27 @@ class PolicyEngineTest extends TestCase
         $this->assertArrayHasKey('approval_model', $policy);
         $this->assertEquals('strict', $policy['approval_model']);
     }
+
+    public function test_tool_allowed_when_deny_empty_and_allow_empty(): void
+    {
+        config(['runtime.tool_deny' => [], 'runtime.tool_allow' => []]);
+        $this->assertTrue($this->engine->isToolAllowedByPolicy('fs'));
+        $this->assertTrue($this->engine->isToolAllowedByPolicy('fs', 'fs.write'));
+    }
+
+    public function test_tool_denied_when_in_deny_list(): void
+    {
+        config(['runtime.tool_deny' => ['fs.write', 'web'], 'runtime.tool_allow' => []]);
+        $this->assertFalse($this->engine->isToolAllowedByPolicy('fs', 'fs.write'));
+        $this->assertFalse($this->engine->isToolAllowedByPolicy('web'));
+        $this->assertTrue($this->engine->isToolAllowedByPolicy('fs', 'fs.read'));
+    }
+
+    public function test_tool_allowed_only_when_in_allow_list(): void
+    {
+        config(['runtime.tool_deny' => [], 'runtime.tool_allow' => ['fs', 'query']]);
+        $this->assertTrue($this->engine->isToolAllowedByPolicy('fs'));
+        $this->assertTrue($this->engine->isToolAllowedByPolicy('query'));
+        $this->assertFalse($this->engine->isToolAllowedByPolicy('web'));
+    }
 }

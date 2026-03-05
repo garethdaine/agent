@@ -1,12 +1,15 @@
 <script setup>
-import { Handle, useNode } from '@vue-flow/core';
+import { Handle } from '@vue-flow/core';
 import { computed } from 'vue';
 
-const { data } = useNode();
+const props = defineProps({
+    id: { type: String, default: '' },
+    data: { type: Object, default: () => ({}) },
+});
 
-const label = computed(() => data?.label ?? data?.name ?? 'Task');
-const status = computed(() => data?.status ?? 'pending');
-const capability = computed(() => data?.capability ?? data?.contract_json?.required_capability ?? '');
+const label = computed(() => props.data?.label ?? props.data?.name ?? 'Task');
+const status = computed(() => props.data?.status ?? 'pending');
+const capability = computed(() => props.data?.capability ?? props.data?.contract_json?.required_capability ?? '');
 
 const statusClass = computed(() => {
     const s = status.value;
@@ -24,13 +27,19 @@ const statusClass = computed(() => {
             statusClass,
         ]"
     >
-        <Handle type="target" :position="'left'" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="top-source" type="source" position="top" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="top-target" type="target" position="top" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="bottom-source" type="source" position="bottom" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="bottom-target" type="target" position="bottom" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="left-source" type="source" position="left" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="left-target" type="target" position="left" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="right-source" type="source" position="right" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="right-target" type="target" position="right" class="!w-2 !h-2 !bg-primary" />
         <div class="text-sm font-medium text-foreground truncate max-w-[180px]">
             {{ label }}
         </div>
         <div v-if="capability" class="text-xs text-muted-foreground truncate max-w-[180px] mt-0.5">
             {{ capability }}
         </div>
-        <Handle type="source" :position="'right'" class="!w-2 !h-2 !bg-primary" />
     </div>
 </template>

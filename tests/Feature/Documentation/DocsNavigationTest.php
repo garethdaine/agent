@@ -32,13 +32,13 @@ class DocsNavigationTest extends TestCase
 
     public function test_docs_navigation_entry_exists_in_primary_layout_and_points_to_docs_route(): void
     {
-        $layout = file_get_contents(resource_path('js/Layouts/AppLayout.vue'));
+        $sidebar = file_get_contents(resource_path('js/Components/AppSidebar.vue'));
 
-        $this->assertIsString($layout);
+        $this->assertIsString($sidebar);
         $this->assertGreaterThanOrEqual(
-            2,
-            substr_count($layout, "route('docs.index')"),
-            'Docs link should exist in both desktop and responsive navigation.'
+            1,
+            substr_count($sidebar, "route('docs.index')"),
+            'Docs link should exist in sidebar navigation.'
         );
 
         $user = User::factory()->create();

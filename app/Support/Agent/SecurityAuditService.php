@@ -23,6 +23,7 @@ class SecurityAuditService
 
         $this->checkAppDebug($findings);
         $this->checkRuntimeDefaultMode($findings);
+        $this->checkToolPolicy($findings);
         $this->checkLoggingRedaction($findings);
         $this->checkSessionTimeout($findings);
 
@@ -56,6 +57,27 @@ class SecurityAuditService
                 'severity' => self::SEVERITY_INFO,
                 'message' => "Default runtime mode is \"{$default}\". Safe mode is recommended for least privilege.",
                 'fix' => 'Set runtime.default_mode=safe in config/runtime.php or RUNTIME_DEFAULT_MODE env',
+            ];
+        }
+    }
+
+    /**
+     * @param  array<int, array{check_id: string, severity: string, message: string, fix: string|null}>  $findings
+     */
+    /**
+     * @param  array<int, array{check_id: string, severity: string, message: string, fix: string|null}>  $findings
+     */
+    private function checkToolPolicy(array &$findings): void
+    {
+        $deny = Config::get('runtime.tool_deny', []);
+        $allow = Config::get('runtime.tool_allow', []);
+
+        if ($deny === [] && $allow === []) {
+            $findings[] = [
+                'check_id' => 'runtime.no_tool_restrictions',
+                'severity' => self::SEVERITY_INFO,
+                'message' => 'No tool deny or allow list is configured. All tools enabled by mode are available.',
+                'fix' => 'Set RUNTIME_TOOL_DENY for sensitive tools (e.g. fs.write,runtime.spawn) or RUNTIME_TOOL_ALLOW for allowlist mode',
             ];
         }
     }

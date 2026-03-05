@@ -7,11 +7,18 @@ use App\Http\Controllers\Api\V1\AgentRunController;
 use App\Http\Controllers\Api\V1\ChatActionController;
 use App\Http\Controllers\Api\V1\ChatSessionController;
 use App\Http\Controllers\Api\V1\ComplianceController;
+use App\Http\Controllers\Api\V1\ConfigurationController;
+use App\Http\Controllers\Api\V1\DebugPanelController;
+use App\Http\Controllers\Api\V1\LogTailController;
+use App\Http\Controllers\Api\V1\ConnectorPolicyController;
+use App\Http\Controllers\Api\V1\PairingController;
 use App\Http\Controllers\Api\V1\CredentialsController;
 use App\Http\Controllers\Api\V1\DelegateeProfileController;
 use App\Http\Controllers\Api\V1\DelegationGraphController;
 use App\Http\Controllers\Api\V1\DelegationTaskController;
 use App\Http\Controllers\Api\V1\DeploymentCountingController;
+use App\Http\Controllers\Api\V1\AuditLogController;
+use App\Http\Controllers\Api\V1\DiagnosticsController;
 use App\Http\Controllers\Api\V1\Docs\DocsCoverageController;
 use App\Http\Controllers\Api\V1\Docs\DocsFragmentController;
 use App\Http\Controllers\Api\V1\Docs\DocsSearchController;
@@ -32,6 +39,7 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\Org;
 use App\Http\Controllers\Api\V1\ProjectionReplayBuildController;
 use App\Http\Controllers\Api\V1\RepoAnalysisSessionController;
+use App\Http\Controllers\Api\V1\Runtime\RuntimePolicyController;
 use App\Http\Controllers\Api\V1\Runtime\RuntimeSessionController;
 use App\Http\Controllers\Api\V1\Runtime\RuntimeToolCallController;
 use App\Http\Controllers\Api\V1\SecurityAuditController;
@@ -41,7 +49,7 @@ use App\Http\Controllers\Api\V1\WorkflowEscalationController;
 use App\Http\Controllers\Api\V1\WorkflowGateTransitionController;
 use App\Http\Controllers\Api\V1\WorkflowGovernanceController;
 use App\Http\Controllers\Api\V1\WorkflowReliabilityController;
-use App\Http\Controllers\Docs\DiagnosticsController;
+use App\Http\Controllers\Docs\DiagnosticsController as DocsDiagnosticsController;
 use App\Http\Controllers\Internal\NlScheduleController;
 use App\Http\Middleware\AgentApiVersionHeader;
 use App\Http\Middleware\Memory\MemoryEnabled;
@@ -121,13 +129,28 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::delete('/credentials', [CredentialsController::class, 'destroy'])->middleware('throttle:agent-mutations');
 
             Route::get('/security/audit', [SecurityAuditController::class, 'index']);
+            Route::get('/diagnostics', [DiagnosticsController::class, 'index']);
+            Route::get('/runtime/policy', [RuntimePolicyController::class, 'index']);
+            Route::get('/audit-log', [AuditLogController::class, 'index']);
+            Route::get('/configuration', [ConfigurationController::class, 'index']);
+            Route::put('/configuration', [ConfigurationController::class, 'update'])->middleware('throttle:agent-mutations');
+            Route::get('/debug', [DebugPanelController::class, 'index']);
+            Route::get('/logs', [LogTailController::class, 'index']);
+            Route::get('/logs/export', [LogTailController::class, 'export']);
+
+            Route::get('/chat-sessions', [ChatSessionController::class, 'index']);
+            Route::get('/chat-sessions/{id}', [ChatSessionController::class, 'show']);
+            Route::get('/chat-sessions/{id}/history', [ChatSessionController::class, 'history']);
+            Route::post('/chat-sessions/{id}/send', [ChatSessionController::class, 'send'])->middleware('throttle:agent-mutations');
+            Route::post('/chat-sessions/{id}/archive', [ChatSessionController::class, 'archive'])->middleware('throttle:agent-mutations');
+            Route::get('/office/state', \App\Http\Controllers\Api\V1\OfficeStateController::class);
 
             Route::prefix('docs')->group(function (): void {
                 Route::get('/search', [DocsSearchController::class, 'index']);
                 Route::get('/fragments/{uiKey}', [DocsFragmentController::class, 'show']);
                 Route::get('/coverage', [DocsCoverageController::class, 'index'])
                     ->middleware('can:view-docs-coverage');
-                Route::get('/diagnostics', DiagnosticsController::class)
+                Route::get('/diagnostics', DocsDiagnosticsController::class)
                     ->middleware('can:view-docs-diagnostics');
             });
 
@@ -235,6 +258,12 @@ Route::middleware([AgentApiVersionHeader::class])
             });
 
             // Messenger connector management endpoints
+            Route::get('/messenger/pairings', [PairingController::class, 'index']);
+            Route::post('/messenger/pairings/{id}/approve', [PairingController::class, 'approve'])
+                ->middleware('throttle:agent-mutations');
+            Route::post('/messenger/pairings/{id}/revoke', [PairingController::class, 'revoke'])
+                ->middleware('throttle:agent-mutations');
+
             Route::get('/messenger/connectors/schema', [MessengerConnectorController::class, 'schema']);
             Route::get('/messenger/connectors', [MessengerConnectorController::class, 'index']);
             Route::post('/messenger/connectors', [MessengerConnectorController::class, 'store'])
@@ -245,6 +274,9 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::delete('/messenger/connectors/{id}', [MessengerConnectorController::class, 'destroy'])
                 ->middleware('throttle:agent-mutations');
             Route::post('/messenger/connectors/{id}/test', [MessengerConnectorController::class, 'test'])
+                ->middleware('throttle:agent-mutations');
+            Route::get('/messenger/connectors/{id}/policy', [ConnectorPolicyController::class, 'show']);
+            Route::put('/messenger/connectors/{id}/policy', [ConnectorPolicyController::class, 'update'])
                 ->middleware('throttle:agent-mutations');
             Route::match(['get', 'put'], '/messenger/connectors/{id}/soul', [MessengerConnectorController::class, 'soul'])
                 ->middleware('throttle:agent-mutations');
@@ -368,6 +400,8 @@ Route::middleware([AgentApiVersionHeader::class])
                 Route::get('/graphs/{graphId}/tasks', [DelegationTaskController::class, 'index']);
                 Route::get('/graphs/{graphId}/tasks/{taskId}', [DelegationTaskController::class, 'show']);
                 Route::post('/graphs/{graphId}/tasks/{taskId}/verification/resolve', [DelegationTaskController::class, 'resolveVerification'])->middleware('throttle:agent-mutations');
+
+                Route::get('/capabilities', [DelegateeProfileController::class, 'capabilities']);
 
                 // Delegatee Profiles - CRUD
                 Route::get('/delegatee-profiles', [DelegateeProfileController::class, 'index']);

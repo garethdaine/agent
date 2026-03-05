@@ -248,6 +248,25 @@ class ToolGatewayTest extends TestCase
         $this->assertArrayHasKey('tool_call_id', $result->data);
     }
 
+    public function test_call_returns_failure_when_tool_denied_by_policy(): void
+    {
+        config(['runtime.tool_deny' => ['fs.write'], 'runtime.tool_allow' => []]);
+
+        $session = RuntimeSession::factory()->create(['mode' => RuntimeMode::Standard]);
+        $turn = RuntimeTurn::factory()->create(['runtime_session_id' => $session->id]);
+        $context = $this->createContext($session, $turn);
+
+        $adapter = $this->createMock(ToolAdapterInterface::class);
+        $adapter->method('name')->willReturn('fs');
+        $adapter->method('authorize')->willReturn(true);
+        $this->gateway->register($adapter);
+
+        $result = $this->gateway->call('fs', $context, ['operation' => 'write', 'path' => '/tmp/out.txt']);
+
+        $this->assertFalse($result->success);
+        $this->assertStringContainsString('denied by runtime policy', $result->error);
+    }
+
     private function createContext(RuntimeSession $session, RuntimeTurn $turn): RuntimeContext
     {
         return new RuntimeContext(

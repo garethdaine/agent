@@ -190,6 +190,38 @@ Route::middleware([
         return Inertia::render('Tools/Security/Index');
     })->name('tools.security.index');
 
+    Route::get('/tools/diagnostics', function () {
+        return Inertia::render('Tools/Diagnostics/Index');
+    })->name('tools.diagnostics.index');
+
+    Route::get('/tools/logs', function () {
+        return Inertia::render('Tools/Logs/Index');
+    })->name('tools.logs.index');
+
+    Route::get('/tools/runtime', function () {
+        return Inertia::render('Tools/Runtime/Index');
+    })->name('tools.runtime.index');
+
+    Route::get('/tools/audit', function () {
+        return Inertia::render('Tools/Audit/Index');
+    })->name('tools.audit.index');
+
+    Route::get('/messenger/pairings', function () {
+        return Inertia::render('Messenger/Pairings/Index');
+    })->name('messenger.pairings.index');
+
+    Route::get('/messenger/sessions', function () {
+        return Inertia::render('Messenger/Sessions/Index');
+    })->name('messenger.sessions.index');
+
+    Route::get('/settings/configuration', function () {
+        return Inertia::render('Settings/Configuration/Index');
+    })->name('settings.configuration.index');
+
+    Route::get('/settings/secrets', function () {
+        return Inertia::render('Settings/Secrets/Index');
+    })->name('settings.secrets.index');
+
     Route::get('/tools/messenger', function () {
         return Inertia::render('Tools/Messenger/Index');
     })->name('tools.messenger.index');
@@ -416,7 +448,7 @@ Route::middleware([
     });
 
     Route::middleware(['office.ui'])->group(function () {
-        Route::get('/agent/office', fn () => Inertia::render('Agent/Office/Office3D'))
+        Route::get('/agent/office', fn () => Inertia::render('Agent/Office/AgentOffice'))
             ->name('agent.office');
     });
 });

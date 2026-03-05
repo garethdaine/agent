@@ -18,7 +18,8 @@ class GeneralTaskHandler implements StreamableHandlerInterface
         }
 
         try {
-            $result = Process::timeout(45)->run([
+            $timeout = (int) config('messenger.general_task_cli_timeout_seconds', 45);
+            $result = Process::timeout($timeout)->run([
                 $this->executable(),
                 '-p',
                 '--system-prompt',
@@ -66,7 +67,8 @@ class GeneralTaskHandler implements StreamableHandlerInterface
         }
 
         try {
-            $process = Process::timeout(45)->start([
+            $timeout = (int) config('messenger.general_task_cli_timeout_seconds', 45);
+            $process = Process::timeout($timeout)->start([
                 $this->executable(),
                 '-p',
                 '--system-prompt',

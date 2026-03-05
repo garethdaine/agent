@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Runtime\RuntimeSession;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -95,6 +96,11 @@ class MemoryConversationLog extends Model
         return $this->belongsTo(AgentJob::class, 'job_id');
     }
 
+    public function runtimeSession(): BelongsTo
+    {
+        return $this->belongsTo(RuntimeSession::class, 'runtime_session_id');
+    }
+
     /**
      * Scope to filter by user.
      */
@@ -117,6 +123,14 @@ class MemoryConversationLog extends Model
     public function scopeForJob(Builder $query, int $jobId): void
     {
         $query->where('job_id', $jobId);
+    }
+
+    /**
+     * Scope to filter by runtime session.
+     */
+    public function scopeForRuntimeSession(Builder $query, string $runtimeSessionId): void
+    {
+        $query->where('runtime_session_id', $runtimeSessionId);
     }
 
     /**
@@ -168,6 +182,16 @@ class MemoryConversationLog extends Model
     {
         return (int) static::query()
             ->where('run_id', $runId)
+            ->max('sequence') + 1;
+    }
+
+    /**
+     * Get the next sequence number for a runtime session.
+     */
+    public static function getNextSequenceForRuntimeSession(string $runtimeSessionId): int
+    {
+        return (int) static::query()
+            ->where('runtime_session_id', $runtimeSessionId)
             ->max('sequence') + 1;
     }
 

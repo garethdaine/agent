@@ -109,7 +109,7 @@ onMounted(load);
                         <Search class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Discovery Settings</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">Discovery Settings</h2>
                         <HelpHint
                             ui-key="discovery.settings"
                             short-text="Configure discovery defaults and provider settings."

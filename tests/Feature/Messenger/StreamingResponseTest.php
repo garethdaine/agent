@@ -3,11 +3,10 @@
 namespace Tests\Feature\Messenger;
 
 use App\Contracts\Messenger\ConnectorAdapterInterface;
-use App\DTOs\Messenger\ActionResult;
 use App\DTOs\Messenger\ProviderResponse;
-use App\DTOs\Messenger\StreamingConfig;
 use App\Enums\Messenger\ChatActionType;
 use App\Jobs\Messenger\ProcessChatIntent;
+use App\Jobs\Runtime\ProcessRuntimeTurnJob;
 use App\Models\ChatAction;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
@@ -21,6 +20,7 @@ use App\Services\Messenger\CommandRouter;
 use App\Services\Messenger\ConfirmationManager;
 use App\Support\Messenger\ConnectorManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Mockery;
 use Tests\TestCase;
 
@@ -69,38 +69,24 @@ class StreamingResponseTest extends TestCase
         ]);
     }
 
-    public function test_general_task_streams_via_progressive_edits(): void
+    public function test_general_task_routes_to_runtime_and_sends_placeholder(): void
     {
+        Queue::fake();
+
         $editContents = [];
 
         $adapterMock = Mockery::mock(ConnectorAdapterInterface::class);
         $adapterMock->shouldReceive('supportsReactions')->andReturn(false);
         $adapterMock->shouldReceive('supportsMessageEditing')->andReturn(true);
-        $adapterMock->shouldReceive('getStreamingConfig')->andReturn(StreamingConfig::discord());
         $adapterMock->shouldReceive('sendMessage')->once()->andReturn(
             ProviderResponse::success('placeholder-msg-id')
         );
         $adapterMock->shouldReceive('editMessage')
-            ->andReturnUsing(function ($session, $msgId, $content) use (&$editContents) {
-                $editContents[] = $content;
-
-                return ProviderResponse::success($msgId);
-            });
+            ->once()
+            ->with(Mockery::any(), 'placeholder-msg-id', '⏳ Processing request…')
+            ->andReturn(ProviderResponse::success('placeholder-msg-id'));
 
         $connectorManager = $this->createConnectorManager($adapterMock);
-
-        $executorMock = Mockery::mock(ChatActionExecutor::class);
-        $executorMock->shouldReceive('executeStreaming')
-            ->once()
-            ->andReturnUsing(function ($action, $user, $onChunk) {
-                $onChunk('Hello, ');
-                usleep(10_000);
-                $onChunk('how can I ');
-                usleep(10_000);
-                $onChunk('help you?');
-
-                return ActionResult::success(message: 'Hello, how can I help you?');
-            });
 
         $intentParser = Mockery::mock(ChatIntentParser::class);
         $intentParser->shouldReceive('parse')->andReturn(
@@ -117,29 +103,23 @@ class StreamingResponseTest extends TestCase
 
         $job->handle(
             $intentParser,
-            $executorMock,
+            app(ChatActionExecutor::class),
             app(ConfirmationManager::class),
             app(ChatResponseFormatter::class),
             $connectorManager,
             app(CommandRouter::class)
         );
 
-        $this->assertNotEmpty($editContents, 'Expected at least one message edit');
+        Queue::assertPushed(ProcessRuntimeTurnJob::class);
 
-        $finalEdit = end($editContents);
-        $this->assertStringContainsString('Hello, how can I help you?', $finalEdit);
-        $this->assertStringNotContainsString('▍', $finalEdit);
-
-        $outboundMessage = ChatMessage::where('chat_session_id', $this->session->id)
-            ->where('direction', ChatMessage::DIRECTION_OUTBOUND)
-            ->first();
-        $this->assertNotNull($outboundMessage);
-        $this->assertStringContainsString('Hello, how can I help you?', $outboundMessage->content);
-        $this->assertEquals('placeholder-msg-id', $outboundMessage->provider_message_id);
+        $action = ChatAction::where('chat_message_id', $message->id)->first();
+        $this->assertNull($action, 'General task should not create a ChatAction; it is routed to runtime.');
     }
 
-    public function test_non_editing_adapter_falls_back_to_sync(): void
+    public function test_non_editing_adapter_sends_runtime_placeholder_message(): void
     {
+        Queue::fake();
+
         $adapterMock = Mockery::mock(ConnectorAdapterInterface::class);
         $adapterMock->shouldReceive('supportsReactions')->andReturn(false);
         $adapterMock->shouldReceive('supportsMessageEditing')->andReturn(false);
@@ -155,11 +135,6 @@ class StreamingResponseTest extends TestCase
             $this->makeParsedAction('Say hello')
         );
 
-        $executorMock = Mockery::mock(ChatActionExecutor::class);
-        $executorMock->shouldReceive('execute')
-            ->once()
-            ->andReturn(ActionResult::success(message: 'Hello!'));
-
         $message = $this->createInboundMessage('Say hello');
 
         $job = new ProcessChatIntent(
@@ -170,44 +145,38 @@ class StreamingResponseTest extends TestCase
 
         $job->handle(
             $intentParser,
-            $executorMock,
+            app(ChatActionExecutor::class),
             app(ConfirmationManager::class),
             app(ChatResponseFormatter::class),
             $connectorManager,
             app(CommandRouter::class)
         );
 
+        Queue::assertPushed(ProcessRuntimeTurnJob::class);
+
         $outboundMessage = ChatMessage::where('chat_session_id', $this->session->id)
             ->where('direction', ChatMessage::DIRECTION_OUTBOUND)
             ->first();
         $this->assertNotNull($outboundMessage);
-        $this->assertEquals('direct-msg-id', $outboundMessage->provider_message_id);
+        $this->assertStringContainsString('Processing request', $outboundMessage->content);
     }
 
-    public function test_streaming_handles_execution_failure_gracefully(): void
+    public function test_general_task_routes_to_runtime_without_executor(): void
     {
-        $lastEditContent = null;
+        Queue::fake();
 
         $adapterMock = Mockery::mock(ConnectorAdapterInterface::class);
         $adapterMock->shouldReceive('supportsReactions')->andReturn(false);
         $adapterMock->shouldReceive('supportsMessageEditing')->andReturn(true);
-        $adapterMock->shouldReceive('getStreamingConfig')->andReturn(StreamingConfig::discord());
         $adapterMock->shouldReceive('sendMessage')->once()->andReturn(
             ProviderResponse::success('placeholder-msg-id')
         );
         $adapterMock->shouldReceive('editMessage')
-            ->andReturnUsing(function ($session, $msgId, $content) use (&$lastEditContent) {
-                $lastEditContent = $content;
-
-                return ProviderResponse::success($msgId);
-            });
+            ->once()
+            ->with(Mockery::any(), 'placeholder-msg-id', '⏳ Processing request…')
+            ->andReturn(ProviderResponse::success('placeholder-msg-id'));
 
         $connectorManager = $this->createConnectorManager($adapterMock);
-
-        $executorMock = Mockery::mock(ChatActionExecutor::class);
-        $executorMock->shouldReceive('executeStreaming')
-            ->once()
-            ->andReturn(ActionResult::failure('I encountered an issue.'));
 
         $intentParser = Mockery::mock(ChatIntentParser::class);
         $intentParser->shouldReceive('parse')->andReturn(
@@ -224,22 +193,23 @@ class StreamingResponseTest extends TestCase
 
         $job->handle(
             $intentParser,
-            $executorMock,
+            app(ChatActionExecutor::class),
             app(ConfirmationManager::class),
             app(ChatResponseFormatter::class),
             $connectorManager,
             app(CommandRouter::class)
         );
 
-        $this->assertEquals('I encountered an issue.', $lastEditContent);
+        Queue::assertPushed(ProcessRuntimeTurnJob::class);
 
         $action = ChatAction::where('chat_message_id', $message->id)->first();
-        $this->assertNotNull($action);
-        $this->assertEquals(ChatAction::STATUS_FAILED, $action->status);
+        $this->assertNull($action, 'General task is routed to runtime; no ChatAction created.');
     }
 
-    public function test_streaming_fallback_when_placeholder_fails(): void
+    public function test_general_task_dispatches_runtime_job_even_when_placeholder_fails(): void
     {
+        Queue::fake();
+
         $adapterMock = Mockery::mock(ConnectorAdapterInterface::class);
         $adapterMock->shouldReceive('supportsReactions')->andReturn(false);
         $adapterMock->shouldReceive('supportsMessageEditing')->andReturn(true);
@@ -254,11 +224,6 @@ class StreamingResponseTest extends TestCase
             $this->makeParsedAction('Hello')
         );
 
-        $executorMock = Mockery::mock(ChatActionExecutor::class);
-        $executorMock->shouldReceive('execute')
-            ->once()
-            ->andReturn(ActionResult::success(message: 'Response'));
-
         $message = $this->createInboundMessage('Hello');
 
         $job = new ProcessChatIntent(
@@ -269,15 +234,17 @@ class StreamingResponseTest extends TestCase
 
         $job->handle(
             $intentParser,
-            $executorMock,
+            app(ChatActionExecutor::class),
             app(ConfirmationManager::class),
             app(ChatResponseFormatter::class),
             $connectorManager,
             app(CommandRouter::class)
         );
 
+        Queue::assertPushed(ProcessRuntimeTurnJob::class);
+
         $action = ChatAction::where('chat_message_id', $message->id)->first();
-        $this->assertNotNull($action);
+        $this->assertNull($action, 'General task is routed to runtime; no ChatAction created.');
     }
 
     public function test_executor_streaming_falls_back_for_non_streamable_handler(): void

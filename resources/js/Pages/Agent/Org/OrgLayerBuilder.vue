@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { markRaw, ref, computed, onMounted } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -7,10 +7,11 @@ import Button from '@/Components/ui/Button.vue';
 import { GraphCanvas } from '@/Components/GraphCanvas';
 import OrgAgentNode from '@/Components/Org/OrgAgentNode.vue';
 import OrgAgentConfigPanel from '@/Components/Org/OrgAgentConfigPanel.vue';
+import DelegateeProfileCreateModal from '@/Components/Delegation/DelegateeProfileCreateModal.vue';
 import { ArrowLeft, Plus, Save, Users } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 
-const nodeTypes = { orgAgent: OrgAgentNode };
+const nodeTypes = { orgAgent: markRaw(OrgAgentNode) };
 
 const nodes = ref([]);
 const edges = ref([]);
@@ -20,6 +21,7 @@ const saving = ref(false);
 const error = ref('');
 const validationError = ref('');
 const selectedNodeId = ref(null);
+const showCreateProfileModal = ref(false);
 
 const loadAgentsAndDelegatees = async () => {
     loading.value = true;
@@ -35,7 +37,7 @@ const loadAgentsAndDelegatees = async () => {
         nodes.value = agents.map((a, i) => ({
             id: a.id,
             type: 'orgAgent',
-            position: { x: 120 + (i % 4) * 200, y: 80 + Math.floor(i / 4) * 120 },
+            position: { x: 120 + (i % 3) * 240, y: 80 + Math.floor(i / 3) * 160 },
             data: {
                 name: a.name,
                 role_slug: a.role_slug,
@@ -54,6 +56,8 @@ const loadAgentsAndDelegatees = async () => {
                     id: `e-${a.id}-${managerId}`,
                     source: a.id,
                     target: managerId,
+                    sourceHandle: 'bottom-source',
+                    targetHandle: 'top-target',
                 });
             }
         });
@@ -76,7 +80,7 @@ const addAgent = () => {
         {
             id,
             type: 'orgAgent',
-            position: { x: 120 + (nodes.value.length % 4) * 200, y: 80 + Math.floor(nodes.value.length / 4) * 120 },
+            position: { x: 120 + (nodes.value.length % 3) * 240, y: 80 + Math.floor(nodes.value.length / 3) * 160 },
             data: {
                 name: `Agent ${nodes.value.length + 1}`,
                 role_slug: 'agent',
@@ -98,12 +102,17 @@ const onEdgesChange = ({ edges: next }) => {
 };
 
 const onConnect = (connection) => {
-    const sourceId = connection.source;
-    const newEdge = { id: `e-${sourceId}-${connection.target}`, source: sourceId, target: connection.target };
-    edges.value = [
-        ...edges.value.filter((e) => e.source !== sourceId),
-        newEdge,
-    ];
+    // GraphCanvas already added the new edge (with handle info) via addEdge.
+    // Enforce one outgoing "reports-to" edge per source agent.
+    edges.value = edges.value.filter(
+        (e) => e.source !== connection.source || e.target === connection.target
+    );
+
+    nodes.value = nodes.value.map((n) =>
+        n.id === connection.source
+            ? { ...n, data: { ...n.data, parent_agent_id: connection.target } }
+            : n
+    );
     validationError.value = '';
 };
 
@@ -127,9 +136,34 @@ const onNodeClick = (node) => {
 const onAgentConfigUpdate = (data) => {
     const id = selectedNodeId.value;
     if (!id) return;
+
+    const oldParent = nodes.value.find((n) => n.id === id)?.data?.parent_agent_id ?? null;
+    const newParent = data.parent_agent_id ?? null;
+
     nodes.value = nodes.value.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, ...data } } : n
     );
+
+    if (oldParent !== newParent) {
+        const filtered = edges.value.filter((e) => e.source !== id);
+
+        if (newParent) {
+            filtered.push({
+                id: `e-${id}-${newParent}`,
+                source: id,
+                target: newParent,
+                sourceHandle: 'bottom-source',
+                targetHandle: 'top-target',
+            });
+        }
+
+        edges.value = filtered;
+    }
+};
+
+const onProfileCreated = (profile) => {
+    delegateeProfiles.value = [...delegateeProfiles.value, profile];
+    onAgentConfigUpdate({ delegatee_profile_id: profile.id });
 };
 
 function topoSortForCreate(nodesList, edgesList) {
@@ -234,7 +268,7 @@ const save = async () => {
                         <Users class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">
+                        <h2 class="text-base font-semibold text-foreground truncate">
                             Org Layer Builder
                         </h2>
                         <HelpHint
@@ -286,9 +320,16 @@ const save = async () => {
                         :agents="agentListForPanel"
                         @close="selectedNodeId = null"
                         @update="onAgentConfigUpdate"
+                        @create-profile="showCreateProfileModal = true"
                     />
                 </aside>
             </div>
         </div>
+
+        <DelegateeProfileCreateModal
+            :show="showCreateProfileModal"
+            @close="showCreateProfileModal = false"
+            @created="onProfileCreated"
+        />
     </AppLayout>
 </template>

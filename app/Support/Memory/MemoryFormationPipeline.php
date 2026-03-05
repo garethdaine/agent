@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Support\Memory;
 
 use App\Models\AgentJobRun;
+use App\Models\ChatMessage;
 use App\Models\MemoryConversationLog;
 use App\Models\MemoryEmbedding;
 use App\Models\MemoryFormationFailure;
+use App\Models\Runtime\RuntimeSession;
+use App\Models\Runtime\RuntimeTurn;
 use App\Support\Agent\FeatureFlagManager;
 use App\Support\Memory\Contracts\EmbeddingProvider;
 use App\Support\Memory\Contracts\ExtractionProvider;
@@ -140,7 +143,8 @@ class MemoryFormationPipeline
                 $userId,
                 $run->id,
                 $combinedContent,
-                $importanceScore
+                $importanceScore,
+                null
             );
         } catch (\Throwable $e) {
             Log::error('MemoryFormationPipeline: Embedding generation failed', [
@@ -208,6 +212,246 @@ class MemoryFormationPipeline
     }
 
     /**
+     * Process a stopped runtime session into long-term memory.
+     *
+     * Builds entries from RuntimeTurns (and linked ChatMessages), persists to
+     * memory_conversation_logs with runtime_session_id, then runs extraction,
+     * embedding, and graph steps when API mode is enabled.
+     */
+    public function processRuntimeSession(RuntimeSession $session): MemoryFormationResult
+    {
+        $conversationLogsCreated = 0;
+        $embeddingsCreated = 0;
+        $entitiesStored = 0;
+        $relationshipsStored = 0;
+        $graphSkipped = false;
+
+        $userId = $session->user_id;
+        if ($userId === null) {
+            Log::warning('MemoryFormationPipeline: Runtime session has no user_id', ['session_id' => $session->id]);
+
+            return MemoryFormationResult::failure(
+                MemoryFormationFailure::TYPE_PROVIDER_ERROR,
+                'Runtime session has no associated user'
+            );
+        }
+
+        $entries = $this->buildRuntimeSessionEntries($session);
+        if (empty($entries)) {
+            Log::debug('MemoryFormationPipeline: No turn entries for runtime session', ['session_id' => $session->id]);
+
+            return MemoryFormationResult::success();
+        }
+
+        try {
+            $conversationLogsCreated = $this->persistConversationLogsForRuntimeSession(
+                $session->id,
+                $userId,
+                $entries
+            );
+        } catch (\Throwable $e) {
+            Log::error('MemoryFormationPipeline: Failed to persist runtime conversation logs', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return MemoryFormationResult::failure(
+                MemoryFormationFailure::TYPE_PROVIDER_ERROR,
+                $e->getMessage(),
+                [],
+                0
+            );
+        }
+
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_API_ENABLED)) {
+            return MemoryFormationResult::success(conversationLogsCreated: $conversationLogsCreated);
+        }
+
+        $combinedContent = $this->combineContentForExtraction($entries);
+
+        $entities = [];
+        try {
+            if ($this->extractionProvider !== null) {
+                $entities = $this->extractionProvider->extractEntities($combinedContent);
+            }
+        } catch (\Throwable $e) {
+            Log::error('MemoryFormationPipeline: Runtime entity extraction failed', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return MemoryFormationResult::failure(
+                MemoryFormationFailure::TYPE_EXTRACTION,
+                $e->getMessage(),
+                ['conversation_logs_created' => $conversationLogsCreated],
+                $conversationLogsCreated
+            );
+        }
+
+        $importanceScore = 0.5;
+        try {
+            if ($this->extractionProvider !== null && ! empty($entities)) {
+                $importanceScore = $this->extractionProvider->scoreImportance($combinedContent, $entities);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('MemoryFormationPipeline: Runtime importance scoring failed', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            $embeddingsCreated = $this->generateAndStoreEmbeddings(
+                $userId,
+                0,
+                $combinedContent,
+                $importanceScore,
+                (string) $session->id
+            );
+        } catch (\Throwable $e) {
+            Log::error('MemoryFormationPipeline: Runtime embedding failed', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return MemoryFormationResult::failure(
+                MemoryFormationFailure::TYPE_EMBEDDING,
+                $e->getMessage(),
+                [
+                    'conversation_logs_created' => $conversationLogsCreated,
+                    'entities_extracted' => $this->summarizeEntities($entities),
+                ],
+                $conversationLogsCreated
+            );
+        }
+
+        if ($this->graphStore !== null && ! empty($entities)) {
+            if (! $this->graphStore->healthCheck()) {
+                $graphSkipped = true;
+                Log::debug('MemoryFormationPipeline: Neo4j unhealthy, skipping runtime graph storage', [
+                    'session_id' => $session->id,
+                ]);
+            } else {
+                try {
+                    $this->graphStore->storeEntities($userId, $entities);
+                    $entitiesStored = count($entities);
+                    $relationships = $this->extractRelationships($entities);
+                    if (! empty($relationships)) {
+                        $this->graphStore->storeRelationships($userId, $relationships);
+                        $relationshipsStored = count($relationships);
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('MemoryFormationPipeline: Runtime graph storage failed', [
+                        'session_id' => $session->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        return MemoryFormationResult::success(
+            conversationLogsCreated: $conversationLogsCreated,
+            embeddingsCreated: $embeddingsCreated,
+            entitiesStored: $entitiesStored,
+            relationshipsStored: $relationshipsStored,
+            graphSkipped: $graphSkipped
+        );
+    }
+
+    /**
+     * Build working-memory-style entries from a runtime session's turns.
+     *
+     * @return array<int, array{role: string, content: string, metadata?: array, timestamp?: float}>
+     */
+    private function buildRuntimeSessionEntries(RuntimeSession $session): array
+    {
+        $turns = $session->turns()->orderBy('sequence')->get();
+        $entries = [];
+        $baseTimestamp = $session->started_at?->getTimestamp() ?? time();
+
+        foreach ($turns as $index => $turn) {
+            $userContent = $this->getTurnUserContent($turn);
+            $assistantContent = $this->getTurnAssistantContent($turn);
+
+            if ($userContent !== '') {
+                $entries[] = [
+                    'role' => 'user',
+                    'content' => $userContent,
+                    'metadata' => [],
+                    'timestamp' => $baseTimestamp + $index * 2,
+                ];
+            }
+            if ($assistantContent !== '') {
+                $entries[] = [
+                    'role' => 'assistant',
+                    'content' => $assistantContent,
+                    'metadata' => [],
+                    'timestamp' => $baseTimestamp + $index * 2 + 1,
+                ];
+            }
+        }
+
+        return $entries;
+    }
+
+    private function getTurnUserContent(RuntimeTurn $turn): string
+    {
+        if ($turn->input_message_id === null) {
+            return '';
+        }
+
+        $msg = ChatMessage::find($turn->input_message_id);
+
+        return $msg?->content ?? '';
+    }
+
+    private function getTurnAssistantContent(RuntimeTurn $turn): string
+    {
+        if ($turn->output_message_id !== null) {
+            $msg = ChatMessage::find($turn->output_message_id);
+            if ($msg !== null && trim($msg->content ?? '') !== '') {
+                return trim($msg->content);
+            }
+        }
+
+        return trim((string) ($turn->summary ?? ''));
+    }
+
+    /**
+     * Persist conversation logs for a runtime session.
+     *
+     * @param  array<array{role: string, content: string, metadata?: array, timestamp?: float}>  $entries
+     */
+    private function persistConversationLogsForRuntimeSession(string $runtimeSessionId, int $userId, array $entries): int
+    {
+        $count = 0;
+        $sequence = MemoryConversationLog::getNextSequenceForRuntimeSession($runtimeSessionId);
+
+        foreach ($entries as $entry) {
+            $role = $this->normalizeRole($entry['role'] ?? 'unknown');
+            $eventType = $this->detectEventType($entry);
+
+            MemoryConversationLog::create([
+                'user_id' => $userId,
+                'run_id' => null,
+                'job_id' => null,
+                'runtime_session_id' => $runtimeSessionId,
+                'role' => $role,
+                'content' => $entry['content'] ?? '',
+                'sequence' => $sequence++,
+                'event_type' => $eventType,
+                'classification' => config('memory.default_classification', 'internal'),
+                'created_at' => isset($entry['timestamp'])
+                    ? \Carbon\Carbon::createFromTimestamp((float) $entry['timestamp'])
+                    : now(),
+            ]);
+            $count++;
+        }
+
+        return $count;
+    }
+
+    /**
      * Persist conversation logs from working memory.
      *
      * @param  array<array{role: string, content: string, metadata?: array, timestamp?: float}>  $entries
@@ -259,17 +503,21 @@ class MemoryFormationPipeline
 
     /**
      * Generate and store embeddings with content_hash deduplication.
+     *
+     * @param  string|null  $sourceIdOverride  When set (e.g. runtime session UUID), used as source_id instead of runId
      */
     private function generateAndStoreEmbeddings(
         int $userId,
         int $runId,
         string $content,
-        float $importanceScore
+        float $importanceScore,
+        ?string $sourceIdOverride = null
     ): int {
         // Check for duplicate by content_hash
         if (MemoryEmbedding::existsByContentHash($userId, $content)) {
             Log::debug('MemoryFormationPipeline: Content already embedded', [
                 'run_id' => $runId,
+                'runtime_session_id' => $sourceIdOverride,
             ]);
 
             return 0;
@@ -285,16 +533,20 @@ class MemoryFormationPipeline
             throw new \RuntimeException('Embedding provider returned null');
         }
 
-        // Store with dedup
+        $sourceId = $sourceIdOverride ?? (string) $runId;
+        $metadata = ['provider' => $this->embeddingProvider->getProviderName()];
+        if ($sourceIdOverride !== null) {
+            $metadata['runtime_session_id'] = $sourceIdOverride;
+        } else {
+            $metadata['run_id'] = $runId;
+        }
+
         [$model, $created] = MemoryEmbedding::createOrGetByContentHash($userId, $content, [
             'source_type' => MemoryEmbedding::SOURCE_CONVERSATION,
-            'source_id' => (string) $runId,
+            'source_id' => $sourceId,
             'importance_score' => $importanceScore,
             'classification' => config('memory.default_classification', 'internal'),
-            'metadata_json' => [
-                'run_id' => $runId,
-                'provider' => $this->embeddingProvider->getProviderName(),
-            ],
+            'metadata_json' => $metadata,
         ]);
 
         return $created ? 1 : 0;

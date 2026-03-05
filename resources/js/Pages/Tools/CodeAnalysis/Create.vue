@@ -67,7 +67,7 @@ const submit = async () => {
                         <FileCode class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">New Code Analysis Session</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">New Code Analysis Session</h2>
                         <HelpHint
                             ui-key="code-analysis.create"
                             short-text="Start a new code analysis session."

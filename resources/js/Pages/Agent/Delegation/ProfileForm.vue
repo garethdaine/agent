@@ -18,6 +18,7 @@ import Skeleton from '@/Components/ui/Skeleton.vue';
 import Spinner from '@/Components/ui/Spinner.vue';
 import { ArrowLeft, Save, RefreshCw, GitBranch } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
+import ApprovalModeSelect from '@/Components/Agent/ApprovalModeSelect.vue';
 
 const props = defineProps({
     profileId: {
@@ -132,6 +133,20 @@ const toggleCapability = (capId) => {
     }
 };
 
+const allCapabilitiesSelected = computed(
+    () =>
+        capabilities.value.length > 0 &&
+        form.value.capability_ids.length === capabilities.value.length,
+);
+
+const selectAllCapabilities = () => {
+    form.value.capability_ids = capabilities.value.map((c) => c.id);
+};
+
+const deselectAllCapabilities = () => {
+    form.value.capability_ids = [];
+};
+
 // Trust score state
 const trustScore = ref(null);
 const trustLoading = ref(false);
@@ -189,23 +204,18 @@ onMounted(async () => {
         <Head :title="isEdit ? 'Edit Profile' : 'Create Profile'" />
 
         <template #header>
-            <div class="flex items-center gap-4">
-                <Link :href="route('agent.delegation.profiles.index')">
-                    <Button variant="ghost" size="icon">
-                        <ArrowLeft class="h-4 w-4" />
-                    </Button>
-                </Link>
-                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <GitBranch class="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                    <div class="text-sm text-muted-foreground mb-1">
-                        <Link :href="route('agent.delegation.profiles.index')" class="hover:text-foreground transition-colors">
-                            Back to Profiles
-                        </Link>
+            <div class="flex items-center justify-between gap-4 min-w-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <Link :href="route('agent.delegation.profiles.index')" class="shrink-0">
+                        <Button variant="ghost" size="icon">
+                            <ArrowLeft class="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <GitBranch class="h-4 w-4 text-primary" />
                     </div>
-                    <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <h2 class="text-base font-semibold text-foreground truncate">
                             {{ isEdit ? 'Edit Delegatee Profile' : 'Create Delegatee Profile' }}
                         </h2>
                         <HelpHint
@@ -249,6 +259,15 @@ onMounted(async () => {
                             </div>
 
                             <div class="space-y-2">
+                                <label class="block text-sm font-medium text-foreground">Approval Mode</label>
+                                <ApprovalModeSelect
+                                    :runner-type="form.runner_type"
+                                    v-model="form.command_template"
+                                    :disabled="submitting"
+                                />
+                            </div>
+
+                            <div class="space-y-2">
                                 <label class="block text-sm font-medium text-foreground">Command Template</label>
                                 <Input
                                     v-model="form.command_template"
@@ -257,7 +276,7 @@ onMounted(async () => {
                                     placeholder="claude -p {{task_markdown_path}}"
                                     :error="!!validationErrors.command_template"
                                 />
-                                <p class="text-xs text-muted-foreground">Available placeholders: {{task_markdown_path}}, {{working_directory}}</p>
+                                <p class="text-xs text-muted-foreground">Available placeholders: <code>&#123;&#123;task_markdown_path&#125;&#125;</code>, <code>&#123;&#123;working_directory&#125;&#125;</code></p>
                                 <p v-if="validationErrors.command_template" class="text-xs text-destructive">{{ validationErrors.command_template[0] }}</p>
                             </div>
 
@@ -295,7 +314,27 @@ onMounted(async () => {
                             </div>
 
                             <div class="space-y-3">
-                                <label class="block text-sm font-medium text-foreground">Capabilities</label>
+                                <div class="flex items-center justify-between gap-2">
+                                    <label class="text-sm font-medium text-foreground">Capabilities</label>
+                                    <div v-if="capabilities.length > 0" class="flex gap-2">
+                                        <button
+                                            v-if="!allCapabilitiesSelected"
+                                            type="button"
+                                            class="text-xs text-primary hover:underline"
+                                            @click="selectAllCapabilities"
+                                        >
+                                            Select all
+                                        </button>
+                                        <button
+                                            v-if="allCapabilitiesSelected"
+                                            type="button"
+                                            class="text-xs text-primary hover:underline"
+                                            @click="deselectAllCapabilities"
+                                        >
+                                            Deselect all
+                                        </button>
+                                    </div>
+                                </div>
                                 <div class="flex flex-wrap gap-2">
                                     <button
                                         v-for="cap in capabilities"

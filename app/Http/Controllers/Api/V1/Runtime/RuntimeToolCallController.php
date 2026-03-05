@@ -29,7 +29,8 @@ class RuntimeToolCallController extends Controller
         $success = $this->approvalGate->approve(
             $approval,
             $request->user(),
-            $request->input('reason')
+            $request->input('reason'),
+            (bool) $request->input('allow_always', false),
         );
 
         if (! $success) {

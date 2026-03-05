@@ -36,7 +36,23 @@ class UserFactory extends Factory
             'remember_token' => Str::random(10),
             'profile_photo_path' => null,
             'current_team_id' => null,
+            'onboarding_completed_at' => now(),
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            if (Features::hasTeamFeatures() && $user->current_team_id === null) {
+                $team = Team::forceCreate([
+                    'user_id' => $user->id,
+                    'name' => $user->name."'s Team",
+                    'personal_team' => true,
+                ]);
+
+                $user->forceFill(['current_team_id' => $team->id])->saveQuietly();
+            }
+        });
     }
 
     /**

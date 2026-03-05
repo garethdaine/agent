@@ -110,6 +110,7 @@ class MemoryMigrationTest extends TestCase
         $this->assertTrue(Schema::hasColumn('memory_conversation_logs', 'user_id'));
         $this->assertTrue(Schema::hasColumn('memory_conversation_logs', 'run_id'));
         $this->assertTrue(Schema::hasColumn('memory_conversation_logs', 'job_id'));
+        $this->assertTrue(Schema::hasColumn('memory_conversation_logs', 'runtime_session_id'));
         $this->assertTrue(Schema::hasColumn('memory_conversation_logs', 'role'));
         $this->assertTrue(Schema::hasColumn('memory_conversation_logs', 'content'));
         $this->assertTrue(Schema::hasColumn('memory_conversation_logs', 'sequence'));

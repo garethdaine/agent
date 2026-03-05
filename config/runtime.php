@@ -30,6 +30,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Tool Deny / Allow List (Enterprise)
+    |--------------------------------------------------------------------------
+    |
+    | tool_deny: Tool names (adapter name or qualified e.g. fs.write) that are
+    | never allowed. Applied after mode capabilities.
+    | tool_allow: If non-empty, only these tools are allowed (allowlist mode).
+    | When set, tool_deny is ignored; tools not in this list are denied.
+    |
+    */
+
+    'tool_deny' => array_filter(explode(',', env('RUNTIME_TOOL_DENY', ''))),
+    'tool_allow' => array_filter(explode(',', env('RUNTIME_TOOL_ALLOW', ''))),
+
+    /*
+    |--------------------------------------------------------------------------
     | Execution Modes
     |--------------------------------------------------------------------------
     |
@@ -185,6 +200,11 @@ return [
     'cli' => [
         'runner_type' => env('RUNTIME_CLI_RUNNER', 'claude'),
         'timeout_seconds' => (int) env('RUNTIME_CLI_TIMEOUT', 300),
+        'session_resume' => env('RUNTIME_SESSION_RESUME', true),
+        'wrapper_enabled' => (bool) env('RUNTIME_WRAPPER_ENABLED', false),
+        'wrapper_idle_timeout' => (int) env('RUNTIME_WRAPPER_IDLE_TIMEOUT', 3600),
+        'tool_approval_timeout' => (int) env('RUNTIME_TOOL_APPROVAL_TIMEOUT', 300),
+        'tool_approval_poll_interval' => 2,
     ],
 
     'queue' => env('RUNTIME_QUEUE', 'agent'), // Use "default" to process runtime with `php artisan queue:work` (no Horizon).

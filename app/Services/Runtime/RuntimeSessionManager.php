@@ -7,6 +7,7 @@ use App\Enums\Runtime\PolicySnapshotReason;
 use App\Enums\Runtime\RuntimeMode;
 use App\Enums\Runtime\RuntimeSessionStatus;
 use App\Exceptions\Runtime\ConcurrentSessionLimitExceededException;
+use App\Jobs\Memory\RuntimeMemoryFormationJob;
 use App\Models\ConnectorAccount;
 use App\Models\Runtime\RuntimeSession;
 use App\Models\User;
@@ -20,6 +21,7 @@ class RuntimeSessionManager
     public function __construct(
         private PolicyEngine $policyEngine,
         private AuditLogger $auditLogger,
+        private SessionProcessManager $sessionProcessManager,
     ) {}
 
     /**
@@ -82,6 +84,12 @@ class RuntimeSessionManager
             'ended_at' => now(),
         ]);
 
+        if ($this->sessionProcessManager->isWrapperEnabled() && $this->sessionProcessManager->hasActiveWrapper($session->id)) {
+            $this->sessionProcessManager->terminateSession($session->id);
+        } else {
+            $this->sessionProcessManager->clearSession($session->id);
+        }
+
         $this->auditLogger->recordSystemAction(
             'runtime.session.stopped',
             'runtime_session',
@@ -101,6 +109,17 @@ class RuntimeSessionManager
             return;
         }
 
+        if (! $session->turns()->exists()) {
+            return;
+        }
+
+        $this->writeMemoryContextFile($session);
+
+        RuntimeMemoryFormationJob::dispatch($session->id);
+    }
+
+    private function writeMemoryContextFile(RuntimeSession $session): void
+    {
         try {
             $turnSummaries = $session->turns()
                 ->whereNotNull('summary')

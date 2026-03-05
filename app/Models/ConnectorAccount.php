@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Messenger\ApprovalMode;
 use App\Messenger\Gateway\Enums\WorkerHealthStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -127,6 +128,127 @@ class ConnectorAccount extends Model
     public function scopeWebhookMode(Builder $query): void
     {
         $query->where('connection_mode', self::MODE_WEBHOOK);
+    }
+
+    /**
+     * Get the DM access policy for this connector.
+     *
+     * @return string One of: pairing, allowlist, open, disabled
+     */
+    public function getDmPolicy(): string
+    {
+        return $this->config['dm_policy'] ?? 'open';
+    }
+
+    /**
+     * Set the DM access policy.
+     */
+    public function setDmPolicy(string $policy): void
+    {
+        $valid = ['pairing', 'allowlist', 'open', 'disabled'];
+        if (! in_array($policy, $valid, true)) {
+            throw new \InvalidArgumentException("Invalid DM policy: {$policy}. Valid: ".implode(', ', $valid));
+        }
+
+        $config = $this->config ?? [];
+        $config['dm_policy'] = $policy;
+        $this->update(['config' => $config]);
+    }
+
+    /**
+     * Get group policy settings.
+     *
+     * @return array{require_mention: bool, allowed_groups: array<string>}
+     */
+    public function getGroupPolicy(): array
+    {
+        $gp = $this->config['group_policy'] ?? [];
+
+        return [
+            'require_mention' => (bool) ($gp['require_mention'] ?? false),
+            'allowed_groups' => (array) ($gp['allowed_groups'] ?? []),
+        ];
+    }
+
+    /**
+     * Update group policy settings.
+     */
+    public function setGroupPolicy(bool $requireMention, array $allowedGroups = []): void
+    {
+        $config = $this->config ?? [];
+        $config['group_policy'] = [
+            'require_mention' => $requireMention,
+            'allowed_groups' => array_values(array_filter($allowedGroups)),
+        ];
+        $this->update(['config' => $config]);
+    }
+
+    /**
+     * Get the DM session scope for this connector.
+     *
+     * @return string One of: main, per_peer
+     */
+    public function getDmSessionScope(): string
+    {
+        return $this->config['dm_session_scope'] ?? 'per_peer';
+    }
+
+    /**
+     * Set the DM session scope.
+     */
+    public function setDmSessionScope(string $scope): void
+    {
+        $valid = ['main', 'per_peer'];
+        if (! in_array($scope, $valid, true)) {
+            throw new \InvalidArgumentException("Invalid DM session scope: {$scope}. Valid: ".implode(', ', $valid));
+        }
+
+        $config = $this->config ?? [];
+        $config['dm_session_scope'] = $scope;
+        $this->update(['config' => $config]);
+    }
+
+    public function getStreamingOverrides(): array
+    {
+        return $this->config['streaming'] ?? [];
+    }
+
+    public function setStreamingOverrides(array $overrides): void
+    {
+        $config = $this->config ?? [];
+        $config['streaming'] = array_intersect_key($overrides, array_flip([
+            'max_message_chars', 'throttle_ms', 'min_initial_chars', 'cursor', 'supports_native_streaming',
+        ]));
+        $this->update(['config' => $config]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getPublicConfig(): array
+    {
+        $config = $this->config ?? [];
+
+        unset(
+            $config['signature_verification'],
+            $config['configured_at'],
+        );
+
+        return $config;
+    }
+
+    public function getApprovalMode(): ApprovalMode
+    {
+        $value = $this->config['approval_mode'] ?? null;
+
+        return ApprovalMode::tryFrom((string) $value) ?? ApprovalMode::Autonomous;
+    }
+
+    public function setApprovalMode(ApprovalMode $mode): void
+    {
+        $config = $this->config ?? [];
+        $config['approval_mode'] = $mode->value;
+        $this->update(['config' => $config]);
     }
 
     /**

@@ -52,7 +52,7 @@ const activeBuildAgeLabel = computed(() => {
                         <RotateCcw class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Replay Builds</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">Replay Builds</h2>
                         <HelpHint
                             ui-key="replay-builds.overview"
                             short-text="Track projection build history and serving-build status."

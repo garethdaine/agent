@@ -3,8 +3,12 @@
 namespace App\Jobs\Runtime;
 
 use App\DTOs\Messenger\OutboundPayload;
+use App\Enums\Messenger\ApprovalMode;
+use App\Jobs\Messenger\CompactionJob;
+use App\Models\ChatMessage;
 use App\Models\ConnectorAccount;
 use App\Models\Runtime\RuntimeSession;
+use App\Services\Messenger\CompactionService;
 use App\Services\Runtime\MessengerRuntimeOrchestrator;
 use App\Support\Messenger\ConnectorManager;
 use Illuminate\Bus\Queueable;
@@ -13,6 +17,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ProcessRuntimeTurnJob implements ShouldQueue
 {
@@ -23,20 +28,23 @@ class ProcessRuntimeTurnJob implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 300;
+    public int $timeout;
 
     public function __construct(
         public string $runtimeSessionId,
         public string $userMessage,
         public string|int|null $chatSessionId = null,
         public string|int|null $connectorAccountId = null,
+        public ?string $placeholderMessageId = null,
     ) {
         $this->onQueue(config('runtime.queue', 'agent'));
+        $this->timeout = (int) config('runtime.cli.timeout_seconds', 300);
     }
 
     public function handle(
         MessengerRuntimeOrchestrator $orchestrator,
         ConnectorManager $connectorManager,
+        CompactionService $compactionService,
     ): void {
         $session = RuntimeSession::query()
             ->with(['user'])
@@ -51,13 +59,27 @@ class ProcessRuntimeTurnJob implements ShouldQueue
             return;
         }
 
+        $account = $this->connectorAccountId !== null
+            ? ConnectorAccount::find($this->connectorAccountId)
+            : null;
+        $runnerTypeOverride = null;
+        if ($account !== null && isset($account->config['runner_type']) && (string) $account->config['runner_type'] !== '') {
+            $runnerTypeOverride = (string) $account->config['runner_type'];
+        }
+
+        $systemPrompt = $account !== null ? $this->buildSystemPromptFromSoul($account) : null;
+        $approvalMode = $account?->getApprovalMode() ?? ApprovalMode::Autonomous;
+
         Log::info('ProcessRuntimeTurnJob: Starting turn', [
             'runtime_session_id' => $this->runtimeSessionId,
             'message_length' => strlen($this->userMessage),
+            'runner_type' => $runnerTypeOverride,
+            'has_system_prompt' => $systemPrompt !== null,
+            'approval_mode' => $approvalMode->value,
         ]);
 
         try {
-            $result = $orchestrator->executeTurn($session, $this->userMessage);
+            $result = $orchestrator->executeTurn($session, $this->userMessage, $runnerTypeOverride, $systemPrompt, $approvalMode);
 
             Log::info('ProcessRuntimeTurnJob: Turn finished', [
                 'runtime_session_id' => $this->runtimeSessionId,
@@ -69,18 +91,14 @@ class ProcessRuntimeTurnJob implements ShouldQueue
                 'exception' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            $this->sendErrorToChat($e->getMessage(), $connectorManager);
+            $this->sendErrorToChat('Something went wrong processing your request. Please try again.', $connectorManager);
 
             throw $e;
         }
 
-        if ($this->chatSessionId === null || $this->connectorAccountId === null) {
+        if ($this->chatSessionId === null || $account === null) {
             return;
         }
-
-        $account = $this->connectorAccountId !== null
-            ? ConnectorAccount::find($this->connectorAccountId)
-            : null;
         $adapter = $account !== null ? $connectorManager->resolve($account->provider) : null;
 
         if ($adapter === null) {
@@ -93,14 +111,17 @@ class ProcessRuntimeTurnJob implements ShouldQueue
         }
 
         if ($result['status'] === 'completed' && isset($result['text'])) {
-            $payload = new OutboundPayload(
-                content: $result['text'],
-                channelId: $chatSession->channel_id,
-                threadId: $chatSession->thread_id,
-            );
-
             try {
-                $adapter->sendMessage($chatSession, $payload);
+                $adapter->sendMessage($chatSession, new OutboundPayload(
+                    content: $result['text'],
+                    channelId: $chatSession->channel_id,
+                    threadId: $chatSession->thread_id,
+                ));
+                $this->persistOutboundMessage($chatSession->id, $account->id, $result['text']);
+
+                if ($this->placeholderMessageId !== null && $adapter->supportsMessageEditing()) {
+                    $adapter->editMessage($chatSession, $this->placeholderMessageId, '✅ Done');
+                }
             } catch (\Throwable $e) {
                 Log::error('ProcessRuntimeTurnJob: Failed to send response', [
                     'session_id' => $this->chatSessionId,
@@ -132,6 +153,10 @@ class ProcessRuntimeTurnJob implements ShouldQueue
             } catch (\Throwable $e) {
                 Log::error('ProcessRuntimeTurnJob: Failed to send error', ['error' => $e->getMessage()]);
             }
+        }
+
+        if ($compactionService->isCompactionNeeded($chatSession)) {
+            CompactionJob::dispatch($chatSession->id, null);
         }
     }
 
@@ -166,6 +191,53 @@ class ProcessRuntimeTurnJob implements ShouldQueue
         } catch (\Throwable $e) {
             Log::warning('ProcessRuntimeTurnJob: Could not send error to chat', ['error' => $e->getMessage()]);
         }
+    }
+
+    private function persistOutboundMessage(string|int $chatSessionId, string|int $connectorAccountId, string $content): void
+    {
+        try {
+            ChatMessage::create([
+                'chat_session_id' => $chatSessionId,
+                'connector_account_id' => $connectorAccountId,
+                'direction' => ChatMessage::DIRECTION_OUTBOUND,
+                'content' => $content,
+                'idempotency_key' => hash('sha256', Str::uuid()->toString()),
+                'provider_timestamp' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('ProcessRuntimeTurnJob: Failed to persist outbound ChatMessage', [
+                'chat_session_id' => $chatSessionId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function buildSystemPromptFromSoul(ConnectorAccount $account): ?string
+    {
+        $soul = $account->getSoul();
+        $parts = [];
+
+        $name = $soul['name'] ?? null;
+        if ($name !== null && $name !== '') {
+            $parts[] = "Your name is {$name}. Always identify yourself as {$name}, never as Claude or any other name.";
+        }
+
+        $personality = $soul['personality'] ?? null;
+        if ($personality !== null && $personality !== '') {
+            $parts[] = "Personality: {$personality}";
+        }
+
+        $systemPrompt = $soul['system_prompt'] ?? null;
+        if ($systemPrompt !== null && $systemPrompt !== '') {
+            $parts[] = $systemPrompt;
+        }
+
+        $userContext = $soul['user_context'] ?? null;
+        if ($userContext !== null && $userContext !== '') {
+            $parts[] = "User context: {$userContext}";
+        }
+
+        return $parts !== [] ? implode("\n\n", $parts) : null;
     }
 
     public function tags(): array

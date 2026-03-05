@@ -48,13 +48,14 @@ final class BrowserCommandTest extends TestCase
     #[Test]
     public function browser_start_requests_sidecar_start(): void
     {
+        config()->set('runtime.browser.sidecar_binary', '/usr/bin/chromium');
         $user = User::factory()->create();
 
         $handler = new BrowserCommandHandler;
         $result = $handler->handle($user, ['start']);
 
         $this->assertTrue($result->success);
-        $this->assertStringContainsString('start requested', $result->message);
+        $this->assertStringContainsString('Browser sidecar is ready', $result->message);
         $this->assertEquals('start', $result->data['action']);
     }
 
@@ -99,12 +100,13 @@ final class BrowserCommandTest extends TestCase
     #[Test]
     public function browser_action_is_case_insensitive(): void
     {
+        config()->set('runtime.browser.sidecar_binary', '/usr/bin/chromium');
         $user = User::factory()->create();
 
         $handler = new BrowserCommandHandler;
         $result = $handler->handle($user, ['START']);
 
         $this->assertTrue($result->success);
-        $this->assertStringContainsString('start requested', $result->message);
+        $this->assertStringContainsString('Browser sidecar is ready', $result->message);
     }
 }

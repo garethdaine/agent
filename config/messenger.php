@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | General Task CLI Timeout
+    |--------------------------------------------------------------------------
+    |
+    | Max seconds for the CLI process when handling a general task (one-shot
+    | claude -p prompt). Keep below HORIZON_MESSENGER_TIMEOUT so the job can
+    | finish and update the "Thinking…" message.
+    |
+    */
+
+    'general_task_cli_timeout_seconds' => (int) env('MESSENGER_GENERAL_TASK_CLI_TIMEOUT', 45),
+
+    /*
+    |--------------------------------------------------------------------------
     | Registered Adapters
     |--------------------------------------------------------------------------
     |

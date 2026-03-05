@@ -3,6 +3,7 @@
 namespace Tests\Feature\Http\Controllers\Api\V1;
 
 use App\Models\DelegateeProfile;
+use App\Models\DelegationCapability;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,6 +16,25 @@ class DelegateeProfileControllerTest extends TestCase
     {
         parent::setUp();
         config()->set('delegation.enabled', true);
+    }
+
+    public function test_capabilities_returns_active_capabilities(): void
+    {
+        DelegationCapability::query()->delete();
+
+        $user = User::factory()->create();
+        $active = DelegationCapability::factory()->create(['slug' => 'code_execution', 'name' => 'Code Execution']);
+        DelegationCapability::factory()->inactive()->create(['slug' => 'inactive_cap', 'name' => 'Inactive']);
+
+        $this->actingAs($user);
+
+        $response = $this->getJson('/agent/api/v1/delegation/capabilities');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $active->id)
+            ->assertJsonPath('data.0.slug', 'code_execution')
+            ->assertJsonPath('data.0.name', $active->name);
     }
 
     public function test_index_returns_user_profiles(): void

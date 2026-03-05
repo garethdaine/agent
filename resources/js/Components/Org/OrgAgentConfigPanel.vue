@@ -16,7 +16,7 @@ const props = defineProps({
     agents: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(['close', 'update']);
+const emit = defineEmits(['close', 'update', 'create-profile']);
 
 const name = computed(() => props.node?.data?.name ?? '');
 const roleSlug = computed(() => props.node?.data?.role_slug ?? 'agent');
@@ -24,9 +24,24 @@ const roleDescription = computed(() => props.node?.data?.role_description ?? '')
 const delegateeId = computed(() => props.node?.data?.delegatee_profile_id ?? null);
 const parentAgentId = computed(() => props.node?.data?.parent_agent_id ?? null);
 
+const delegateeOptions = computed(() => [
+    { value: '', label: '— Select —' },
+    ...props.delegateeProfiles.map((p) => ({
+        value: String(p.id),
+        label: p.name ?? `Profile ${p.id}`,
+    })),
+]);
+
 const parentOptions = computed(() => {
     const nodeId = props.node?.id;
-    return props.agents.filter((a) => a.id !== nodeId);
+    const filtered = props.agents.filter((a) => a.id !== nodeId);
+    return [
+        { value: '', label: 'None' },
+        ...filtered.map((a) => ({
+            value: a.id,
+            label: a.name ?? a.data?.name ?? a.id,
+        })),
+    ];
 });
 
 function updateData(partial) {
@@ -72,35 +87,26 @@ function updateData(partial) {
             </div>
             <div class="space-y-2">
                 <InputLabel>Delegatee profile</InputLabel>
-                <Select
-                    :model-value="delegateeId != null ? String(delegateeId) : ''"
-                    @update:model-value="(v) => updateData({ delegatee_profile_id: v ? Number(v) : null })"
-                >
-                    <option value="">— Select —</option>
-                    <option
-                        v-for="p in delegateeProfiles"
-                        :key="p.id"
-                        :value="String(p.id)"
-                    >
-                        {{ p.name ?? `Profile ${p.id}` }}
-                    </option>
-                </Select>
+                <div class="flex gap-2">
+                    <div class="min-w-0 flex-1">
+                        <Select
+                            :model-value="delegateeId != null ? String(delegateeId) : ''"
+                            :options="delegateeOptions"
+                            @update:model-value="(v) => updateData({ delegatee_profile_id: v ? Number(v) : null })"
+                        />
+                    </div>
+                    <Button type="button" variant="outline" size="sm" @click="emit('create-profile')">
+                        New
+                    </Button>
+                </div>
             </div>
             <div class="space-y-2">
                 <InputLabel>Reports to (manager)</InputLabel>
                 <Select
                     :model-value="parentAgentId ?? ''"
+                    :options="parentOptions"
                     @update:model-value="(v) => updateData({ parent_agent_id: v || null })"
-                >
-                    <option value="">None</option>
-                    <option
-                        v-for="a in parentOptions"
-                        :key="a.id"
-                        :value="a.id"
-                    >
-                        {{ a.name ?? a.data?.name ?? a.id }}
-                    </option>
-                </Select>
+                />
             </div>
         </CardContent>
     </Card>

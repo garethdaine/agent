@@ -78,30 +78,23 @@ onMounted(load);
         <Head :title="task?.name ?? 'Task Detail'" />
 
         <template #header>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <Link :href="route('agent.delegation.show', graphId)">
+            <div class="flex items-center justify-between gap-4 min-w-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <Link :href="route('agent.delegation.show', graphId)" class="shrink-0">
                         <Button variant="ghost" size="icon">
                             <ArrowLeft class="h-4 w-4" />
                         </Button>
                     </Link>
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <GitBranch class="h-5 w-5 text-primary" />
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <GitBranch class="h-4 w-4 text-primary" />
                     </div>
-                    <div>
-                        <div class="text-sm text-muted-foreground mb-1">
-                            <Link :href="route('agent.delegation.show', graphId)" class="hover:text-foreground transition-colors">
-                                Back to Graph
-                            </Link>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <h2 class="text-xl font-semibold leading-tight text-foreground">{{ task?.name ?? 'Loading...' }}</h2>
-                            <HelpHint
-                                ui-key="delegation.task"
-                                short-text="Inspect task assignment details and verification status."
-                                learn-more-href="/docs/overview"
-                            />
-                        </div>
+                    <div class="flex items-center gap-2 min-w-0">
+                        <h2 class="text-base font-semibold text-foreground truncate">{{ task?.name ?? 'Loading...' }}</h2>
+                        <HelpHint
+                            ui-key="delegation.task"
+                            short-text="Inspect task assignment details and verification status."
+                            learn-more-href="/docs/overview"
+                        />
                     </div>
                 </div>
                 <Link

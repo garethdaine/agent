@@ -1,0 +1,356 @@
+---
+description: Agent platform development rules — trunk-based, TDD-first, SOLID/DRY with adversarial review and compliance gates
+alwaysApply: true
+---
+
+# Agent Platform Development Rules — IMPORTANT — MUST FOLLOW
+
+## Non-negotiables
+
+- **Trunk-based development on `main`.** No long-lived feature branches. Commit directly to `main` in small, safe increments. Every commit must leave `main` deployable.
+- **Small, additive, risk-mitigated increments.** Avoid wide refactors; touch unrelated domains only if absolutely necessary.
+- **No regressions.** Preserve existing behaviour. If a change risks breaking existing flows, stop and surface it immediately.
+- **Clean repo.** Never leave refactor artifacts (unused folders/files/routes/tests). Remove or revert anything that's no longer used.
+- **SOLID + DRY + existing architecture.** Follow current Laravel 12 + Inertia + Vue 3 patterns, module boundaries, naming, and conventions already used in the codebase.
+- **Test-Driven Development (TDD) is mandatory.** Tests must be written before implementation. No exceptions.
+- **Verification before done.** Never mark a task complete without proving it works. Ask: "Would a staff engineer approve this?"
+- **If unsure, stop.** Ask clarifying questions before proceeding.
+
+---
+
+## Core Principles
+
+- **Simplicity First:** Make every change as simple as possible. Impact minimal code. Prefer the smallest change that solves the problem correctly.
+- **No Laziness:** Find root causes. No temporary fixes, no workarounds, no "good enough for now." Senior developer standards at all times. If a fix feels hacky, step back and implement the elegant solution.
+- **Minimal Impact:** Changes should only touch what's necessary. Avoid introducing bugs by keeping blast radius small. If something unrelated needs fixing, that's a separate commit.
+
+---
+
+## Demand Elegance (Balanced)
+
+- For non-trivial changes: pause and ask "Is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution."
+- Skip this for simple, obvious fixes — do not over-engineer trivial work.
+- Challenge your own work before presenting it.
+
+---
+
+## Autonomous Bug Fixing
+
+When given a bug report:
+- Just fix it. Do not ask for hand-holding.
+- Point at logs, errors, failing tests — then resolve them.
+- Zero context switching required from the user.
+- Go fix failing CI tests without being told how.
+- If blocked, surface the blocker clearly but try at least one resolution first.
+
+---
+
+## STAR Reasoning (Required for all non-trivial work)
+
+Before beginning any non-trivial task, articulate in `tasks/todo.md`:
+
+- **S — Situation:** What is the current state? What exists, what doesn't?
+- **T — Task:** What specifically must be true when this is complete?
+- **A — Action:** What steps will achieve that end state?
+- **R — Result:** How will completion be verified?
+
+Use STAR for:
+- Task planning in `tasks/todo.md`
+- Commit messages on significant changes
+- Completion reports
+
+Keep STAR succinct. Prefer bullet points.
+
+---
+
+## Test-Driven Development Workflow (REQUIRED)
+
+All development must follow strict TDD using the **Red → Green → Refactor** cycle.
+
+### 1) Red — Write Tests First
+
+Before writing any implementation code:
+- Write tests that describe the expected behaviour.
+- Tests must initially **fail**.
+- Tests should cover as applicable:
+  - Route registration and responses
+  - Authorization / permissions
+  - Feature flag behaviour (compliance gates, adversarial review, etc.)
+  - Core domain logic and contract semantics
+  - Database state changes (append-only projections, audit logs, immutable records)
+  - Expected side effects (events, jobs, broadcasts, queue dispatches)
+  - Regression coverage for existing behaviour where relevant
+  - Canonical contract invariants (workflow key format, reliability scoring, cost governance)
+
+Only proceed once the tests fail for the correct reasons.
+
+### 2) Green — Implement the Minimum Code
+
+- Implement only the minimal code required to make the tests pass.
+- Do not introduce additional features or refactors beyond the scope of the failing tests.
+- Maintain SOLID, DRY, and existing architecture conventions.
+
+### 3) Refactor — Improve Safely
+
+Once tests pass:
+- Refactor code while keeping tests green.
+- Improve separation of concerns, naming, duplication, and architectural alignment.
+- Remove temporary code or artifacts created during implementation.
+
+Tests must remain green throughout refactoring.
+
+### 4) Verify
+
+After completing Red → Green → Refactor:
+- Run `php artisan test` (targeted minimum; broaden if shared code is touched).
+- Run `./vendor/bin/pint --dirty` for code style.
+- Run any required frontend build/type checks if UI changed (`npm run build`).
+- Verify route registration: `php artisan route:list --path=agent/api/v1` if API routes changed.
+
+No implementation is considered complete until all tests pass.
+
+---
+
+## Trunk-Based Development Workflow
+
+### Commit rules
+
+1. Commit directly to `main` in small, deployable increments.
+2. Each commit must pass all tests. Never push a broken `main`.
+3. Use **Conventional Commits** format:
+   - `feat:` new feature
+   - `fix:` bug fix
+   - `refactor:` code restructure (no behaviour change)
+   - `test:` adding or updating tests
+   - `docs:` documentation only
+   - `chore:` build, config, tooling
+4. For larger, high-level features, use **feature flags** (Laravel config-driven; see compliance config in `config/agent.php`). Do not use feature flags for small or incremental changes.
+5. Keep commits atomic — one logical change per commit.
+6. Never force-push to `main`.
+
+### Before every push
+
+```bash
+php artisan test
+./vendor/bin/pint --dirty
+npm run build  # if frontend changed
+```
+
+---
+
+## SOLID Principles (Enforced)
+
+- **S — Single Responsibility:** Each class has one reason to change. Policy classes handle specific validation domains (`CommandPolicy`, `PathPolicy`, `EnvPolicy`). Controllers delegate to services.
+- **O — Open/Closed:** Extend behaviour through configuration, not modification. Runner executables, allowed paths, and rate cards are config-driven. New terminal event types are added to catalog, not hard-coded.
+- **L — Liskov Substitution:** Honour interface contracts (`ConnectorAdapterInterface`, `ToolAdapterInterface`, `RunnerExecutor`). Implementations must be interchangeable.
+- **I — Interface Segregation:** Use focused FormRequest classes per endpoint. Do not bloat interfaces with methods only some consumers need.
+- **D — Dependency Injection:** Inject services via constructor. Never instantiate dependencies directly in controllers or jobs. Use Laravel's container.
+
+---
+
+## DRY (Don't Repeat Yourself)
+
+- Extract shared logic into Support classes (`app/Support/Agent/`).
+- Reuse validation policies — do not duplicate command/path/env checks across controllers.
+- Use config-driven defaults (`config/agent.php`) instead of magic numbers in code.
+- Shared UI components (`DialogModal`, `ConfirmationModal`) for all modal dialogs — no custom overlays unless interaction requirements cannot be met by shared primitives.
+
+---
+
+## Adversarial Review
+
+When implementing changes to domain-critical flows (reliability classification, cost governance, telemetry, delegation verification):
+
+- Consider: "How could a malicious caller or unexpected input break this?"
+- Reliability classification must be deterministic — `hard_fail` indicators always resolve to `Failed`; callers cannot override.
+- Cost governance uses immutable append-only projection rows — no retroactive edits.
+- Audit logs are immutable — no updates or deletes.
+- Gate transitions persist previous/new state, source, reason, actor context, and timestamps.
+- Projection reads flow through repository boundaries with active-build scoping — controllers must not query projection tables directly.
+
+---
+
+## Canonical Contract Invariants
+
+These contracts are immutable. Any change that violates them is a bug:
+
+- Workflow key regex: `^[a-z0-9._-]+[.]v[1-9][0-9]*$`
+- Reliability: `WeightedReliability = (sum(run_weight) / count(scored_runs)) * 100`
+- Reliability gates evaluate both rolling 14-day AND rolling 50-run windows; enforce stricter result.
+- Assisted SLA breach auto-reclassifies to `Failed` after ≤24h.
+- Terminalization is catalog-driven: `terminal=true` AND event type in configured terminal catalog.
+- Projection tables are internal infrastructure — no external ad-hoc queries.
+- Projection access: reporting roles denied direct DML; app role read-only; projector role scoped to writes.
+- Event ID is unique within `run_attempt_id`; global uniqueness not required.
+- Cost enforcement uses internal canonical token-cost tables (versioned rate cards). Provider billed cost is reconciliation only.
+- `skipped` runs are excluded from weighted reliability numerator and denominator.
+
+---
+
+## Implementation Standards
+
+### Backend (Laravel 12)
+
+- Use FormRequest classes for all validation. Normalize incoming data where required.
+- Use invokable controllers or proper RESTful controllers. Avoid multi-action god controllers.
+- API routes live under `/agent/api/v1/` with Sanctum SPA auth and `X-Agent-Api-Version: 1.0` header.
+- Queue jobs on `agent` connection via Redis. Set `retry_after` appropriately. For long-running AI jobs, queue timeout must exceed process timeout with explicit buffer.
+- Audit all mutating actions via `AuditLogger` (append-only, immutable).
+- Configuration values go in `config/agent.php` with env-driven overrides. Never hard-code thresholds.
+
+### Frontend (Vue 3 + Inertia)
+
+- Follow existing component patterns. Use Inertia page components in `resources/js/Pages/Agent/`.
+- Styling via Tailwind CSS v3.4 with dark mode (class-based, system preference detection).
+- Design tokens: RGB-channel CSS variables. Typography: DM Sans + JetBrains Mono.
+- Icons: Lucide Vue Next exclusively.
+- Realtime updates via Laravel Echo + Reverb — ensure both broadcast delivery and frontend channel subscriptions.
+- Use shared modal components (`DialogModal`, `ConfirmationModal`) for all dialogs.
+
+### Database (PostgreSQL)
+
+- Projection schema: `agent_projection` — isolated from `public`.
+- Append-only tables: never update or delete rows in projection rollups, telemetry ledger, or audit logs.
+- Migrations must be additive (no destructive column drops without explicit approval).
+- Test against `pgsql_testing` connection with separate test database.
+
+---
+
+## Testing Standards
+
+Every change must include tests that verify, as applicable:
+
+- Routes are correctly registered and return expected responses
+- Authorization / permissions enforced
+- Feature flag behaviour (enabled/disabled paths)
+- Core domain logic and contract invariants
+- Database state changes (especially append-only tables)
+- No regression to existing flows
+- Queue job dispatch and event broadcasting
+- Error paths and edge cases
+
+Tests must:
+- Be written **before** implementation (Red)
+- Fail initially for the correct reasons (Red)
+- Pass after minimal implementation (Green)
+- Remain green after refactoring (Refactor)
+
+Test configuration:
+- **Backend:** PHPUnit 11.5+ with `RefreshDatabase`, sandbox directories at `storage/framework/testing/agent-*`, mock executables for isolation. PostgreSQL test database via `pgsql_testing` connection.
+- **Frontend unit:** Vitest for Vue component and utility testing.
+- **E2E:** Playwright (Chromium) against `http://localhost:8000` with auth setup flow and storage state. HTML reporter with traces on first-retry failure.
+- **Search:** Typesense for documentation/memory search — ensure Scout indices remain consistent when modifying searchable models.
+
+---
+
+## Pre-Push Validation Checklist
+
+Before every push to `main`, verify:
+
+- [ ] Docs parity — documentation updated if contracts/APIs changed
+- [ ] Route/page discoverability impacts assessed
+- [ ] Additive API compatibility — no breaking changes to existing endpoints
+- [ ] Trigger-taxonomy consistency — new event types follow existing taxonomy
+- [ ] Active-build read-scope consistency — projection reads flow through repositories
+- [ ] All tests pass (`php artisan test`)
+- [ ] Code style clean (`./vendor/bin/pint --dirty`)
+- [ ] Frontend builds (`npm run build`) if UI changed
+
+Do not open PRs. Push directly to `main` once all checks pass.
+
+---
+
+## Self-Improvement Loop
+
+After ANY correction:
+
+1. Update `tasks/lessons.md` with:
+   - Date
+   - Source (job run id / session id / context)
+   - Correction (what was wrong)
+   - Pattern (why it happened)
+   - Prevention rule (how to avoid it)
+   - Applied in (files changed)
+2. Write prevention rules that are specific and actionable.
+3. Review `tasks/lessons.md` at session start for patterns relevant to current work.
+
+---
+
+## Task Management
+
+1. **Plan First:** Write plan to `tasks/todo.md` with STAR articulation and checkable items.
+2. **Verify Plan:** Check in before starting implementation.
+3. **Track Progress:** Mark items complete as you go.
+4. **Explain Changes:** High-level summary at each step.
+5. **Document Results:** Add review section to `tasks/todo.md`.
+6. **Capture Lessons:** Update `tasks/lessons.md` after any corrections.
+
+---
+
+## Compliance Gates
+
+The system enforces compliance gates when `config('agent.compliance.enabled')` is true:
+
+- **Plan Gate:** Non-trivial tasks (≥3 files, ≥50 LOC, ≥2 directories) require a written plan before implementation.
+- **Verification Gate:** Evidence of correctness required before marking complete.
+- **Elegance Gate:** Deferred review — "Is there a more elegant way?" for non-trivial changes.
+- **Lessons Gate:** Corrections trigger mandatory lessons capture.
+
+Even when compliance is advisory, follow these gates as best practice.
+
+---
+
+## Definition of Done
+
+A task is complete only when:
+
+- [ ] All acceptance criteria are satisfied
+- [ ] Tests were written first and followed Red → Green → Refactor
+- [ ] All tests pass (`php artisan test`)
+- [ ] Code style is clean (`./vendor/bin/pint --dirty`)
+- [ ] Frontend builds if UI changed (`npm run build`)
+- [ ] No stray artifacts remain (unused files, dead code, orphaned routes)
+- [ ] Documentation updated if contracts/APIs changed
+- [ ] Pushed to `main` and `main` is deployable
+- [ ] `tasks/todo.md` updated with results
+- [ ] Verification evidence documented (test output, manual checks)
+- [ ] Risks and follow-ups noted
+
+---
+
+## Known Risk Boundaries (from canonical contracts)
+
+Be aware of and protect against:
+
+- Event-ID stability mistakes from producers can break dedupe semantics
+- Terminal catalog drift can misclassify attempt terminalization until catalog updates and replay complete
+- Projection query restrictions must be enforced so external consumers cannot bypass active-build scoped APIs
+- Rate-card version immutability — cost projection rows pinned to rate-card version at creation time
+- Queue timeout must exceed process timeout for long-running AI jobs to prevent premature worker kills
+
+---
+
+## Subagent Strategy
+
+When working in AI-assisted tools (Claude Code, Cursor Composer, etc.):
+- Use subagents liberally to keep the main context window clean.
+- Offload research, exploration, and parallel analysis to subagents.
+- For complex problems, throw more compute at it via subagents.
+- One task per subagent for focused execution.
+- Never pollute the main context with exploratory file reads or broad searches — delegate those.
+
+---
+
+## Quick Reference: Verification Commands
+
+```bash
+php artisan test                                    # Full test suite
+php artisan test --filter=ClassName                 # Targeted tests
+./vendor/bin/pint --dirty                           # Code style (changed files)
+npm run build                                       # Frontend build
+php artisan route:list --path=agent/api/v1          # API route verification
+php artisan horizon:status                          # Queue worker health
+php artisan agent:dispatch-due                      # Scheduler dispatch
+php artisan agent:prune --dry-run                   # Safe pruning preview
+```

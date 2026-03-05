@@ -239,7 +239,7 @@ onMounted(async () => {
                     <Bot class="h-5 w-5 text-primary" />
                 </div>
                 <div class="flex items-center gap-2">
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Create Council</h2>
+                    <h2 class="text-base font-semibold text-foreground truncate">Create Council</h2>
                     <HelpHint
                         ui-key="org.councils.create"
                         short-text="Define a new agent council."

@@ -10,6 +10,31 @@ use App\Models\Runtime\RuntimeSession;
 class PolicyEngine
 {
     /**
+     * Check if a tool is allowed by the runtime tool deny/allow list.
+     *
+     * When tool_allow is non-empty, only tools in that list are allowed.
+     * Otherwise, tools in tool_deny are denied. Checks both adapter name
+     * and qualified name (e.g. fs and fs.write).
+     */
+    public function isToolAllowedByPolicy(string $toolName, ?string $qualifiedName = null): bool
+    {
+        $allow = config('runtime.tool_allow', []);
+        $deny = config('runtime.tool_deny', []);
+
+        $qualifiedName = $qualifiedName ?? $toolName;
+
+        if ($allow !== []) {
+            $allowed = in_array($toolName, $allow, true) || in_array($qualifiedName, $allow, true);
+
+            return $allowed;
+        }
+
+        $denied = in_array($toolName, $deny, true) || in_array($qualifiedName, $deny, true);
+
+        return ! $denied;
+    }
+
+    /**
      * Check if a capability is allowed for the given mode.
      *
      * Capabilities are defined in config/runtime.php modes.{mode}.capabilities.

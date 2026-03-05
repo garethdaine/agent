@@ -21,6 +21,17 @@ return [
     'transient_error_codes' => ['TIMEOUT', 'RATE_LIMIT', 'CONNECTION_*'],
     'non_transient_error_codes' => ['INVALID_OUTPUT', 'PERMISSION_DENIED'],
     'ai_critic_default_prompt_template' => 'Review the following task output and determine if it meets the acceptance criteria. Provide your verdict as JSON with fields: verdict (passed/failed), issues (array), confidence (0-1 float), reasoning (string).',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Delegation Capabilities (seed list)
+    |--------------------------------------------------------------------------
+    |
+    | Slugs seeded into delegation_capabilities for matching tasks to delegatee
+    | profiles. Run DelegationCapabilitySeeder to sync (e.g. after adding new
+    | slugs). Aligns with OpenClaw-style capability domains where applicable.
+    |
+    */
     'capabilities_seed' => [
         'code_execution',
         'review',
@@ -28,6 +39,16 @@ return [
         'documentation',
         'deployment',
         'monitoring',
+        'browser',
+        'filesystem',
+        'research',
+        'tools',
+        'mcp',
+        'runtime',
+        'web',
+        'discovery',
+        'orchestration',
+        'skills',
     ],
     'check_profiles' => [
         'laravel_standard' => ['php artisan test', './vendor/bin/pint --test'],

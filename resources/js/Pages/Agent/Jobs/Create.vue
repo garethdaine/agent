@@ -108,7 +108,7 @@ const onSubmit = async ({ payload, invalidEnvJson, invalidTaskMarkdown }) => {
                     <Briefcase class="h-5 w-5 text-primary" />
                 </div>
                 <div class="flex items-center gap-2">
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Create Agent Job</h2>
+                    <h2 class="text-base font-semibold text-foreground truncate">Create Agent Job</h2>
                     <HelpHint
                         ui-key="jobs.create"
                         short-text="Configure runner, schedule, and task for a new agent job."

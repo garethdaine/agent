@@ -93,7 +93,7 @@ const getProviderBadgeVariant = (provider) => {
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h2 class="text-xl font-semibold leading-tight text-foreground">Dead Letter #{{ deadLetter.id }}</h2>
+                            <h2 class="text-base font-semibold text-foreground truncate">Dead Letter #{{ deadLetter.id }}</h2>
                             <HelpHint
                                 ui-key="dead-letters.detail"
                                 short-text="Inspect and retry a failed message."

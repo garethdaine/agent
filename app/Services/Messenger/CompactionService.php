@@ -21,6 +21,38 @@ final class CompactionService
     ) {}
 
     /**
+     * Whether the session has exceeded compaction thresholds and compaction would run if invoked.
+     * Use this to decide whether to dispatch CompactionJob (e.g. after a turn) so compaction runs only when context is running low.
+     */
+    public function isCompactionNeeded(ChatSession $session): bool
+    {
+        if (! config('messenger.compaction.enabled', true)) {
+            return false;
+        }
+
+        $triggerMessages = (int) config('messenger.compaction.trigger_message_count', 30);
+        $triggerTokens = (int) config('messenger.compaction.trigger_estimated_tokens', 15_000);
+        $targetMessages = (int) config('messenger.compaction.target_message_count', 10);
+
+        $stats = $this->estimator->estimate($session);
+        $messageCount = $stats['message_count'];
+        $estimatedTokens = $stats['estimated_tokens'];
+
+        if ($messageCount < $triggerMessages && $estimatedTokens < $triggerTokens) {
+            return false;
+        }
+
+        $messages = $session->messages()->orderBy('created_at')->get();
+        if ($messages->count() <= $targetMessages) {
+            return false;
+        }
+
+        $toSummarize = $messages->slice(0, -$targetMessages);
+
+        return $toSummarize->isNotEmpty();
+    }
+
+    /**
      * Run compaction if the session exceeds configured thresholds.
      * Returns true if compaction was performed, false otherwise.
      */

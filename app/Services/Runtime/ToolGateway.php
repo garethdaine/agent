@@ -52,6 +52,10 @@ class ToolGateway
     {
         $tools = [];
         foreach ($this->adapters as $adapter) {
+            $name = $adapter->name();
+            if (! $this->policyEngine->isToolAllowedByPolicy($name, $name)) {
+                continue;
+            }
             $raw = $adapter->schema();
             $operations = $raw['operations'] ?? [];
             $params = $raw['parameters'] ?? [];
@@ -74,7 +78,7 @@ class ToolGateway
                 }
             }
             $tools[] = [
-                'name' => $adapter->name(),
+                'name' => $name,
                 'description' => $description,
                 'input_schema' => [
                     'type' => 'object',
@@ -115,6 +119,11 @@ class ToolGateway
             return $this->recordFailure($toolCall, "Unknown tool: {$toolName}", $startTime);
         }
 
+        $qualifiedName = $this->resolveQualifiedToolName($toolName, $args);
+        if (! $this->policyEngine->isToolAllowedByPolicy($toolName, $qualifiedName)) {
+            return $this->recordFailure($toolCall, "Tool {$toolName} is denied by runtime policy (tool_deny / tool_allow)", $startTime);
+        }
+
         $adapter = $this->adapters[$toolName];
 
         // Check capability authorization via adapter
@@ -125,9 +134,6 @@ class ToolGateway
                 $startTime
             );
         }
-
-        // Resolve the qualified tool name for approval checks (e.g. fs + write → fs.write)
-        $qualifiedName = $this->resolveQualifiedToolName($toolName, $args);
 
         // Check if approval is required via ApprovalGate
         if ($this->approvalGate->requiresApproval($context->mode, $qualifiedName, $args)) {
@@ -177,8 +183,13 @@ class ToolGateway
             return $this->recordFailure($toolCall, "Unknown tool: {$toolName}", $startTime);
         }
 
-        $adapter = $this->adapters[$toolName];
         $args = (array) ($toolCall->arguments_json ?? []);
+        $qualifiedName = $this->resolveQualifiedToolName($toolName, $args);
+        if (! $this->policyEngine->isToolAllowedByPolicy($toolName, $qualifiedName)) {
+            return $this->recordFailure($toolCall, "Tool {$toolName} is denied by runtime policy", $startTime);
+        }
+
+        $adapter = $this->adapters[$toolName];
 
         $this->auditLogger->recordSystemAction(
             'runtime.tool_call.execute_approved',

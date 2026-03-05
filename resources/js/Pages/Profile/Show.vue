@@ -22,7 +22,7 @@ defineProps({
                     <UserCircle class="h-5 w-5 text-primary" />
                 </div>
                 <div class="flex items-center gap-2">
-                    <h2 class="font-semibold text-xl text-foreground leading-tight">
+                    <h2 class="text-base font-semibold text-foreground truncate">
                         Profile
                     </h2>
                     <HelpHint

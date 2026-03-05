@@ -9,7 +9,7 @@ import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
 import DirectoryPickerInput from '@/Components/ui/DirectoryPickerInput.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { FileCode } from 'lucide-vue-next';
+import { ArrowLeft, FileCode } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { onMounted, reactive, ref } from 'vue';
@@ -84,13 +84,18 @@ onMounted(load);
         <Head title="Code Analysis Settings" />
 
         <template #header>
-            <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <FileCode class="h-5 w-5 text-primary" />
+            <div class="flex items-center justify-between gap-4 min-w-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <Link :href="route('tools.code-analysis.wizard', sessionId)" class="shrink-0">
+                        <Button variant="ghost" size="icon">
+                            <ArrowLeft class="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <FileCode class="h-4 w-4 text-primary" />
                     </div>
-                    <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Code Analysis Settings</h2>
+                    <div class="flex items-center gap-2 min-w-0">
+                        <h2 class="text-base font-semibold text-foreground truncate">Code Analysis Settings</h2>
                         <HelpHint
                             ui-key="code-analysis.settings"
                             short-text="Configure analysis session settings."
@@ -98,14 +103,9 @@ onMounted(load);
                         />
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <Link :href="route('tools.code-analysis.wizard', sessionId)">
-                        <Button variant="outline" size="sm">Back to Wizard</Button>
-                    </Link>
-                    <Link :href="route('tools.code-analysis.index')">
-                        <Button variant="outline" size="sm">Session List</Button>
-                    </Link>
-                </div>
+                <Link :href="route('tools.code-analysis.index')" class="shrink-0">
+                    <Button variant="outline" size="sm">Session List</Button>
+                </Link>
             </div>
         </template>
 

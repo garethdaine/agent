@@ -23,6 +23,12 @@ import {
     Brain,
     FileCode,
     ShieldCheck,
+    Stethoscope,
+    Sliders,
+    ScrollText,
+    UserCheck,
+    Settings,
+    FileText,
 } from 'lucide-vue-next';
 
 defineProps({
@@ -164,6 +170,26 @@ const page = usePage();
                     </template>
                     Sessions
                 </SidebarNavLink>
+                <SidebarNavLink
+                    :href="route('messenger.pairings.index')"
+                    :active="route().current('messenger.pairings.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <UserCheck class="h-4 w-4 shrink-0" />
+                    </template>
+                    Pairings
+                </SidebarNavLink>
+                <SidebarNavLink
+                    :href="route('messenger.sessions.index')"
+                    :active="route().current('messenger.sessions.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <MessageSquare class="h-4 w-4 shrink-0" />
+                    </template>
+                    Chat History
+                </SidebarNavLink>
             </SidebarNavGroup>
 
             <SidebarNavGroup label="Workspace" :collapsed="collapsed">
@@ -208,7 +234,7 @@ const page = usePage();
                     <template #icon>
                         <Building2 class="h-4 w-4 shrink-0" />
                     </template>
-                    3D Office
+                    Agent Office
                 </SidebarNavLink>
             </SidebarNavGroup>
 
@@ -222,6 +248,46 @@ const page = usePage();
                         <ShieldCheck class="h-4 w-4 shrink-0" />
                     </template>
                     Security
+                </SidebarNavLink>
+                <SidebarNavLink
+                    :href="route('tools.diagnostics.index')"
+                    :active="route().current('tools.diagnostics.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <Stethoscope class="h-4 w-4 shrink-0" />
+                    </template>
+                    Diagnostics
+                </SidebarNavLink>
+                <SidebarNavLink
+                    :href="route('tools.logs.index')"
+                    :active="route().current('tools.logs.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <FileText class="h-4 w-4 shrink-0" />
+                    </template>
+                    Logs
+                </SidebarNavLink>
+                <SidebarNavLink
+                    :href="route('tools.runtime.index')"
+                    :active="route().current('tools.runtime.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <Sliders class="h-4 w-4 shrink-0" />
+                    </template>
+                    Runtime
+                </SidebarNavLink>
+                <SidebarNavLink
+                    :href="route('tools.audit.index')"
+                    :active="route().current('tools.audit.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <ScrollText class="h-4 w-4 shrink-0" />
+                    </template>
+                    Audit Log
                 </SidebarNavLink>
                 <SidebarNavLink
                     :href="route('tools.credentials.index')"
@@ -262,6 +328,26 @@ const page = usePage();
                         <Brain class="h-4 w-4 shrink-0" />
                     </template>
                     Memory
+                </SidebarNavLink>
+                <SidebarNavLink
+                    :href="route('settings.configuration.index')"
+                    :active="route().current('settings.configuration.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <Settings class="h-4 w-4 shrink-0" />
+                    </template>
+                    Configuration
+                </SidebarNavLink>
+                <SidebarNavLink
+                    :href="route('settings.secrets.index')"
+                    :active="route().current('settings.secrets.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <Key class="h-4 w-4 shrink-0" />
+                    </template>
+                    Secrets
                 </SidebarNavLink>
             </SidebarNavGroup>
         </nav>

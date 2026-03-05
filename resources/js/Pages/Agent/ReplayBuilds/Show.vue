@@ -1,9 +1,10 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Button from '@/Components/ui/Button.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { RotateCcw } from 'lucide-vue-next';
-import HelpHint from '@/Components/HelpHint.vue';
+import { ArrowLeft, RotateCcw } from 'lucide-vue-next';
 
 const props = defineProps({
     build: {
@@ -42,30 +43,31 @@ const activeBuildAgeLabel = computed(() => {
 
     <AppLayout :title="`Replay Build ${build.id}`">
         <template #header>
-            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <RotateCcw class="h-5 w-5 text-primary" />
+            <div class="flex items-center justify-between gap-4 min-w-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <Link :href="navigation.replayBuilds" class="shrink-0">
+                        <Button variant="ghost" size="icon">
+                            <ArrowLeft class="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <RotateCcw class="h-4 w-4 text-primary" />
                     </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h2 class="text-xl font-semibold leading-tight text-foreground">Replay Build Detail</h2>
-                            <HelpHint
-                                ui-key="replay-builds.detail"
-                                short-text="Inspect replay build progress and status."
-                                learn-more-href="/docs/overview"
-                            />
-                        </div>
-                        <p class="mt-1 font-mono text-xs text-muted-foreground">{{ build.id }}</p>
+                    <div class="flex items-center gap-2 min-w-0">
+                        <h2 class="text-base font-semibold text-foreground truncate">Replay Build Detail</h2>
+                        <HelpHint
+                            ui-key="replay-builds.detail"
+                            short-text="Inspect replay build progress and status."
+                            learn-more-href="/docs/overview"
+                        />
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.replayBuilds">Back to replay builds</Link>
+                <div class="flex shrink-0 gap-2">
                     <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.systemOverview">System Overview</Link>
                     <button
                         v-if="governance.canManageReplay && !build.isActive"
                         type="button"
-                        class="rounded-md border border-border px-3 py-2 text-sm"
+                        class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
                     >Activate replay build</button>
                 </div>
             </div>

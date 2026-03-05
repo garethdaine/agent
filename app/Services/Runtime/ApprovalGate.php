@@ -62,22 +62,23 @@ class ApprovalGate
      * Standard mode: Approve all mutations
      * Full mode: Approve mutations + external calls
      */
-    public function requiresApproval(RuntimeMode $mode, string $toolName, array $args = []): bool
+    public function requiresApproval(RuntimeMode $mode, string $toolName, array $args = [], ?RuntimeSession $session = null): bool
     {
-        // Safe mode blocks writes entirely, doesn't use approval flow
         if ($mode === RuntimeMode::Safe) {
+            return false;
+        }
+
+        if ($session?->isToolAutoApproved($toolName)) {
             return false;
         }
 
         $isMutation = in_array($toolName, self::MUTATION_TOOLS, true);
         $isExternal = in_array($toolName, self::EXTERNAL_TOOLS, true);
 
-        // Standard mode: approve all mutations
         if ($mode === RuntimeMode::Standard && $isMutation) {
             return $this->policyEngine->requiresApproval($mode, 'mutations');
         }
 
-        // Full mode: approve mutations + external
         if ($mode === RuntimeMode::Full) {
             if ($isMutation && $this->policyEngine->requiresApproval($mode, 'mutations')) {
                 return true;
@@ -115,7 +116,10 @@ class ApprovalGate
      * @param  string|null  $reason  Optional reason for the approval
      * @return bool True if approval was successful, false if not in pending state
      */
-    public function approve(RuntimeApproval $approval, User $decider, ?string $reason = null): bool
+    /**
+     * @param  bool  $allowAlways  If true, add the tool to the session's auto-approval list
+     */
+    public function approve(RuntimeApproval $approval, User $decider, ?string $reason = null, bool $allowAlways = false): bool
     {
         if ($approval->state !== RuntimeApprovalState::Pending) {
             return false;
@@ -130,13 +134,19 @@ class ApprovalGate
         $approval->update([
             'state' => RuntimeApprovalState::Approved,
             'decision_by' => $decider->id,
-            'decision_reason' => $reason,
+            'decision_reason' => $reason ?? ($allowAlways ? 'allow_always' : null),
         ]);
 
         $approval->toolCall->update([
             'status' => RuntimeToolCallStatus::Approved,
             'approved_at' => now(),
         ]);
+
+        if ($allowAlways) {
+            $session = $approval->toolCall->turn->runtimeSession;
+            $toolName = $approval->toolCall->tool_name;
+            $session?->addToolAutoApproval($toolName);
+        }
 
         $this->auditLogger->recordSystemAction(
             'runtime.approval.approved',

@@ -266,7 +266,7 @@ onUnmounted(() => {
                         <Brain class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Memory Settings</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">Memory Settings</h2>
                         <HelpHint
                             ui-key="memory.settings"
                             short-text="Configure memory provider and retention settings."

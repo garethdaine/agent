@@ -38,6 +38,16 @@ Delegation orchestrates multi-step graph execution with dependency ordering, ass
 
 Create a graph with dependent tasks, assign capabilities, run execution, and inspect verification results per node.
 
+## Capabilities
+
+Delegatee profiles and task contracts use **capability slugs** (e.g. `code_execution`, `browser`, `mcp`) to match which delegatees can run which tasks. The list of available capabilities is **config-driven**:
+
+- **Source:** `config/delegation.php` → `capabilities_seed`. Slugs are seeded into the `delegation_capabilities` table via `DelegationCapabilitySeeder`.
+- **API:** `GET /agent/api/v1/delegation/capabilities` returns active capabilities (id, slug, name, description) for the profile form and task contracts.
+- **Extending:** Add slugs to `capabilities_seed` in config (or override via env if you expose it), then run `php artisan db:seed --class=DelegationCapabilitySeeder` so new rows are created. Existing rows are left unchanged (`firstOrCreate` by slug).
+
+The default seed set includes OpenClaw-aligned domains (e.g. `browser`, `filesystem`, `research`, `tools`, `mcp`, `runtime`, `web`, `discovery`, `orchestration`) in addition to the original six (`code_execution`, `review`, `testing`, `documentation`, `deployment`, `monitoring`). Runtime execution modes (e.g. in `config/runtime.php`) use a separate capability model for tool policy (read/write/query/browser_* etc.); delegation capabilities are for **task–delegatee matching** only.
+
 ## Troubleshooting
 
 - Frequent retry loops: inspect failure mode and verification policy thresholds.

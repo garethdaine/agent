@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Contracts\OrchestrationPolicyServiceContract;
+use App\Events\AgentJobRunFinished;
 use App\Jobs\Memory\MemoryFormationJob;
 use App\Models\AgentJobRun;
 use App\Services\Cost\WorkflowBudgetEnforcer;
@@ -638,6 +639,8 @@ class ExecuteAgentRunJob implements ShouldQueue
                 Log::warning('BillingUsageService: failed to report run', ['run_id' => $run->id, 'message' => $e->getMessage()]);
             }
         }
+
+        AgentJobRunFinished::dispatch($run, $status);
     }
 
     /**

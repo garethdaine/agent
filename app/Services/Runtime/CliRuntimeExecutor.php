@@ -2,17 +2,19 @@
 
 namespace App\Services\Runtime;
 
+use App\Enums\Messenger\ApprovalMode;
 use App\Models\Runtime\RuntimeSession;
-use App\Models\User;
 use App\Services\Credentials\CredentialsManager;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
 
 /**
- * Executes a single runtime turn by running the CLI (claude/codex) with the user message as a task.
- * Uses the credential manager for the Anthropic API key; no env var required.
+ * Executes a single runtime turn by running the CLI (claude/codex) as a conversational endpoint.
+ *
+ * The message is piped via stdin (not a file path) so the CLI treats it as a direct prompt.
+ * --strict-mcp-config skips all MCP server initialization for fast startup.
+ * --system-prompt injects the connector personality/identity.
+ * --resume preserves conversation context between turns.
  */
 class CliRuntimeExecutor
 {
@@ -21,12 +23,19 @@ class CliRuntimeExecutor
     ) {}
 
     /**
-     * Run one turn via the CLI: create temp task file, run runner, capture output, return result.
-     *
-     * @return array{status: 'completed'|'failed', text?: string, error?: string}
+     * @param  string|null  $runnerTypeOverride  When set (e.g. from connector config), use this runner instead of config.
+     * @param  string|null  $runnerSessionId  When set, --resume is passed for conversation continuity.
+     * @param  string|null  $systemPrompt  Connector soul (personality, identity) to inject via --system-prompt.
+     * @return array{status: 'completed'|'failed', text?: string, error?: string, runner_session_id?: string}
      */
-    public function executeTurn(RuntimeSession $session, string $userMessage): array
-    {
+    public function executeTurn(
+        RuntimeSession $session,
+        string $userMessage,
+        ?string $runnerTypeOverride = null,
+        ?string $runnerSessionId = null,
+        ?string $systemPrompt = null,
+        ApprovalMode $approvalMode = ApprovalMode::Autonomous,
+    ): array {
         $session->load('user');
         $user = $session->user;
         if ($user === null) {
@@ -41,36 +50,26 @@ class CliRuntimeExecutor
             ];
         }
 
-        $runnerType = config('runtime.cli.runner_type', 'claude');
+        $runnerType = $runnerTypeOverride ?? config('runtime.cli.runner_type', 'claude');
         $executables = config('agent.runner_executables', []);
-        $templates = config('agent.default_templates', []);
         $executable = $executables[$runnerType] ?? null;
-        $template = $templates[$runnerType] ?? null;
 
-        if ($executable === null || $template === null) {
+        if ($executable === null) {
             return [
                 'status' => 'failed',
-                'error' => "Runtime CLI runner '{$runnerType}' is not configured (runner_executables / default_templates).",
+                'error' => "Runtime CLI runner '{$runnerType}' is not configured (runner_executables).",
             ];
         }
 
-        $taskBase = storage_path('app/memory/context');
-        if (! File::isDirectory($taskBase)) {
-            File::makeDirectory($taskBase, 0755, true);
-        }
-
-        $taskPath = $taskBase.'/runtime-'.Str::uuid()->toString().'.md';
         $workingDir = $session->workspace_root !== null && $session->workspace_root !== ''
             ? $session->workspace_root
             : (config('agent.allowed_working_directory_bases', [])[0] ?? base_path());
 
-        $written = File::put($taskPath, $userMessage, true);
-        if ($written === false) {
-            return ['status' => 'failed', 'error' => 'Failed to write runtime task file.'];
-        }
+        $sessionResumeEnabled = (bool) config('runtime.cli.session_resume', true);
+        $useResume = $sessionResumeEnabled && $runnerSessionId !== null && $runnerSessionId !== '';
 
         try {
-            $command = $this->buildCommand($template, $taskPath, $workingDir);
+            $command = $this->buildRuntimeCommand($executable, $runnerType, $useResume ? $runnerSessionId : null, $systemPrompt, $approvalMode);
             $parentEnv = array_merge($_ENV ?? [], $_SERVER ?? []);
             $env = array_merge(
                 array_filter($parentEnv, static fn ($_, string $k): bool => ! str_starts_with($k, 'ANTHROPIC_'), ARRAY_FILTER_USE_BOTH),
@@ -83,10 +82,13 @@ class CliRuntimeExecutor
             Log::info('CliRuntimeExecutor: Starting CLI process', [
                 'session_id' => $session->id,
                 'runner_type' => $runnerType,
+                'has_system_prompt' => $systemPrompt !== null && $systemPrompt !== '',
+                'has_resume' => $useResume,
                 'timeout_seconds' => (int) config('runtime.cli.timeout_seconds', 300),
             ]);
 
             $process = new Process($command, $workingDir, $env);
+            $process->setInput($userMessage);
             $process->setTimeout((int) config('runtime.cli.timeout_seconds', 300));
             $process->run();
 
@@ -99,12 +101,18 @@ class CliRuntimeExecutor
             $stdout = $process->getOutput();
             $stderr = $process->getErrorOutput();
             $text = $this->extractFinalText($stdout, $runnerType);
+            $parsedRunnerSessionId = $this->extractRunnerSessionId($stdout, $runnerType);
 
             if ($process->isSuccessful()) {
-                return [
+                $result = [
                     'status' => 'completed',
-                    'text' => $text !== '' ? $text : trim($stdout) !== '' ? trim($stdout) : 'Done.',
+                    'text' => $text !== '' ? $text : 'Done.',
                 ];
+                if ($parsedRunnerSessionId !== null) {
+                    $result['runner_session_id'] = $parsedRunnerSessionId;
+                }
+
+                return $result;
             }
 
             $error = trim($stderr) !== '' ? trim($stderr) : 'CLI process exited with code '.$process->getExitCode();
@@ -113,31 +121,68 @@ class CliRuntimeExecutor
             }
 
             return ['status' => 'failed', 'error' => $error];
-        } finally {
-            if (File::exists($taskPath)) {
-                File::delete($taskPath);
-            }
+        } catch (\Throwable $e) {
+            Log::error('CliRuntimeExecutor: Process exception', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['status' => 'failed', 'error' => $e->getMessage()];
         }
     }
 
     /**
+     * Build the CLI command for a runtime conversational turn.
+     * Message is piped via stdin (not a file path) so the CLI treats it as a direct prompt.
+     *
      * @return array<int, string>
      */
-    private function buildCommand(string $template, string $taskPath, string $workingDir): array
-    {
-        $rendered = str_replace(
-            ['{{task_markdown_path}}', '{{working_directory}}'],
-            [$taskPath, $workingDir],
-            $template
-        );
+    private function buildRuntimeCommand(
+        string $executable,
+        string $runnerType,
+        ?string $runnerSessionId,
+        ?string $systemPrompt,
+        ApprovalMode $approvalMode = ApprovalMode::Autonomous,
+    ): array {
+        $command = [$executable];
 
-        return array_values(array_filter(preg_split('/\s+/', $rendered) ?: [], static fn (string $t): bool => $t !== ''));
+        if ($runnerType === 'claude') {
+            $command[] = '--verbose';
+            $command[] = '-p';
+            $command[] = '--output-format';
+            $command[] = 'stream-json';
+            $command[] = '--strict-mcp-config';
+
+            match ($approvalMode) {
+                ApprovalMode::Autonomous, ApprovalMode::Supervised => $command[] = '--dangerously-skip-permissions',
+                ApprovalMode::Restricted => array_push($command, '--allowedTools', 'Read,Grep,Glob,LS,WebSearch,WebFetch'),
+            };
+
+            if ($systemPrompt !== null && $systemPrompt !== '') {
+                $command[] = '--system-prompt';
+                $command[] = $systemPrompt;
+            }
+
+            if ($runnerSessionId !== null && $runnerSessionId !== '') {
+                $command[] = '--resume';
+                $command[] = $runnerSessionId;
+            }
+        }
+
+        if ($runnerType === 'codex') {
+            $command[] = 'exec';
+            $command[] = '--json';
+        }
+
+        return $command;
     }
 
     private function extractFinalText(string $stdout, string $runnerType): string
     {
         $lines = preg_split('/\R/', trim($stdout)) ?: [];
         $fragments = [];
+        $resultText = '';
+        $inTextBlock = false;
 
         foreach ($lines as $line) {
             $line = trim($line);
@@ -151,13 +196,31 @@ class CliRuntimeExecutor
             }
 
             if ($runnerType === 'claude') {
-                $type = $decoded['type'] ?? '';
-                if ($type === 'content_block_delta') {
-                    $delta = $decoded['delta'] ?? [];
-                    $text = is_array($delta) ? ($delta['text'] ?? '') : (is_string($delta) ? $delta : '');
-                    if ($text !== '') {
-                        $fragments[] = $text;
+                $event = $this->unwrapStreamEvent($decoded);
+                $type = $event['type'] ?? '';
+
+                if ($type === 'content_block_start') {
+                    $blockType = $event['content_block']['type'] ?? '';
+                    $inTextBlock = $blockType === 'text';
+                }
+
+                if ($type === 'content_block_stop') {
+                    $inTextBlock = false;
+                }
+
+                if ($type === 'content_block_delta' && $inTextBlock) {
+                    $delta = $event['delta'] ?? [];
+                    $deltaType = is_array($delta) ? ($delta['type'] ?? '') : '';
+                    if ($deltaType === 'text_delta') {
+                        $text = $delta['text'] ?? '';
+                        if ($text !== '') {
+                            $fragments[] = $text;
+                        }
                     }
+                }
+
+                if ($type === 'result' && isset($event['result']) && is_string($event['result'])) {
+                    $resultText = $event['result'];
                 }
             }
 
@@ -169,6 +232,59 @@ class CliRuntimeExecutor
             }
         }
 
-        return implode('', $fragments);
+        $assembled = implode('', $fragments);
+
+        return $assembled !== '' ? $assembled : $resultText;
+    }
+
+    private function extractRunnerSessionId(string $stdout, string $runnerType): ?string
+    {
+        if ($runnerType !== 'claude') {
+            return null;
+        }
+
+        $lines = preg_split('/\R/', trim($stdout)) ?: [];
+        $lastSessionId = null;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+
+            $decoded = json_decode($line, true);
+            if (! is_array($decoded)) {
+                continue;
+            }
+
+            $sessionId = $decoded['session_id'] ?? null;
+            if (is_string($sessionId) && $sessionId !== '') {
+                $lastSessionId = $sessionId;
+            }
+
+            $event = $this->unwrapStreamEvent($decoded);
+            $eventSessionId = $event['session_id'] ?? null;
+            if (is_string($eventSessionId) && $eventSessionId !== '') {
+                $lastSessionId = $eventSessionId;
+            }
+        }
+
+        return $lastSessionId;
+    }
+
+    /**
+     * Claude CLI --output-format stream-json wraps API events in
+     * {"type":"stream_event","event":{...}}. Unwrap to get the inner event.
+     *
+     * @param  array<string, mixed>  $decoded
+     * @return array<string, mixed>
+     */
+    private function unwrapStreamEvent(array $decoded): array
+    {
+        if (($decoded['type'] ?? '') === 'stream_event' && isset($decoded['event']) && is_array($decoded['event'])) {
+            return $decoded['event'];
+        }
+
+        return $decoded;
     }
 }

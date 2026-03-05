@@ -9,6 +9,8 @@ use App\Models\AgentJobRun;
 use App\Models\MemoryConversationLog;
 use App\Models\MemoryEmbedding;
 use App\Models\MemoryFormationFailure;
+use App\Models\Runtime\RuntimeSession;
+use App\Models\Runtime\RuntimeTurn;
 use App\Models\User;
 use App\Support\Memory\Contracts\EmbeddingProvider;
 use App\Support\Memory\Contracts\ExtractionProvider;
@@ -635,5 +637,41 @@ class MemoryFormationPipelineTest extends TestCase
         // Should still succeed - graceful degradation
         $this->assertTrue($result->success);
         $this->assertTrue($result->graphSkipped);
+    }
+
+    /**
+     * Test that processRuntimeSession persists runtime session turns to memory_conversation_logs.
+     */
+    public function test_process_runtime_session_persists_conversation_logs(): void
+    {
+        config(['memory.api_enabled' => false]);
+
+        $session = RuntimeSession::factory()->create([
+            'user_id' => $this->user->id,
+            'started_at' => now(),
+        ]);
+        RuntimeTurn::factory()->create([
+            'runtime_session_id' => $session->id,
+            'sequence' => 1,
+            'summary' => 'I can help with that.',
+        ]);
+        RuntimeTurn::factory()->create([
+            'runtime_session_id' => $session->id,
+            'sequence' => 2,
+            'summary' => 'Here is the result.',
+        ]);
+
+        $pipeline = new MemoryFormationPipeline(app(WorkingMemoryBuffer::class), null, null, null);
+
+        $result = $pipeline->processRuntimeSession($session->fresh());
+
+        $this->assertTrue($result->success);
+        $this->assertGreaterThanOrEqual(2, $result->conversationLogsCreated);
+
+        $logs = MemoryConversationLog::forRuntimeSession($session->id)->ordered()->get();
+        $this->assertGreaterThanOrEqual(2, $logs->count());
+        $this->assertEquals($session->id, $logs->first()->runtime_session_id);
+        $this->assertNull($logs->first()->run_id);
+        $this->assertNull($logs->first()->job_id);
     }
 }

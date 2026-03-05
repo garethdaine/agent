@@ -248,7 +248,7 @@ return [
             'memory' => 128,
             'tries' => 3,
             'backoff' => [5, 30, 60],
-            'timeout' => 60,
+            'timeout' => (int) env('HORIZON_MESSENGER_TIMEOUT', 120),
             'nice' => 0,
         ],
         'supervisor-delegation' => [

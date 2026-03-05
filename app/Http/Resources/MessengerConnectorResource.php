@@ -58,8 +58,10 @@ class MessengerConnectorResource extends JsonResource
         $config = $this->config ?? [];
 
         $publicFields = [
+            'approval_mode',
             'confirmation_required',
             'link_expiration_days',
+            'runner_type',
             'session_history_limit',
             'session_history_window',
             'default_verbosity',

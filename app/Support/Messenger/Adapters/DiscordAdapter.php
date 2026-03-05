@@ -43,6 +43,8 @@ class DiscordAdapter extends AbstractConnectorAdapter
 
     private const INTERACTION_CONTEXT_TTL_SECONDS = 900;
 
+    private const MAX_MESSAGE_LENGTH = 1950;
+
     protected function getProviderName(): string
     {
         return ConnectorAccount::PROVIDER_DISCORD;
@@ -169,6 +171,7 @@ class DiscordAdapter extends AbstractConnectorAdapter
         // edit the original interaction response so Discord clears "thinking…".
         $interactionContext = $this->pullInteractionContextForSession($session, $account);
         if ($interactionContext !== null) {
+            $interactionChunks = $this->chunkContent($normalizedContent);
             $originalResponse = Http::timeout(10)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->patch(
@@ -178,7 +181,7 @@ class DiscordAdapter extends AbstractConnectorAdapter
                         $interactionContext['application_id'],
                         $interactionContext['token']
                     ),
-                    ['content' => $normalizedContent]
+                    ['content' => $interactionChunks[0]]
                 );
 
             if ($originalResponse->successful()) {
@@ -187,6 +190,10 @@ class DiscordAdapter extends AbstractConnectorAdapter
 
                 if ($messageId !== null) {
                     $this->storeLastBotMessageId($session, $messageId);
+
+                    if (count($interactionChunks) > 1) {
+                        $this->sendOverflowChunks($session, $account, $botToken, array_slice($interactionChunks, 1));
+                    }
 
                     return ProviderResponse::success((string) $messageId, $responseData);
                 }
@@ -205,62 +212,70 @@ class DiscordAdapter extends AbstractConnectorAdapter
         $targetChannelId = $payload->threadId ?? $payload->channelId;
 
         $httpClient = new MessengerHttpClient($account);
+        $chunks = $this->chunkContent($normalizedContent);
 
-        $data = [
-            'content' => $normalizedContent,
-        ];
+        $lastMessageId = null;
+        $lastResponseData = [];
 
-        // Add message reference for replies (optional threading)
-        if ($payload->replyToMessageId) {
-            $data['message_reference'] = [
-                'message_id' => $payload->replyToMessageId,
-            ];
-        }
+        foreach ($chunks as $i => $chunk) {
+            $data = ['content' => $chunk];
 
-        $result = $httpClient->post(
-            self::API_BASE_URL.'/channels/'.$targetChannelId.'/messages',
-            $data,
-            [
-                'Authorization' => 'Bot '.$botToken,
-                'Content-Type' => 'application/json',
-            ]
-        );
-
-        if (! $result['success']) {
-            $this->logError('Failed to send Discord message', [
-                'account_id' => $account->id,
-                'channel_id' => $targetChannelId,
-                'error' => $result['error'],
-            ]);
-
-            $errorMessage = $result['error'] ?? 'Failed to send message';
-            $responseData = $result['response']?->json() ?? [];
-
-            // Extract Discord error message if available
-            if (isset($responseData['message'])) {
-                $errorMessage = $responseData['message'];
+            if ($i === 0 && $payload->components !== null) {
+                $data['components'] = $payload->components;
             }
 
-            return ProviderResponse::failure($errorMessage, $responseData);
+            if ($i === 0 && $payload->replyToMessageId) {
+                $data['message_reference'] = [
+                    'message_id' => $payload->replyToMessageId,
+                ];
+            }
+
+            $result = $httpClient->post(
+                self::API_BASE_URL.'/channels/'.$targetChannelId.'/messages',
+                $data,
+                [
+                    'Authorization' => 'Bot '.$botToken,
+                    'Content-Type' => 'application/json',
+                ]
+            );
+
+            if (! $result['success']) {
+                $this->logError('Failed to send Discord message', [
+                    'account_id' => $account->id,
+                    'channel_id' => $targetChannelId,
+                    'error' => $result['error'],
+                    'chunk' => $i + 1,
+                    'total_chunks' => count($chunks),
+                ]);
+
+                $errorMessage = $result['error'] ?? 'Failed to send message';
+                $responseData = $result['response']?->json() ?? [];
+
+                if (isset($responseData['message'])) {
+                    $errorMessage = $responseData['message'];
+                }
+
+                return ProviderResponse::failure($errorMessage, $responseData);
+            }
+
+            $lastResponseData = $result['response']->json();
+            $lastMessageId = $lastResponseData['id'] ?? null;
         }
 
-        $responseData = $result['response']->json();
-        $messageId = $responseData['id'] ?? null;
-
-        if (! $messageId) {
-            return ProviderResponse::failure('No message ID in response', $responseData);
+        if (! $lastMessageId) {
+            return ProviderResponse::failure('No message ID in response', $lastResponseData);
         }
 
-        // Store last bot message ID for DM pseudo-threading
-        $this->storeLastBotMessageId($session, $messageId);
+        $this->storeLastBotMessageId($session, $lastMessageId);
 
         $this->logInfo('Message sent successfully', [
             'account_id' => $account->id,
             'channel_id' => $targetChannelId,
-            'message_id' => $messageId,
+            'message_id' => $lastMessageId,
+            'chunks' => count($chunks),
         ]);
 
-        return ProviderResponse::success($messageId, $responseData);
+        return ProviderResponse::success($lastMessageId, $lastResponseData);
     }
 
     public function editMessage(ChatSession $session, string $providerMessageId, string $content): ProviderResponse
@@ -942,5 +957,83 @@ class DiscordAdapter extends AbstractConnectorAdapter
     private function interactionContextCacheKey(ConnectorAccount $account, string $interactionId): string
     {
         return sprintf('discord:interaction:%s:%s', $account->id, $interactionId);
+    }
+
+    /**
+     * Send overflow chunks as follow-up messages (used when an interaction edit holds only the first chunk).
+     *
+     * @param  list<string>  $chunks
+     */
+    private function sendOverflowChunks(ChatSession $session, ConnectorAccount $account, string $botToken, array $chunks): void
+    {
+        $targetChannelId = $session->thread_id ?? $session->channel_id;
+        $httpClient = new MessengerHttpClient($account);
+
+        foreach ($chunks as $chunk) {
+            $result = $httpClient->post(
+                self::API_BASE_URL.'/channels/'.$targetChannelId.'/messages',
+                ['content' => $chunk],
+                [
+                    'Authorization' => 'Bot '.$botToken,
+                    'Content-Type' => 'application/json',
+                ]
+            );
+
+            if (! $result['success']) {
+                $this->logError('Failed to send overflow Discord chunk', [
+                    'account_id' => $account->id,
+                    'channel_id' => $targetChannelId,
+                    'error' => $result['error'],
+                ]);
+
+                return;
+            }
+
+            $lastResponseData = $result['response']->json();
+            $lastMessageId = $lastResponseData['id'] ?? null;
+            if ($lastMessageId !== null) {
+                $this->storeLastBotMessageId($session, $lastMessageId);
+            }
+        }
+    }
+
+    /**
+     * Split content into chunks that fit within Discord's message limit.
+     * Splits on double-newlines or single newlines when possible to avoid breaking mid-sentence.
+     *
+     * @return list<string>
+     */
+    private function chunkContent(string $content): array
+    {
+        if (mb_strlen($content) <= self::MAX_MESSAGE_LENGTH) {
+            return [$content];
+        }
+
+        $chunks = [];
+        $remaining = $content;
+
+        while (mb_strlen($remaining) > self::MAX_MESSAGE_LENGTH) {
+            $slice = mb_substr($remaining, 0, self::MAX_MESSAGE_LENGTH);
+
+            $breakAt = mb_strrpos($slice, "\n\n");
+            if ($breakAt === false || $breakAt < self::MAX_MESSAGE_LENGTH / 2) {
+                $breakAt = mb_strrpos($slice, "\n");
+            }
+            if ($breakAt === false || $breakAt < self::MAX_MESSAGE_LENGTH / 4) {
+                $breakAt = mb_strrpos($slice, ' ');
+            }
+            if ($breakAt === false || $breakAt < self::MAX_MESSAGE_LENGTH / 4) {
+                $breakAt = self::MAX_MESSAGE_LENGTH;
+            }
+
+            $chunks[] = trim(mb_substr($remaining, 0, $breakAt));
+            $remaining = trim(mb_substr($remaining, $breakAt));
+        }
+
+        if ($remaining !== '') {
+            $chunks[] = $remaining;
+        }
+
+        return $chunks;
     }
 }

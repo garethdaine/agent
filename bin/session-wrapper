@@ -1,0 +1,300 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Session Wrapper — one long-lived process per RuntimeSession.
+ *
+ * Protocol:
+ *   stdin:  One JSON object per line: {"message": "user text"}
+ *           EOF or {"type": "shutdown"} to stop.
+ *   stdout: For each turn:
+ *           - Lines of output from the runner (stream-json or plain text).
+ *           - A turn-complete marker: {"type":"turn_complete","session_id":"...","exit_code":0}
+ *   stderr: Diagnostic/log output (forwarded from runner).
+ *
+ * Environment (required):
+ *   WRAPPER_RUNNER_EXECUTABLE  — path to the CLI (e.g. /usr/local/bin/claude)
+ *   WRAPPER_RUNNER_TYPE        — claude | codex | custom
+ *   WRAPPER_WORKING_DIRECTORY  — workspace root
+ *   ANTHROPIC_API_KEY          — (for claude runner)
+ *
+ * Environment (optional):
+ *   WRAPPER_IDLE_TIMEOUT       — seconds to wait for next message before self-exit (default 3600)
+ *   WRAPPER_OUTPUT_FORMAT      — stream-json (default) | json | text
+ *   WRAPPER_SYSTEM_PROMPT      — connector soul / personality text for --system-prompt
+ */
+
+declare(strict_types=1);
+
+$executable = getenv('WRAPPER_RUNNER_EXECUTABLE') ?: '';
+$runnerType = getenv('WRAPPER_RUNNER_TYPE') ?: 'claude';
+$workingDir = getenv('WRAPPER_WORKING_DIRECTORY') ?: getcwd();
+$idleTimeout = (int) (getenv('WRAPPER_IDLE_TIMEOUT') ?: 3600);
+$outputFormat = getenv('WRAPPER_OUTPUT_FORMAT') ?: 'stream-json';
+$systemPrompt = getenv('WRAPPER_SYSTEM_PROMPT') ?: '';
+$approvalMode = getenv('WRAPPER_APPROVAL_MODE') ?: 'autonomous';
+
+if ($executable === '') {
+    fwrite(STDERR, "session-wrapper: WRAPPER_RUNNER_EXECUTABLE is required\n");
+    exit(1);
+}
+
+if (!is_dir($workingDir)) {
+    fwrite(STDERR, "session-wrapper: WRAPPER_WORKING_DIRECTORY does not exist: {$workingDir}\n");
+    exit(1);
+}
+
+$runnerSessionId = null;
+$turnCount = 0;
+
+fwrite(STDERR, "session-wrapper: started (runner={$runnerType}, dir={$workingDir})\n");
+
+stream_set_blocking(STDIN, false);
+
+while (true) {
+    $line = waitForLine(STDIN, $idleTimeout);
+
+    if ($line === null) {
+        fwrite(STDERR, "session-wrapper: idle timeout ({$idleTimeout}s), exiting\n");
+        break;
+    }
+
+    $line = trim($line);
+    if ($line === '') {
+        continue;
+    }
+
+    $input = json_decode($line, true);
+    if (!is_array($input)) {
+        fwrite(STDERR, "session-wrapper: invalid JSON input, skipping\n");
+        continue;
+    }
+
+    if (($input['type'] ?? '') === 'shutdown') {
+        fwrite(STDERR, "session-wrapper: shutdown requested\n");
+        break;
+    }
+
+    $message = $input['message'] ?? '';
+    if ($message === '') {
+        fwrite(STDERR, "session-wrapper: empty message, skipping\n");
+        continue;
+    }
+
+    $turnCount++;
+    [$exitCode, $runnerSessionId] = executeTurn(
+        $executable,
+        $runnerType,
+        $workingDir,
+        $outputFormat,
+        $message,
+        $runnerSessionId,
+        $turnCount,
+        $systemPrompt,
+        $approvalMode
+    );
+
+    $marker = json_encode([
+        'type' => 'turn_complete',
+        'session_id' => $runnerSessionId,
+        'exit_code' => $exitCode,
+        'turn' => $turnCount,
+    ], JSON_UNESCAPED_SLASHES);
+    fwrite(STDOUT, $marker . "\n");
+    fflush(STDOUT);
+}
+
+fwrite(STDERR, "session-wrapper: exiting after {$turnCount} turns\n");
+exit(0);
+
+// ---------------------------------------------------------------------------
+
+function waitForLine($stream, int $timeoutSeconds): ?string
+{
+    $deadline = time() + $timeoutSeconds;
+
+    while (time() < $deadline) {
+        $line = fgets($stream);
+        if ($line !== false) {
+            return $line;
+        }
+
+        if (feof($stream)) {
+            return null;
+        }
+
+        usleep(50_000); // 50ms
+    }
+
+    return null;
+}
+
+function executeTurn(
+    string $executable,
+    string $runnerType,
+    string $workingDir,
+    string $outputFormat,
+    string $message,
+    ?string $prevSessionId,
+    int $turnCount,
+    string $systemPrompt = '',
+    string $approvalMode = 'autonomous'
+): array {
+    $command = buildCommand($executable, $runnerType, $outputFormat, $prevSessionId, $systemPrompt, $approvalMode);
+
+    fwrite(STDERR, "session-wrapper: turn {$turnCount} command: " . implode(' ', $command) . "\n");
+
+    $descriptors = [
+        0 => ['pipe', 'r'],
+        1 => ['pipe', 'w'],
+        2 => ['pipe', 'w'],
+    ];
+
+    $process = proc_open($command, $descriptors, $pipes, $workingDir);
+
+    if (!is_resource($process)) {
+        fwrite(STDERR, "session-wrapper: failed to start CLI process\n");
+        return [1, $prevSessionId];
+    }
+
+    fwrite($pipes[0], $message);
+    fclose($pipes[0]);
+
+    stream_set_blocking($pipes[1], false);
+    stream_set_blocking($pipes[2], false);
+
+    $runnerSessionId = $prevSessionId;
+
+    while (true) {
+        $status = proc_get_status($process);
+
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+
+        if ($stdout !== false && $stdout !== '') {
+            $lines = explode("\n", $stdout);
+            foreach ($lines as $line) {
+                $trimmed = trim($line);
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                fwrite(STDOUT, $trimmed . "\n");
+                fflush(STDOUT);
+
+                if ($runnerType === 'claude') {
+                    $decoded = json_decode($trimmed, true);
+                    $sessionId = extractSessionIdFromLine($decoded);
+                    if ($sessionId !== null) {
+                        $runnerSessionId = $sessionId;
+                    }
+                }
+            }
+        }
+
+        if ($stderr !== false && $stderr !== '') {
+            fwrite(STDERR, $stderr);
+        }
+
+        if (!$status['running']) {
+            break;
+        }
+
+        usleep(10_000); // 10ms
+    }
+
+    $finalStdout = stream_get_contents($pipes[1]);
+    $finalStderr = stream_get_contents($pipes[2]);
+
+    if ($finalStdout !== false && $finalStdout !== '') {
+        foreach (explode("\n", $finalStdout) as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '') continue;
+            fwrite(STDOUT, $trimmed . "\n");
+            fflush(STDOUT);
+
+            if ($runnerType === 'claude') {
+                $decoded = json_decode($trimmed, true);
+                $sessionId = extractSessionIdFromLine($decoded);
+                if ($sessionId !== null) {
+                    $runnerSessionId = $sessionId;
+                }
+            }
+        }
+    }
+
+    if ($finalStderr !== false && $finalStderr !== '') {
+        fwrite(STDERR, $finalStderr);
+    }
+
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+
+    $exitCode = proc_close($process);
+
+    return [$exitCode, $runnerSessionId];
+}
+
+/**
+ * Extract session_id from a decoded JSON line, handling stream_event envelope.
+ */
+function extractSessionIdFromLine(?array $decoded): ?string
+{
+    if (!is_array($decoded)) {
+        return null;
+    }
+
+    if (isset($decoded['session_id']) && is_string($decoded['session_id'])) {
+        return $decoded['session_id'];
+    }
+
+    if (($decoded['type'] ?? '') === 'stream_event' && is_array($decoded['event'] ?? null)) {
+        $event = $decoded['event'];
+        if (isset($event['session_id']) && is_string($event['session_id'])) {
+            return $event['session_id'];
+        }
+    }
+
+    return null;
+}
+
+function buildCommand(
+    string $executable,
+    string $runnerType,
+    string $outputFormat,
+    ?string $prevSessionId,
+    string $systemPrompt = '',
+    string $approvalMode = 'autonomous'
+): array {
+    $command = [$executable];
+
+    if ($runnerType === 'claude') {
+        $command[] = '--verbose';
+        $command[] = '-p';
+        $command[] = '--output-format';
+        $command[] = $outputFormat;
+        $command[] = '--strict-mcp-config';
+
+        match ($approvalMode) {
+            'autonomous', 'supervised' => $command[] = '--dangerously-skip-permissions',
+            'restricted' => array_push($command, '--allowedTools', 'Read,Grep,Glob,LS,WebSearch,WebFetch'),
+        };
+
+        if ($systemPrompt !== '') {
+            $command[] = '--system-prompt';
+            $command[] = $systemPrompt;
+        }
+
+        if ($prevSessionId !== null && $prevSessionId !== '') {
+            $command[] = '--resume';
+            $command[] = $prevSessionId;
+        }
+    }
+
+    if ($runnerType === 'codex') {
+        $command[] = 'exec';
+        $command[] = '--json';
+    }
+
+    return $command;
+}

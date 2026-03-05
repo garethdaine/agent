@@ -13,9 +13,17 @@ class RuntimeConfigTest extends TestCase
         $this->assertArrayHasKey('default_mode', $config);
         $this->assertArrayHasKey('approval_model', $config);
         $this->assertArrayHasKey('modes', $config);
+        $this->assertArrayHasKey('tool_deny', $config);
+        $this->assertArrayHasKey('tool_allow', $config);
         $this->assertArrayHasKey('concurrent_session_limit_default', $config);
         $this->assertArrayHasKey('browser', $config);
         $this->assertArrayHasKey('mcp', $config);
+    }
+
+    public function test_tool_deny_and_tool_allow_are_arrays(): void
+    {
+        $this->assertIsArray(config('runtime.tool_deny'));
+        $this->assertIsArray(config('runtime.tool_allow'));
     }
 
     public function test_strict_approval_model_modes(): void
@@ -142,5 +150,15 @@ class RuntimeConfigTest extends TestCase
         $approvals = config('runtime.modes.full.approvals_required');
 
         $this->assertContains('elevated', $approvals);
+    }
+
+    public function test_cli_tool_approval_timeout_defaults_to_300(): void
+    {
+        $this->assertEquals(300, config('runtime.cli.tool_approval_timeout'));
+    }
+
+    public function test_cli_tool_approval_poll_interval_defaults_to_2(): void
+    {
+        $this->assertEquals(2, config('runtime.cli.tool_approval_poll_interval'));
     }
 }

@@ -47,6 +47,12 @@ class JetstreamServiceProvider extends ServiceProvider
             'read',
             'update',
             'delete',
+            'runtime:read',
+            'runtime:execute',
+            'jobs:read',
+            'jobs:manage',
+            'messenger:read',
+            'messenger:manage',
         ]);
     }
 }

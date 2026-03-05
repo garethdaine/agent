@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\DelegateeProfile;
+use App\Models\DelegationCapability;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Delegation\TrustScoreCalculator;
@@ -12,6 +13,23 @@ use Illuminate\Http\Request;
 
 class DelegateeProfileController extends Controller
 {
+    public function capabilities(Request $request): JsonResponse
+    {
+        $capabilities = DelegationCapability::query()
+            ->active()
+            ->orderBy('slug')
+            ->get(['id', 'slug', 'name', 'description']);
+
+        return response()->json([
+            'data' => $capabilities->map(fn (DelegationCapability $c): array => [
+                'id' => $c->id,
+                'slug' => $c->slug,
+                'name' => $c->name,
+                'description' => $c->description,
+            ])->values()->all(),
+        ]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $query = $request->user()->delegateeProfiles()->newQuery();

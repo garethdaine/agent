@@ -57,6 +57,13 @@ class ConfirmationManager
             content: $promptMessage,
             channelId: $session->channel_id,
             threadId: $session->thread_id,
+            components: [[
+                'type' => 1,
+                'components' => [
+                    ['type' => 2, 'style' => 3, 'label' => 'Approve', 'custom_id' => "confirm:{$confirmation->id}:yes"],
+                    ['type' => 2, 'style' => 4, 'label' => 'Deny', 'custom_id' => "confirm:{$confirmation->id}:no"],
+                ],
+            ]],
         );
 
         try {

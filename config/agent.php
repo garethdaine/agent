@@ -249,4 +249,11 @@ return [
         'default_notification_level' => 'escalations_only',
         'budget_hard_stop_behavior' => 'block_undispatched',
     ],
+
+    'webhooks' => [
+        'enabled' => env('AGENT_WEBHOOKS_ENABLED', false),
+        'url' => env('AGENT_WEBHOOK_URL'),
+        'secret' => env('AGENT_WEBHOOK_SECRET'),
+        'events' => $parseEnvCsvList('AGENT_WEBHOOK_EVENTS'),
+    ],
 ];

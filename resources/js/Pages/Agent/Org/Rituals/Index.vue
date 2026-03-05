@@ -116,7 +116,7 @@ onMounted(loadRituals);
                         <Bot class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Rituals</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">Rituals</h2>
                         <HelpHint
                             ui-key="org.rituals"
                             short-text="Manage recurring agent rituals and schedules."

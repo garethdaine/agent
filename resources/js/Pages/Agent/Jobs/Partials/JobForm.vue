@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import Button from '@/Components/ui/Button.vue';
 import Card from '@/Components/ui/Card.vue';
 import DirectoryPickerInput from '@/Components/ui/DirectoryPickerInput.vue';
@@ -178,6 +179,33 @@ const degradationError = ref(null);
 
 // Disable active hours checkbox state (for edit mode)
 const disableActiveHours = ref(false);
+
+// Task markdown path directory picker (sets directory; user appends filename)
+const taskPathPickerOpening = ref(false);
+const taskPathPickerError = ref('');
+const openTaskPathPicker = async () => {
+    if (taskPathPickerOpening.value || props.isSubmitting) return;
+    taskPathPickerOpening.value = true;
+    taskPathPickerError.value = '';
+    const payload = {};
+    if (form.task_markdown_path.trim()) {
+        payload.current_path = form.task_markdown_path.trim();
+    }
+    try {
+        const { data } = await axios.post('/agent/api/v1/system/directory-picker', payload);
+        const path = data?.data?.path;
+        if (typeof path === 'string' && path.trim()) {
+            form.task_markdown_path = path.trim();
+        }
+    } catch (err) {
+        const code = err?.response?.data?.error?.code ?? '';
+        if (code !== 'DIRECTORY_PICKER_CANCELLED') {
+            taskPathPickerError.value = err?.response?.data?.error?.message ?? err?.message ?? 'Unable to open directory picker.';
+        }
+    } finally {
+        taskPathPickerOpening.value = false;
+    }
+};
 
 watch(disableActiveHours, (newValue) => {
     if (newValue) {
@@ -881,8 +909,25 @@ const submit = () => {
 
                 <div v-if="taskSource.mode === 'path'" class="mt-3">
                     <label class="block text-sm font-medium text-foreground">Task Markdown Path</label>
-                    <input v-model="form.task_markdown_path" type="text" class="mt-1 w-full rounded-md border border-input bg-input-background focus-visible:ring-2 focus-visible:ring-ring" />
-                    <p class="mt-1 text-xs text-muted-foreground">Absolute path to an existing markdown task/prompt file.</p>
+                    <div class="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <input
+                            v-model="form.task_markdown_path"
+                            type="text"
+                            class="w-full rounded-md border border-input bg-input-background font-mono focus-visible:ring-2 focus-visible:ring-ring sm:flex-1"
+                            :disabled="isSubmitting || taskPathPickerOpening"
+                        />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            class="shrink-0 sm:w-auto"
+                            :disabled="isSubmitting || taskPathPickerOpening"
+                            @click="openTaskPathPicker"
+                        >
+                            {{ taskPathPickerOpening ? 'Opening…' : 'Browse…' }}
+                        </Button>
+                    </div>
+                    <p class="mt-1 text-xs text-muted-foreground">Absolute path to an existing markdown task/prompt file. Use Browse to pick the directory, then add the filename.</p>
+                    <p v-if="taskPathPickerError" class="mt-1 text-xs text-destructive">{{ taskPathPickerError }}</p>
                     <p v-if="errors.task_markdown_path" class="mt-1 text-sm text-destructive">{{ errors.task_markdown_path[0] }}</p>
                 </div>
 

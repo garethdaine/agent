@@ -8,7 +8,7 @@ import CardContent from '@/Components/ui/CardContent.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Button from '@/Components/ui/Button.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowLeft, CheckCircle, XCircle, StopCircle, Clock, Terminal, Play } from 'lucide-vue-next';
+import { ArrowLeft, CheckCircle, XCircle, StopCircle, Clock, Terminal, Play, ShieldCheck } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { ref } from 'vue';
@@ -49,10 +49,12 @@ const getModeBadgeVariant = (mode) => {
     return variants[mode] || 'outline';
 };
 
-const approveToolCall = async (toolCallId) => {
+const approveToolCall = async (toolCallId, allowAlways = false) => {
     processingApproval.value = toolCallId;
     try {
-        await axios.post(`/agent/api/v1/chat/runtime/tool-calls/${toolCallId}/approve`);
+        await axios.post(`/agent/api/v1/chat/runtime/tool-calls/${toolCallId}/approve`, {
+            allow_always: allowAlways,
+        });
         router.reload({ only: ['session', 'pendingApprovals'] });
     } catch (error) {
         console.error('Failed to approve tool call', error);
@@ -100,7 +102,7 @@ const stopSession = async () => {
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h2 class="text-xl font-semibold leading-tight text-foreground">
+                            <h2 class="text-base font-semibold text-foreground truncate">
                                 {{ session.title || 'Session Details' }}
                             </h2>
                             <HelpHint
@@ -168,10 +170,19 @@ const stopSession = async () => {
                                         variant="default"
                                         size="sm"
                                         :disabled="processingApproval === approval.runtime_tool_call_id"
-                                        @click="approveToolCall(approval.runtime_tool_call_id)"
+                                        @click="approveToolCall(approval.runtime_tool_call_id, false)"
                                     >
                                         <CheckCircle class="h-4 w-4 mr-1" />
-                                        Approve
+                                        Allow once
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        :disabled="processingApproval === approval.runtime_tool_call_id"
+                                        @click="approveToolCall(approval.runtime_tool_call_id, true)"
+                                    >
+                                        <ShieldCheck class="h-4 w-4 mr-1" />
+                                        Allow always
                                     </Button>
                                     <Button
                                         variant="destructive"
@@ -222,6 +233,12 @@ const stopSession = async () => {
                             <div v-if="session.workspace_root" class="col-span-2 sm:col-span-4">
                                 <dt class="text-sm font-medium text-muted-foreground">Workspace Root</dt>
                                 <dd class="mt-1 font-mono text-sm text-muted-foreground">{{ session.workspace_root }}</dd>
+                            </div>
+                            <div v-if="session.tool_auto_approvals?.length" class="col-span-2 sm:col-span-4">
+                                <dt class="text-sm font-medium text-muted-foreground">Auto-approved tools (allow always)</dt>
+                                <dd class="mt-1 flex flex-wrap gap-1">
+                                    <Badge v-for="t in session.tool_auto_approvals" :key="t" variant="secondary" class="font-mono text-xs">{{ t }}</Badge>
+                                </dd>
                             </div>
                         </dl>
                     </CardContent>

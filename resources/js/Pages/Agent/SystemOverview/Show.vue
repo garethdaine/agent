@@ -56,7 +56,7 @@ const activeBuildAgeLabel = computed(() => {
                         <Activity class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">System Overview</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">System Overview</h2>
                         <HelpHint
                             ui-key="system.overview"
                             short-text="Monitor projection freshness, telemetry health, and scheduler status."

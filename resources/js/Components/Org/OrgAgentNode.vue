@@ -1,12 +1,15 @@
 <script setup>
-import { Handle, useNode } from '@vue-flow/core';
+import { Handle } from '@vue-flow/core';
 import { computed } from 'vue';
 
-const { data } = useNode();
+const props = defineProps({
+    id: { type: String, default: '' },
+    data: { type: Object, default: () => ({}) },
+});
 
-const label = computed(() => data?.name ?? data?.label ?? 'Agent');
-const role = computed(() => data?.role_slug ?? data?.role_description ?? '');
-const isNew = computed(() => data?.isNew === true);
+const label = computed(() => props.data?.name ?? props.data?.label ?? 'Agent');
+const role = computed(() => props.data?.role_slug ?? props.data?.role_description ?? '');
+const isNew = computed(() => props.data?.isNew === true);
 </script>
 
 <template>
@@ -18,7 +21,14 @@ const isNew = computed(() => data?.isNew === true);
                 : 'bg-background border-border',
         ]"
     >
-        <Handle type="target" :position="'left'" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="top-source" type="source" position="top" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="top-target" type="target" position="top" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="bottom-source" type="source" position="bottom" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="bottom-target" type="target" position="bottom" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="left-source" type="source" position="left" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="left-target" type="target" position="left" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="right-source" type="source" position="right" class="!w-2 !h-2 !bg-primary" />
+        <Handle id="right-target" type="target" position="right" class="!w-2 !h-2 !bg-primary" />
         <div class="text-sm font-medium text-foreground truncate max-w-[180px]">
             {{ label }}
         </div>
@@ -28,6 +38,5 @@ const isNew = computed(() => data?.isNew === true);
         <div v-if="isNew" class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
             New (unsaved)
         </div>
-        <Handle type="source" :position="'right'" class="!w-2 !h-2 !bg-primary" />
     </div>
 </template>

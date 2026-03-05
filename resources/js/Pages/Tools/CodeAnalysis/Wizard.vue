@@ -416,7 +416,7 @@ onUnmounted(() => {
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h2 class="text-xl font-semibold leading-tight text-foreground">Code Analysis Wizard</h2>
+                            <h2 class="text-base font-semibold text-foreground truncate">Code Analysis Wizard</h2>
                             <HelpHint
                                 ui-key="code-analysis.wizard"
                                 short-text="Step through code analysis with AI assistance."

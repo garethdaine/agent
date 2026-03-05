@@ -39,6 +39,12 @@ class DocsCatalog
             'severity' => 'info',
             'learn_more_slug' => 'overview',
         ],
+        'sessions.detail' => [
+            'ui_key' => 'sessions.detail',
+            'short_text' => 'Inspect session turns, tool calls, and approvals.',
+            'severity' => 'info',
+            'learn_more_slug' => 'overview',
+        ],
     ];
 
     /**

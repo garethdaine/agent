@@ -84,7 +84,7 @@ onMounted(loadMetrics);
                         <LayoutDashboard class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="font-semibold text-xl text-foreground leading-tight">Dashboard</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">Dashboard</h2>
                         <HelpHint
                             ui-key="dashboard.overview"
                             short-text="Understand dashboard metrics, scheduler health, and safe interpretation."

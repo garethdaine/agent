@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { markRaw, ref, computed, onMounted, watch } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -11,7 +11,7 @@ import { ArrowLeft, Plus, Save, Play, GitBranch, CheckCircle } from 'lucide-vue-
 import HelpHint from '@/Components/HelpHint.vue';
 import TaskConfigPanel from '@/Components/Delegation/TaskConfigPanel.vue';
 
-const nodeTypes = { delegationTask: DelegationTaskNode };
+const nodeTypes = { delegationTask: markRaw(DelegationTaskNode) };
 
 const props = defineProps({
     graphId: { type: Number, default: null },
@@ -267,7 +267,7 @@ const startGraph = () => {
                         <GitBranch class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">
+                        <h2 class="text-base font-semibold text-foreground truncate">
                             {{ isEditing ? 'Edit Graph' : 'Visual Graph Builder' }}
                         </h2>
                         <HelpHint

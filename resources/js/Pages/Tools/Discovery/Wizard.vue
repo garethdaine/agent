@@ -1401,7 +1401,7 @@ onBeforeUnmount(() => {
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h2 class="text-xl font-semibold leading-tight text-foreground">{{ session?.name || `Session #${sessionId}` }}</h2>
+                            <h2 class="text-base font-semibold text-foreground truncate">{{ session?.name || `Session #${sessionId}` }}</h2>
                             <HelpHint
                                 ui-key="discovery.wizard"
                                 short-text="Guide the AI-led interrogation and generate plans."

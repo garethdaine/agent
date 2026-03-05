@@ -38,6 +38,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Redact Sensitive Values
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, the log redaction processor will mask values that look like
+    | API keys, tokens, passwords, and secrets before they reach log handlers.
+    | Recommended for production. Patterns: Bearer tokens, API keys, .env-style
+    | secrets, and common credential field names in JSON context.
+    |
+    */
+
+    'redact_sensitive' => (bool) env('LOG_REDACT_SENSITIVE', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Log Channels
     |--------------------------------------------------------------------------
     |
@@ -62,6 +76,7 @@ return [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
+            'tap' => [App\Logging\RedactSensitiveTap::class],
             'replace_placeholders' => true,
         ],
 
@@ -70,6 +85,7 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
+            'tap' => [App\Logging\RedactSensitiveTap::class],
             'replace_placeholders' => true,
         ],
 

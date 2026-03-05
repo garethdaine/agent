@@ -44,7 +44,7 @@ const freshnessLabel = computed(() => {
                         <Rocket class="h-5 w-5 text-primary" />
                     </div>
                     <div class="flex items-center gap-2">
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Agent Deployments</h2>
+                        <h2 class="text-base font-semibold text-foreground truncate">Agent Deployments</h2>
                         <HelpHint
                             ui-key="deployments.overview"
                             short-text="View deployment reliability, cost metrics, and escalation visibility."

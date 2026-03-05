@@ -26,6 +26,7 @@ class AgentInstallCommand extends Command
     protected $signature = 'agent:install
         {--connector=* : Providers to configure (slack, telegram, discord, whatsapp)}
         {--mode=local : Ingress mode (local, webhook)}
+        {--runner-type= : CLI runner for messenger chat (claude, codex, custom)}
         {--non-interactive : Fail on missing required values}
         {--skip-migrations : Skip running migrations}
         {--skip-health-check : Skip final health check}
@@ -432,6 +433,8 @@ class AgentInstallCommand extends Command
                 required: true,
             );
 
+        $runnerType = $this->resolveRunnerType();
+
         $accountKey = $this->generateAccountKey($connector, $credentials);
 
         $existingAccount = ConnectorAccount::withTrashed()
@@ -451,7 +454,10 @@ class AgentInstallCommand extends Command
                 'status' => ConnectorAccount::STATUS_DISCONNECTED,
                 'config' => array_merge(
                     config(sprintf('messenger.providers.%s', $connector), []),
-                    ['configured_at' => now()->toIso8601String()]
+                    [
+                        'configured_at' => now()->toIso8601String(),
+                        'runner_type' => $runnerType,
+                    ]
                 ),
             ]);
             $this->info(sprintf('  %s connector updated successfully.', ucfirst($connector)));
@@ -466,7 +472,10 @@ class AgentInstallCommand extends Command
                 'account_key' => $accountKey,
                 'config' => array_merge(
                     config(sprintf('messenger.providers.%s', $connector), []),
-                    ['configured_at' => now()->toIso8601String()]
+                    [
+                        'configured_at' => now()->toIso8601String(),
+                        'runner_type' => $runnerType,
+                    ]
                 ),
             ]);
             $this->info(sprintf('  %s connector configured successfully.', ucfirst($connector)));
@@ -528,6 +537,33 @@ class AgentInstallCommand extends Command
             $this->warn(sprintf('  Failed to register slash commands: %s', $result->getMessage()));
             $this->warn('  You may need to re-run installation or register manually.');
         }
+    }
+
+    private const RUNNER_TYPES = ['claude', 'codex', 'custom'];
+
+    /**
+     * Resolve CLI runner type for messenger chat (from option, prompt, or config).
+     */
+    private function resolveRunnerType(): string
+    {
+        $option = trim((string) $this->option('runner-type'));
+        if ($option !== '' && in_array($option, self::RUNNER_TYPES, true)) {
+            return $option;
+        }
+
+        if ($this->option('non-interactive')) {
+            return config('runtime.cli.runner_type', 'claude');
+        }
+
+        return select(
+            label: 'Runner type (CLI used when chatting via this connector)',
+            options: [
+                'claude' => 'Claude',
+                'codex' => 'Codex',
+                'custom' => 'Custom',
+            ],
+            default: config('runtime.cli.runner_type', 'claude'),
+        );
     }
 
     /**

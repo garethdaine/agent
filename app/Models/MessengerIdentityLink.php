@@ -16,6 +16,12 @@ class MessengerIdentityLink extends Model
     use HasFactory;
     use HasUuids;
 
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_APPROVED = 'approved';
+
+    public const STATUS_REVOKED = 'revoked';
+
     protected $guarded = [];
 
     protected function casts(): array
@@ -23,6 +29,31 @@ class MessengerIdentityLink extends Model
         return [
             'expires_at' => 'datetime',
         ];
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === self::STATUS_APPROVED;
+    }
+
+    public function isRevoked(): bool
+    {
+        return $this->status === self::STATUS_REVOKED;
+    }
+
+    public function approve(): void
+    {
+        $this->update(['status' => self::STATUS_APPROVED]);
+    }
+
+    public function revoke(): void
+    {
+        $this->update(['status' => self::STATUS_REVOKED]);
     }
 
     public function user(): BelongsTo
@@ -52,10 +83,16 @@ class MessengerIdentityLink extends Model
 
     public function scopeValid(Builder $query): void
     {
-        $query->where(function (Builder $q) {
-            $q->whereNull('expires_at')
-                ->orWhere('expires_at', '>', now());
-        });
+        $query->where('status', self::STATUS_APPROVED)
+            ->where(function (Builder $q) {
+                $q->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            });
+    }
+
+    public function scopeStatusFilter(Builder $query, string $status): void
+    {
+        $query->where('status', $status);
     }
 
     public function isExpired(): bool

@@ -15,7 +15,7 @@ class Office3DAccessTest extends TestCase
         $response = $this->actingAs($user)->get('/agent/office');
 
         $response->assertOk();
-        $response->assertInertia(fn ($page) => $page->component('Agent/Office/Office3D'));
+        $response->assertInertia(fn ($page) => $page->component('Agent/Office/AgentOffice'));
     }
 
     public function test_office_route_returns_404_when_disabled(): void

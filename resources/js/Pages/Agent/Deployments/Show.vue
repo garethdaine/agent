@@ -1,9 +1,10 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import Button from '@/Components/ui/Button.vue';
+import HelpHint from '@/Components/HelpHint.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { Rocket } from 'lucide-vue-next';
-import HelpHint from '@/Components/HelpHint.vue';
+import { ArrowLeft, Rocket } from 'lucide-vue-next';
 
 const props = defineProps({
     workflowKey: {
@@ -54,25 +55,26 @@ const freshnessLabel = computed(() => {
 
     <AppLayout :title="`Deployment ${workflowKey}`">
         <template #header>
-            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                        <Rocket class="h-5 w-5 text-primary" />
+            <div class="flex items-center justify-between gap-4 min-w-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <Link :href="navigation.deployments" class="shrink-0">
+                        <Button variant="ghost" size="icon">
+                            <ArrowLeft class="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Rocket class="h-4 w-4 text-primary" />
                     </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h2 class="text-xl font-semibold leading-tight text-foreground">Deployment Detail</h2>
-                            <HelpHint
-                                ui-key="deployments.detail"
-                                short-text="Inspect individual deployment details and status."
-                                learn-more-href="/docs/overview"
-                            />
-                        </div>
-                        <p class="mt-1 font-mono text-xs text-muted-foreground">{{ workflowKey }}</p>
+                    <div class="flex items-center gap-2 min-w-0">
+                        <h2 class="text-base font-semibold text-foreground truncate">Deployment Detail</h2>
+                        <HelpHint
+                            ui-key="deployments.detail"
+                            short-text="Inspect individual deployment details and status."
+                            learn-more-href="/docs/overview"
+                        />
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.deployments">Back to Deployments</Link>
+                <div class="flex shrink-0 gap-2">
                     <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.systemOverview">System Overview</Link>
                     <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.replayBuilds">Replay Builds</Link>
                 </div>
