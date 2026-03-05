@@ -31,7 +31,7 @@ class MessengerRuntimeOrchestrator
      * @param  string|null  $systemPrompt  Connector soul text (identity, personality, user context) for CLI --system-prompt.
      * @return array{status: 'completed'|'failed'|'pending_approval', text?: string, tool_call_id?: string, error?: string}
      */
-    public function executeTurn(RuntimeSession $session, string $userMessage, ?string $runnerTypeOverride = null, ?string $systemPrompt = null, ApprovalMode $approvalMode = ApprovalMode::Autonomous): array
+    public function executeTurn(RuntimeSession $session, string $userMessage, ?string $runnerTypeOverride = null, ?string $systemPrompt = null, ApprovalMode $approvalMode = ApprovalMode::Autonomous, ?\Closure $onProgress = null): array
     {
         $session->load(['user', 'policySnapshots']);
         $user = $session->user;
@@ -50,7 +50,7 @@ class MessengerRuntimeOrchestrator
 
         if (config('runtime.use_cli', true)) {
             if ($this->sessionProcessManager->isWrapperEnabled()) {
-                $result = $this->executeViaWrapper($session, $userMessage, $runnerTypeOverride, $systemPrompt, $approvalMode);
+                $result = $this->executeViaWrapper($session, $userMessage, $runnerTypeOverride, $systemPrompt, $approvalMode, $onProgress);
             } else {
                 $runnerSessionId = $this->sessionProcessManager->getRunnerSessionId($session->id);
                 $result = $this->cliExecutor->executeTurn($session, $userMessage, $runnerTypeOverride, $runnerSessionId, $systemPrompt, $approvalMode);
@@ -184,7 +184,7 @@ class MessengerRuntimeOrchestrator
     /**
      * @return array{status: 'completed'|'failed', text?: string, runner_session_id?: string, error?: string}
      */
-    private function executeViaWrapper(RuntimeSession $session, string $userMessage, ?string $runnerTypeOverride = null, ?string $systemPrompt = null, ApprovalMode $approvalMode = ApprovalMode::Autonomous): array
+    private function executeViaWrapper(RuntimeSession $session, string $userMessage, ?string $runnerTypeOverride = null, ?string $systemPrompt = null, ApprovalMode $approvalMode = ApprovalMode::Autonomous, ?\Closure $onProgress = null): array
     {
         $user = $session->user;
         if ($user === null) {
@@ -224,9 +224,9 @@ class MessengerRuntimeOrchestrator
             }
         }
 
-        $timeout = (int) config('runtime.cli.timeout_seconds', 300);
+        $timeout = (int) config('runtime.cli.timeout_seconds', 1800);
 
-        return $this->sessionProcessManager->sendMessage($session->id, $userMessage, $timeout);
+        return $this->sessionProcessManager->sendMessage($session->id, $userMessage, $timeout, $onProgress);
     }
 
     private function getPolicyForSession(RuntimeSession $session): array

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\DelegationGraphStarted;
 use App\Exceptions\DelegationGraphCycleException;
 use App\Exceptions\DelegationGraphTaskLimitException;
 use App\Http\Controllers\Controller;
@@ -358,6 +359,8 @@ class DelegationGraphController extends Controller
             before: ['status' => DelegationGraph::STATUS_READY],
             after: ['status' => DelegationGraph::STATUS_RUNNING],
         );
+
+        DelegationGraphStarted::dispatch($graph->fresh());
 
         return response()->json([
             'data' => $this->transformGraph($graph->fresh(), false),

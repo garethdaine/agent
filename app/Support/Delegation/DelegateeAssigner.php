@@ -29,6 +29,25 @@ class DelegateeAssigner
      */
     public function assign(DelegationTask $task): ?AssignmentResult
     {
+        // Honour pre-assigned delegatee from ritual/upstream systems
+        $preAssignedId = $task->contract_json['pre_assigned_delegatee_profile_id'] ?? null;
+        if ($preAssignedId !== null) {
+            $profile = DelegateeProfile::query()
+                ->active()
+                ->where('user_id', $task->graph->user_id)
+                ->find($preAssignedId);
+
+            if ($profile !== null) {
+                return new AssignmentResult(
+                    profile: $profile,
+                    reasoning: [
+                        'source' => 'pre_assigned',
+                        'delegatee_profile_id' => $preAssignedId,
+                    ]
+                );
+            }
+        }
+
         $requiredCapability = $task->contract_json['required_capability'] ?? null;
         if ($requiredCapability === null) {
             return null;
@@ -47,7 +66,6 @@ class DelegateeAssigner
             return null;
         }
 
-        // Calculate ranking scores and select best candidate
         $ranked = $candidates
             ->map(fn ($profile) => [
                 'profile' => $profile,
@@ -55,9 +73,7 @@ class DelegateeAssigner
                 'current_load' => $this->currentLoad($profile),
             ])
             ->sortBy([
-                // Primary: success_rate descending (higher is better)
                 fn ($a, $b) => $b['success_rate'] <=> $a['success_rate'],
-                // Secondary: current_load ascending (lower is better)
                 fn ($a, $b) => $a['current_load'] <=> $b['current_load'],
             ])
             ->first();

@@ -6,6 +6,7 @@ use App\Events\DelegationAttemptCompleted;
 use App\Events\DelegationGraphCompleted;
 use App\Events\DelegationGraphStarted;
 use App\Events\DelegationTaskVerified;
+use App\Events\Office\AgentActivityChanged;
 use App\Models\DelegationAttempt;
 use App\Models\DelegationGraph;
 use App\Models\DelegationTask;
@@ -142,7 +143,6 @@ class DelegationCoordinator
      */
     private function handleVerificationPassed(DelegationTask $task): void
     {
-        // Transition task to succeeded
         $transitioned = $this->taskTransition->transition(
             $task->id,
             [DelegationTask::STATUS_VERIFYING],
@@ -151,16 +151,13 @@ class DelegationCoordinator
         );
 
         if (! $transitioned) {
-            return; // State race
+            return;
         }
 
-        // Make dependent tasks ready if all their dependencies are now satisfied
+        $this->broadcastTaskCompleted($task);
+
         $this->makeReadyDependents($task);
-
-        // Check if graph is complete
         $this->checkGraphCompletion($task->graph);
-
-        // Spawn newly ready tasks
         $this->spawnReadyTasks($task->graph->fresh());
     }
 
@@ -351,6 +348,31 @@ class DelegationCoordinator
 
         if ($transitioned) {
             event(new DelegationGraphCompleted($graph->fresh(), $finalStatus));
+        }
+    }
+
+    private function broadcastTaskCompleted(DelegationTask $task): void
+    {
+        try {
+            $graph = $task->graph;
+            $userId = $graph?->user_id;
+            if (! $userId) {
+                return;
+            }
+
+            $dependentNames = $task->dependents()
+                ->whereIn('status', [DelegationTask::STATUS_PENDING, DelegationTask::STATUS_BLOCKED])
+                ->pluck('name')
+                ->all();
+
+            AgentActivityChanged::dispatch($userId, 'delegation.task_completed', [
+                'task_name' => $task->name,
+                'task_id' => $task->id,
+                'delegatee_profile_id' => $task->assigned_delegatee_profile_id,
+                'next_tasks' => $dependentNames,
+            ]);
+        } catch (\Throwable) {
+            // Best-effort
         }
     }
 }

@@ -31,6 +31,7 @@ return [
         '/Users/garethdaine/Code/agent/tasks',
         '/Users/garethdaine/Code/agent/prompts',
         storage_path('app/memory/context'),
+        storage_path('app/delegation'),
     ], $parseEnvCsvList('AGENT_ADDITIONAL_TASK_MARKDOWN_BASES')))),
 
     'runner_executables' => [

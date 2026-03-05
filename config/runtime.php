@@ -199,7 +199,7 @@ return [
 
     'cli' => [
         'runner_type' => env('RUNTIME_CLI_RUNNER', 'claude'),
-        'timeout_seconds' => (int) env('RUNTIME_CLI_TIMEOUT', 300),
+        'timeout_seconds' => (int) env('RUNTIME_CLI_TIMEOUT', 1800),
         'session_resume' => env('RUNTIME_SESSION_RESUME', true),
         'wrapper_enabled' => (bool) env('RUNTIME_WRAPPER_ENABLED', false),
         'wrapper_idle_timeout' => (int) env('RUNTIME_WRAPPER_IDLE_TIMEOUT', 3600),

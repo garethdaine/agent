@@ -2,6 +2,7 @@
 
 namespace App\Support\Org;
 
+use App\Events\Office\AgentActivityChanged;
 use App\Events\Org\OrgCouncilTemplateArchived;
 use App\Events\Org\OrgCouncilTemplateCreated;
 use App\Events\Org\OrgCouncilTemplateRestored;
@@ -184,11 +185,24 @@ class OrgCouncilService
         $memberList = $template->member_list ?? [];
         $mode = $template->synthesis_mode ?? 'majority';
 
-        // Get the appropriate strategy
-        $strategy = $this->getStrategy($mode);
+        $memberIds = array_column($memberList, 'agent_id');
 
-        // Execute deterministic synthesis
-        return $strategy->synthesize($responsesArray, $decisionField, $memberList);
+        $this->broadcastActivity($template->user_id, 'council.deliberation_started', [
+            'council_name' => $template->name,
+            'member_ids' => $memberIds,
+            'synthesis_mode' => $mode,
+        ]);
+
+        $strategy = $this->getStrategy($mode);
+        $result = $strategy->synthesize($responsesArray, $decisionField, $memberList);
+
+        $this->broadcastActivity($template->user_id, 'council.deliberation_ended', [
+            'council_name' => $template->name,
+            'member_ids' => $memberIds,
+            'outcome' => $result->decision ?? null,
+        ]);
+
+        return $result;
     }
 
     /**
@@ -245,5 +259,14 @@ class OrgCouncilService
     private function generateCorrelationId(): string
     {
         return Str::uuid()->toString();
+    }
+
+    private function broadcastActivity(int|string $userId, string $eventType, array $payload): void
+    {
+        try {
+            AgentActivityChanged::dispatch((int) $userId, $eventType, $payload);
+        } catch (\Throwable) {
+            // Best-effort
+        }
     }
 }

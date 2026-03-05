@@ -41,22 +41,47 @@ class OfficeStateController extends Controller
     private function buildAgentStates($user): array
     {
         $orgAgents = OrgAgentProfile::query()
+            ->forUser($user->id)
+            ->active()
             ->with(['reportingEdge', 'delegateeProfile'])
             ->get();
 
         $activeRuns = AgentJobRun::query()
+            ->where('user_id', $user->id)
             ->whereIn('status', ['queued', 'starting', 'running', 'stopping'])
             ->with('job:id,name,runner_type')
             ->get();
 
-        return $orgAgents->map(function (OrgAgentProfile $agent) use ($activeRuns) {
-            $run = $activeRuns->first();
+        $activeDelegationTasks = DelegationTask::query()
+            ->whereHas('graph', fn ($q) => $q->where('user_id', $user->id))
+            ->whereIn('status', ['assigned', 'running', 'verifying'])
+            ->get()
+            ->keyBy('assigned_delegatee_profile_id');
+
+        return $orgAgents->map(function (OrgAgentProfile $agent) use ($activeRuns, $activeDelegationTasks) {
+            $delegationTask = $activeDelegationTasks->get($agent->delegatee_profile_id);
+
+            $run = $activeRuns->first(fn (AgentJobRun $r) => $r->job?->runner_type === $agent->delegateeProfile?->runner_type);
 
             $status = 'idle';
             $activity = 'idle';
+            $zone = 'workstation';
             $needsAttention = false;
 
-            if ($run) {
+            if ($delegationTask) {
+                $status = $delegationTask->status;
+                $activity = match ($delegationTask->status) {
+                    'running' => 'writing_code',
+                    'assigned' => 'waiting',
+                    'verifying' => 'reading',
+                    default => 'idle',
+                };
+                $zone = match ($agent->role_slug) {
+                    'coordinator', 'manager' => 'conference',
+                    'adversarial_reviewer' => 'warRoom',
+                    default => 'workstation',
+                };
+            } elseif ($run) {
                 $status = $run->status;
                 $activity = match ($run->status) {
                     'running' => 'writing_code',
@@ -80,8 +105,13 @@ class OfficeStateController extends Controller
                     'started_at' => $run->started_at?->toIso8601String(),
                     'duration_ms' => $run->duration_ms,
                 ] : null,
+                'current_delegation_task' => $delegationTask ? [
+                    'id' => $delegationTask->id,
+                    'name' => $delegationTask->name,
+                    'status' => $delegationTask->status,
+                ] : null,
                 'current_session' => null,
-                'zone' => 'workstation',
+                'zone' => $zone,
                 'tools_active' => [],
                 'needs_attention' => $needsAttention,
             ];

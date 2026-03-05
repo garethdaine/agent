@@ -152,7 +152,7 @@ class SessionProcessManager
     /**
      * @return array{status: 'completed'|'failed', text?: string, runner_session_id?: string, error?: string}
      */
-    public function sendMessage(string $runtimeSessionId, string $message, int $timeoutSeconds = 300): array
+    public function sendMessage(string $runtimeSessionId, string $message, int $timeoutSeconds = 1800, ?\Closure $onProgress = null, int $heartbeatInterval = 30): array
     {
         $entry = self::$activeProcesses[$runtimeSessionId] ?? null;
         if ($entry === null) {
@@ -170,7 +170,7 @@ class SessionProcessManager
             return ['status' => 'failed', 'error' => 'Failed to write to process stdin.'];
         }
 
-        return $this->readTurnResponse($runtimeSessionId, $timeoutSeconds);
+        return $this->readTurnResponse($runtimeSessionId, $timeoutSeconds, $onProgress, $heartbeatInterval);
     }
 
     public function terminateSession(string $runtimeSessionId): void
@@ -226,7 +226,7 @@ class SessionProcessManager
     /**
      * @return array{status: 'completed'|'failed', text?: string, runner_session_id?: string, error?: string}
      */
-    public function readTurnResponse(string $runtimeSessionId, int $timeoutSeconds): array
+    public function readTurnResponse(string $runtimeSessionId, int $timeoutSeconds, ?\Closure $onProgress = null, int $heartbeatInterval = 30): array
     {
         $entry = self::$activeProcesses[$runtimeSessionId] ?? null;
         if ($entry === null) {
@@ -235,7 +235,9 @@ class SessionProcessManager
 
         $stdout = $entry['pipes'][1];
         $stderr = $entry['pipes'][2];
-        $deadline = time() + $timeoutSeconds;
+        $startTime = time();
+        $deadline = $startTime + $timeoutSeconds;
+        $lastHeartbeat = $startTime;
         $fragments = [];
         $runnerSessionId = null;
 
@@ -290,6 +292,34 @@ class SessionProcessManager
                     'session_id' => $runtimeSessionId,
                     'line' => trim($stderrLine),
                 ]);
+            }
+
+            if ((time() - $lastHeartbeat) >= $heartbeatInterval) {
+                $lastHeartbeat = time();
+                $elapsed = time() - $startTime;
+                $fragmentCount = count($fragments);
+
+                Log::debug('SessionProcessManager: turn activity', [
+                    'session_id' => $runtimeSessionId,
+                    'elapsed_seconds' => $elapsed,
+                    'fragment_count' => $fragmentCount,
+                    'runner_session_id' => $runnerSessionId,
+                ]);
+
+                if ($onProgress !== null) {
+                    try {
+                        $onProgress([
+                            'elapsed_seconds' => $elapsed,
+                            'has_partial_output' => $fragments !== [],
+                            'fragment_count' => $fragmentCount,
+                        ]);
+                    } catch (\Throwable $e) {
+                        Log::debug('SessionProcessManager: progress callback error', [
+                            'session_id' => $runtimeSessionId,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
             }
 
             if ($line === false) {

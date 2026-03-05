@@ -7,6 +7,7 @@ export function useOfficeRealtime() {
     const officeState = ref(null);
     const connected = ref(false);
     const lastUpdate = ref(null);
+    const agentOutputQueue = ref([]);
 
     let pollTimer = null;
     let echoChannel = null;
@@ -65,6 +66,67 @@ export function useOfficeRealtime() {
                 Object.assign(officeState.value.delegation, payload);
                 break;
             }
+            case 'delegation.graph_created': {
+                if (officeState.value.delegation) {
+                    officeState.value.delegation.active_graphs = (officeState.value.delegation.active_graphs ?? 0) + 1;
+                }
+                break;
+            }
+            case 'ritual.started': {
+                officeState.value.agents?.forEach((agent) => {
+                    if (agent.role !== 'coordinator') return;
+                    agent.zone = 'conference';
+                    agent.current_activity = 'reading';
+                    agent.status = 'running';
+                });
+                break;
+            }
+            case 'ritual.phase_started': {
+                const agent = officeState.value.agents?.find((a) => a.id === payload.agent_id);
+                if (agent) {
+                    agent.status = 'running';
+                    agent.current_activity = 'writing_code';
+                    agent.zone = 'workstation';
+                }
+                break;
+            }
+            case 'ritual.phase_completed': {
+                const agent = officeState.value.agents?.find((a) => a.id === payload.agent_id);
+                if (agent) {
+                    agent.status = 'idle';
+                    agent.current_activity = 'idle';
+                }
+                break;
+            }
+            case 'council.deliberation_started': {
+                officeState.value.agents?.forEach((agent) => {
+                    if (payload.member_ids?.includes(agent.id)) {
+                        agent.zone = 'conference';
+                        agent.current_activity = 'chatting';
+                        agent.status = 'running';
+                    }
+                });
+                break;
+            }
+            case 'council.deliberation_ended': {
+                officeState.value.agents?.forEach((agent) => {
+                    if (payload.member_ids?.includes(agent.id)) {
+                        agent.zone = 'workstation';
+                        agent.current_activity = 'idle';
+                        agent.status = 'idle';
+                    }
+                });
+                break;
+            }
+            case 'ritual.failed': {
+                officeState.value.agents?.forEach((agent) => {
+                    if (agent.role === 'coordinator') {
+                        agent.zone = 'escalation';
+                        agent.current_activity = 'waiting';
+                    }
+                });
+                break;
+            }
             case 'messenger.updated': {
                 if (payload.channels) officeState.value.messenger.channels = payload.channels;
                 break;
@@ -74,6 +136,46 @@ export function useOfficeRealtime() {
                     officeState.value.memory.total_entries = payload.total_entries ?? officeState.value.memory.total_entries;
                     officeState.value.memory.recent_formations = (officeState.value.memory.recent_formations ?? 0) + 1;
                 }
+                break;
+            }
+            case 'agent.output': {
+                agentOutputQueue.value.push({
+                    run_id: payload.run_id,
+                    text: payload.text,
+                    at: Date.now(),
+                });
+                if (agentOutputQueue.value.length > 20) {
+                    agentOutputQueue.value = agentOutputQueue.value.slice(-20);
+                }
+                break;
+            }
+            case 'delegation.task_completed': {
+                const agent = officeState.value.agents?.find(
+                    (a) => a.current_delegation_task?.id === payload.task_id,
+                );
+                if (agent) {
+                    agent.status = 'idle';
+                    agent.current_activity = 'idle';
+                    agent.current_delegation_task = null;
+                }
+                agentOutputQueue.value.push({
+                    event_type: 'task_completed',
+                    task_name: payload.task_name,
+                    next_tasks: payload.next_tasks ?? [],
+                    delegatee_profile_id: payload.delegatee_profile_id,
+                    at: Date.now(),
+                });
+                break;
+            }
+            case 'agent.escalation': {
+                agentOutputQueue.value.push({
+                    event_type: 'escalation',
+                    run_id: payload.run_id,
+                    job_name: payload.job_name,
+                    reason: payload.reason,
+                    summary: payload.summary,
+                    at: Date.now(),
+                });
                 break;
             }
         }
@@ -114,6 +216,7 @@ export function useOfficeRealtime() {
         officeState,
         connected,
         lastUpdate,
+        agentOutputQueue,
         fetchState,
         start,
         stop,

@@ -53,6 +53,7 @@ export class AvatarAnimator {
 
     setState(newState) {
         if (this.state === newState) return;
+        this._resetPose();
         this.state = newState;
         this.stateTime = 0;
     }

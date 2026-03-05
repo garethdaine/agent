@@ -20,7 +20,7 @@ export const ZONE_DEFS = [
     { id: 'vault',         label: 'Archives',          cx: 10,    cz: 6,    w: 6,  d: 3, tint: 0x18162a },
     { id: 'toolWorkshop',  label: 'Tool Workshop',     cx: -10,   cz: 7,    w: 6,  d: 4, tint: 0x161620 },
     { id: 'breakRoom',     label: 'Break Room',        cx: 10,    cz: 9.5,  w: 6,  d: 3, tint: 0x1a1e22 },
-    { id: 'escalation',    label: 'Escalation',        cx: -5,    cz: -9.8, w: 2,  d: 0.5, tint: 0x1a1020 },
+    { id: 'escalation',    label: 'Escalation',        cx: -8,    cz: 1,    w: 2,  d: 2,   tint: 0x1a1020 },
 ];
 
 export const WORKSTATION_POSITIONS = [
@@ -198,13 +198,22 @@ export function buildOfficeWalls() {
     eastWindows.forEach((wz) => addWindow(eastX, winY, wz, eastWinW, winH, winD, Math.PI / 2));
 
     addWall(0.15, wallH, FLOOR_DEPTH + 1, -FLOOR_WIDTH / 2 - 0.5, wallH / 2, 0);
-    addWall(FLOOR_WIDTH + 1, 0.6, 0.15, 0, 0.3, FLOOR_DEPTH / 2 + 0.5);
+
+    const southZ = FLOOR_DEPTH / 2 + 0.5;
+    const southWindows = [-9, -3, 3, 9];
+    const southWinW = 2.5;
+    const southWallSegments = buildWallWithGaps(
+        FLOOR_WIDTH + 1, wallH, 0.15, southZ,
+        southWindows, southWinW, 'x',
+    );
+    southWallSegments.forEach(({ w, x }) => addWall(w, wallH, 0.15, x, wallH / 2, southZ));
+    southWindows.forEach((wx) => addWindow(wx, winY, southZ, southWinW, winH, winD));
 
     const partitions = [
         { x: -8, z: -8.5, w: 0.1, d: 3, glass: true, rY: 0 },
         { x: -8, z: -3.5, w: 0.1, d: 5, glass: true, rY: 0 },
         { x: -8, z: 3, w: 0.1, d: 4, glass: true, rY: 0 },
-        { x: -13, z: -6.5, w: 10, d: 0.1, glass: false, rY: 0 },
+        { x: -11.25, z: -6.5, w: 6.5, d: 0.1, glass: false, rY: 0 },
         { x: 0, z: -6.5, w: 20, d: 0.1, glass: true, rY: 0 },
         { x: -8, z: 5.5, w: 0.1, d: 1, glass: true, rY: 0 },
         { x: 6.5, z: 5, w: 0.1, d: 5, glass: true, rY: 0 },
@@ -294,8 +303,8 @@ export function buildZoneFurniture() {
         { x: -3.2, z: 6.0, ry: 0 },
         { x: -2,   z: 6.0, ry: 0 },
         { x: -0.8, z: 6.0, ry: 0 },
-        { x: -4.3, z: 7.0, ry: -Math.PI / 2 },
-        { x:  0.3, z: 7.0, ry: Math.PI / 2 },
+        { x: -4.3, z: 7.0, ry: Math.PI / 2 },
+        { x:  0.3, z: 7.0, ry: -Math.PI / 2 },
     ];
     confChairs.forEach(({ x, z, ry }) => {
         const c = createConferenceChair();
@@ -342,7 +351,8 @@ export function buildZoneFurniture() {
 
     // --- Escalation Alarm ---
     const alarm = createAlarmBell();
-    alarm.position.set(-5, 2.2, -10.7);
+    alarm.position.set(-8.1, 2.2, 1);
+    alarm.userData.zoneId = 'escalation';
     group.add(alarm);
 
     return group;

@@ -1,6 +1,9 @@
 import { ref } from 'vue';
-import { Raycaster, Vector2 } from 'three';
+import { Raycaster, Vector2, Color } from 'three';
 import { ZONE_DEFS } from '@/Support/Office/officeFloorplan.js';
+
+const HIGHLIGHT_COLOR = new Color(0x4488ff);
+const SELECTION_COLOR = new Color(0x66aaff);
 
 export function useOfficeInteraction(scene, camera, renderer, options = {}, agentsByWorkstation = {}) {
     const hoveredObject = ref(null);
@@ -12,7 +15,9 @@ export function useOfficeInteraction(scene, camera, renderer, options = {}, agen
     const raycaster = new Raycaster();
     const mouse = new Vector2();
     let lastHovered = null;
-    let originalMaterials = new WeakMap();
+    let highlightedMeshes = new Set();
+    let selectedMeshes = new Set();
+    let lastSelected3D = null;
 
     const DRAG_THRESHOLD_PX = 5;
     let pointerDownPos = null;
@@ -62,24 +67,74 @@ export function useOfficeInteraction(scene, camera, renderer, options = {}, agen
         return null;
     }
 
+    function applyEmissiveOverride(child, color, intensity, trackingSet) {
+        if (!trackingSet.has(child)) {
+            child._savedEmissive = child.material.emissive.clone();
+            child._savedEmissiveIntensity = child.material.emissiveIntensity ?? 0;
+            child._origMaterial = child.material;
+            child.material = child.material.clone();
+            trackingSet.add(child);
+        }
+        child.material.emissive.copy(color);
+        child.material.emissiveIntensity = intensity;
+    }
+
+    function removeEmissiveOverride(child, trackingSet) {
+        if (trackingSet.has(child) && child._origMaterial) {
+            child.material.dispose();
+            child.material = child._origMaterial;
+            delete child._origMaterial;
+            delete child._savedEmissive;
+            delete child._savedEmissiveIntensity;
+            trackingSet.delete(child);
+        }
+    }
+
     function setHighlight(object, on) {
         if (!object) return;
         object.traverse((child) => {
-            if (child.isMesh && child.material) {
-                if (on) {
-                    if (!originalMaterials.has(child)) {
-                        originalMaterials.set(child, child.material.emissiveIntensity ?? 0);
-                    }
-                    if (child.material.emissive) {
-                        child.material.emissiveIntensity = (originalMaterials.get(child) ?? 0) + 0.2;
-                    }
-                } else {
-                    if (originalMaterials.has(child) && child.material.emissive) {
-                        child.material.emissiveIntensity = originalMaterials.get(child);
-                    }
-                }
+            if (!child.isMesh || !child.material?.emissive) return;
+            if (selectedMeshes.has(child)) return;
+
+            if (on) {
+                applyEmissiveOverride(child, HIGHLIGHT_COLOR, 0.35, highlightedMeshes);
+            } else {
+                removeEmissiveOverride(child, highlightedMeshes);
             }
         });
+    }
+
+    function setSelectionHighlight(object, on) {
+        if (!object) return;
+        object.traverse((child) => {
+            if (!child.isMesh || !child.material?.emissive) return;
+
+            if (on) {
+                removeEmissiveOverride(child, highlightedMeshes);
+                applyEmissiveOverride(child, SELECTION_COLOR, 0.45, selectedMeshes);
+            } else {
+                removeEmissiveOverride(child, selectedMeshes);
+            }
+        });
+    }
+
+    function clearSelection() {
+        if (lastSelected3D) {
+            setSelectionHighlight(lastSelected3D, false);
+            lastSelected3D = null;
+        }
+    }
+
+    function clearHighlight() {
+        if (lastHovered) {
+            setHighlight(lastHovered, false);
+            lastHovered = null;
+        }
+        hoveredObject.value = null;
+        cursorStyle.value = 'default';
+        if (renderer?.domElement) {
+            renderer.domElement.style.cursor = 'default';
+        }
     }
 
     function onPointerMove(event) {
@@ -103,6 +158,10 @@ export function useOfficeInteraction(scene, camera, renderer, options = {}, agen
                 renderer.domElement.style.cursor = cursorStyle.value;
             }
         }
+    }
+
+    function onPointerLeave() {
+        clearHighlight();
     }
 
     function onPointerDown(event) {
@@ -130,6 +189,8 @@ export function useOfficeInteraction(scene, camera, renderer, options = {}, agen
         raycaster.setFromCamera(mouse, camera);
         const intersects = raycaster.intersectObjects(scene.children, true);
 
+        clearSelection();
+
         if (intersects.length === 0) {
             selectedObject.value = null;
             selectedType.value = null;
@@ -143,18 +204,24 @@ export function useOfficeInteraction(scene, camera, renderer, options = {}, agen
         const wsAgent = resolveWorkstationAgent(intersects[0].object);
 
         if (wsAgent) {
-            selectedObject.value = interactive || intersects[0].object;
+            const target = interactive || intersects[0].object;
+            selectedObject.value = target;
             selectedType.value = 'agent';
             selectedData.value = {
                 type: 'agent',
                 agentId: wsAgent.id,
                 agentName: wsAgent.name,
             };
+            lastSelected3D = target;
+            setSelectionHighlight(target, true);
             if (options.onAgentClick) options.onAgentClick(selectedData.value);
         } else if (interactive) {
             selectedObject.value = interactive;
             const type = interactive.userData.type;
             selectedType.value = type;
+
+            lastSelected3D = interactive;
+            setSelectionHighlight(interactive, true);
 
             if (type === 'agent') {
                 selectedData.value = {
@@ -164,7 +231,10 @@ export function useOfficeInteraction(scene, camera, renderer, options = {}, agen
                 };
                 if (options.onAgentClick) options.onAgentClick(selectedData.value);
             } else {
-                const zone = resolveZoneFromPosition(interactive.position);
+                const explicitZoneId = interactive.userData.zoneId;
+                const zone = explicitZoneId
+                    ? ZONE_DEFS.find((z) => z.id === explicitZoneId)
+                    : resolveZoneFromPosition(interactive.position);
                 selectedData.value = {
                     type: 'zone',
                     zoneId: zone?.id ?? type,
@@ -193,6 +263,7 @@ export function useOfficeInteraction(scene, camera, renderer, options = {}, agen
         el.addEventListener('pointermove', onPointerMove);
         el.addEventListener('pointerdown', onPointerDown);
         el.addEventListener('pointerup', onPointerUp);
+        el.addEventListener('pointerleave', onPointerLeave);
     }
 
     function detach() {
@@ -201,8 +272,10 @@ export function useOfficeInteraction(scene, camera, renderer, options = {}, agen
         el.removeEventListener('pointermove', onPointerMove);
         el.removeEventListener('pointerdown', onPointerDown);
         el.removeEventListener('pointerup', onPointerUp);
+        el.removeEventListener('pointerleave', onPointerLeave);
+        clearHighlight();
+        clearSelection();
         pointerDownPos = null;
-        if (el) el.style.cursor = 'default';
     }
 
     return {

@@ -1,11 +1,18 @@
 const WAYPOINTS = {
-    // Main corridor (z=-2.5) - one per desk column + edges
-    mcW:  { x: -7,  z: -2.5 },
-    mc6:  { x: -6,  z: -2.5 },
-    mc3:  { x: -3,  z: -2.5 },
-    mcC:  { x: 0,   z: -2.5 },
-    mc3E: { x: 3,   z: -2.5 },
-    mc6E: { x: 6,   z: -2.5 },
+    // Main corridor (z=-2.5) — one per desk column + edges
+    mcW:  { x: -7,   z: -2.5 },
+    mc6:  { x: -6,   z: -2.5 },
+    mc3:  { x: -3,   z: -2.5 },
+    mcC:  { x: 0,    z: -2.5 },
+    mc3E: { x: 3,    z: -2.5 },
+    mc6E: { x: 6,    z: -2.5 },
+
+    // Corridor gaps between desk columns (safe N-S crossing points)
+    cg63: { x: -4.5, z: -2.5 },
+    cg30: { x: -1.5, z: -2.5 },
+    cg03: { x: 1.5,  z: -2.5 },
+    cg36: { x: 4.5,  z: -2.5 },
+    cg6w: { x: 7.5,  z: -2.5 },
 
     // North aisle (z=-5.5, south of z=-6.5 wall)
     nW:  { x: -7, z: -5.5 },
@@ -13,13 +20,20 @@ const WAYPOINTS = {
     nE:  { x: 6,  z: -5.5 },
     nEE: { x: 10, z: -5.5 },
 
-    // South aisle (z=0.5) - one per desk column + edges
+    // South aisle (z=0.5) — one per desk column + edges
     sW:  { x: -7, z: 0.5 },
     s6:  { x: -6, z: 0.5 },
     s3:  { x: -3, z: 0.5 },
     sC:  { x: 0,  z: 0.5 },
     s3E: { x: 3,  z: 0.5 },
     s6E: { x: 6,  z: 0.5 },
+
+    // South aisle gaps between desk columns (safe N-S crossing points)
+    sg63: { x: -4.5, z: 0.5 },
+    sg30: { x: -1.5, z: 0.5 },
+    sg03: { x: 1.5,  z: 0.5 },
+    sg36: { x: 4.5,  z: 0.5 },
+    sg6w: { x: 7.5,  z: 0.5 },
 
     // Open south area
     southW: { x: -5, z: 3 },
@@ -47,8 +61,13 @@ const WAYPOINTS = {
     eastC: { x: 8, z: 6 },
     eastS: { x: 8, z: 8.5 },
 
-    // Conference approach
+    // Conference approach — west of table then behind it
     confApproach: { x: -2, z: 5.5 },
+    confWest:     { x: -5, z: 5.5 },
+    confBehind:   { x: -5, z: 8.5 },
+
+    // Tool workshop approach (in front of benches, not through them)
+    toolApproach: { x: -10, z: 6 },
 
     // Room interiors
     serverRoom:   { x: -10.5, z: -8.5 },
@@ -56,20 +75,25 @@ const WAYPOINTS = {
     warRoomE:     { x: 8,     z: -8.5 },
     securityDesk: { x: -11,   z: -3.5 },
     mailroom:     { x: -11,   z: 3 },
-    conference:   { x: -3,    z: 8.2 },
+    conference:   { x: -2,    z: 8.5 },
     vault:        { x: 9,     z: 6 },
-    toolWorkshop: { x: -10,   z: 7.5 },
+    toolWorkshop: { x: -10,   z: 8.5 },
     breakRoom:    { x: 9,     z: 9.5 },
-    escalation:   { x: -5,    z: -9 },
+    escalation:   { x: -8,    z: 1 },
 };
 
 const EDGES = [
     // === Main corridor (z=-2.5) east-west ===
     ['mcW', 'mc6'],
-    ['mc6', 'mc3'],
-    ['mc3', 'mcC'],
-    ['mcC', 'mc3E'],
-    ['mc3E', 'mc6E'],
+    ['mc6', 'cg63'],
+    ['cg63', 'mc3'],
+    ['mc3', 'cg30'],
+    ['cg30', 'mcC'],
+    ['mcC', 'cg03'],
+    ['cg03', 'mc3E'],
+    ['mc3E', 'cg36'],
+    ['cg36', 'mc6E'],
+    ['mc6E', 'cg6w'],
 
     // === North aisle (z=-5.5) east-west ===
     ['nW', 'nC'],
@@ -78,26 +102,33 @@ const EDGES = [
 
     // === South aisle (z=0.5) east-west ===
     ['sW', 's6'],
-    ['s6', 's3'],
-    ['s3', 'sC'],
-    ['sC', 's3E'],
-    ['s3E', 's6E'],
+    ['s6', 'sg63'],
+    ['sg63', 's3'],
+    ['s3', 'sg30'],
+    ['sg30', 'sC'],
+    ['sC', 'sg03'],
+    ['sg03', 's3E'],
+    ['s3E', 'sg36'],
+    ['sg36', 's6E'],
+    ['s6E', 'sg6w'],
 
-    // === North-south links (perpendicular only, same x column) ===
-    ['nW', 'mcW'],   // x=-7
-    ['nC', 'mcC'],   // x=0
-    ['nE', 'mc6E'],  // x=6
-    ['mcW', 'sW'],   // x=-7
-    ['mc6', 's6'],   // x=-6
-    ['mc3', 's3'],   // x=-3
-    ['mcC', 'sC'],   // x=0
-    ['mc3E', 's3E'], // x=3
-    ['mc6E', 's6E'], // x=6
+    // === N-S links at wall edges (no desks at x=-7) ===
+    ['nW', 'mcW'],
+    ['nC', 'mcC'],
+    ['nE', 'mc6E'],
+    ['mcW', 'sW'],
+
+    // === N-S links through GAPS between desk columns (safe) ===
+    ['cg63', 'sg63'],
+    ['cg30', 'sg30'],
+    ['cg03', 'sg03'],
+    ['cg36', 'sg36'],
+    ['cg6w', 'sg6w'],
 
     // === South aisle to open south area ===
     ['sW', 'southW'],
     ['sC', 'southC'],
-    ['s6E', 'southE'],
+    ['sg6w', 'southE'],
     ['southW', 'southC'],
     ['southC', 'southE'],
 
@@ -126,7 +157,8 @@ const EDGES = [
     ['westN', 'serverRoom'],
     ['westC', 'securityDesk'],
     ['westC', 'mailroom'],
-    ['westS', 'toolWorkshop'],
+    ['westS', 'toolApproach'],
+    ['toolApproach', 'toolWorkshop'],
 
     // === East corridor (all east of x=6.5) ===
     ['eastN', 'eastC'],
@@ -136,12 +168,14 @@ const EDGES = [
 
     // === War room (north of z=-6.5 wall, accessed via doorC) ===
     ['warRoomW', 'warRoomE'],
-    ['warRoomW', 'escalation'],
+    ['doorB', 'escalation'],
 
-    // === Conference (open from south, no wall blocking) ===
+    // === Conference (route west around the table) ===
     ['southW', 'confApproach'],
     ['southC', 'confApproach'],
-    ['confApproach', 'conference'],
+    ['confApproach', 'confWest'],
+    ['confWest', 'confBehind'],
+    ['confBehind', 'conference'],
 
     // === Connect east door E to south area for continuity ===
     ['southE', 'doorE'],

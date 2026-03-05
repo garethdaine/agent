@@ -10,6 +10,7 @@ use App\Models\DelegateeProfile;
 use App\Models\DelegationAttempt;
 use App\Models\DelegationTask;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\File;
 
 /**
  * Spawns delegation attempts by creating the necessary records and dispatching
@@ -68,10 +69,10 @@ class AttemptSpawner
             ? $profile->runner_type
             : 'custom';
 
-        $commandTemplate = $profile->command_template;
-        if ($runnerType === 'custom' && ! str_contains($commandTemplate, '{{task_markdown_path}}')) {
-            $commandTemplate = trim($commandTemplate).' {{task_markdown_path}}';
-        }
+        $commandTemplate = $this->ensureAutonomousTemplate($profile->command_template, $runnerType);
+
+        $taskMarkdownPath = $task->contract_json['task_markdown_path']
+            ?? $this->generateTaskMarkdown($task, $attempt);
 
         $job = AgentJob::create([
             'user_id' => $task->graph->user_id,
@@ -80,12 +81,11 @@ class AttemptSpawner
             'command_template' => $commandTemplate,
             'working_directory' => $profile->working_directory,
             'env_json' => $profile->env_json,
-            // Required fields - use sensible defaults for delegation jobs
-            'cron_expression' => '@once', // Placeholder: delegation jobs don't use cron
+            'cron_expression' => '@once',
             'timezone' => config('app.timezone', 'UTC'),
             'max_runtime_seconds' => $task->contract_json['authority_scope']['max_runtime_seconds'] ?? 3600,
-            'task_markdown_path' => $task->contract_json['task_markdown_path'] ?? '',
-            'is_enabled' => false, // Transient job, not scheduled
+            'task_markdown_path' => $taskMarkdownPath,
+            'is_enabled' => false,
         ]);
 
         // Create AgentJobRun with delegation source in metadata
@@ -114,5 +114,66 @@ class AttemptSpawner
         ])->onQueue('agent')->dispatch();
 
         return $attempt;
+    }
+
+    private function ensureAutonomousTemplate(string $template, string $runnerType): string
+    {
+        if ($runnerType === 'custom' && ! str_contains($template, '{{task_markdown_path}}')) {
+            $template = trim($template).' {{task_markdown_path}}';
+        }
+
+        if ($runnerType === 'claude' && ! str_contains($template, '--dangerously-skip-permissions')) {
+            $template = str_replace(' -p ', ' --dangerously-skip-permissions -p ', $template);
+        }
+
+        if ($runnerType === 'codex' && ! str_contains($template, '--dangerously-bypass-approvals-and-sandbox')) {
+            $template = str_replace(' exec ', ' --dangerously-bypass-approvals-and-sandbox exec ', $template);
+        }
+
+        return $template;
+    }
+
+    private function generateTaskMarkdown(DelegationTask $task, DelegationAttempt $attempt): string
+    {
+        $contract = $task->contract_json ?? [];
+        $context = $contract['context_inputs'] ?? [];
+        $instructions = $contract['phase_config']['instructions'] ?? '';
+
+        $lines = [
+            "# {$task->name}",
+            '',
+        ];
+
+        if ($instructions !== '') {
+            $lines[] = $instructions;
+            $lines[] = '';
+        }
+
+        if (! empty($context)) {
+            $lines[] = '## Context';
+            $lines[] = '';
+            foreach ($context as $key => $value) {
+                $display = is_array($value) ? implode(', ', array_map('strval', (array) $value)) : (string) $value;
+                $lines[] = "- **{$key}**: {$display}";
+            }
+            $lines[] = '';
+        }
+
+        $lines[] = '## Metadata';
+        $lines[] = '';
+        $lines[] = "- Graph: {$task->graph->name}";
+        $lines[] = "- Task ID: {$task->id}";
+        $lines[] = "- Attempt: {$attempt->attempt_number}";
+        $lines[] = '';
+
+        $dir = storage_path('app/delegation');
+
+        File::ensureDirectoryExists($dir);
+
+        $filename = sprintf('%s-%s-%d.md', now()->format('Ymd-His'), $task->id, $attempt->attempt_number);
+        $path = $dir.'/'.$filename;
+        File::put($path, implode("\n", $lines));
+
+        return $path;
     }
 }

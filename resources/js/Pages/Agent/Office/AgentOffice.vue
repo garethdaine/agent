@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import Button from '@/Components/ui/Button.vue';
-import { ArrowLeft, Building2, AlertTriangle } from 'lucide-vue-next';
+import { ArrowLeft, Building2, AlertTriangle, Maximize2, Minimize2 } from 'lucide-vue-next';
 import { usePage } from '@inertiajs/vue3';
 import { useOfficeScene } from '@/Composables/Office/useOfficeScene.js';
 import { useAgentAvatars } from '@/Composables/Office/useAgentAvatars.js';
@@ -16,7 +16,11 @@ import OfficeDetailPanel from '@/Components/Office/OfficeDetailPanel.vue';
 import { buildOfficeFloor, buildOfficeWalls, buildZoneLabels, buildZoneFurniture, ZONE_DEFS, WORKSTATION_POSITIONS } from '@/Support/Office/officeFloorplan.js';
 import { ParticleEmitter, SpeechBubble, AmbientAnimations } from '@/Support/Office/animations/visualEffects.js';
 import { Vector3 } from 'three';
-import { Sun, Moon, MonitorCog } from 'lucide-vue-next';
+import {
+    Sun, Moon, MonitorCog,
+    Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog, CloudSun,
+    Thermometer, Wind,
+} from 'lucide-vue-next';
 
 const page = usePage();
 const containerRef = ref(null);
@@ -39,6 +43,28 @@ const realtime = useOfficeRealtime();
 const panelVisible = ref(false);
 const panelData = ref(null);
 const envOverride = ref(null);
+const weatherInfo = ref(null);
+const wrapperRef = ref(null);
+const isFullscreen = ref(false);
+
+function toggleFullscreen() {
+    if (!wrapperRef.value) return;
+    if (!document.fullscreenElement) {
+        wrapperRef.value.requestFullscreen().catch(() => {});
+    } else {
+        document.exitFullscreen().catch(() => {});
+    }
+}
+
+function onFullscreenChange() {
+    isFullscreen.value = !!document.fullscreenElement;
+    requestAnimationFrame(() => sceneApi?.resize());
+}
+
+const WEATHER_LABELS = {
+    clear: 'Clear', cloudy: 'Cloudy', fog: 'Fog', rain: 'Rain',
+    snow: 'Snow', showers: 'Showers', thunderstorm: 'Thunderstorm',
+};
 
 function addZoneLighting(api) {
     api.addZoneLight(-10.5, 2.5, -8.5, 0x00ff44, 0.15, 6);
@@ -110,11 +136,20 @@ onMounted(async () => {
     }
 
     try {
+        let weatherSyncAccum = 0;
         sceneApi = useOfficeScene(containerRef, {
             onFrame(delta, time) {
                 if (envApi) {
                     envApi.update(delta);
                     sceneApi.setCeilingLightsEnabled(envApi.ceilingLightsEnabled);
+                    weatherSyncAccum += delta;
+                    if (weatherSyncAccum > 1) {
+                        weatherSyncAccum = 0;
+                        const w = envApi.weather;
+                        if (w?.temperature !== undefined) {
+                            weatherInfo.value = { ...w, weatherClass: envApi.weatherClass };
+                        }
+                    }
                 }
                 if (avatarApi) avatarApi.updateAll(delta);
                 if (zoneController) zoneController.updateZones(time);
@@ -195,6 +230,20 @@ onMounted(async () => {
 
                 if (!prev || !avatarApi || !particles) return;
 
+                if (prev.zone !== a.zone && a.zone) {
+                    avatarApi.moveAgentToZone(a.id, a.zone === 'workstation' ? 'workstations' : a.zone);
+                    if (a.zone === 'conference') {
+                        avatarApi.setAgentState(a.id, 'walking');
+                    }
+                }
+
+                if (prev.current_activity !== a.current_activity && a.current_activity === 'chatting') {
+                    const group = avatarApi.getAvatarGroup(a.id);
+                    if (group && speechBubbles) {
+                        speechBubbles.show(a.id, 'Joining deliberation...', group, { duration: 3, color: '#a5b4fc' });
+                    }
+                }
+
                 if (prev.status !== 'succeeded' && a.status === 'succeeded') {
                     const group = avatarApi.getAvatarGroup(a.id);
                     if (group) {
@@ -220,7 +269,83 @@ onMounted(async () => {
             }
         }, { deep: true });
 
+        watch(realtime.agentOutputQueue, (queue) => {
+            if (!queue?.length || !avatarApi || !speechBubbles) return;
+            const state = realtime.officeState.value;
+            if (!state?.agents) return;
+
+            const latest = queue[queue.length - 1];
+
+            if (latest.event_type === 'task_completed') {
+                const fromAgent = state.agents.find((a) =>
+                    a.current_delegation_task?.name === latest.task_name,
+                );
+                if (fromAgent) {
+                    const fromGroup = avatarApi.getAvatarGroup(fromAgent.id);
+                    if (fromGroup) {
+                        particles.emitSuccess(fromGroup.position);
+                        const nextLabel = latest.next_tasks?.length
+                            ? `Done! Handing off to ${latest.next_tasks[0]}`
+                            : 'Review complete!';
+                        speechBubbles.show(fromAgent.id, nextLabel, fromGroup, {
+                            duration: 4,
+                            color: '#a5f3c4',
+                        });
+                    }
+                }
+                return;
+            }
+
+            if (latest.event_type === 'escalation') {
+                const escalatedAgent = state.agents.find((a) =>
+                    a.current_run?.id === latest.run_id,
+                );
+                if (escalatedAgent) {
+                    escalatedAgent.zone = 'escalation';
+                    escalatedAgent.current_activity = 'waiting';
+                    escalatedAgent.needs_attention = true;
+                    const group = avatarApi.getAvatarGroup(escalatedAgent.id);
+                    if (group) {
+                        avatarApi.moveAgentToZone(escalatedAgent.id, 'escalation');
+                        speechBubbles.show(escalatedAgent.id, latest.summary, group, {
+                            duration: 8,
+                            color: '#fca5a5',
+                            bgColor: 'rgba(80,20,20,0.92)',
+                        });
+                    }
+                }
+                agentThoughts.value[latest.run_id] = {
+                    status: 'escalation',
+                    text: `${latest.job_name} — ${latest.summary}`,
+                };
+                return;
+            }
+
+            const agent = state.agents.find((a) =>
+                a.current_run?.id === latest.run_id
+                || a.current_delegation_task?.id === latest.run_id,
+            );
+
+            if (!agent) return;
+
+            const group = avatarApi.getAvatarGroup(agent.id);
+            if (!group) return;
+
+            speechBubbles.show(agent.id, latest.text, group, {
+                duration: 5,
+                color: '#c4d5ff',
+                bgColor: 'rgba(20,30,60,0.92)',
+                thought: true,
+            });
+
+            agentThoughts.value[agent.id] = {
+                status: agent.status,
+                text: `${agent.name} — ${latest.text}`,
+            };
+        }, { deep: true });
+
         window.addEventListener('resize', sceneApi.resize);
+        document.addEventListener('fullscreenchange', onFullscreenChange);
     } catch (e) {
         webglUnavailable.value = true;
         error.value = e?.message ?? 'WebGL unavailable';
@@ -231,6 +356,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
     window.removeEventListener('resize', sceneApi?.resize);
+    document.removeEventListener('fullscreenchange', onFullscreenChange);
     interactionApi?.detach();
     envApi?.dispose();
     particles?.dispose();
@@ -270,7 +396,10 @@ onUnmounted(() => {
             </div>
         </template>
 
-        <div class="relative h-[calc(100vh-8rem)] w-full px-4 py-4 sm:px-6 lg:px-8">
+        <div
+            ref="wrapperRef"
+            :class="isFullscreen ? 'relative h-screen w-screen bg-[#0a0e1a]' : 'relative h-[calc(100vh-8rem)] w-full px-4 py-4 sm:px-6 lg:px-8'"
+        >
             <div
                 v-if="webglUnavailable || error"
                 class="flex flex-col items-center justify-center gap-4 rounded-lg border border-border bg-muted/30 p-8 text-center h-full"
@@ -295,8 +424,57 @@ onUnmounted(() => {
                         <p class="text-sm text-muted-foreground">Constructing office…</p>
                     </div>
                 </div>
+                <button
+                    v-if="!loading"
+                    @click="toggleFullscreen"
+                    class="absolute top-6 right-6 z-10 flex items-center justify-center h-9 w-9 rounded-lg border border-border/50 bg-background/80 backdrop-blur-sm shadow-lg text-muted-foreground hover:text-foreground hover:bg-background/90 transition-colors"
+                    :title="isFullscreen ? 'Exit fullscreen' : 'Fullscreen'"
+                >
+                    <component :is="isFullscreen ? Minimize2 : Maximize2" class="h-4 w-4" />
+                </button>
                 <div
-                    v-else-if="agents.length > 0"
+                    v-if="weatherInfo && !loading"
+                    class="absolute top-6 left-6 rounded-xl border border-border/50 bg-background/80 backdrop-blur-sm px-4 py-3 shadow-lg select-none pointer-events-none"
+                >
+                    <div class="flex items-center gap-3">
+                        <component
+                            :is="({
+                                clear: weatherInfo.isDay ? Sun : Moon,
+                                cloudy: weatherInfo.isDay ? CloudSun : Cloud,
+                                fog: CloudFog,
+                                rain: CloudRain,
+                                showers: CloudRain,
+                                snow: CloudSnow,
+                                thunderstorm: CloudLightning,
+                            })[weatherInfo.weatherClass] || Sun"
+                            class="h-7 w-7 shrink-0"
+                            :class="{
+                                'text-amber-400': weatherInfo.weatherClass === 'clear' && weatherInfo.isDay,
+                                'text-indigo-300': weatherInfo.weatherClass === 'clear' && !weatherInfo.isDay,
+                                'text-slate-400': weatherInfo.weatherClass === 'cloudy' || weatherInfo.weatherClass === 'fog',
+                                'text-blue-400': weatherInfo.weatherClass === 'rain' || weatherInfo.weatherClass === 'showers',
+                                'text-white': weatherInfo.weatherClass === 'snow',
+                                'text-yellow-300': weatherInfo.weatherClass === 'thunderstorm',
+                            }"
+                        />
+                        <div class="flex flex-col gap-0.5">
+                            <div class="flex items-baseline gap-1.5">
+                                <span class="text-base font-semibold text-foreground tabular-nums">
+                                    {{ Math.round(weatherInfo.temperature) }}°C
+                                </span>
+                                <span class="text-xs text-muted-foreground">
+                                    {{ WEATHER_LABELS[weatherInfo.weatherClass] || 'Clear' }}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-1 text-[10px] text-muted-foreground/70">
+                                <Wind class="h-2.5 w-2.5" />
+                                <span>{{ Math.round(weatherInfo.windSpeed) }} km/h</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    v-if="agents.length > 0 && !loading"
                     class="absolute bottom-6 left-6 right-6 flex items-center justify-between rounded-xl border border-border/50 bg-background/80 backdrop-blur-sm px-4 py-3 shadow-lg"
                 >
                     <div class="flex flex-wrap gap-2">

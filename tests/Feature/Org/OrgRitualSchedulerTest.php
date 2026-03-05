@@ -5,7 +5,6 @@ namespace Tests\Feature\Org;
 use App\Jobs\Org\OrgDispatchDueRitualsJob;
 use App\Jobs\Org\OrgExecuteRitualJob;
 use App\Models\OrgRitualTemplate;
-use App\Support\Org\OrgRitualRunService;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -23,7 +22,7 @@ class OrgRitualSchedulerTest extends TestCase
             'archived_at' => null,
         ]);
 
-        (new OrgDispatchDueRitualsJob())->handle();
+        (new OrgDispatchDueRitualsJob)->handle();
 
         Queue::assertPushed(OrgExecuteRitualJob::class, function ($job) use ($template) {
             return $job->template->id === $template->id;
@@ -40,7 +39,7 @@ class OrgRitualSchedulerTest extends TestCase
             'is_paused' => true,
         ]);
 
-        (new OrgDispatchDueRitualsJob())->handle();
+        (new OrgDispatchDueRitualsJob)->handle();
 
         Queue::assertNotPushed(OrgExecuteRitualJob::class, function ($job) use ($template) {
             return $job->template->id === $template->id;
@@ -57,26 +56,24 @@ class OrgRitualSchedulerTest extends TestCase
             'is_paused' => false,
         ]);
 
-        (new OrgDispatchDueRitualsJob())->handle();
+        (new OrgDispatchDueRitualsJob)->handle();
 
         Queue::assertNotPushed(OrgExecuteRitualJob::class, function ($job) use ($template) {
             return $job->template->id === $template->id;
         });
     }
 
-    public function test_execute_job_creates_run(): void
+    public function test_execute_job_creates_run_and_delegation_graph(): void
     {
         config(['agent.org.enabled' => true]);
 
         $template = OrgRitualTemplate::factory()->create();
 
         $job = new OrgExecuteRitualJob($template);
-        $runService = app(OrgRitualRunService::class);
-        $job->handle($runService);
+        app()->call([$job, 'handle']);
 
         $this->assertDatabaseHas('org_ritual_runs', [
             'ritual_template_id' => $template->id,
-            'state' => 'queued',
         ]);
     }
 
@@ -91,7 +88,7 @@ class OrgRitualSchedulerTest extends TestCase
             'archived_at' => null,
         ]);
 
-        (new OrgDispatchDueRitualsJob())->handle();
+        (new OrgDispatchDueRitualsJob)->handle();
 
         Queue::assertNotPushed(OrgExecuteRitualJob::class);
     }

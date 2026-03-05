@@ -2,6 +2,7 @@
 
 namespace App\Support\Agent;
 
+use App\Events\Office\AgentActivityChanged;
 use App\Events\RunEventsAvailable;
 use App\Jobs\Memory\MemoryWorkingBufferJob;
 use App\Models\AgentJobRun;
@@ -258,6 +259,103 @@ class RunEventWriter
         } catch (\Throwable) {
             // Never block the event write loop
         }
+
+        $this->broadcastOutputSnippetToOffice($sequence);
+    }
+
+    private function broadcastOutputSnippetToOffice(int $sequence): void
+    {
+        $officeCacheKey = 'office_output_broadcast:'.$this->run->id;
+        if (Cache::has($officeCacheKey)) {
+            return;
+        }
+
+        Cache::put($officeCacheKey, true, 4);
+
+        $snippet = $this->extractMeaningfulSnippet($sequence);
+        if ($snippet === null) {
+            return;
+        }
+
+        try {
+            AgentActivityChanged::dispatch(
+                (int) $this->run->user_id,
+                'agent.output',
+                [
+                    'run_id' => $this->run->id,
+                    'text' => $snippet,
+                    'sequence' => $sequence,
+                ],
+            );
+        } catch (\Throwable) {
+            // Best-effort
+        }
+    }
+
+    private function broadcastEscalation(string $reason, string $summary): void
+    {
+        try {
+            AgentActivityChanged::dispatch(
+                (int) $this->run->user_id,
+                'agent.escalation',
+                [
+                    'run_id' => $this->run->id,
+                    'job_name' => $this->run->job?->name ?? 'Unknown',
+                    'reason' => $reason,
+                    'summary' => $summary,
+                ],
+            );
+        } catch (\Throwable) {
+            // Best-effort
+        }
+    }
+
+    private function extractMeaningfulSnippet(int $upToSequence): ?string
+    {
+        $event = AgentRunEvent::query()
+            ->where('agent_job_run_id', $this->run->id)
+            ->where('event_type', 'stdout')
+            ->where('sequence', '<=', $upToSequence)
+            ->orderByDesc('sequence')
+            ->first();
+
+        if ($event === null) {
+            return null;
+        }
+
+        $raw = $event->payload ?? '';
+
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            $raw = $this->extractReadableText($decoded);
+        }
+
+        $raw = trim(preg_replace('/\s+/', ' ', $raw) ?? $raw);
+
+        if (strlen($raw) < 5 || $this->isLikelyNonRuntimeSnippet($raw)) {
+            return null;
+        }
+
+        return Str::limit($raw, 60);
+    }
+
+    private function extractReadableText(array $decoded): string
+    {
+        foreach (['text', 'message', 'content', 'detail', 'summary'] as $key) {
+            if (is_string($decoded[$key] ?? null) && trim((string) $decoded[$key]) !== '') {
+                return trim((string) $decoded[$key]);
+            }
+        }
+
+        if (is_array($decoded['content'] ?? null)) {
+            foreach ($decoded['content'] as $block) {
+                if (is_array($block) && ($block['type'] ?? '') === 'text' && is_string($block['text'] ?? null)) {
+                    return trim($block['text']);
+                }
+            }
+        }
+
+        return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
     }
 
     private function redact(string $payload, int &$redactionCount): string
@@ -362,6 +460,8 @@ class RunEventWriter
         $metadata['approval_excerpt'] = substr(trim($excerpt), 0, 1000);
 
         $this->run->metadata_json = $metadata;
+
+        $this->broadcastEscalation('approval_required', 'Agent needs approval to continue');
     }
 
     private function markPermissionBlockerDetected(string $excerpt): void
@@ -382,6 +482,8 @@ class RunEventWriter
             'type' => 'permission_blocker_detected',
             'at' => $now,
         ]);
+
+        $this->broadcastEscalation('permission_blocked', 'Agent blocked by file permission');
     }
 
     private function markClarificationRequired(string $excerpt): void
@@ -403,6 +505,8 @@ class RunEventWriter
             'type' => 'clarification_requested',
             'at' => $now,
         ]);
+
+        $this->broadcastEscalation('clarification_required', 'Agent needs clarification to continue');
     }
 
     private function normalizeClarificationExcerpt(string $excerpt): string

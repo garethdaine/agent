@@ -289,13 +289,17 @@ export function useOfficeZones(scene, officeState, avatarApi) {
         const messenger = state.messenger ?? {};
         const memory = state.memory ?? {};
 
-        // Workstations
         const workstations = findMeshByType(scene, 'workstation');
-        workstations.forEach((ws, i) => {
-            const agent = agentStates[i];
+        workstations.forEach((ws) => {
+            const wsIdx = ws.userData?.workstationIndex;
+            if (wsIdx === undefined) return;
+            const agent = agentStates[wsIdx];
             if (agent) {
                 updateDeskLamp(ws, agent.status);
                 updateMonitorScreen(ws, agent.current_activity, time);
+            } else {
+                updateDeskLamp(ws, 'idle');
+                updateMonitorScreen(ws, 'idle', time);
             }
         });
 
@@ -327,7 +331,13 @@ export function useOfficeZones(scene, officeState, avatarApi) {
         if (avatarApi) {
             agentStates.forEach((agent) => {
                 const isBusy = agent.current_activity !== 'idle';
-                avatarApi.setAgentBusy(agent.id, isBusy);
+                const inNonDeskZone = agent.zone && agent.zone !== 'workstation' && agent.zone !== 'workstations';
+
+                if (isBusy && !inNonDeskZone) {
+                    avatarApi.setAgentBusy(agent.id, true);
+                } else if (!isBusy) {
+                    avatarApi.setAgentBusy(agent.id, false);
+                }
 
                 if (isBusy) {
                     const stateMap = {
@@ -335,6 +345,7 @@ export function useOfficeZones(scene, officeState, avatarApi) {
                         reading: 'reading',
                         waiting: 'waiting',
                         finishing: 'typing',
+                        chatting: 'chatting',
                     };
                     const avatarState = stateMap[agent.current_activity] || 'typing';
                     avatarApi.setAgentState(agent.id, avatarState);

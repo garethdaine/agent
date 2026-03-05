@@ -53,8 +53,7 @@ class RitualToDelegationMapper
             $roleSlug = $roleMappings[$phaseId] ?? null;
             $delegateeProfileId = $this->resolveDelegateeProfileId($roleSlug, $agentsByRole);
 
-            // Build the task contract
-            $contract = $this->buildTaskContract($phase, $run, $contextInputs);
+            $contract = $this->buildTaskContract($phase, $run, $contextInputs, $delegateeProfileId);
 
             $tasks[] = [
                 'id' => $phaseId,
@@ -118,23 +117,34 @@ class RitualToDelegationMapper
      * @param  ?array  $contextInputs  Context inputs from the template
      * @return array The task contract
      */
-    private function buildTaskContract(array $phase, OrgRitualRun $run, ?array $contextInputs): array
-    {
+    private function buildTaskContract(
+        array $phase,
+        OrgRitualRun $run,
+        ?array $contextInputs,
+        ?string $delegateeProfileId = null,
+    ): array {
         $contract = [
             'phase_id' => $phase['id'],
             'phase_name' => $phase['name'] ?? $phase['id'],
             'correlation_id' => $run->correlation_id,
             'ritual_run_id' => $run->id,
+            'required_capability' => 'review',
         ];
 
-        // Include context inputs if provided
+        if ($delegateeProfileId !== null) {
+            $contract['pre_assigned_delegatee_profile_id'] = (int) $delegateeProfileId;
+        }
+
         if (! empty($contextInputs)) {
             $contract['context_inputs'] = $contextInputs;
         }
 
-        // Include any phase-specific configuration
-        if (isset($phase['config'])) {
-            $contract['phase_config'] = $phase['config'];
+        $phaseConfig = $phase['config'] ?? [];
+        if (isset($phase['instructions'])) {
+            $phaseConfig['instructions'] = $phase['instructions'];
+        }
+        if (! empty($phaseConfig)) {
+            $contract['phase_config'] = $phaseConfig;
         }
 
         return $contract;

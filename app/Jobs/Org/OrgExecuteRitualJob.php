@@ -2,62 +2,118 @@
 
 namespace App\Jobs\Org;
 
+use App\Events\DelegationGraphStarted;
+use App\Events\Office\AgentActivityChanged;
+use App\Models\DelegationGraph;
 use App\Models\OrgRitualRun;
 use App\Models\OrgRitualTemplate;
+use App\Support\Delegation\DelegationGraphBuilder;
+use App\Support\Delegation\GraphStateTransitionService;
 use App\Support\Org\OrgRitualRunService;
+use App\Support\Org\RitualToDelegationMapper;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
 
-/**
- * Job that executes a ritual by creating a run and starting its execution.
- *
- * This job is dispatched either by OrgDispatchDueRitualsJob (for scheduled rituals)
- * or by the API endpoint when a user triggers an immediate run.
- */
 class OrgExecuteRitualJob implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * The number of times the job may be attempted.
-     */
     public int $tries = 3;
 
-    /**
-     * The number of seconds to wait before retrying the job.
-     *
-     * @var array<int, int>
-     */
+    /** @var array<int, int> */
     public array $backoff = [10, 30, 60];
 
-    /**
-     * The number of seconds the job can run before timing out.
-     */
     public int $timeout = 600;
 
     public function __construct(
-        public readonly OrgRitualTemplate $template
+        public readonly OrgRitualTemplate $template,
+        public readonly ?OrgRitualRun $existingRun = null,
     ) {
         $this->onQueue('org-rituals');
     }
 
-    public function handle(OrgRitualRunService $runService): void
-    {
-        // Create a new run in queued state
-        $run = $runService->createRun($this->template);
+    public function handle(
+        OrgRitualRunService $runService,
+        RitualToDelegationMapper $mapper,
+        DelegationGraphBuilder $graphBuilder,
+        GraphStateTransitionService $transitionService,
+    ): void {
+        $run = $this->existingRun ?? $runService->createRun($this->template);
 
-        // For now, we just create the run.
-        // Future integration with DelegationGraph will:
-        // 1. Convert phase graph to delegation tasks
-        // 2. Start the delegation graph execution
-        // 3. Listen for completion events to update run state
+        try {
+            $runService->markRunning($run);
+
+            $this->broadcastActivity('ritual.started', [
+                'ritual_name' => $this->template->name,
+                'run_id' => $run->id,
+            ]);
+
+            $taskDefs = $mapper->mapPhasesToTasks($this->template, $run);
+
+            if (empty($taskDefs)) {
+                $runService->markFailed($run);
+
+                return;
+            }
+
+            // Build a map from phase ID → task name so depends_on references resolve correctly.
+            // The mapper returns phase IDs in depends_on, but the graph builder matches by task name.
+            $idToName = [];
+            foreach ($taskDefs as $t) {
+                $idToName[$t['id']] = $t['name'];
+            }
+
+            $graphInput = [
+                'tasks' => array_map(fn (array $t) => [
+                    'name' => $t['name'],
+                    'contract' => $t['contract'],
+                    'depends_on' => array_map(
+                        fn (string $depId) => $idToName[$depId] ?? $depId,
+                        $t['depends_on'],
+                    ),
+                ], $taskDefs),
+            ];
+
+            $graph = $graphBuilder->build($this->template->user, $graphInput);
+
+            $run->update(['delegation_graph_id' => $graph->id]);
+
+            // Transition draft → ready → running, then fire the start event
+            // so the DelegationCoordinator picks up root tasks.
+            $transitionService->transition(
+                $graph->id,
+                [DelegationGraph::STATUS_DRAFT],
+                DelegationGraph::STATUS_READY,
+            );
+
+            $transitionService->transition(
+                $graph->id,
+                [DelegationGraph::STATUS_READY],
+                DelegationGraph::STATUS_RUNNING,
+                ['started_at' => now('UTC')],
+            );
+
+            DelegationGraphStarted::dispatch($graph->fresh());
+
+            $this->broadcastActivity('delegation.graph_created', [
+                'graph_id' => $graph->id,
+                'task_count' => $graph->tasks->count(),
+                'ritual_name' => $this->template->name,
+            ]);
+        } catch (Throwable $e) {
+            report($e);
+            $runService->markFailed($run);
+
+            $this->broadcastActivity('ritual.failed', [
+                'ritual_name' => $this->template->name,
+                'run_id' => $run->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
-    /**
-     * Get the tags that should be assigned to the job.
-     *
-     * @return array<int, string>
-     */
+    /** @return array<int, string> */
     public function tags(): array
     {
         return [
@@ -67,11 +123,21 @@ class OrgExecuteRitualJob implements ShouldQueue
         ];
     }
 
-    /**
-     * Determine the time at which the job should timeout.
-     */
     public function retryUntil(): \DateTimeInterface
     {
         return now()->addMinutes(30);
+    }
+
+    private function broadcastActivity(string $eventType, array $payload): void
+    {
+        try {
+            AgentActivityChanged::dispatch(
+                $this->template->user_id,
+                $eventType,
+                $payload,
+            );
+        } catch (Throwable) {
+            // Broadcasting is best-effort
+        }
     }
 }

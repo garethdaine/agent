@@ -97,45 +97,55 @@ export class SpeechBubble {
     }
 
     show(agentId, text, targetGroup, options = {}) {
-        const { duration = 4, color = '#e0e8ff', bgColor = 'rgba(15,20,40,0.9)' } = options;
+        const { duration = 4, color = '#e0e8ff', bgColor = 'rgba(15,20,40,0.92)', thought = false } = options;
 
         this.hide(agentId);
 
         const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 80;
+        canvas.width = 320;
+        canvas.height = 96;
         const ctx = canvas.getContext('2d');
 
         ctx.fillStyle = bgColor;
         ctx.beginPath();
-        ctx.roundRect(8, 4, 240, 56, 12);
+        ctx.roundRect(8, 4, 304, 64, 14);
         ctx.fill();
 
-        ctx.beginPath();
-        ctx.moveTo(118, 60);
-        ctx.lineTo(128, 72);
-        ctx.lineTo(138, 60);
-        ctx.fillStyle = bgColor;
-        ctx.fill();
+        if (thought) {
+            ctx.fillStyle = bgColor;
+            ctx.beginPath();
+            ctx.ellipse(160, 76, 6, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(155, 86, 3.5, 2.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.moveTo(148, 68);
+            ctx.lineTo(160, 80);
+            ctx.lineTo(172, 68);
+            ctx.fillStyle = bgColor;
+            ctx.fill();
+        }
 
-        ctx.strokeStyle = 'rgba(100,140,255,0.3)';
+        ctx.strokeStyle = thought ? 'rgba(140,160,255,0.35)' : 'rgba(100,140,255,0.3)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.roundRect(8, 4, 240, 56, 12);
+        ctx.roundRect(8, 4, 304, 64, 14);
         ctx.stroke();
 
-        ctx.font = '16px system-ui, sans-serif';
+        ctx.font = '15px system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = color;
-        const truncated = text.length > 28 ? text.slice(0, 25) + '...' : text;
-        ctx.fillText(truncated, 128, 32);
+        const truncated = text.length > 40 ? text.slice(0, 37) + '...' : text;
+        ctx.fillText(truncated, 160, 36);
 
         const texture = new CanvasTexture(canvas);
         const mat = new SpriteMaterial({ map: texture, depthTest: false, transparent: true });
         const sprite = new Sprite(mat);
-        sprite.scale.set(1.8, 0.55, 1);
-        sprite.position.set(0, 1.7, 0);
+        sprite.scale.set(2.0, 0.6, 1);
+        sprite.position.set(0, 1.75, 0);
 
         if (targetGroup) {
             targetGroup.add(sprite);
@@ -172,7 +182,7 @@ export class SpeechBubble {
                 const fadeT = (bubble.age - bubble.fadeStart) / (bubble.duration - bubble.fadeStart);
                 bubble.sprite.material.opacity = 1.0 - fadeT;
             }
-            bubble.sprite.position.y = 1.7 + Math.sin(bubble.age * 2) * 0.02;
+            bubble.sprite.position.y = 1.75 + Math.sin(bubble.age * 2) * 0.02;
         });
     }
 

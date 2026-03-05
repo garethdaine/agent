@@ -89,8 +89,9 @@ export function createMonitor(options = {}) {
         mat(screenColor, { emissive: screenColor, emissiveIntensity: 0.3 }),
         0, centerY, centerZ + casingDepth / 2 + 0.002);
 
-    addCylinder(g, 0.03, 0.03, 0.16, mat(0x333333), 0, 0.83, centerZ);
-    addBox(g, 0.15, 0.01, 0.1, mat(0x333333), 0, 0.76, centerZ);
+    const standZ = centerZ - casingDepth / 2;
+    addCylinder(g, 0.03, 0.03, 0.16, mat(0x333333), 0, 0.83, standZ);
+    addBox(g, 0.15, 0.01, 0.1, mat(0x333333), 0, 0.76, standZ);
     return g;
 }
 

@@ -38,7 +38,7 @@ class ProcessRuntimeTurnJob implements ShouldQueue
         public ?string $placeholderMessageId = null,
     ) {
         $this->onQueue(config('runtime.queue', 'agent'));
-        $this->timeout = (int) config('runtime.cli.timeout_seconds', 300);
+        $this->timeout = (int) config('runtime.cli.timeout_seconds', 1800);
     }
 
     public function handle(
@@ -78,8 +78,10 @@ class ProcessRuntimeTurnJob implements ShouldQueue
             'approval_mode' => $approvalMode->value,
         ]);
 
+        $progressCallback = $this->buildProgressCallback($connectorManager);
+
         try {
-            $result = $orchestrator->executeTurn($session, $this->userMessage, $runnerTypeOverride, $systemPrompt, $approvalMode);
+            $result = $orchestrator->executeTurn($session, $this->userMessage, $runnerTypeOverride, $systemPrompt, $approvalMode, $progressCallback);
 
             Log::info('ProcessRuntimeTurnJob: Turn finished', [
                 'runtime_session_id' => $this->runtimeSessionId,
@@ -144,9 +146,15 @@ class ProcessRuntimeTurnJob implements ShouldQueue
 
         if ($result['status'] === 'failed') {
             $errorText = $result['error'] ?? 'The turn failed. Please try again.';
+            $partialText = isset($result['text']) && $result['text'] !== '' ? $result['text'] : null;
+
+            $content = $partialText !== null
+                ? "Error: {$errorText}\n\n**Partial progress before failure:**\n{$partialText}"
+                : "Error: {$errorText}";
+
             try {
                 $adapter->sendMessage($chatSession, new OutboundPayload(
-                    content: 'Error: '.$errorText,
+                    content: $content,
                     channelId: $chatSession->channel_id,
                     threadId: $chatSession->thread_id,
                 ));
@@ -158,6 +166,43 @@ class ProcessRuntimeTurnJob implements ShouldQueue
         if ($compactionService->isCompactionNeeded($chatSession)) {
             CompactionJob::dispatch($chatSession->id, null);
         }
+    }
+
+    private function buildProgressCallback(ConnectorManager $connectorManager): ?\Closure
+    {
+        if ($this->placeholderMessageId === null || $this->chatSessionId === null || $this->connectorAccountId === null) {
+            return null;
+        }
+
+        $account = ConnectorAccount::find($this->connectorAccountId);
+        if ($account === null) {
+            return null;
+        }
+
+        $adapter = $connectorManager->resolve($account->provider);
+        if ($adapter === null || ! $adapter->supportsMessageEditing()) {
+            return null;
+        }
+
+        $chatSession = $account->sessions()->whereKey($this->chatSessionId)->first();
+        if ($chatSession === null) {
+            return null;
+        }
+
+        $placeholderMessageId = $this->placeholderMessageId;
+
+        return function (array $state) use ($adapter, $chatSession, $placeholderMessageId) {
+            $elapsed = $state['elapsed_seconds'] ?? 0;
+            $minutes = intdiv($elapsed, 60);
+            $seconds = $elapsed % 60;
+            $timeStr = $minutes > 0 ? "{$minutes}m {$seconds}s" : "{$seconds}s";
+
+            try {
+                $adapter->editMessage($chatSession, $placeholderMessageId, "⏳ Working on it… ({$timeStr} elapsed)");
+            } catch (\Throwable $e) {
+                Log::debug('ProcessRuntimeTurnJob: progress update failed', ['error' => $e->getMessage()]);
+            }
+        };
     }
 
     private function sendErrorToChat(string $errorMessage, ConnectorManager $connectorManager): void

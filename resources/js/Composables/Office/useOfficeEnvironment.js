@@ -1,6 +1,7 @@
 import {
     Color, Vector3, MathUtils,
     BufferGeometry, Float32BufferAttribute, Points, PointsMaterial,
+    LineSegments, LineBasicMaterial,
     Mesh, PlaneGeometry, MeshStandardMaterial,
 } from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
@@ -145,26 +146,45 @@ export function useOfficeEnvironment(sceneApi, options = {}) {
         return { x, z };
     }
 
+    const RAIN_DROP_COUNT = 2000;
+    const rainDropLengths = new Float32Array(RAIN_DROP_COUNT);
+
     function createWeatherParticles(scene) {
-        const count = 2000;
-        const positions = new Float32Array(count * 3);
-        for (let i = 0; i < count * 3; i += 3) {
+        const rainVerts = new Float32Array(RAIN_DROP_COUNT * 2 * 3);
+        for (let i = 0; i < RAIN_DROP_COUNT; i++) {
             const { x, z } = randomOutdoorPosition();
-            positions[i] = x;
-            positions[i + 1] = Math.random() * 20;
-            positions[i + 2] = z;
+            const y = Math.random() * 20;
+            const len = 0.25 + Math.random() * 0.55;
+            rainDropLengths[i] = len;
+
+            const top = i * 6;
+            rainVerts[top] = x;
+            rainVerts[top + 1] = y;
+            rainVerts[top + 2] = z;
+            rainVerts[top + 3] = x;
+            rainVerts[top + 4] = y - len;
+            rainVerts[top + 5] = z;
         }
 
         const rainGeom = new BufferGeometry();
-        rainGeom.setAttribute('position', new Float32BufferAttribute(positions.slice(), 3));
-        rainPoints = new Points(rainGeom, new PointsMaterial({
-            color: 0xaaccff, size: 0.15, transparent: true, opacity: 0, sizeAttenuation: true,
+        rainGeom.setAttribute('position', new Float32BufferAttribute(rainVerts, 3));
+        rainPoints = new LineSegments(rainGeom, new LineBasicMaterial({
+            color: 0x8ab4f8, transparent: true, opacity: 0, linewidth: 1,
         }));
         rainPoints.name = 'envRain';
         scene.add(rainPoints);
 
+        const snowCount = 2000;
+        const snowPositions = new Float32Array(snowCount * 3);
+        for (let i = 0; i < snowCount * 3; i += 3) {
+            const { x, z } = randomOutdoorPosition();
+            snowPositions[i] = x;
+            snowPositions[i + 1] = Math.random() * 20;
+            snowPositions[i + 2] = z;
+        }
+
         const snowGeom = new BufferGeometry();
-        snowGeom.setAttribute('position', new Float32BufferAttribute(positions.slice(), 3));
+        snowGeom.setAttribute('position', new Float32BufferAttribute(snowPositions, 3));
         snowPoints = new Points(snowGeom, new PointsMaterial({
             color: 0xffffff, size: 0.3, transparent: true, opacity: 0, sizeAttenuation: true,
         }));
@@ -275,20 +295,34 @@ export function useOfficeEnvironment(sceneApi, options = {}) {
         const isSnow = weatherClass === 'snow';
 
         if (rainPoints) {
-            const targetOpacity = isRain ? 0.6 : 0;
+            const targetOpacity = isRain ? 0.5 : 0;
             rainPoints.material.opacity = MathUtils.lerp(rainPoints.material.opacity, targetOpacity, delta * 3);
             if (rainPoints.material.opacity > 0.01) {
                 const pos = rainPoints.geometry.attributes.position;
-                const speed = weatherClass === 'thunderstorm' ? 25 : 15;
-                for (let i = 0; i < pos.count; i++) {
-                    let y = pos.getY(i) - speed * delta;
-                    if (y < 0 || isInsideOffice(pos.getX(i), pos.getZ(i))) {
-                        y = 15 + Math.random() * 5;
+                const speed = weatherClass === 'thunderstorm' ? 28 : 18;
+                const windDrift = (weather.windSpeed ?? 5) * 0.02 * delta;
+
+                for (let i = 0; i < RAIN_DROP_COUNT; i++) {
+                    const topIdx = i * 2;
+                    const botIdx = topIdx + 1;
+                    const fall = speed * delta;
+
+                    let topY = pos.getY(topIdx) - fall;
+                    const len = rainDropLengths[i];
+
+                    if (topY - len < 0 || isInsideOffice(pos.getX(topIdx), pos.getZ(topIdx))) {
+                        topY = 16 + Math.random() * 6;
+                        const newLen = 0.25 + Math.random() * 0.55;
+                        rainDropLengths[i] = newLen;
                         const { x, z } = randomOutdoorPosition();
-                        pos.setX(i, x);
-                        pos.setZ(i, z);
+                        pos.setXYZ(topIdx, x, topY, z);
+                        pos.setXYZ(botIdx, x, topY - newLen, z);
+                    } else {
+                        const topX = pos.getX(topIdx) + windDrift;
+                        const topZ = pos.getZ(topIdx);
+                        pos.setXYZ(topIdx, topX, topY, topZ);
+                        pos.setXYZ(botIdx, topX, topY - len, topZ);
                     }
-                    pos.setY(i, y);
                 }
                 pos.needsUpdate = true;
             }

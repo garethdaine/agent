@@ -153,11 +153,9 @@ class OrgRitualController extends Controller
 
         $this->authorize('run', $template);
 
-        // Create a run immediately (in queued state)
         $run = $this->runService->createRun($template);
 
-        // Dispatch the execution job
-        OrgExecuteRitualJob::dispatch($template)->onQueue('org-rituals');
+        OrgExecuteRitualJob::dispatch($template, $run)->onQueue('org-rituals');
 
         return response()->json(['data' => $run], 201);
     }
