@@ -21,7 +21,7 @@ setting_keys:
 feature_flags:
   - docs_center_enabled
 locale: en
-reviewed_at: 2026-03-04
+reviewed_at: 2026-03-05
 ---
 
 ## Settings
@@ -121,6 +121,16 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | POST | `agent/api/v1/connectors/slack/webhook` | `agent.api.connectors.slack.webhook` | `WebhookController@handleSlack` | - |
 | POST | `agent/api/v1/connectors/telegram/webhook/{accountKey}` | `agent.api.connectors.telegram.webhook` | `WebhookController@handleTelegram` | - |
 | GET,POST | `agent/api/v1/connectors/whatsapp/webhook` | `agent.api.connectors.whatsapp.webhook` | `WebhookController@handleWhatsApp` | - |
+
+### Credentials
+
+**3 endpoint(s)** registered under `/agent/api/v1/credentials`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/credentials` | `-` | `CredentialsController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/credentials` | `-` | `CredentialsController@store` | `auth:sanctum` |
+| DELETE | `agent/api/v1/credentials` | `-` | `CredentialsController@destroy` | `auth:sanctum` |
 
 ### Dashboard
 

@@ -21,7 +21,7 @@ setting_keys:
 feature_flags:
   - docs_center_enabled
 locale: en
-reviewed_at: 2026-03-04
+reviewed_at: 2026-03-05
 ---
 
 ## Settings
@@ -83,6 +83,9 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/connectors/slack/webhook` | `agent.api.connectors.slack.webhook` | `WebhookController@handleSlack` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
 | POST | `agent/api/v1/connectors/telegram/webhook/{accountKey}` | `agent.api.connectors.telegram.webhook` | `WebhookController@handleTelegram` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
 | GET,POST | `agent/api/v1/connectors/whatsapp/webhook` | `agent.api.connectors.whatsapp.webhook` | `WebhookController@handleWhatsApp` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
+| GET | `agent/api/v1/credentials` | `-` | `CredentialsController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/credentials` | `-` | `CredentialsController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| DELETE | `agent/api/v1/credentials` | `-` | `CredentialsController@destroy` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/dashboard/metrics` | `-` | `AgentRunController@dashboardMetrics` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/delegation/delegatee-profiles` | `-` | `DelegateeProfileController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, delegation` |
 | POST | `agent/api/v1/delegation/delegatee-profiles` | `-` | `DelegateeProfileController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, delegation, throttle:agent-mutations` |
