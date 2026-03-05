@@ -6,13 +6,13 @@ namespace Tests\Feature\Reliability;
 
 use App\Enums\GateTransitionSource;
 use App\Services\Reliability\GateTransitionRecorder;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class GateTransitionAuditTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     public function test_gate_transition_source_is_persisted_for_auditing(): void
     {

@@ -13,7 +13,7 @@ import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Input from '@/Components/ui/Input.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
-import { Plus, Play, Pencil, Trash2, RotateCcw, ToggleLeft, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { Briefcase, Plus, Play, Pencil, Trash2, RotateCcw, ToggleLeft, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import axios from 'axios';
 import { onMounted, reactive, ref } from 'vue';
 
@@ -115,13 +115,18 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Agent Jobs</h2>
-                    <HelpHint
-                        ui-key="jobs.overview"
-                        short-text="Review scheduling, runner selection, and safe execution controls."
-                        learn-more-href="/docs/overview"
-                    />
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Briefcase class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Agent Jobs</h2>
+                        <HelpHint
+                            ui-key="jobs.overview"
+                            short-text="Review scheduling, runner selection, and safe execution controls."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
                 <Link :href="route('agent.jobs.create')">
                     <Button>
@@ -133,7 +138,7 @@ onMounted(load);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px] space-y-4">
+            <div class="space-y-4">
                 <Card class="p-4">
                     <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
                         <Input v-model="filters.q" placeholder="Search name / description" @change="load" />

@@ -14,6 +14,11 @@ const props = defineProps({
         type: Array,
         default: () => ['py-1', 'bg-card'],
     },
+    position: {
+        type: String,
+        default: 'bottom',
+        validator: (v) => ['bottom', 'top'].includes(v),
+    },
 });
 
 let open = ref(false);
@@ -66,8 +71,8 @@ const alignmentClasses = computed(() => {
         >
             <div
                 v-if="open"
-                class="absolute z-50 mt-2 rounded-lg shadow-lg border border-border"
-                :class="[widthClass, alignmentClasses]"
+                class="absolute z-50 rounded-lg shadow-lg border border-border"
+                :class="[widthClass, alignmentClasses, position === 'top' ? 'bottom-full mb-2' : 'mt-2']"
                 @click="open = false"
             >
                 <div class="rounded-lg" :class="contentClasses">

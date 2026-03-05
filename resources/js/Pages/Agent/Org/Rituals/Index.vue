@@ -14,7 +14,8 @@ import TableCell from '@/Components/ui/TableCell.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
-import { Calendar, Plus, ArrowLeft, Play, Pause, RefreshCw, Archive, ArchiveRestore, Eye, AlertTriangle } from 'lucide-vue-next';
+import { Calendar, Plus, ArrowLeft, Play, Pause, RefreshCw, Archive, ArchiveRestore, Eye, AlertTriangle, Bot } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 import { confirmDialog } from '@/Support/confirmDialog';
 
 const rituals = ref([]);
@@ -111,7 +112,17 @@ onMounted(loadRituals);
                             <ArrowLeft class="h-4 w-4" />
                         </Button>
                     </Link>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Rituals</h2>
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Bot class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Rituals</h2>
+                        <HelpHint
+                            ui-key="org.rituals"
+                            short-text="Manage recurring agent rituals and schedules."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <Button variant="outline" @click="includeArchived = !includeArchived; loadRituals()">
@@ -128,7 +139,7 @@ onMounted(loadRituals);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px] space-y-4">
+            <div class="space-y-4">
                 <p v-if="error && rituals.length > 0" class="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {{ error }}
                 </p>

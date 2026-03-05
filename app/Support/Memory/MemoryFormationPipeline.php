@@ -8,6 +8,7 @@ use App\Models\AgentJobRun;
 use App\Models\MemoryConversationLog;
 use App\Models\MemoryEmbedding;
 use App\Models\MemoryFormationFailure;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Memory\Contracts\EmbeddingProvider;
 use App\Support\Memory\Contracts\ExtractionProvider;
 use Illuminate\Support\Facades\Log;
@@ -90,7 +91,7 @@ class MemoryFormationPipeline
         }
 
         // Steps 3-7 only run in API mode
-        if (! config('memory.api_enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_API_ENABLED)) {
             return MemoryFormationResult::success(
                 conversationLogsCreated: $conversationLogsCreated
             );

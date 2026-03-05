@@ -12,6 +12,7 @@ import Skeleton from '@/Components/ui/Skeleton.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, Brain, CheckCircle, XCircle, AlertCircle, Loader2, Wifi, WifiOff } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { onMounted, onUnmounted, reactive, ref, computed } from 'vue';
 
@@ -264,7 +265,14 @@ onUnmounted(() => {
                     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                         <Brain class="h-5 w-5 text-primary" />
                     </div>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Memory Settings</h2>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Memory Settings</h2>
+                        <HelpHint
+                            ui-key="memory.settings"
+                            short-text="Configure memory provider and retention settings."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
                 <Link :href="route('tools.memory.index')">
                     <Button variant="outline" size="sm">

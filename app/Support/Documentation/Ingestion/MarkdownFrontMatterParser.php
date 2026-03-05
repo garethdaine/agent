@@ -47,9 +47,30 @@ class MarkdownFrontMatterParser
         $frontMatter = $parsed;
         $this->schema->validate($frontMatter, $sourcePath);
 
+        $body = ltrim((string) $matches['body']);
+        $body = $this->stripLeadingTitleBlock($body, (string) ($frontMatter['title'] ?? ''));
+
         return [
             'front_matter' => $frontMatter,
-            'body' => ltrim((string) $matches['body']),
+            'body' => $body,
         ];
+    }
+
+    /**
+     * Strip the leading `# Title` heading and the description paragraph
+     * that immediately follows it when they duplicate the frontmatter
+     * title/summary already rendered by the UI chrome.
+     */
+    private function stripLeadingTitleBlock(string $body, string $frontMatterTitle): string
+    {
+        if ($frontMatterTitle === '' || $body === '') {
+            return $body;
+        }
+
+        $pattern = '/\A#\s+'.preg_quote($frontMatterTitle, '/').'\s*\R+/i';
+
+        $stripped = preg_replace($pattern, '', $body, 1);
+
+        return is_string($stripped) ? ltrim($stripped) : $body;
     }
 }

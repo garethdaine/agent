@@ -69,7 +69,7 @@ The Jobs area is the primary control plane for scheduled automation. It covers j
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -79,11 +79,55 @@ The block below is generated from code and front-matter metadata.
 | `agent.jobs.edit` | ok | `agent/jobs/{id}/edit` | `GET` |
 | `agent.jobs.index` | ok | `agent/jobs` | `GET` |
 
-### Referenced Settings Keys
+### API Endpoints
 
-- `jobs.default_page_size`
+The following API endpoints are available for this feature:
 
-### Referenced Feature Flags
+- **`GET agent/api/v1/jobs`**
+  - Controller: `AgentJobController@index`
+  - Auth: `auth:sanctum`
+- **`POST agent/api/v1/jobs`**
+  - Controller: `AgentJobController@store`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`GET agent/api/v1/jobs/by-workflow/{workflowKey}`**
+  - Controller: `AgentJobController@showByWorkflowKey`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/jobs/{id}`**
+  - Controller: `AgentJobController@show`
+  - Auth: `auth:sanctum`
+- **`PUT agent/api/v1/jobs/{id}`**
+  - Controller: `AgentJobController@update`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`DELETE agent/api/v1/jobs/{id}`**
+  - Controller: `AgentJobController@destroy`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`POST agent/api/v1/jobs/{id}/restore`**
+  - Controller: `AgentJobController@restore`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`POST agent/api/v1/jobs/{id}/run-now`**
+  - Controller: `AgentJobController@runNow`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`GET agent/api/v1/jobs/{id}/runs`**
+  - Controller: `AgentJobController@runs`
+  - Auth: `auth:sanctum`
+- **`POST agent/api/v1/jobs/{id}/toggle`**
+  - Controller: `AgentJobController@toggle`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+
+### Configuration Reference
+
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `jobs.default_page_size` | _not set_ | _default_ |
+
+### Feature Flags
 
 - `docs_center_enabled`
+
 <!-- AUTO-GENERATED:END -->

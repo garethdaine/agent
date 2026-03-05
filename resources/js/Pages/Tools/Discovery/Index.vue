@@ -14,7 +14,7 @@ import TableRow from '@/Components/ui/TableRow.vue';
 import TableHead from '@/Components/ui/TableHead.vue';
 import TableCell from '@/Components/ui/TableCell.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { Plus, Settings, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { Plus, Search, Settings, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import axios from 'axios';
 import { onMounted, reactive, ref } from 'vue';
 import { confirmDialog } from '@/Support/confirmDialog';
@@ -135,13 +135,18 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2">
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Requirements Discovery</h2>
-                    <HelpHint
-                        ui-key="discovery.sessions"
-                        short-text="Find guidance for setup, interview flow, planning, and build handoff."
-                        learn-more-href="/docs/overview"
-                    />
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Search class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Requirements Discovery</h2>
+                        <HelpHint
+                            ui-key="discovery.sessions"
+                            short-text="Find guidance for setup, interview flow, planning, and build handoff."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('tools.discovery.settings')">
@@ -161,7 +166,7 @@ onMounted(load);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px] space-y-4">
+            <div class="space-y-4">
                 <Card>
                     <CardContent class="pt-6">
                         <div class="grid grid-cols-1 gap-3 md:grid-cols-5">

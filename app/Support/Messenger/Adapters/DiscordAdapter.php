@@ -9,6 +9,7 @@ use App\DTOs\Messenger\NormalizedMessage;
 use App\DTOs\Messenger\OutboundPayload;
 use App\DTOs\Messenger\ProviderResponse;
 use App\DTOs\Messenger\ReplayProtectionStrategy;
+use App\DTOs\Messenger\StreamingConfig;
 use App\DTOs\Messenger\ThreadingStrategy;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
@@ -161,6 +162,9 @@ class DiscordAdapter extends AbstractConnectorAdapter
             return ProviderResponse::failure('Missing bot token');
         }
 
+        // Normalize content to handle escaped newlines and formatting issues
+        $normalizedContent = $this->normalizeContent($payload->content);
+
         // If this outbound is a response to a deferred slash interaction,
         // edit the original interaction response so Discord clears "thinking…".
         $interactionContext = $this->pullInteractionContextForSession($session, $account);
@@ -174,7 +178,7 @@ class DiscordAdapter extends AbstractConnectorAdapter
                         $interactionContext['application_id'],
                         $interactionContext['token']
                     ),
-                    ['content' => $payload->content]
+                    ['content' => $normalizedContent]
                 );
 
             if ($originalResponse->successful()) {
@@ -203,7 +207,7 @@ class DiscordAdapter extends AbstractConnectorAdapter
         $httpClient = new MessengerHttpClient($account);
 
         $data = [
-            'content' => $payload->content,
+            'content' => $normalizedContent,
         ];
 
         // Add message reference for replies (optional threading)
@@ -259,6 +263,60 @@ class DiscordAdapter extends AbstractConnectorAdapter
         return ProviderResponse::success($messageId, $responseData);
     }
 
+    public function editMessage(ChatSession $session, string $providerMessageId, string $content): ProviderResponse
+    {
+        $account = $session->connectorAccount;
+
+        if (! $account) {
+            return ProviderResponse::failure('No connector account associated with session');
+        }
+
+        $botToken = $this->getBotToken($account);
+
+        if (! $botToken) {
+            return ProviderResponse::failure('Missing bot token');
+        }
+
+        $targetChannelId = $session->thread_id ?? $session->channel_id;
+
+        // Normalize content to handle escaped newlines and formatting issues
+        $normalizedContent = $this->normalizeContent($content);
+
+        $editResponse = Http::withHeaders([
+            'Authorization' => 'Bot '.$botToken,
+            'Content-Type' => 'application/json',
+        ])->patch(
+            self::API_BASE_URL.'/channels/'.$targetChannelId.'/messages/'.$providerMessageId,
+            ['content' => $normalizedContent]
+        );
+
+        if (! $editResponse->successful()) {
+            $this->logError('Failed to edit Discord message for streaming', [
+                'account_id' => $account->id,
+                'channel_id' => $targetChannelId,
+                'message_id' => $providerMessageId,
+                'status' => $editResponse->status(),
+            ]);
+
+            return ProviderResponse::failure(
+                $editResponse->json()['message'] ?? 'Failed to edit message',
+                $editResponse->json()
+            );
+        }
+
+        return ProviderResponse::success($providerMessageId, $editResponse->json());
+    }
+
+    public function supportsMessageEditing(): bool
+    {
+        return true;
+    }
+
+    public function getStreamingConfig(): StreamingConfig
+    {
+        return StreamingConfig::discord();
+    }
+
     /**
      * Append content to the last bot message in a DM (pseudo-threading).
      *
@@ -296,8 +354,9 @@ class DiscordAdapter extends AbstractConnectorAdapter
             $existingContent = $existingResponse->json()['content'] ?? '';
         }
 
-        // Append new content with separator
-        $newContent = $existingContent."\n\n---\n\n".$content;
+        // Normalize and append new content with separator
+        $normalizedContent = $this->normalizeContent($content);
+        $newContent = $existingContent."\n\n---\n\n".$normalizedContent;
 
         // Edit the message
         $editResponse = Http::withHeaders([
@@ -370,6 +429,51 @@ class DiscordAdapter extends AbstractConnectorAdapter
         ];
     }
 
+    public function supportsReactions(): bool
+    {
+        return true;
+    }
+
+    public function addReaction(ChatSession $session, string $messageId, string $emoji): ProviderResponse
+    {
+        $account = $session->connectorAccount;
+
+        if (! $account) {
+            return ProviderResponse::failure('No connector account associated with session');
+        }
+
+        $botToken = $this->getBotToken($account);
+
+        if (! $botToken) {
+            return ProviderResponse::failure('Missing bot token');
+        }
+
+        $targetChannelId = $session->thread_id ?? $session->channel_id;
+        $encodedEmoji = rawurlencode($emoji);
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bot '.$botToken,
+        ])->put(
+            self::API_BASE_URL.'/channels/'.$targetChannelId.'/messages/'.$messageId.'/reactions/'.$encodedEmoji.'/@me'
+        );
+
+        if (! $response->successful()) {
+            $this->logDebug('Failed to add Discord reaction', [
+                'channel_id' => $targetChannelId,
+                'message_id' => $messageId,
+                'emoji' => $emoji,
+                'status' => $response->status(),
+            ]);
+
+            return ProviderResponse::failure(
+                $response->json()['message'] ?? 'Failed to add reaction',
+                $response->json()
+            );
+        }
+
+        return ProviderResponse::success($messageId);
+    }
+
     public function supportsThreading(): bool
     {
         return true;
@@ -414,6 +518,8 @@ class DiscordAdapter extends AbstractConnectorAdapter
             ]);
         }
 
+        $attachments = $this->extractResolvedAttachments($data);
+
         return new NormalizedMessage(
             providerUserId: $providerUserId,
             channelId: $channelId,
@@ -422,7 +528,7 @@ class DiscordAdapter extends AbstractConnectorAdapter
             providerMessageId: $data['id'] ?? null,
             providerEventId: $data['id'] ?? null,
             providerTimestamp: null,
-            attachments: [],
+            attachments: $attachments,
         );
     }
 
@@ -514,86 +620,62 @@ class DiscordAdapter extends AbstractConnectorAdapter
         return '';
     }
 
+    private const SLASH_COMMAND_NAMES = [
+        'jobs', 'runs', 'status', 'sessions', 'mode', 'approve', 'deny', 'browser', 'ask', 'context', 'new',
+        'help', 'commands', 'whoami', 'compact',
+    ];
+
     /**
-     * Map known Discord slash commands to parser-friendly text commands.
+     * Map Discord slash command interaction to /command subcommand args format
+     * consumed by CommandRouter.
      *
      * @param  array<int, mixed>  $options
      */
     private function mapKnownSlashCommand(string $commandName, array $options): ?string
     {
-        if ($commandName === 'agent') {
-            $legacyCommand = $this->extractOptionValue($options, 'command')
-                ?? $this->extractOptionValue($options, 'text')
-                ?? $this->extractOptionValue($options, 'query');
-
-            if ($legacyCommand !== null && trim($legacyCommand) !== '') {
-                return trim($legacyCommand);
-            }
+        if (! in_array($commandName, self::SLASH_COMMAND_NAMES, true)) {
+            return null;
         }
 
         $subcommand = $this->extractFirstSubcommand($options);
+
         if ($subcommand !== null) {
-            $subcommandName = strtolower(trim($subcommand['name']));
-            $subcommandOptions = $subcommand['options'];
+            $subName = strtolower(trim($subcommand['name']));
+            $subOpts = $subcommand['options'];
 
-            if ($commandName === 'jobs') {
-                if ($subcommandName === 'list') {
-                    return 'list my jobs';
-                }
-
-                if ($subcommandName === 'run') {
-                    $jobId = $this->extractOptionValue($subcommandOptions, 'job_id');
-
-                    return $jobId !== null
-                        ? sprintf('run job %s now', $jobId)
-                        : null;
-                }
-            }
-
-            if ($commandName === 'runs') {
-                if ($subcommandName === 'active') {
-                    return 'show active runs';
-                }
-
-                if ($subcommandName === 'stop') {
-                    $runId = $this->extractOptionValue($subcommandOptions, 'run_id');
-
-                    return $runId !== null
-                        ? sprintf('stop run %s', $runId)
-                        : null;
-                }
-            }
+            return '/'.$this->buildSlashCommandLine($commandName, $subName, $subOpts);
         }
 
-        if ($commandName === 'jobs') {
-            $legacyAction = strtolower(trim((string) ($this->extractOptionValue($options, 'command')
-                ?? $this->extractOptionValue($options, 'action')
-                ?? '')));
+        return '/'.$this->buildSlashCommandLine($commandName, '', $options);
+    }
 
-            if (in_array($legacyAction, ['list', 'ls', 'show'], true)) {
-                return 'list my jobs';
-            }
+    /**
+     * Build "command [subcommand] arg1 arg2 ..." for CommandRouter.
+     *
+     * @param  array<int, mixed>  $options
+     */
+    private function buildSlashCommandLine(string $commandName, string $subcommandName, array $options): string
+    {
+        $parts = [$commandName];
+        if ($subcommandName !== '') {
+            $parts[] = $subcommandName;
         }
 
-        if ($commandName === 'runs') {
-            $legacyAction = strtolower(trim((string) ($this->extractOptionValue($options, 'command')
-                ?? $this->extractOptionValue($options, 'action')
-                ?? '')));
-
-            if (in_array($legacyAction, ['active', 'list', 'show'], true)) {
-                return 'show active runs';
+        foreach ($options as $option) {
+            if (! is_array($option)) {
+                continue;
             }
-
-            if ($legacyAction === 'stop') {
-                $runId = $this->extractOptionValue($options, 'run_id');
-
-                return $runId !== null
-                    ? sprintf('stop run %s', $runId)
-                    : null;
+            if (! array_key_exists('value', $option)) {
+                continue;
             }
+            $value = $option['value'];
+            if (! is_scalar($value)) {
+                continue;
+            }
+            $parts[] = (string) $value;
         }
 
-        return null;
+        return implode(' ', $parts);
     }
 
     /**
@@ -703,6 +785,43 @@ class DiscordAdapter extends AbstractConnectorAdapter
         foreach ($attachments as $attachment) {
             $normalized[] = new NormalizedAttachment(
                 providerFileId: $attachment['id'] ?? '',
+                filename: $attachment['filename'] ?? 'unknown',
+                mimeType: $attachment['content_type'] ?? 'application/octet-stream',
+                sizeBytes: $attachment['size'] ?? 0,
+                downloadUrl: $attachment['url'] ?? null,
+            );
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Extract attachments from Discord interaction resolved data.
+     *
+     * Discord interactions store file attachments at data.resolved.attachments
+     * as a keyed map (attachment_id => attachment_object), and also reference
+     * them via option values in data.data.options.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<int, NormalizedAttachment>
+     */
+    private function extractResolvedAttachments(array $data): array
+    {
+        $resolved = $data['data']['resolved']['attachments'] ?? null;
+
+        if (! is_array($resolved) || $resolved === []) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($resolved as $id => $attachment) {
+            if (! is_array($attachment)) {
+                continue;
+            }
+
+            $normalized[] = new NormalizedAttachment(
+                providerFileId: (string) ($attachment['id'] ?? $id),
                 filename: $attachment['filename'] ?? 'unknown',
                 mimeType: $attachment['content_type'] ?? 'application/octet-stream',
                 sizeBytes: $attachment['size'] ?? 0,

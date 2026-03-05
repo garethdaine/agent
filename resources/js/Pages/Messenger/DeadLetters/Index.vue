@@ -14,10 +14,11 @@ import TableRow from '@/Components/ui/TableRow.vue';
 import TableHead from '@/Components/ui/TableHead.vue';
 import TableCell from '@/Components/ui/TableCell.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { RefreshCw, RotateCcw, Trash2, Eye, CheckSquare, Square } from 'lucide-vue-next';
+import { RefreshCw, RotateCcw, Trash2, Eye, CheckSquare, Square, MailWarning } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, ref } from 'vue';
 import { confirmDialog } from '@/Support/confirmDialog';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
     deadLetters: Object,
@@ -180,11 +181,18 @@ const refresh = () => {
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Failed Messages</h2>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Messages that failed processing and can be manually retried
-                    </p>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <MailWarning class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Failed Messages</h2>
+                        <HelpHint
+                            ui-key="dead-letters.overview"
+                            short-text="Review failed messages and retry or discard them."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
                 <Button variant="outline" size="sm" @click="refresh">
                     <RefreshCw class="h-4 w-4 mr-1" />

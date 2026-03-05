@@ -26,7 +26,8 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { ArrowLeft, Pause, Pencil, Play, RefreshCw, RotateCcw, Settings, Trash2 } from 'lucide-vue-next';
+import { ArrowLeft, Pause, Pencil, Play, RefreshCw, RotateCcw, Search, Settings, Trash2 } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 import { confirmDialog } from '@/Support/confirmDialog';
 
 const props = defineProps({
@@ -1394,9 +1395,21 @@ onBeforeUnmount(() => {
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">{{ session?.name || `Session #${sessionId}` }}</h2>
-                    <p class="mt-1 text-xs text-muted-foreground">{{ session?.project_directory || 'Loading...' }}</p>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Search class="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-xl font-semibold leading-tight text-foreground">{{ session?.name || `Session #${sessionId}` }}</h2>
+                            <HelpHint
+                                ui-key="discovery.wizard"
+                                short-text="Guide the AI-led interrogation and generate plans."
+                                learn-more-href="/docs/overview"
+                            />
+                        </div>
+                        <p class="mt-1 text-xs text-muted-foreground">{{ session?.project_directory || 'Loading...' }}</p>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <SessionStatusBadge

@@ -37,7 +37,7 @@ class OperatorRouteReachabilityTest extends TestCase
 
     public function test_authenticated_user_can_reach_operator_routes_with_expected_components(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
 
         $expectedComponentsByRoute = [
             '/agent/deployments' => 'Agent/Deployments/Index',

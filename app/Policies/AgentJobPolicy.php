@@ -14,7 +14,17 @@ class AgentJobPolicy
 
     public function view(User $user, AgentJob $agentJob): bool
     {
-        return $agentJob->user_id === $user->id;
+        if ($agentJob->user_id === $user->id) {
+            return true;
+        }
+
+        $token = request()->user()?->currentAccessToken();
+        if ($token && $token->team_id !== null) {
+            return (int) $agentJob->team_id === (int) $token->team_id
+                && $user->belongsToTeam($agentJob->team);
+        }
+
+        return $agentJob->team_id !== null && $user->belongsToTeam($agentJob->team);
     }
 
     public function create(User $user): bool
@@ -24,21 +34,21 @@ class AgentJobPolicy
 
     public function update(User $user, AgentJob $agentJob): bool
     {
-        return $agentJob->user_id === $user->id;
+        return $this->view($user, $agentJob);
     }
 
     public function delete(User $user, AgentJob $agentJob): bool
     {
-        return $agentJob->user_id === $user->id;
+        return $this->view($user, $agentJob);
     }
 
     public function restore(User $user, AgentJob $agentJob): bool
     {
-        return $agentJob->user_id === $user->id;
+        return $this->view($user, $agentJob);
     }
 
     public function forceDelete(User $user, AgentJob $agentJob): bool
     {
-        return $agentJob->user_id === $user->id;
+        return $this->view($user, $agentJob);
     }
 }

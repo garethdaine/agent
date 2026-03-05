@@ -21,6 +21,8 @@ return new class extends Migration
             $table->json('env_json')->nullable();
             $table->json('config_json')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->decimal('trust_score', 3, 2)->nullable();
+            $table->timestamp('trust_updated_at')->nullable();
             $table->softDeletes();
             $table->timestamps();
 

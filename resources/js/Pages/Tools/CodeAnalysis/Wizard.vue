@@ -8,6 +8,8 @@ import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { FileCode } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { mergeEventsInSequence, nextEventCursor } from './eventStream';
@@ -408,12 +410,24 @@ onUnmounted(() => {
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Code Analysis Wizard</h2>
-                    <p class="text-xs text-muted-foreground">
-                        Session #{{ sessionId }}
-                        <span v-if="viewer.is_admin_override"> · admin override</span>
-                    </p>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <FileCode class="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-xl font-semibold leading-tight text-foreground">Code Analysis Wizard</h2>
+                            <HelpHint
+                                ui-key="code-analysis.wizard"
+                                short-text="Step through code analysis with AI assistance."
+                                learn-more-href="/docs/overview"
+                            />
+                        </div>
+                        <p class="text-xs text-muted-foreground">
+                            Session #{{ sessionId }}
+                            <span v-if="viewer.is_admin_override"> · admin override</span>
+                        </p>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('tools.code-analysis.settings', sessionId)">
@@ -427,7 +441,7 @@ onUnmounted(() => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px] space-y-4">
+            <div class="space-y-4">
                 <div v-if="!websocketActive" class="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
                     Realtime updates are unavailable. Connect Reverb/Echo to receive live task updates.
                 </div>

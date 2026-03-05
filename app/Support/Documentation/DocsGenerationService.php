@@ -162,9 +162,6 @@ class DocsGenerationService
             'locale: en',
             'reviewed_at: '.$reviewedAt,
             '---',
-            '# Agent API v1 Route Inventory',
-            '',
-            'This inventory is generated from `php artisan route:list --path=agent/api/v1 --json` and tracks the current API surface from code.',
             '',
             '## Settings',
             '',
@@ -256,9 +253,6 @@ class DocsGenerationService
             'locale: en',
             'reviewed_at: '.$reviewedAt,
             '---',
-            '# Agent API v1 Surface Reference',
-            '',
-            'This guide is generated from live route registration and summarizes the API by operational domain.',
             '',
             '## Settings',
             '',
@@ -286,18 +280,27 @@ class DocsGenerationService
             $label = $segment === 'root' ? 'Root' : Str::of($segment)->replace('-', ' ')->title()->toString();
             $lines[] = '### '.$label;
             $lines[] = '';
-            $lines[] = sprintf('Registered endpoints: %d', count($routes));
+            $lines[] = sprintf('**%d endpoint(s)** registered under `/agent/api/v1/%s`.', count($routes), $segment);
             $lines[] = '';
-            $lines[] = '| Method | URI | Route Name |';
-            $lines[] = '| --- | --- | --- |';
 
             usort($routes, fn (IlluminateRoute $left, IlluminateRoute $right): int => $left->uri() <=> $right->uri());
+
+            $lines[] = '| Method | URI | Route Name | Controller | Auth |';
+            $lines[] = '| --- | --- | --- | --- | --- |';
+
             foreach ($routes as $route) {
+                $middleware = collect($route->gatherMiddleware())
+                    ->map(fn ($item): string => (string) $item)
+                    ->filter(fn (string $m): bool => str_contains($m, 'auth') || str_contains($m, 'sanctum') || str_contains($m, 'verify'))
+                    ->implode(', ');
+
                 $lines[] = sprintf(
-                    '| %s | `%s` | `%s` |',
+                    '| %s | `%s` | `%s` | `%s` | %s |',
                     $this->methodString($route),
                     $route->uri(),
-                    $route->getName() ?: '-'
+                    $route->getName() ?: '-',
+                    $this->controllerString($route),
+                    $middleware !== '' ? '`'.str_replace('|', '\\|', $middleware).'`' : '-'
                 );
             }
 
@@ -370,9 +373,6 @@ class DocsGenerationService
             'locale: en',
             'reviewed_at: '.$reviewedAt,
             '---',
-            '# Interface Surface Coverage',
-            '',
-            'This page is generated from `config/docs_coverage.php`, route registration, and docs metadata.',
             '',
             '## Settings',
             '',
@@ -444,13 +444,34 @@ class DocsGenerationService
             self::AUTOGEN_START,
             '## Runtime Contract Snapshot',
             '',
-            'The block below is generated from code and front-matter metadata.',
+            '> This section is auto-generated from code and front-matter metadata. Do not edit manually.',
             '',
-            '### Verified Route Bindings',
-            '',
-            '| Route Name | Status | URI | Methods |',
-            '| --- | --- | --- | --- |',
         ];
+
+        $entrySection = (string) ($entry['section'] ?? '');
+
+        $this->appendRouteBindings($lines, $routeNames, $routesByName);
+        $this->appendApiEndpointDetails($lines, $routeNames, $routesByName, $entrySection);
+        $this->appendConfigurationReference($lines, $settingKeys);
+        $this->appendFeatureFlagReference($lines, $featureFlags);
+
+        $lines[] = self::AUTOGEN_END;
+        $lines[] = '';
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * @param  array<int, string>  $lines
+     * @param  array<int, string>  $routeNames
+     * @param  array<string, IlluminateRoute>  $routesByName
+     */
+    private function appendRouteBindings(array &$lines, array $routeNames, array $routesByName): void
+    {
+        $lines[] = '### Verified Route Bindings';
+        $lines[] = '';
+        $lines[] = '| Route Name | Status | URI | Methods |';
+        $lines[] = '| --- | --- | --- | --- |';
 
         if ($routeNames === []) {
             $lines[] = '| - | - | - | - |';
@@ -473,31 +494,153 @@ class DocsGenerationService
         }
 
         $lines[] = '';
-        $lines[] = '### Referenced Settings Keys';
-        $lines[] = '';
-        if ($settingKeys === []) {
-            $lines[] = '- None';
-        } else {
-            foreach ($settingKeys as $settingKey) {
-                $lines[] = sprintf('- `%s`', $settingKey);
+    }
+
+    /**
+     * @param  array<int, string>  $lines
+     * @param  array<int, string>  $routeNames
+     * @param  array<string, IlluminateRoute>  $routesByName
+     */
+    private function appendApiEndpointDetails(array &$lines, array $routeNames, array $routesByName, string $entrySection = ''): void
+    {
+        $apiRoutes = collect(Route::getRoutes()->getRoutes())
+            ->filter(fn (IlluminateRoute $route): bool => str_starts_with($route->uri(), 'agent/api/v1'))
+            ->values();
+
+        $relatedSegments = collect($routeNames)
+            ->map(function (string $name) use ($routesByName): ?string {
+                if (! isset($routesByName[$name])) {
+                    return null;
+                }
+
+                $uri = $routesByName[$name]->uri();
+                $segment = Str::of($uri)->after('agent/api/v1/')->before('/')->toString();
+
+                return $segment !== '' ? $segment : null;
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        $sectionUri = Str::of((string) ($routeNames[0] ?? ''))
+            ->replace('.', '/')
+            ->before('/')
+            ->toString();
+
+        $sectionSegment = strtolower(trim($entrySection));
+
+        $relatedApiRoutes = $apiRoutes->filter(function (IlluminateRoute $route) use ($relatedSegments, $sectionUri, $sectionSegment): bool {
+            $uri = $route->uri();
+            foreach ($relatedSegments as $segment) {
+                if (str_contains($uri, "agent/api/v1/{$segment}")) {
+                    return true;
+                }
             }
+
+            if ($sectionUri !== '' && str_contains($uri, "agent/api/v1/{$sectionUri}")) {
+                return true;
+            }
+
+            if ($sectionSegment !== '' && str_contains($uri, "agent/api/v1/{$sectionSegment}")) {
+                return true;
+            }
+
+            return false;
+        });
+
+        if ($relatedApiRoutes->isEmpty()) {
+            return;
+        }
+
+        $lines[] = '### API Endpoints';
+        $lines[] = '';
+        $lines[] = 'The following API endpoints are available for this feature:';
+        $lines[] = '';
+
+        $relatedApiRoutes
+            ->sortBy(fn (IlluminateRoute $route): string => $route->uri())
+            ->each(function (IlluminateRoute $route) use (&$lines): void {
+                $methods = $this->methodString($route);
+                $uri = $route->uri();
+                $controller = $this->controllerString($route);
+                $middleware = collect($route->gatherMiddleware())
+                    ->map(fn ($item): string => (string) $item)
+                    ->filter(fn (string $item): bool => $item !== '')
+                    ->values()
+                    ->all();
+
+                $lines[] = sprintf('- **`%s %s`**', $methods, $uri);
+
+                if ($controller !== 'Closure' && $controller !== '-') {
+                    $lines[] = sprintf('  - Controller: `%s`', $controller);
+                }
+
+                $authMiddleware = collect($middleware)->filter(fn (string $m): bool => str_contains($m, 'auth') || str_contains($m, 'sanctum'))->values();
+                $rateLimitMiddleware = collect($middleware)->filter(fn (string $m): bool => str_contains($m, 'throttle'))->values();
+
+                if ($authMiddleware->isNotEmpty()) {
+                    $lines[] = sprintf('  - Auth: `%s`', $authMiddleware->implode(', '));
+                }
+                if ($rateLimitMiddleware->isNotEmpty()) {
+                    $lines[] = sprintf('  - Rate limit: `%s`', $rateLimitMiddleware->implode(', '));
+                }
+            });
+
+        $lines[] = '';
+    }
+
+    /**
+     * @param  array<int, string>  $lines
+     * @param  array<int, string>  $settingKeys
+     */
+    private function appendConfigurationReference(array &$lines, array $settingKeys): void
+    {
+        $lines[] = '### Configuration Reference';
+        $lines[] = '';
+
+        if ($settingKeys === []) {
+            $lines[] = 'No setting keys are referenced by this page.';
+            $lines[] = '';
+
+            return;
+        }
+
+        $lines[] = '| Setting Key | Current Value | Source |';
+        $lines[] = '| --- | --- | --- |';
+
+        foreach ($settingKeys as $settingKey) {
+            $value = config($settingKey);
+            $displayValue = match (true) {
+                $value === null => '_not set_',
+                is_bool($value) => $value ? '`true`' : '`false`',
+                is_array($value) => '`[array]`',
+                default => sprintf('`%s`', Str::limit((string) $value, 60)),
+            };
+
+            $source = config($settingKey) !== null ? '`config()`' : '_default_';
+            $lines[] = sprintf('| `%s` | %s | %s |', $settingKey, $displayValue, $source);
         }
 
         $lines[] = '';
-        $lines[] = '### Referenced Feature Flags';
+    }
+
+    /**
+     * @param  array<int, string>  $lines
+     * @param  array<int, string>  $featureFlags
+     */
+    private function appendFeatureFlagReference(array &$lines, array $featureFlags): void
+    {
+        $lines[] = '### Feature Flags';
         $lines[] = '';
         if ($featureFlags === []) {
-            $lines[] = '- None';
+            $lines[] = 'No feature flags are referenced by this page.';
         } else {
             foreach ($featureFlags as $featureFlag) {
                 $lines[] = sprintf('- `%s`', $featureFlag);
             }
         }
 
-        $lines[] = self::AUTOGEN_END;
         $lines[] = '';
-
-        return implode("\n", $lines);
     }
 
     private function replaceOrAppendAutogenBlock(string $body, string $block): string

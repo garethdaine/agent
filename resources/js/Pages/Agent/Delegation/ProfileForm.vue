@@ -16,7 +16,8 @@ import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import Spinner from '@/Components/ui/Spinner.vue';
-import { ArrowLeft, Save, RefreshCw } from 'lucide-vue-next';
+import { ArrowLeft, Save, RefreshCw, GitBranch } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
     profileId: {
@@ -194,15 +195,25 @@ onMounted(async () => {
                         <ArrowLeft class="h-4 w-4" />
                     </Button>
                 </Link>
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <GitBranch class="h-5 w-5 text-primary" />
+                </div>
                 <div>
                     <div class="text-sm text-muted-foreground mb-1">
                         <Link :href="route('agent.delegation.profiles.index')" class="hover:text-foreground transition-colors">
                             Back to Profiles
                         </Link>
                     </div>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">
-                        {{ isEdit ? 'Edit Delegatee Profile' : 'Create Delegatee Profile' }}
-                    </h2>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">
+                            {{ isEdit ? 'Edit Delegatee Profile' : 'Create Delegatee Profile' }}
+                        </h2>
+                        <HelpHint
+                            ui-key="delegation.profile-form"
+                            short-text="Configure delegatee capabilities and constraints."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
             </div>
         </template>

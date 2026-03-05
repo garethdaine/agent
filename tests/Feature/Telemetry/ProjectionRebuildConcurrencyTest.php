@@ -6,7 +6,7 @@ namespace Tests\Feature\Telemetry;
 
 use App\Models\User;
 use Illuminate\Database\QueryException;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
@@ -14,7 +14,12 @@ use Tests\TestCase;
 
 class ProjectionRebuildConcurrencyTest extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
+
+    protected array $tablesToTruncate = [
+        'agent_projection.telemetry_projection_builds',
+        'agent_projection.telemetry_projection_build_state',
+    ];
 
     public function test_second_rebuild_request_returns_deterministic_conflict_response(): void
     {

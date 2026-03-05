@@ -1,0 +1,47 @@
+# Client deployment stack: PostgreSQL + Redis for Agent Ops.
+# Run the Laravel app and Horizon on the host or in a separate app container.
+#
+# Usage:
+#   docker compose -f docker-compose.client.yml up -d
+#   # Then set in .env: DB_HOST=127.0.0.1 REDIS_HOST=127.0.0.1 (or service names if app runs in Docker)
+#   php artisan serve & php artisan horizon
+#
+# Health check (after app is running):
+#   curl -s http://localhost:8000/agent/health/deployment
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: agent-client-postgres
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-agent}
+      POSTGRES_USER: ${DB_USERNAME:-agent}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - agent_client_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-agent} -d ${DB_DATABASE:-agent}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: agent-client-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - agent_client_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  agent_client_pgdata:
+  agent_client_redis:

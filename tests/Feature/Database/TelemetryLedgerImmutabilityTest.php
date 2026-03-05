@@ -5,14 +5,19 @@ declare(strict_types=1);
 namespace Tests\Feature\Database;
 
 use Illuminate\Database\QueryException;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class TelemetryLedgerImmutabilityTest extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
+
+    protected array $tablesToTruncate = [
+        'telemetry_event_ledger',
+        'telemetry_ledger_mutation_attempts',
+    ];
 
     public function test_telemetry_ledger_tables_exist_with_expected_columns(): void
     {

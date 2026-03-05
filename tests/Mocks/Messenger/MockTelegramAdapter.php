@@ -215,6 +215,16 @@ class MockTelegramAdapter implements ConnectorAdapterInterface
         return $response;
     }
 
+    public function editMessage(ChatSession $session, string $providerMessageId, string $content): ProviderResponse
+    {
+        return ProviderResponse::success($providerMessageId);
+    }
+
+    public function supportsMessageEditing(): bool
+    {
+        return true;
+    }
+
     public function supportsThreading(): bool
     {
         return true;
@@ -228,5 +238,15 @@ class MockTelegramAdapter implements ConnectorAdapterInterface
     public function getReplayProtectionStrategy(): ReplayProtectionStrategy
     {
         return ReplayProtectionStrategy::EventId;
+    }
+
+    public function supportsReactions(): bool
+    {
+        return true;
+    }
+
+    public function addReaction(ChatSession $session, string $messageId, string $emoji): ProviderResponse
+    {
+        return ProviderResponse::success($messageId);
     }
 }

@@ -32,6 +32,7 @@
         <env name="TEST_DB_DATABASE" value="agent_test" force="true"/>
         <env name="TEST_DB_USERNAME" value="root" force="true"/>
         <env name="TEST_DB_PASSWORD" value="" force="true"/>
+        <env name="TEST_DB_SEARCH_PATH" value="public, agent_projection" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

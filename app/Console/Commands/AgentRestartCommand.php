@@ -41,6 +41,12 @@ class AgentRestartCommand extends Command
             'depends_on' => [],
             'dev_only' => false,
         ],
+        'messenger-gateway' => [
+            'command' => 'php artisan agent:messenger-gateway',
+            'description' => 'Messenger gateway (Slack Socket Mode, Telegram long-poll, Discord Gateway)',
+            'depends_on' => [],
+            'dev_only' => false,
+        ],
         'serve' => [
             'command' => 'php artisan serve',
             'description' => 'Laravel Development Server',

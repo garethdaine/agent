@@ -60,6 +60,11 @@ class AgentJobRun extends Model
         return $this->belongsTo(AgentJob::class, 'agent_job_id');
     }
 
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -83,5 +88,16 @@ class AgentJobRun extends Model
     public function scopeActive(Builder $query): void
     {
         $query->whereIn('status', self::ACTIVE_STATUSES);
+    }
+
+    public function scopeForUser(Builder $query, \App\Models\User $user): void
+    {
+        $teamIds = $user->allTeams()->pluck('id');
+        $jobIds = AgentJob::query()->forUser($user)->pluck('id');
+        $query->where(function (Builder $q) use ($user, $teamIds, $jobIds): void {
+            $q->where('user_id', $user->id)
+                ->orWhereIn('team_id', $teamIds)
+                ->orWhereIn('agent_job_id', $jobIds);
+        });
     }
 }

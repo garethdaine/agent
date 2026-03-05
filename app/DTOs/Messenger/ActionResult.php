@@ -7,6 +7,7 @@ final readonly class ActionResult
     /**
      * @param  array<string, mixed>  $data
      * @param  array<string>  $warnings
+     * @param  array{input_tokens?: int, output_tokens?: int, cost_usd?: float}|null  $usage
      */
     public function __construct(
         public bool $success,
@@ -14,6 +15,7 @@ final readonly class ActionResult
         public ?string $message = null,
         public ?string $error = null,
         public array $warnings = [],
+        public ?array $usage = null,
     ) {}
 
     /**
@@ -70,6 +72,7 @@ final readonly class ActionResult
             'message' => $this->message,
             'error' => $this->error,
             'warnings' => $this->warnings,
+            'usage' => $this->usage,
         ];
     }
 
@@ -86,6 +89,7 @@ final readonly class ActionResult
             message: $data['message'] ?? null,
             error: $data['error'] ?? null,
             warnings: $data['warnings'] ?? [],
+            usage: is_array($data['usage'] ?? null) ? $data['usage'] : null,
         );
     }
 }

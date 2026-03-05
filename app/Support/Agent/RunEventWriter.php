@@ -70,7 +70,7 @@ class RunEventWriter
         $this->persistRunStats();
 
         // Memory integration: buffer to Working Memory (fire-and-forget)
-        if (config('memory.enabled')) {
+        if (app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
             try {
                 MemoryWorkingBufferJob::dispatch(
                     $this->run->id,

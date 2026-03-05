@@ -23,9 +23,6 @@ feature_flags:
 locale: en
 reviewed_at: 2026-03-04
 ---
-# Agent API v1 Route Inventory
-
-This inventory is generated from `php artisan route:list --path=agent/api/v1 --json` and tracks the current API surface from code.
 
 ## Settings
 
@@ -50,6 +47,11 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/chat/actions/{id}/cancel` | `-` | `ChatActionController@cancel` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/chat/actions/{id}/confirm` | `-` | `ChatActionController@confirm` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/chat/actions/{id}/status` | `-` | `ChatActionController@status` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/chat/runtime/sessions` | `-` | `RuntimeSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| GET | `agent/api/v1/chat/runtime/sessions/{id}` | `-` | `RuntimeSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/chat/runtime/sessions/{id}/stop` | `-` | `RuntimeSessionController@stop` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/chat/runtime/tool-calls/{id}/approve` | `-` | `RuntimeToolCallController@approve` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| POST | `agent/api/v1/chat/runtime/tool-calls/{id}/deny` | `-` | `RuntimeToolCallController@deny` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/chat/sessions` | `-` | `ChatSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}` | `-` | `ChatSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}/actions` | `-` | `ChatSessionController@actions` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
@@ -187,8 +189,10 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | PUT | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | DELETE | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@destroy` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
+| GET,PUT | `agent/api/v1/messenger/connectors/{id}/soul` | `-` | `MessengerConnectorController@soul` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/messenger/connectors/{id}/test` | `-` | `MessengerConnectorController@test` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | GET | `agent/api/v1/messenger/metrics` | `-` | `MessengerMetricsController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
+| POST | `agent/api/v1/n8n/webhook` | `-` | `N8nWebhookController` | `api, App\Http\Middleware\AgentApiVersionHeader` |
 | GET | `agent/api/v1/notifications` | `-` | `NotificationController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum` |
 | DELETE | `agent/api/v1/notifications` | `-` | `NotificationController@clearAll` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
 | POST | `agent/api/v1/notifications/read-all` | `-` | `NotificationController@markAllAsRead` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, throttle:agent-mutations` |
@@ -241,7 +245,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -252,11 +256,27 @@ The block below is generated from code and front-matter metadata.
 | `agent.api.connectors.telegram.webhook` | ok | `agent/api/v1/connectors/telegram/webhook/{accountKey}` | `POST` |
 | `agent.api.connectors.whatsapp.webhook` | ok | `agent/api/v1/connectors/whatsapp/webhook` | `GET,POST` |
 
-### Referenced Settings Keys
+### API Endpoints
 
-- `api.tokens.default_expiration_days`
+The following API endpoints are available for this feature:
 
-### Referenced Feature Flags
+- **`POST agent/api/v1/connectors/discord/webhook`**
+  - Controller: `WebhookController@handleDiscord`
+- **`POST agent/api/v1/connectors/slack/webhook`**
+  - Controller: `WebhookController@handleSlack`
+- **`POST agent/api/v1/connectors/telegram/webhook/{accountKey}`**
+  - Controller: `WebhookController@handleTelegram`
+- **`GET,POST agent/api/v1/connectors/whatsapp/webhook`**
+  - Controller: `WebhookController@handleWhatsApp`
+
+### Configuration Reference
+
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `api.tokens.default_expiration_days` | _not set_ | _default_ |
+
+### Feature Flags
 
 - `docs_center_enabled`
+
 <!-- AUTO-GENERATED:END -->

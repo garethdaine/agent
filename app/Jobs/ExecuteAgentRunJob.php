@@ -5,9 +5,14 @@ namespace App\Jobs;
 use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Jobs\Memory\MemoryFormationJob;
 use App\Models\AgentJobRun;
+use App\Services\Cost\WorkflowBudgetEnforcer;
 use App\Support\Agent\CommandTemplateRenderer;
+use App\Support\Agent\DatabaseIsolationEnvironment;
 use App\Support\Agent\Duration;
+use App\Support\Agent\EnvPolicy;
 use App\Support\Agent\FailureModeClassifier;
+use App\Support\Agent\FeatureFlagManager;
+use App\Support\Agent\PreRunDatabaseBackup;
 use App\Support\Agent\ReasoningStepParser;
 use App\Support\Agent\RunEventWriter;
 use App\Support\Agent\RunStateTransitionService;
@@ -22,6 +27,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
 
 class ExecuteAgentRunJob implements ShouldQueue
@@ -58,6 +64,10 @@ class ExecuteAgentRunJob implements ShouldQueue
         if ($run === null || $run->job === null) {
             return;
         }
+
+        // Assign correlation ID for tracing this run across logs and events
+        $correlationId = Str::uuid()->toString();
+        Log::shareContext(['correlation_id' => $correlationId, 'run_id' => $this->runId]);
 
         try {
             $movedToStarting = $transitions->transition(
@@ -136,9 +146,12 @@ class ExecuteAgentRunJob implements ShouldQueue
             $run->job->last_validated_executable_path = $runtimeCheck['resolved_executable_path'];
             $run->job->save();
 
+            $backupResult = app(PreRunDatabaseBackup::class)->backup($run);
+            $this->updateMetadata($run, ['pre_run_backup' => $backupResult]);
+
             // Memory Context Injection (before STAR so STAR can prepend to memory-wrapped task)
             $memoryContextApplied = false;
-            if (config('memory.enabled')) {
+            if (app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
                 try {
                     $contextBuilder = app(MemoryContextBuilder::class);
                     $contextPath = $contextBuilder->buildContext($run);
@@ -182,6 +195,26 @@ class ExecuteAgentRunJob implements ShouldQueue
 
             // Store STAR metadata
             $this->updateMetadata($run, ['star_preamble_applied' => $starApplied]);
+
+            // Validate env overrides at execution time (defense-in-depth)
+            $envOverrides = (array) ($run->job->env_json ?? []);
+            if ($envOverrides !== []) {
+                $envErrors = (new EnvPolicy)->validate($envOverrides);
+                if ($envErrors !== []) {
+                    $this->finalizeTerminal(
+                        $run,
+                        $transitions,
+                        AgentJobRun::STATUS_FAILED,
+                        [
+                            'error_code' => 'ENV_POLICY_VIOLATION',
+                            'error_summary' => implode('; ', array_values($envErrors)),
+                            'resolved_executable_path' => $run->resolved_executable_path,
+                        ]
+                    );
+
+                    return;
+                }
+            }
 
             $tokens = $renderer->renderTokens($run->job, $run);
 
@@ -467,22 +500,12 @@ class ExecuteAgentRunJob implements ShouldQueue
      */
     private function mergedEnvironment(AgentJobRun $run): array
     {
-        $env = [];
+        $env = DatabaseIsolationEnvironment::build(
+            $_ENV,
+            (array) ($run->job->env_json ?? [])
+        );
 
-        foreach ($_ENV as $key => $value) {
-            if (is_string($key) && is_scalar($value)) {
-                $env[$key] = (string) $value;
-            }
-        }
-
-        foreach ((array) ($run->job->env_json ?? []) as $key => $value) {
-            if (is_string($key) && is_scalar($value)) {
-                $env[$key] = (string) $value;
-            }
-        }
-
-        // Memory API URL injection (programmatic, bypasses EnvPolicy)
-        if (config('memory.enabled')) {
+        if (app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
             $env['MEMORY_API_BASE_URL'] = config('app.url').'/agent/api/v1/memory';
         }
 
@@ -591,17 +614,118 @@ class ExecuteAgentRunJob implements ShouldQueue
         $this->attemptTargetedRetry($run, $status);
 
         // Memory integration: dispatch formation job (async, non-blocking)
-        if (config('memory.enabled')) {
+        if (app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
             try {
                 MemoryFormationJob::dispatch($run->id)->onQueue('memory-formation');
             } catch (\Throwable $e) {
-                // Log but never block finalization
                 Log::warning('Failed to dispatch memory formation job', [
                     'run_id' => $run->id,
                     'error' => $e->getMessage(),
                 ]);
             }
         }
+
+        // Cost recording: extract usage from run events and record to budget enforcer
+        $this->recordRunCostFromEvents($run);
+
+        if ($status === AgentJobRun::STATUS_SUCCEEDED && $run->user_id) {
+            try {
+                $user = \App\Models\User::find($run->user_id);
+                if ($user) {
+                    app(\App\Services\Billing\BillingUsageService::class)->reportRunCompleted($user, 1);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('BillingUsageService: failed to report run', ['run_id' => $run->id, 'message' => $e->getMessage()]);
+            }
+        }
+    }
+
+    /**
+     * Parse token usage from run events and record costs via WorkflowBudgetEnforcer.
+     */
+    private function recordRunCostFromEvents(AgentJobRun $run): void
+    {
+        if ($run->job === null || ($run->job->workflow_key ?? '') === '') {
+            return;
+        }
+
+        try {
+            $usage = $this->extractUsageFromEvents($run);
+
+            if ($usage['input_tokens'] === 0 && $usage['output_tokens'] === 0) {
+                return;
+            }
+
+            $enforcer = app(WorkflowBudgetEnforcer::class);
+            $enforcer->recordRunCost(
+                job: $run->job,
+                runId: (string) $run->id,
+                rateCardVersion: config('agent.cost_governance.rate_card_version', 'v1'),
+                model: $usage['model'] ?? 'unknown',
+                inputTokens: $usage['input_tokens'],
+                outputTokens: $usage['output_tokens'],
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Failed to record run cost', [
+                'run_id' => $run->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Extract aggregated token usage from run events (turn.completed payloads).
+     *
+     * @return array{input_tokens: int, output_tokens: int, model: string|null}
+     */
+    private function extractUsageFromEvents(AgentJobRun $run): array
+    {
+        $inputTokens = 0;
+        $outputTokens = 0;
+        $model = null;
+
+        $events = $run->events()
+            ->where('event_type', 'stdout')
+            ->orderBy('sequence')
+            ->get(['payload']);
+
+        foreach ($events as $event) {
+            $payload = is_string($event->payload) ? $event->payload : '';
+            if ($payload === '') {
+                continue;
+            }
+
+            foreach (preg_split('/\R/', $payload) ?: [] as $line) {
+                $line = trim((string) $line);
+                if ($line === '') {
+                    continue;
+                }
+
+                $decoded = json_decode($line, true);
+                if (! is_array($decoded)) {
+                    continue;
+                }
+
+                $type = (string) ($decoded['type'] ?? '');
+                if ($type !== 'turn.completed' && ! isset($decoded['usage'])) {
+                    continue;
+                }
+
+                $usage = is_array($decoded['usage'] ?? null) ? $decoded['usage'] : [];
+                $inputTokens += (int) ($usage['input_tokens'] ?? 0);
+                $outputTokens += (int) ($usage['output_tokens'] ?? 0);
+
+                if ($model === null && isset($decoded['model']) && is_string($decoded['model'])) {
+                    $model = $decoded['model'];
+                }
+            }
+        }
+
+        return [
+            'input_tokens' => $inputTokens,
+            'output_tokens' => $outputTokens,
+            'model' => $model,
+        ];
     }
 
     private function attemptTargetedRetry(AgentJobRun $run, string $status): void

@@ -3,6 +3,7 @@
 namespace App\Support\Interrogation\Adapters;
 
 use App\Models\InterrogationSession;
+use App\Support\Agent\DatabaseIsolationEnvironment;
 use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 
 class ClaudeAdapter implements InterrogationRunnerAdapter
@@ -211,9 +212,48 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
 
         $type = (string) ($decoded['type'] ?? 'message');
 
+        // Extract usage metadata when present (turn.completed, message events)
+        $usage = $this->extractUsageFromEvent($decoded);
+        if ($usage !== null) {
+            $payload['usage'] = $usage;
+        }
+
         return [
             'type' => $type,
             'payload' => $payload,
+        ];
+    }
+
+    /**
+     * Extract token usage from a stream event when present.
+     *
+     * @param  array<string, mixed>  $decoded
+     * @return array{input_tokens: int, output_tokens: int, cached_input_tokens: int}|null
+     */
+    private function extractUsageFromEvent(array $decoded): ?array
+    {
+        $usage = $decoded['usage'] ?? null;
+
+        if (! is_array($usage)) {
+            $message = is_array($decoded['message'] ?? null) ? $decoded['message'] : [];
+            $usage = $message['usage'] ?? null;
+        }
+
+        if (! is_array($usage)) {
+            return null;
+        }
+
+        $input = (int) ($usage['input_tokens'] ?? 0);
+        $output = (int) ($usage['output_tokens'] ?? 0);
+
+        if ($input === 0 && $output === 0) {
+            return null;
+        }
+
+        return [
+            'input_tokens' => $input,
+            'output_tokens' => $output,
+            'cached_input_tokens' => (int) ($usage['cache_read_input_tokens'] ?? $usage['cached_input_tokens'] ?? 0),
         ];
     }
 
@@ -794,14 +834,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
      */
     public function buildEnvironment(InterrogationSession $session): array
     {
-        $env = [];
-
-        foreach ($_ENV as $key => $value) {
-            if (is_string($key) && is_scalar($value)) {
-                $env[$key] = (string) $value;
-            }
-        }
-
+        $env = DatabaseIsolationEnvironment::build($_ENV);
         $env['INTERROGATION_SESSION_ID'] = (string) $session->id;
 
         return $env;

@@ -51,7 +51,7 @@ Enable a non-critical feature in staging, validate target surface behavior, then
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -59,11 +59,26 @@ The block below is generated from code and front-matter metadata.
 | --- | --- | --- | --- |
 | `tools.features.settings` | ok | `tools/features/settings` | `GET` |
 
-### Referenced Settings Keys
+### API Endpoints
 
-- `features.flags_refresh_minutes`
+The following API endpoints are available for this feature:
 
-### Referenced Feature Flags
+- **`GET agent/api/v1/features/settings`**
+  - Controller: `AgentFeatureSettingsController@index`
+  - Auth: `auth:sanctum`
+- **`PUT agent/api/v1/features/settings`**
+  - Controller: `AgentFeatureSettingsController@update`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+
+### Configuration Reference
+
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `features.flags_refresh_minutes` | _not set_ | _default_ |
+
+### Feature Flags
 
 - `docs_center_enabled`
+
 <!-- AUTO-GENERATED:END -->

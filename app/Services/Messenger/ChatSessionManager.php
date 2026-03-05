@@ -56,19 +56,40 @@ class ChatSessionManager
 
     /**
      * Get session message history for AI context.
+     * When compaction is present, returns only messages after the compaction boundary (recent messages).
+     * Use getCompactionSummary() to obtain the summarized older context when present.
      *
      * @return Collection<int, ChatMessage>
      */
     public function getSessionHistory(ChatSession $session, ?int $limit = null): Collection
     {
         $limit = $limit ?? $this->getHistoryLimit($session);
+        $query = $session->messages();
 
-        return $session->messages()
+        $boundaryId = $session->compaction_boundary_message_id ?? null;
+        if ($boundaryId !== null) {
+            $boundary = ChatMessage::where('id', $boundaryId)->where('chat_session_id', $session->id)->first();
+            if ($boundary !== null) {
+                $query->where('created_at', '>', $boundary->created_at);
+            }
+        }
+
+        return $query
             ->orderByDesc('created_at')
             ->limit($limit)
             ->get()
             ->reverse()
             ->values();
+    }
+
+    /**
+     * Get compaction summary for the session when compaction has been run.
+     */
+    public function getCompactionSummary(ChatSession $session): ?string
+    {
+        $summary = $session->compaction_summary ?? null;
+
+        return $summary !== null && $summary !== '' ? $summary : null;
     }
 
     /**

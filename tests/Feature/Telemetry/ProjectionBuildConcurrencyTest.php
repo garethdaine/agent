@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Telemetry;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class ProjectionBuildConcurrencyTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     public function test_rebuild_conflict_payload_is_deterministic_with_explicit_reason_state(): void
     {

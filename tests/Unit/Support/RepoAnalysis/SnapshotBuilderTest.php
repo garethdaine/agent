@@ -19,7 +19,7 @@ class SnapshotBuilderTest extends TestCase
     {
         parent::setUp();
 
-        $this->fixtureRoot = base_path('tests/Fixtures/CodeAnalysis/SnapshotBuilder/repo-root');
+        $this->fixtureRoot = base_path('tests/Fixtures/RepoAnalysis/SnapshotBuilder/repo-root');
         $this->workspaceRoot = storage_path('framework/testing/code-analysis-snapshot-builder/'.Str::uuid()->toString());
 
         File::deleteDirectory($this->workspaceRoot);

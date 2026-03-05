@@ -128,4 +128,39 @@ class ConnectorAccount extends Model
     {
         $query->where('connection_mode', self::MODE_WEBHOOK);
     }
+
+    /**
+     * Get the agent soul configuration.
+     *
+     * @return array{name: string|null, personality: string|null, system_prompt: string|null, user_context: string|null}
+     */
+    public function getSoul(): array
+    {
+        $soul = $this->config['soul'] ?? [];
+
+        return [
+            'name' => $soul['name'] ?? null,
+            'personality' => $soul['personality'] ?? null,
+            'system_prompt' => $soul['system_prompt'] ?? null,
+            'user_context' => $soul['user_context'] ?? null,
+        ];
+    }
+
+    /**
+     * Update the agent soul configuration.
+     *
+     * @param  array<string, string|null>  $soul
+     */
+    public function setSoul(array $soul): void
+    {
+        $config = $this->config ?? [];
+        $config['soul'] = array_filter([
+            'name' => $soul['name'] ?? null,
+            'personality' => $soul['personality'] ?? null,
+            'system_prompt' => $soul['system_prompt'] ?? null,
+            'user_context' => $soul['user_context'] ?? null,
+        ], fn ($v) => $v !== null && $v !== '');
+
+        $this->update(['config' => $config]);
+    }
 }

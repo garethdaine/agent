@@ -23,9 +23,6 @@ feature_flags:
 locale: en
 reviewed_at: 2026-03-04
 ---
-# Agent API v1 Surface Reference
-
-This guide is generated from live route registration and summarizes the API by operational domain.
 
 ## Settings
 
@@ -49,344 +46,358 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ### Backups
 
-Registered endpoints: 3
+**3 endpoint(s)** registered under `/agent/api/v1/backups`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| POST | `agent/api/v1/backups/run-now` | `-` |
-| GET | `agent/api/v1/backups/settings` | `-` |
-| PUT | `agent/api/v1/backups/settings` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| POST | `agent/api/v1/backups/run-now` | `-` | `AgentBackupSettingsController@runNow` | `auth:sanctum` |
+| GET | `agent/api/v1/backups/settings` | `-` | `AgentBackupSettingsController@show` | `auth:sanctum` |
+| PUT | `agent/api/v1/backups/settings` | `-` | `AgentBackupSettingsController@update` | `auth:sanctum` |
 
 ### Chat
 
-Registered endpoints: 8
+**13 endpoint(s)** registered under `/agent/api/v1/chat`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/chat/actions/{id}` | `-` |
-| POST | `agent/api/v1/chat/actions/{id}/cancel` | `-` |
-| POST | `agent/api/v1/chat/actions/{id}/confirm` | `-` |
-| GET | `agent/api/v1/chat/actions/{id}/status` | `-` |
-| GET | `agent/api/v1/chat/sessions` | `-` |
-| GET | `agent/api/v1/chat/sessions/{id}` | `-` |
-| GET | `agent/api/v1/chat/sessions/{id}/actions` | `-` |
-| GET | `agent/api/v1/chat/sessions/{id}/messages` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/chat/actions/{id}` | `-` | `ChatActionController@show` | `auth:sanctum` |
+| POST | `agent/api/v1/chat/actions/{id}/cancel` | `-` | `ChatActionController@cancel` | `auth:sanctum` |
+| POST | `agent/api/v1/chat/actions/{id}/confirm` | `-` | `ChatActionController@confirm` | `auth:sanctum` |
+| GET | `agent/api/v1/chat/actions/{id}/status` | `-` | `ChatActionController@status` | `auth:sanctum` |
+| GET | `agent/api/v1/chat/runtime/sessions` | `-` | `RuntimeSessionController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/chat/runtime/sessions/{id}` | `-` | `RuntimeSessionController@show` | `auth:sanctum` |
+| POST | `agent/api/v1/chat/runtime/sessions/{id}/stop` | `-` | `RuntimeSessionController@stop` | `auth:sanctum` |
+| POST | `agent/api/v1/chat/runtime/tool-calls/{id}/approve` | `-` | `RuntimeToolCallController@approve` | `auth:sanctum` |
+| POST | `agent/api/v1/chat/runtime/tool-calls/{id}/deny` | `-` | `RuntimeToolCallController@deny` | `auth:sanctum` |
+| GET | `agent/api/v1/chat/sessions` | `-` | `ChatSessionController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/chat/sessions/{id}` | `-` | `ChatSessionController@show` | `auth:sanctum` |
+| GET | `agent/api/v1/chat/sessions/{id}/actions` | `-` | `ChatSessionController@actions` | `auth:sanctum` |
+| GET | `agent/api/v1/chat/sessions/{id}/messages` | `-` | `ChatSessionController@messages` | `auth:sanctum` |
 
 ### Code Analysis
 
-Registered endpoints: 21
+**21 endpoint(s)** registered under `/agent/api/v1/code-analysis`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/code-analysis/sessions` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions` | `-` |
-| GET | `agent/api/v1/code-analysis/sessions/{id}` | `-` |
-| PATCH | `agent/api/v1/code-analysis/sessions/{id}` | `-` |
-| DELETE | `agent/api/v1/code-analysis/sessions/{id}` | `-` |
-| GET | `agent/api/v1/code-analysis/sessions/{id}/artifacts` | `-` |
-| GET | `agent/api/v1/code-analysis/sessions/{id}/events` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/execute` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/generate-report` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/pause` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/plan` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/purge` | `-` |
-| GET | `agent/api/v1/code-analysis/sessions/{id}/reports` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/restart-from-beginning` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/restore` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/resume` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/retry` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/retry-task` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/start-snapshot` | `-` |
-| GET | `agent/api/v1/code-analysis/sessions/{id}/tasks` | `-` |
-| POST | `agent/api/v1/code-analysis/sessions/{id}/validate-coverage` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/code-analysis/sessions` | `-` | `RepoAnalysisSessionController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions` | `-` | `RepoAnalysisSessionController@store` | `auth:sanctum` |
+| GET | `agent/api/v1/code-analysis/sessions/{id}` | `-` | `RepoAnalysisSessionController@show` | `auth:sanctum` |
+| PATCH | `agent/api/v1/code-analysis/sessions/{id}` | `-` | `RepoAnalysisSessionController@update` | `auth:sanctum` |
+| DELETE | `agent/api/v1/code-analysis/sessions/{id}` | `-` | `RepoAnalysisSessionController@destroy` | `auth:sanctum` |
+| GET | `agent/api/v1/code-analysis/sessions/{id}/artifacts` | `-` | `RepoAnalysisSessionController@artifacts` | `auth:sanctum` |
+| GET | `agent/api/v1/code-analysis/sessions/{id}/events` | `-` | `RepoAnalysisSessionController@events` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/execute` | `-` | `RepoAnalysisSessionController@execute` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/generate-report` | `-` | `RepoAnalysisSessionController@generateReport` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/pause` | `-` | `RepoAnalysisSessionController@pause` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/plan` | `-` | `RepoAnalysisSessionController@plan` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/purge` | `-` | `RepoAnalysisSessionController@purge` | `auth:sanctum` |
+| GET | `agent/api/v1/code-analysis/sessions/{id}/reports` | `-` | `RepoAnalysisSessionController@reports` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/restart-from-beginning` | `-` | `RepoAnalysisSessionController@restartFromBeginning` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/restore` | `-` | `RepoAnalysisSessionController@restore` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/resume` | `-` | `RepoAnalysisSessionController@resume` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/retry` | `-` | `RepoAnalysisSessionController@retry` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/retry-task` | `-` | `RepoAnalysisSessionController@retryTask` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/start-snapshot` | `-` | `RepoAnalysisSessionController@startSnapshot` | `auth:sanctum` |
+| GET | `agent/api/v1/code-analysis/sessions/{id}/tasks` | `-` | `RepoAnalysisSessionController@tasks` | `auth:sanctum` |
+| POST | `agent/api/v1/code-analysis/sessions/{id}/validate-coverage` | `-` | `RepoAnalysisSessionController@validateCoverage` | `auth:sanctum` |
 
 ### Compliance
 
-Registered endpoints: 2
+**2 endpoint(s)** registered under `/agent/api/v1/compliance`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/compliance/metrics` | `-` |
-| GET | `agent/api/v1/compliance/status` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/compliance/metrics` | `-` | `ComplianceController@metrics` | `auth:sanctum` |
+| GET | `agent/api/v1/compliance/status` | `-` | `ComplianceController@status` | `auth:sanctum` |
 
 ### Connectors
 
-Registered endpoints: 4
+**4 endpoint(s)** registered under `/agent/api/v1/connectors`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| POST | `agent/api/v1/connectors/discord/webhook` | `agent.api.connectors.discord.webhook` |
-| POST | `agent/api/v1/connectors/slack/webhook` | `agent.api.connectors.slack.webhook` |
-| POST | `agent/api/v1/connectors/telegram/webhook/{accountKey}` | `agent.api.connectors.telegram.webhook` |
-| GET,POST | `agent/api/v1/connectors/whatsapp/webhook` | `agent.api.connectors.whatsapp.webhook` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| POST | `agent/api/v1/connectors/discord/webhook` | `agent.api.connectors.discord.webhook` | `WebhookController@handleDiscord` | - |
+| POST | `agent/api/v1/connectors/slack/webhook` | `agent.api.connectors.slack.webhook` | `WebhookController@handleSlack` | - |
+| POST | `agent/api/v1/connectors/telegram/webhook/{accountKey}` | `agent.api.connectors.telegram.webhook` | `WebhookController@handleTelegram` | - |
+| GET,POST | `agent/api/v1/connectors/whatsapp/webhook` | `agent.api.connectors.whatsapp.webhook` | `WebhookController@handleWhatsApp` | - |
 
 ### Dashboard
 
-Registered endpoints: 1
+**1 endpoint(s)** registered under `/agent/api/v1/dashboard`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/dashboard/metrics` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/dashboard/metrics` | `-` | `AgentRunController@dashboardMetrics` | `auth:sanctum` |
 
 ### Delegation
 
-Registered endpoints: 21
+**21 endpoint(s)** registered under `/agent/api/v1/delegation`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/delegation/delegatee-profiles` | `-` |
-| POST | `agent/api/v1/delegation/delegatee-profiles` | `-` |
-| GET | `agent/api/v1/delegation/delegatee-profiles/{id}` | `-` |
-| PUT | `agent/api/v1/delegation/delegatee-profiles/{id}` | `-` |
-| DELETE | `agent/api/v1/delegation/delegatee-profiles/{id}` | `-` |
-| POST | `agent/api/v1/delegation/delegatee-profiles/{id}/restore` | `-` |
-| GET | `agent/api/v1/delegation/delegatee-profiles/{id}/trust` | `-` |
-| GET | `agent/api/v1/delegation/graphs` | `-` |
-| POST | `agent/api/v1/delegation/graphs` | `-` |
-| GET | `agent/api/v1/delegation/graphs/{graphId}/tasks` | `-` |
-| GET | `agent/api/v1/delegation/graphs/{graphId}/tasks/{taskId}` | `-` |
-| POST | `agent/api/v1/delegation/graphs/{graphId}/tasks/{taskId}/verification/resolve` | `-` |
-| GET | `agent/api/v1/delegation/graphs/{id}` | `-` |
-| PUT | `agent/api/v1/delegation/graphs/{id}` | `-` |
-| DELETE | `agent/api/v1/delegation/graphs/{id}` | `-` |
-| POST | `agent/api/v1/delegation/graphs/{id}/cancel` | `-` |
-| POST | `agent/api/v1/delegation/graphs/{id}/clone` | `-` |
-| GET | `agent/api/v1/delegation/graphs/{id}/events` | `-` |
-| POST | `agent/api/v1/delegation/graphs/{id}/restore` | `-` |
-| POST | `agent/api/v1/delegation/graphs/{id}/start` | `-` |
-| POST | `agent/api/v1/delegation/graphs/{id}/validate` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/delegation/delegatee-profiles` | `-` | `DelegateeProfileController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/delegation/delegatee-profiles` | `-` | `DelegateeProfileController@store` | `auth:sanctum` |
+| GET | `agent/api/v1/delegation/delegatee-profiles/{id}` | `-` | `DelegateeProfileController@show` | `auth:sanctum` |
+| PUT | `agent/api/v1/delegation/delegatee-profiles/{id}` | `-` | `DelegateeProfileController@update` | `auth:sanctum` |
+| DELETE | `agent/api/v1/delegation/delegatee-profiles/{id}` | `-` | `DelegateeProfileController@destroy` | `auth:sanctum` |
+| POST | `agent/api/v1/delegation/delegatee-profiles/{id}/restore` | `-` | `DelegateeProfileController@restore` | `auth:sanctum` |
+| GET | `agent/api/v1/delegation/delegatee-profiles/{id}/trust` | `-` | `DelegateeProfileController@trust` | `auth:sanctum` |
+| GET | `agent/api/v1/delegation/graphs` | `-` | `DelegationGraphController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/delegation/graphs` | `-` | `DelegationGraphController@store` | `auth:sanctum` |
+| GET | `agent/api/v1/delegation/graphs/{graphId}/tasks` | `-` | `DelegationTaskController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/delegation/graphs/{graphId}/tasks/{taskId}` | `-` | `DelegationTaskController@show` | `auth:sanctum` |
+| POST | `agent/api/v1/delegation/graphs/{graphId}/tasks/{taskId}/verification/resolve` | `-` | `DelegationTaskController@resolveVerification` | `auth:sanctum` |
+| GET | `agent/api/v1/delegation/graphs/{id}` | `-` | `DelegationGraphController@show` | `auth:sanctum` |
+| PUT | `agent/api/v1/delegation/graphs/{id}` | `-` | `DelegationGraphController@update` | `auth:sanctum` |
+| DELETE | `agent/api/v1/delegation/graphs/{id}` | `-` | `DelegationGraphController@destroy` | `auth:sanctum` |
+| POST | `agent/api/v1/delegation/graphs/{id}/cancel` | `-` | `DelegationGraphController@cancel` | `auth:sanctum` |
+| POST | `agent/api/v1/delegation/graphs/{id}/clone` | `-` | `DelegationGraphController@clone` | `auth:sanctum` |
+| GET | `agent/api/v1/delegation/graphs/{id}/events` | `-` | `DelegationGraphController@events` | `auth:sanctum` |
+| POST | `agent/api/v1/delegation/graphs/{id}/restore` | `-` | `DelegationGraphController@restore` | `auth:sanctum` |
+| POST | `agent/api/v1/delegation/graphs/{id}/start` | `-` | `DelegationGraphController@start` | `auth:sanctum` |
+| POST | `agent/api/v1/delegation/graphs/{id}/validate` | `-` | `DelegationGraphController@validate` | `auth:sanctum` |
 
 ### Deployments
 
-Registered endpoints: 1
+**1 endpoint(s)** registered under `/agent/api/v1/deployments`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/deployments/counting` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/deployments/counting` | `-` | `DeploymentCountingController@index` | `auth:sanctum` |
 
 ### Docs
 
-Registered endpoints: 4
+**4 endpoint(s)** registered under `/agent/api/v1/docs`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/docs/coverage` | `-` |
-| GET | `agent/api/v1/docs/diagnostics` | `-` |
-| GET | `agent/api/v1/docs/fragments/{uiKey}` | `-` |
-| GET | `agent/api/v1/docs/search` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/docs/coverage` | `-` | `DocsCoverageController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/docs/diagnostics` | `-` | `DiagnosticsController` | `auth:sanctum` |
+| GET | `agent/api/v1/docs/fragments/{uiKey}` | `-` | `DocsFragmentController@show` | `auth:sanctum` |
+| GET | `agent/api/v1/docs/search` | `-` | `DocsSearchController@index` | `auth:sanctum` |
 
 ### Features
 
-Registered endpoints: 2
+**2 endpoint(s)** registered under `/agent/api/v1/features`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/features/settings` | `-` |
-| PUT | `agent/api/v1/features/settings` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/features/settings` | `-` | `AgentFeatureSettingsController@index` | `auth:sanctum` |
+| PUT | `agent/api/v1/features/settings` | `-` | `AgentFeatureSettingsController@update` | `auth:sanctum` |
 
 ### Health
 
-Registered endpoints: 3
+**3 endpoint(s)** registered under `/agent/api/v1/health`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/health` | `-` |
-| GET | `agent/api/v1/health/messenger` | `-` |
-| GET | `agent/api/v1/health/scheduler` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/health` | `-` | `Closure` | - |
+| GET | `agent/api/v1/health/messenger` | `-` | `MessengerHealthController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/health/scheduler` | `-` | `AgentRunController@schedulerHealth` | `auth:sanctum` |
 
 ### Interrogation
 
-Registered endpoints: 46
+**46 endpoint(s)** registered under `/agent/api/v1/interrogation`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/interrogation/sessions` | `-` |
-| POST | `agent/api/v1/interrogation/sessions` | `-` |
-| GET | `agent/api/v1/interrogation/sessions/{id}` | `-` |
-| PATCH | `agent/api/v1/interrogation/sessions/{id}` | `-` |
-| DELETE | `agent/api/v1/interrogation/sessions/{id}` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/advance-pre-discovery` | `-` |
-| PATCH | `agent/api/v1/interrogation/sessions/{id}/annotations` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/answer` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/answer/edit` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/approve-build-tasks` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/approve-plan` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/build-tasks` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/build-tasks/reorder` | `-` |
-| PATCH | `agent/api/v1/interrogation/sessions/{id}/build-tasks/{taskId}` | `-` |
-| DELETE | `agent/api/v1/interrogation/sessions/{id}/build-tasks/{taskId}` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/build-tasks/{taskId}/regenerate` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/build/clarify` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/cleanup-invalid-questions` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/confirm-summary` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/continue-interrogation` | `-` |
-| GET | `agent/api/v1/interrogation/sessions/{id}/events` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/export-plan` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/export-summary` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/generate-build-tasks` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/generate-plan` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/pause` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/pause-build` | `-` |
-| DELETE | `agent/api/v1/interrogation/sessions/{id}/providers/{driver}` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/providers/{driver}/oauth/start` | `-` |
-| GET | `agent/api/v1/interrogation/sessions/{id}/providers/{driver}/projects` | `-` |
-| PATCH | `agent/api/v1/interrogation/sessions/{id}/providers/{driver}/settings` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/regenerate-plan` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/restart-from-beginning` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/restore` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/resume` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/resume-build` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/retry` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/revise-plan` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/revise-summary` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/start-build` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/start-discovery` | `-` |
-| POST | `agent/api/v1/interrogation/sessions/{id}/tech-stacks` | `-` |
-| DELETE | `agent/api/v1/interrogation/sessions/{id}/tech-stacks/{stackId}` | `-` |
-| GET | `agent/api/v1/interrogation/settings` | `-` |
-| GET | `agent/api/v1/interrogation/settings/{key}` | `-` |
-| PUT | `agent/api/v1/interrogation/settings/{key}` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/interrogation/sessions` | `-` | `InterrogationSessionController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions` | `-` | `InterrogationSessionController@store` | `auth:sanctum` |
+| GET | `agent/api/v1/interrogation/sessions/{id}` | `-` | `InterrogationSessionController@show` | `auth:sanctum` |
+| PATCH | `agent/api/v1/interrogation/sessions/{id}` | `-` | `InterrogationSessionController@update` | `auth:sanctum` |
+| DELETE | `agent/api/v1/interrogation/sessions/{id}` | `-` | `InterrogationSessionController@destroy` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/advance-pre-discovery` | `-` | `InterrogationSessionController@advancePreDiscovery` | `auth:sanctum` |
+| PATCH | `agent/api/v1/interrogation/sessions/{id}/annotations` | `-` | `InterrogationSessionController@updateAnnotation` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/answer` | `-` | `InterrogationSessionController@submitAnswer` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/answer/edit` | `-` | `InterrogationSessionController@editAnswer` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/approve-build-tasks` | `-` | `InterrogationSessionController@approveBuildTasks` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/approve-plan` | `-` | `InterrogationSessionController@approvePlan` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/build-tasks` | `-` | `InterrogationSessionController@storeBuildTask` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/build-tasks/reorder` | `-` | `InterrogationSessionController@reorderBuildTasks` | `auth:sanctum` |
+| PATCH | `agent/api/v1/interrogation/sessions/{id}/build-tasks/{taskId}` | `-` | `InterrogationSessionController@updateBuildTask` | `auth:sanctum` |
+| DELETE | `agent/api/v1/interrogation/sessions/{id}/build-tasks/{taskId}` | `-` | `InterrogationSessionController@destroyBuildTask` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/build-tasks/{taskId}/regenerate` | `-` | `InterrogationSessionController@regenerateBuildTask` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/build/clarify` | `-` | `InterrogationSessionController@clarifyBuild` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/cleanup-invalid-questions` | `-` | `InterrogationSessionController@cleanupInvalidQuestions` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/confirm-summary` | `-` | `InterrogationSessionController@confirmSummary` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/continue-interrogation` | `-` | `InterrogationSessionController@continueInterrogation` | `auth:sanctum` |
+| GET | `agent/api/v1/interrogation/sessions/{id}/events` | `-` | `InterrogationSessionController@events` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/export-plan` | `-` | `InterrogationSessionController@exportPlan` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/export-summary` | `-` | `InterrogationSessionController@exportSummary` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/generate-build-tasks` | `-` | `InterrogationSessionController@generateBuildTasks` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/generate-plan` | `-` | `InterrogationSessionController@generatePlan` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/pause` | `-` | `InterrogationSessionController@pause` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/pause-build` | `-` | `InterrogationSessionController@pauseBuild` | `auth:sanctum` |
+| DELETE | `agent/api/v1/interrogation/sessions/{id}/providers/{driver}` | `-` | `InterrogationTaskProviderController@disconnect` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/providers/{driver}/oauth/start` | `-` | `InterrogationTaskProviderController@startOAuth` | `auth:sanctum` |
+| GET | `agent/api/v1/interrogation/sessions/{id}/providers/{driver}/projects` | `-` | `InterrogationTaskProviderController@projects` | `auth:sanctum` |
+| PATCH | `agent/api/v1/interrogation/sessions/{id}/providers/{driver}/settings` | `-` | `InterrogationTaskProviderController@updateSettings` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/regenerate-plan` | `-` | `InterrogationSessionController@regeneratePlan` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/restart-from-beginning` | `-` | `InterrogationSessionController@restartFromBeginning` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/restore` | `-` | `InterrogationSessionController@restore` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/resume` | `-` | `InterrogationSessionController@resume` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/resume-build` | `-` | `InterrogationSessionController@resumeBuild` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/retry` | `-` | `InterrogationSessionController@retry` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/revise-plan` | `-` | `InterrogationSessionController@requestRevision` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/revise-summary` | `-` | `InterrogationSessionController@reviseSummary` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/start-build` | `-` | `InterrogationSessionController@startBuild` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/start-discovery` | `-` | `InterrogationSessionController@startDiscovery` | `auth:sanctum` |
+| POST | `agent/api/v1/interrogation/sessions/{id}/tech-stacks` | `-` | `InterrogationTechStackController@store` | `auth:sanctum` |
+| DELETE | `agent/api/v1/interrogation/sessions/{id}/tech-stacks/{stackId}` | `-` | `InterrogationTechStackController@destroy` | `auth:sanctum` |
+| GET | `agent/api/v1/interrogation/settings` | `-` | `InterrogationSettingsController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/interrogation/settings/{key}` | `-` | `InterrogationSettingsController@show` | `auth:sanctum` |
+| PUT | `agent/api/v1/interrogation/settings/{key}` | `-` | `InterrogationSettingsController@update` | `auth:sanctum` |
 
 ### Jobs
 
-Registered endpoints: 10
+**10 endpoint(s)** registered under `/agent/api/v1/jobs`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/jobs` | `-` |
-| POST | `agent/api/v1/jobs` | `-` |
-| GET | `agent/api/v1/jobs/by-workflow/{workflowKey}` | `-` |
-| GET | `agent/api/v1/jobs/{id}` | `-` |
-| PUT | `agent/api/v1/jobs/{id}` | `-` |
-| DELETE | `agent/api/v1/jobs/{id}` | `-` |
-| POST | `agent/api/v1/jobs/{id}/restore` | `-` |
-| POST | `agent/api/v1/jobs/{id}/run-now` | `-` |
-| GET | `agent/api/v1/jobs/{id}/runs` | `-` |
-| POST | `agent/api/v1/jobs/{id}/toggle` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/jobs` | `-` | `AgentJobController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/jobs` | `-` | `AgentJobController@store` | `auth:sanctum` |
+| GET | `agent/api/v1/jobs/by-workflow/{workflowKey}` | `-` | `AgentJobController@showByWorkflowKey` | `auth:sanctum` |
+| GET | `agent/api/v1/jobs/{id}` | `-` | `AgentJobController@show` | `auth:sanctum` |
+| PUT | `agent/api/v1/jobs/{id}` | `-` | `AgentJobController@update` | `auth:sanctum` |
+| DELETE | `agent/api/v1/jobs/{id}` | `-` | `AgentJobController@destroy` | `auth:sanctum` |
+| POST | `agent/api/v1/jobs/{id}/restore` | `-` | `AgentJobController@restore` | `auth:sanctum` |
+| POST | `agent/api/v1/jobs/{id}/run-now` | `-` | `AgentJobController@runNow` | `auth:sanctum` |
+| GET | `agent/api/v1/jobs/{id}/runs` | `-` | `AgentJobController@runs` | `auth:sanctum` |
+| POST | `agent/api/v1/jobs/{id}/toggle` | `-` | `AgentJobController@toggle` | `auth:sanctum` |
 
 ### Memory
 
-Registered endpoints: 12
+**12 endpoint(s)** registered under `/agent/api/v1/memory`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/memory/core-blocks` | `-` |
-| GET | `agent/api/v1/memory/core-blocks/{key}` | `-` |
-| PUT | `agent/api/v1/memory/core-blocks/{key}` | `-` |
-| DELETE | `agent/api/v1/memory/core-blocks/{key}` | `-` |
-| POST | `agent/api/v1/memory/retrieve` | `-` |
-| GET | `agent/api/v1/memory/settings` | `-` |
-| PUT | `agent/api/v1/memory/settings` | `-` |
-| GET | `agent/api/v1/memory/settings/capabilities` | `-` |
-| POST | `agent/api/v1/memory/settings/test-connection` | `-` |
-| GET | `agent/api/v1/memory/stats` | `-` |
-| POST | `agent/api/v1/memory/working/append` | `-` |
-| GET | `agent/api/v1/memory/working/{runId}` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/memory/core-blocks` | `-` | `MemoryCoreBlockController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/memory/core-blocks/{key}` | `-` | `MemoryCoreBlockController@show` | `auth:sanctum` |
+| PUT | `agent/api/v1/memory/core-blocks/{key}` | `-` | `MemoryCoreBlockController@update` | `auth:sanctum` |
+| DELETE | `agent/api/v1/memory/core-blocks/{key}` | `-` | `MemoryCoreBlockController@destroy` | `auth:sanctum` |
+| POST | `agent/api/v1/memory/retrieve` | `-` | `MemoryRetrievalController@retrieve` | `auth:sanctum` |
+| GET | `agent/api/v1/memory/settings` | `-` | `MemorySettingsController@index` | `auth:sanctum` |
+| PUT | `agent/api/v1/memory/settings` | `-` | `MemorySettingsController@update` | `auth:sanctum` |
+| GET | `agent/api/v1/memory/settings/capabilities` | `-` | `MemorySettingsController@capabilities` | `auth:sanctum` |
+| POST | `agent/api/v1/memory/settings/test-connection` | `-` | `MemorySettingsController@testConnection` | `auth:sanctum` |
+| GET | `agent/api/v1/memory/stats` | `-` | `MemoryDiagnosticsController@stats` | `auth:sanctum` |
+| POST | `agent/api/v1/memory/working/append` | `-` | `MemoryWorkingController@append` | `auth:sanctum` |
+| GET | `agent/api/v1/memory/working/{runId}` | `-` | `MemoryWorkingController@show` | `auth:sanctum` |
 
 ### Messenger
 
-Registered endpoints: 8
+**9 endpoint(s)** registered under `/agent/api/v1/messenger`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/messenger/connectors` | `-` |
-| POST | `agent/api/v1/messenger/connectors` | `-` |
-| GET | `agent/api/v1/messenger/connectors/schema` | `-` |
-| GET | `agent/api/v1/messenger/connectors/{id}` | `-` |
-| PUT | `agent/api/v1/messenger/connectors/{id}` | `-` |
-| DELETE | `agent/api/v1/messenger/connectors/{id}` | `-` |
-| POST | `agent/api/v1/messenger/connectors/{id}/test` | `-` |
-| GET | `agent/api/v1/messenger/metrics` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/messenger/connectors` | `-` | `MessengerConnectorController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/messenger/connectors` | `-` | `MessengerConnectorController@store` | `auth:sanctum` |
+| GET | `agent/api/v1/messenger/connectors/schema` | `-` | `MessengerConnectorController@schema` | `auth:sanctum` |
+| GET | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@show` | `auth:sanctum` |
+| PUT | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@update` | `auth:sanctum` |
+| DELETE | `agent/api/v1/messenger/connectors/{id}` | `-` | `MessengerConnectorController@destroy` | `auth:sanctum` |
+| GET,PUT | `agent/api/v1/messenger/connectors/{id}/soul` | `-` | `MessengerConnectorController@soul` | `auth:sanctum` |
+| POST | `agent/api/v1/messenger/connectors/{id}/test` | `-` | `MessengerConnectorController@test` | `auth:sanctum` |
+| GET | `agent/api/v1/messenger/metrics` | `-` | `MessengerMetricsController@index` | `auth:sanctum` |
+
+### N8N
+
+**1 endpoint(s)** registered under `/agent/api/v1/n8n`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| POST | `agent/api/v1/n8n/webhook` | `-` | `N8nWebhookController` | - |
 
 ### Notifications
 
-Registered endpoints: 4
+**4 endpoint(s)** registered under `/agent/api/v1/notifications`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/notifications` | `-` |
-| DELETE | `agent/api/v1/notifications` | `-` |
-| POST | `agent/api/v1/notifications/read-all` | `-` |
-| POST | `agent/api/v1/notifications/{id}/read` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/notifications` | `-` | `NotificationController@index` | `auth:sanctum` |
+| DELETE | `agent/api/v1/notifications` | `-` | `NotificationController@clearAll` | `auth:sanctum` |
+| POST | `agent/api/v1/notifications/read-all` | `-` | `NotificationController@markAllAsRead` | `auth:sanctum` |
+| POST | `agent/api/v1/notifications/{id}/read` | `-` | `NotificationController@markAsRead` | `auth:sanctum` |
 
 ### Org
 
-Registered endpoints: 26
+**26 endpoint(s)** registered under `/agent/api/v1/org`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/org/agents` | `-` |
-| POST | `agent/api/v1/org/agents` | `-` |
-| GET | `agent/api/v1/org/agents/{id}` | `-` |
-| PUT | `agent/api/v1/org/agents/{id}` | `-` |
-| DELETE | `agent/api/v1/org/agents/{id}` | `-` |
-| POST | `agent/api/v1/org/agents/{id}/restore` | `-` |
-| GET | `agent/api/v1/org/costs/summary` | `-` |
-| GET | `agent/api/v1/org/councils` | `-` |
-| POST | `agent/api/v1/org/councils` | `-` |
-| GET | `agent/api/v1/org/councils/{id}` | `-` |
-| PUT | `agent/api/v1/org/councils/{id}` | `-` |
-| DELETE | `agent/api/v1/org/councils/{id}` | `-` |
-| GET | `agent/api/v1/org/escalations` | `-` |
-| POST | `agent/api/v1/org/escalations/{id}/resolve` | `-` |
-| GET | `agent/api/v1/org/ritual-runs` | `-` |
-| GET | `agent/api/v1/org/ritual-runs/{id}` | `-` |
-| POST | `agent/api/v1/org/ritual-runs/{id}/retry` | `-` |
-| GET | `agent/api/v1/org/rituals` | `-` |
-| POST | `agent/api/v1/org/rituals` | `-` |
-| GET | `agent/api/v1/org/rituals/{id}` | `-` |
-| PUT | `agent/api/v1/org/rituals/{id}` | `-` |
-| DELETE | `agent/api/v1/org/rituals/{id}` | `-` |
-| POST | `agent/api/v1/org/rituals/{id}/pause` | `-` |
-| POST | `agent/api/v1/org/rituals/{id}/restore` | `-` |
-| POST | `agent/api/v1/org/rituals/{id}/resume` | `-` |
-| POST | `agent/api/v1/org/rituals/{id}/run` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/org/agents` | `-` | `OrgAgentController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/org/agents` | `-` | `OrgAgentController@store` | `auth:sanctum` |
+| GET | `agent/api/v1/org/agents/{id}` | `-` | `OrgAgentController@show` | `auth:sanctum` |
+| PUT | `agent/api/v1/org/agents/{id}` | `-` | `OrgAgentController@update` | `auth:sanctum` |
+| DELETE | `agent/api/v1/org/agents/{id}` | `-` | `OrgAgentController@destroy` | `auth:sanctum` |
+| POST | `agent/api/v1/org/agents/{id}/restore` | `-` | `OrgAgentController@restore` | `auth:sanctum` |
+| GET | `agent/api/v1/org/costs/summary` | `-` | `OrgCostController@summary` | `auth:sanctum` |
+| GET | `agent/api/v1/org/councils` | `-` | `OrgCouncilController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/org/councils` | `-` | `OrgCouncilController@store` | `auth:sanctum` |
+| GET | `agent/api/v1/org/councils/{id}` | `-` | `OrgCouncilController@show` | `auth:sanctum` |
+| PUT | `agent/api/v1/org/councils/{id}` | `-` | `OrgCouncilController@update` | `auth:sanctum` |
+| DELETE | `agent/api/v1/org/councils/{id}` | `-` | `OrgCouncilController@destroy` | `auth:sanctum` |
+| GET | `agent/api/v1/org/escalations` | `-` | `OrgEscalationController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/org/escalations/{id}/resolve` | `-` | `OrgEscalationController@resolve` | `auth:sanctum` |
+| GET | `agent/api/v1/org/ritual-runs` | `-` | `OrgRitualRunController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/org/ritual-runs/{id}` | `-` | `OrgRitualRunController@show` | `auth:sanctum` |
+| POST | `agent/api/v1/org/ritual-runs/{id}/retry` | `-` | `OrgRitualRunController@retry` | `auth:sanctum` |
+| GET | `agent/api/v1/org/rituals` | `-` | `OrgRitualController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/org/rituals` | `-` | `OrgRitualController@store` | `auth:sanctum` |
+| GET | `agent/api/v1/org/rituals/{id}` | `-` | `OrgRitualController@show` | `auth:sanctum` |
+| PUT | `agent/api/v1/org/rituals/{id}` | `-` | `OrgRitualController@update` | `auth:sanctum` |
+| DELETE | `agent/api/v1/org/rituals/{id}` | `-` | `OrgRitualController@destroy` | `auth:sanctum` |
+| POST | `agent/api/v1/org/rituals/{id}/pause` | `-` | `OrgRitualController@pause` | `auth:sanctum` |
+| POST | `agent/api/v1/org/rituals/{id}/restore` | `-` | `OrgRitualController@restore` | `auth:sanctum` |
+| POST | `agent/api/v1/org/rituals/{id}/resume` | `-` | `OrgRitualController@resume` | `auth:sanctum` |
+| POST | `agent/api/v1/org/rituals/{id}/run` | `-` | `OrgRitualController@run` | `auth:sanctum` |
 
 ### Runs
 
-Registered endpoints: 6
+**6 endpoint(s)** registered under `/agent/api/v1/runs`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/runs` | `-` |
-| GET | `agent/api/v1/runs/{id}` | `-` |
-| POST | `agent/api/v1/runs/{id}/confirm-lesson` | `-` |
-| GET | `agent/api/v1/runs/{id}/events` | `-` |
-| POST | `agent/api/v1/runs/{id}/retry` | `-` |
-| POST | `agent/api/v1/runs/{id}/stop` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/runs` | `-` | `AgentRunController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/runs/{id}` | `-` | `AgentRunController@show` | `auth:sanctum` |
+| POST | `agent/api/v1/runs/{id}/confirm-lesson` | `-` | `AgentRunController@confirmSuggestedLesson` | `auth:sanctum` |
+| GET | `agent/api/v1/runs/{id}/events` | `-` | `AgentRunController@events` | `auth:sanctum` |
+| POST | `agent/api/v1/runs/{id}/retry` | `-` | `AgentRunController@retry` | `auth:sanctum` |
+| POST | `agent/api/v1/runs/{id}/stop` | `-` | `AgentRunController@stop` | `auth:sanctum` |
 
 ### System
 
-Registered endpoints: 1
+**1 endpoint(s)** registered under `/agent/api/v1/system`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| POST | `agent/api/v1/system/directory-picker` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| POST | `agent/api/v1/system/directory-picker` | `-` | `SystemDirectoryPickerController@store` | `auth:sanctum` |
 
 ### Telemetry
 
-Registered endpoints: 4
+**4 endpoint(s)** registered under `/agent/api/v1/telemetry`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/telemetry/replay/active-build` | `-` |
-| POST | `agent/api/v1/telemetry/replay/builds` | `-` |
-| GET | `agent/api/v1/telemetry/replay/builds/{buildId}` | `-` |
-| POST | `agent/api/v1/telemetry/replay/builds/{buildId}/activate` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/telemetry/replay/active-build` | `-` | `ProjectionReplayBuildController@activeBuild` | `auth:sanctum` |
+| POST | `agent/api/v1/telemetry/replay/builds` | `-` | `ProjectionReplayBuildController@store` | `auth:sanctum` |
+| GET | `agent/api/v1/telemetry/replay/builds/{buildId}` | `-` | `ProjectionReplayBuildController@show` | `auth:sanctum` |
+| POST | `agent/api/v1/telemetry/replay/builds/{buildId}/activate` | `-` | `ProjectionReplayBuildController@activate` | `auth:sanctum` |
 
 ### Workflows
 
-Registered endpoints: 7
+**7 endpoint(s)** registered under `/agent/api/v1/workflows`.
 
-| Method | URI | Route Name |
-| --- | --- | --- |
-| GET | `agent/api/v1/workflows/{workflowKey}/cost` | `-` |
-| GET | `agent/api/v1/workflows/{workflowKey}/escalations` | `-` |
-| GET | `agent/api/v1/workflows/{workflowKey}/gate-transitions` | `-` |
-| GET | `agent/api/v1/workflows/{workflowKey}/health` | `-` |
-| POST | `agent/api/v1/workflows/{workflowKey}/pause` | `-` |
-| GET | `agent/api/v1/workflows/{workflowKey}/reliability` | `-` |
-| POST | `agent/api/v1/workflows/{workflowKey}/resume` | `-` |
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/workflows/{workflowKey}/cost` | `-` | `WorkflowCostController@show` | `auth:sanctum` |
+| GET | `agent/api/v1/workflows/{workflowKey}/escalations` | `-` | `WorkflowEscalationController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/workflows/{workflowKey}/gate-transitions` | `-` | `WorkflowGateTransitionController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/workflows/{workflowKey}/health` | `-` | `WorkflowReliabilityController@show` | `auth:sanctum` |
+| POST | `agent/api/v1/workflows/{workflowKey}/pause` | `-` | `WorkflowGovernanceController@pause` | `auth:sanctum` |
+| GET | `agent/api/v1/workflows/{workflowKey}/reliability` | `-` | `WorkflowReliabilityController@show` | `auth:sanctum` |
+| POST | `agent/api/v1/workflows/{workflowKey}/resume` | `-` | `WorkflowGovernanceController@resume` | `auth:sanctum` |
 
 ## Related Docs
 
@@ -396,7 +407,7 @@ Registered endpoints: 7
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -407,11 +418,27 @@ The block below is generated from code and front-matter metadata.
 | `agent.api.connectors.telegram.webhook` | ok | `agent/api/v1/connectors/telegram/webhook/{accountKey}` | `POST` |
 | `agent.api.connectors.whatsapp.webhook` | ok | `agent/api/v1/connectors/whatsapp/webhook` | `GET,POST` |
 
-### Referenced Settings Keys
+### API Endpoints
 
-- `api.tokens.default_expiration_days`
+The following API endpoints are available for this feature:
 
-### Referenced Feature Flags
+- **`POST agent/api/v1/connectors/discord/webhook`**
+  - Controller: `WebhookController@handleDiscord`
+- **`POST agent/api/v1/connectors/slack/webhook`**
+  - Controller: `WebhookController@handleSlack`
+- **`POST agent/api/v1/connectors/telegram/webhook/{accountKey}`**
+  - Controller: `WebhookController@handleTelegram`
+- **`GET,POST agent/api/v1/connectors/whatsapp/webhook`**
+  - Controller: `WebhookController@handleWhatsApp`
+
+### Configuration Reference
+
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `api.tokens.default_expiration_days` | _not set_ | _default_ |
+
+### Feature Flags
 
 - `docs_center_enabled`
+
 <!-- AUTO-GENERATED:END -->

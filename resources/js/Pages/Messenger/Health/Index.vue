@@ -14,7 +14,8 @@ import TableRow from '@/Components/ui/TableRow.vue';
 import TableHead from '@/Components/ui/TableHead.vue';
 import TableCell from '@/Components/ui/TableCell.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { RefreshCw, AlertCircle, CheckCircle, XCircle, Activity, Server } from 'lucide-vue-next';
+import { RefreshCw, AlertCircle, CheckCircle, XCircle, Activity, HeartPulse } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
@@ -86,7 +87,19 @@ const formatDateTime = (isoString) => {
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Messenger Health Dashboard</h2>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <HeartPulse class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Messenger Health Dashboard</h2>
+                        <HelpHint
+                            ui-key="messenger.health"
+                            short-text="Monitor connector health and uptime status."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
+                </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('messenger.dead-letters.index')">
                         <Button variant="outline" size="sm">
@@ -111,7 +124,7 @@ const formatDateTime = (isoString) => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px] space-y-6">
+            <div class="space-y-6">
                 <!-- Health Summary Cards -->
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Card>

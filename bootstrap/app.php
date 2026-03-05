@@ -28,8 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'delegation' => \App\Http\Middleware\DelegationFeatureGate::class,
             'delegation.ui' => \App\Http\Middleware\DelegationUiFeatureGate::class,
+            'onboarding' => \App\Http\Middleware\EnsureOnboardingCompleted::class,
             'org' => \App\Http\Middleware\OrgFeatureGate::class,
             'org.ui' => \App\Http\Middleware\OrgUiFeatureGate::class,
+            'outage.protect' => \App\Http\Middleware\OutageAutoProtect::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

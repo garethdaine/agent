@@ -8,7 +8,8 @@ import CardContent from '@/Components/ui/CardContent.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowLeft, RotateCcw, Trash2, Clock, AlertCircle } from 'lucide-vue-next';
+import { ArrowLeft, RotateCcw, Trash2, Clock, AlertCircle, MailWarning } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 import { ref } from 'vue';
 import { confirmDialog } from '@/Support/confirmDialog';
 
@@ -87,8 +88,18 @@ const getProviderBadgeVariant = (provider) => {
                             Back
                         </Button>
                     </Link>
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <MailWarning class="h-5 w-5 text-primary" />
+                    </div>
                     <div>
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">Dead Letter #{{ deadLetter.id }}</h2>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-xl font-semibold leading-tight text-foreground">Dead Letter #{{ deadLetter.id }}</h2>
+                            <HelpHint
+                                ui-key="dead-letters.detail"
+                                short-text="Inspect and retry a failed message."
+                                learn-more-href="/docs/overview"
+                            />
+                        </div>
                         <p class="mt-1 text-sm text-muted-foreground">
                             Failed at {{ formatDate(deadLetter.failed_at) }}
                         </p>

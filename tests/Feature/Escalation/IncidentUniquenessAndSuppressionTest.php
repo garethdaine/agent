@@ -7,13 +7,18 @@ namespace Tests\Feature\Escalation;
 use App\Services\Escalation\DailyAlertSuppressionService;
 use App\Services\Escalation\IncidentLifecycleService;
 use Carbon\CarbonImmutable;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class IncidentUniquenessAndSuppressionTest extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
+
+    protected array $tablesToTruncate = [
+        'agent_projection.escalation_incidents',
+        'agent_projection.escalation_alert_suppressions',
+    ];
 
     protected function tearDown(): void
     {

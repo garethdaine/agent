@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
+import { BookOpen } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
     entry: {
@@ -383,7 +385,19 @@ function onGlobalKeydown(event) {
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="font-semibold text-xl text-foreground leading-tight">{{ entry.title }}</h2>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <BookOpen class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="font-semibold text-xl text-foreground leading-tight">{{ entry.title }}</h2>
+                        <HelpHint
+                            ui-key="docs.detail"
+                            short-text="Read documentation content."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
+                </div>
                 <div class="flex items-center gap-3">
                     <span class="text-xs text-muted-foreground">Press `Ctrl/Cmd + K` to search</span>
                     <Link :href="route('docs.index')" class="text-sm text-primary hover:underline">Back to Docs</Link>

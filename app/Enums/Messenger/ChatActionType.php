@@ -8,11 +8,15 @@ enum ChatActionType: string
     case JOBS_CREATE = 'jobs.create';
     case JOBS_UPDATE = 'jobs.update';
     case JOBS_DELETE = 'jobs.delete';
+    case JOBS_SHOW = 'jobs.show';
     case RUNS_LIST_ACTIVE = 'runs.list_active';
+    case RUNS_LIST_HISTORY = 'runs.list_history';
+    case RUNS_SHOW = 'runs.show';
     case RUNS_STOP = 'runs.stop';
     case RUNS_RUN_NOW = 'runs.run_now';
     case RUNS_RETRY = 'runs.retry';
     case RUNS_STEER = 'runs.steer';
+    case GENERAL_TASK = 'general.task';
 
     /**
      * Get all action type values.
@@ -31,7 +35,10 @@ enum ChatActionType: string
     {
         return in_array($this, [
             self::JOBS_LIST,
+            self::JOBS_SHOW,
             self::RUNS_LIST_ACTIVE,
+            self::RUNS_LIST_HISTORY,
+            self::RUNS_SHOW,
         ], true);
     }
 
@@ -80,17 +87,18 @@ enum ChatActionType: string
             self::JOBS_CREATE => 'Create Job',
             self::JOBS_UPDATE => 'Update Job',
             self::JOBS_DELETE => 'Delete Job',
+            self::JOBS_SHOW => 'Job Details',
             self::RUNS_LIST_ACTIVE => 'List Active Runs',
+            self::RUNS_LIST_HISTORY => 'Run History',
+            self::RUNS_SHOW => 'Run Details',
             self::RUNS_STOP => 'Stop Run',
             self::RUNS_RUN_NOW => 'Run Job Now',
             self::RUNS_RETRY => 'Retry Run',
             self::RUNS_STEER => 'Steer Run',
+            self::GENERAL_TASK => 'Task',
         };
     }
 
-    /**
-     * Get a description of what this action does.
-     */
     public function description(): string
     {
         return match ($this) {
@@ -98,11 +106,15 @@ enum ChatActionType: string
             self::JOBS_CREATE => 'Create a new scheduled job',
             self::JOBS_UPDATE => 'Update an existing job configuration',
             self::JOBS_DELETE => 'Permanently delete a job',
+            self::JOBS_SHOW => 'Show detailed information about a specific job',
             self::RUNS_LIST_ACTIVE => 'List currently active runs',
+            self::RUNS_LIST_HISTORY => 'List run history for a job or all jobs',
+            self::RUNS_SHOW => 'Show detailed information about a specific run',
             self::RUNS_STOP => 'Stop a running process',
             self::RUNS_RUN_NOW => 'Trigger immediate execution of a job',
             self::RUNS_RETRY => 'Retry a failed or stopped run',
             self::RUNS_STEER => 'Provide guidance to a running process',
+            self::GENERAL_TASK => 'Handle a general task or question',
         };
     }
 
@@ -129,8 +141,11 @@ enum ChatActionType: string
                     'command' => ['type' => 'string', 'description' => 'Command to execute'],
                     'schedule' => ['type' => 'string', 'description' => 'Cron expression'],
                     'description' => ['type' => 'string', 'description' => 'Job description'],
+                    'runner_type' => ['type' => 'string', 'description' => 'Runner type: claude, codex, or custom'],
+                    'working_directory' => ['type' => 'string', 'description' => 'Working directory for the job'],
+                    'task_brief' => ['type' => 'string', 'description' => 'Task description/brief for the agent'],
                 ],
-                'required' => ['name', 'command', 'schedule'],
+                'required' => ['name'],
             ],
             self::JOBS_UPDATE => [
                 'type' => 'object',
@@ -150,6 +165,13 @@ enum ChatActionType: string
                 ],
                 'required' => ['job_id'],
             ],
+            self::JOBS_SHOW => [
+                'type' => 'object',
+                'properties' => [
+                    'job_id' => ['type' => 'string', 'description' => 'Job identifier'],
+                ],
+                'required' => ['job_id'],
+            ],
             self::RUNS_LIST_ACTIVE => [
                 'type' => 'object',
                 'properties' => [
@@ -157,6 +179,22 @@ enum ChatActionType: string
                     'limit' => ['type' => 'integer', 'description' => 'Maximum number of results'],
                 ],
                 'required' => [],
+            ],
+            self::RUNS_LIST_HISTORY => [
+                'type' => 'object',
+                'properties' => [
+                    'job_id' => ['type' => 'string', 'description' => 'Filter by job ID'],
+                    'limit' => ['type' => 'integer', 'description' => 'Maximum number of results'],
+                    'status' => ['type' => 'string', 'description' => 'Filter by status: succeeded, failed, killed, timed_out'],
+                ],
+                'required' => [],
+            ],
+            self::RUNS_SHOW => [
+                'type' => 'object',
+                'properties' => [
+                    'run_id' => ['type' => 'string', 'description' => 'Run identifier'],
+                ],
+                'required' => ['run_id'],
             ],
             self::RUNS_STOP => [
                 'type' => 'object',
@@ -188,6 +226,14 @@ enum ChatActionType: string
                     'guidance' => ['type' => 'string', 'description' => 'Guidance message for the running process'],
                 ],
                 'required' => ['run_id', 'guidance'],
+            ],
+            self::GENERAL_TASK => [
+                'type' => 'object',
+                'properties' => [
+                    'task_description' => ['type' => 'string', 'description' => 'The task to perform'],
+                    'context' => ['type' => 'string', 'description' => 'Additional context'],
+                ],
+                'required' => ['task_description'],
             ],
         };
     }

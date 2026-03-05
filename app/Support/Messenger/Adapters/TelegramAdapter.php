@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support\Messenger\Adapters;
 
 use App\DTOs\Messenger\NormalizedAttachment;
@@ -7,12 +9,14 @@ use App\DTOs\Messenger\NormalizedMessage;
 use App\DTOs\Messenger\OutboundPayload;
 use App\DTOs\Messenger\ProviderResponse;
 use App\DTOs\Messenger\ReplayProtectionStrategy;
+use App\DTOs\Messenger\StreamingConfig;
 use App\DTOs\Messenger\ThreadingStrategy;
 use App\Models\ChatSession;
 use App\Models\ConnectorAccount;
 use App\Support\Messenger\MessengerHttpClient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class TelegramAdapter extends AbstractConnectorAdapter
 {
@@ -35,8 +39,6 @@ class TelegramAdapter extends AbstractConnectorAdapter
         $expectedToken = $this->getSecretToken($account);
 
         if (! $expectedToken) {
-            // Backward-compatible behavior: if no secret token is configured,
-            // fall back to account-key based routing as the only ingress guard.
             $this->logDebug('No Telegram secret token configured; skipping header verification', [
                 'account_id' => $account->id,
             ]);
@@ -44,28 +46,23 @@ class TelegramAdapter extends AbstractConnectorAdapter
             return true;
         }
 
-        // Telegram uses a secret token header for webhook verification.
         $providedToken = $request->header('X-Telegram-Bot-Api-Secret-Token');
         if (! is_string($providedToken) || $providedToken === '') {
             return false;
         }
 
-        // Timing-safe comparison
         return hash_equals($expectedToken, $providedToken);
     }
 
     public function parseInboundMessage(Request $request): NormalizedMessage
     {
-        // Handle different update types
         $message = $this->extractMessageFromUpdate($request);
         $from = $message['from'] ?? [];
         $chat = $message['chat'] ?? [];
 
-        // Handle reply threading
         $replyTo = $message['reply_to_message'] ?? null;
         $threadId = $replyTo ? (string) $replyTo['message_id'] : null;
 
-        // Extract attachments
         $attachments = $this->extractAttachments($message);
 
         return new NormalizedMessage(
@@ -100,13 +97,14 @@ class TelegramAdapter extends AbstractConnectorAdapter
             return ProviderResponse::failure('Missing bot token');
         }
 
+        $normalizedContent = $this->normalizeContent($payload->content);
+
         $data = [
             'chat_id' => $payload->channelId,
-            'text' => $payload->content,
+            'text' => $normalizedContent,
             'parse_mode' => 'Markdown',
         ];
 
-        // Add reply threading support
         if ($payload->replyToMessageId) {
             $data['reply_to_message_id'] = (int) $payload->replyToMessageId;
         } elseif ($payload->threadId) {
@@ -136,7 +134,6 @@ class TelegramAdapter extends AbstractConnectorAdapter
 
         $responseData = $result['response']->json();
 
-        // Check Telegram API response for success
         if (! ($responseData['ok'] ?? false)) {
             $this->logError('Telegram API returned error', [
                 'account_id' => $account->id,
@@ -156,6 +153,8 @@ class TelegramAdapter extends AbstractConnectorAdapter
             return ProviderResponse::failure('No message ID in response', $responseData);
         }
 
+        $this->storeLastBotMessageId($session, (string) $messageId);
+
         $this->logInfo('Message sent successfully', [
             'account_id' => $account->id,
             'chat_id' => $payload->channelId,
@@ -163,6 +162,150 @@ class TelegramAdapter extends AbstractConnectorAdapter
         ]);
 
         return ProviderResponse::success((string) $messageId, $responseData);
+    }
+
+    public function editMessage(ChatSession $session, string $providerMessageId, string $content): ProviderResponse
+    {
+        $account = $session->connectorAccount;
+
+        if (! $account) {
+            return ProviderResponse::failure('No connector account associated with session');
+        }
+
+        $botToken = $this->getBotToken($account);
+
+        if (! $botToken) {
+            return ProviderResponse::failure('Missing bot token');
+        }
+
+        $normalizedContent = $this->normalizeContent($content);
+        $httpClient = new MessengerHttpClient($account);
+
+        $result = $this->attemptTelegramEdit(
+            $httpClient, $botToken, $session->channel_id, (int) $providerMessageId, $normalizedContent, 'Markdown'
+        );
+
+        if ($result->success) {
+            return $result;
+        }
+
+        $errorDescription = strtolower($result->error ?? '');
+
+        // Streaming can produce partial markdown that Telegram rejects — retry without parse_mode
+        if (str_contains($errorDescription, "can't parse entities") || str_contains($errorDescription, 'parse')) {
+            $this->logDebug('Retrying edit without Markdown parse_mode', [
+                'message_id' => $providerMessageId,
+            ]);
+
+            return $this->attemptTelegramEdit(
+                $httpClient, $botToken, $session->channel_id, (int) $providerMessageId, $normalizedContent, null
+            );
+        }
+
+        // "message is not modified" is a no-op success during streaming
+        if (str_contains($errorDescription, 'not modified')) {
+            return ProviderResponse::success($providerMessageId);
+        }
+
+        return $result;
+    }
+
+    private function attemptTelegramEdit(
+        MessengerHttpClient $httpClient,
+        string $botToken,
+        string $chatId,
+        int $messageId,
+        string $content,
+        ?string $parseMode
+    ): ProviderResponse {
+        $payload = [
+            'chat_id' => $chatId,
+            'message_id' => $messageId,
+            'text' => $content,
+        ];
+
+        if ($parseMode !== null) {
+            $payload['parse_mode'] = $parseMode;
+        }
+
+        $result = $httpClient->post(
+            self::API_BASE_URL.$botToken.'/editMessageText',
+            $payload,
+            ['Content-Type' => 'application/json']
+        );
+
+        if (! $result['success'] || ! ($result['response']?->json()['ok'] ?? false)) {
+            $description = $result['response']?->json()['description'] ?? $result['error'] ?? 'Unknown';
+
+            $this->logError('Failed to edit Telegram message', [
+                'chat_id' => $chatId,
+                'message_id' => $messageId,
+                'parse_mode' => $parseMode,
+                'error' => $description,
+            ]);
+
+            return ProviderResponse::failure($description, $result['response']?->json() ?? []);
+        }
+
+        return ProviderResponse::success((string) $messageId, $result['response']->json());
+    }
+
+    public function supportsMessageEditing(): bool
+    {
+        return true;
+    }
+
+    public function getStreamingConfig(): StreamingConfig
+    {
+        return StreamingConfig::telegram();
+    }
+
+    public function supportsReactions(): bool
+    {
+        return true;
+    }
+
+    public function addReaction(ChatSession $session, string $messageId, string $emoji): ProviderResponse
+    {
+        $account = $session->connectorAccount;
+
+        if (! $account) {
+            return ProviderResponse::failure('No connector account associated with session');
+        }
+
+        $botToken = $this->getBotToken($account);
+
+        if (! $botToken) {
+            return ProviderResponse::failure('Missing bot token');
+        }
+
+        $httpClient = new MessengerHttpClient($account);
+
+        $result = $httpClient->post(
+            self::API_BASE_URL.$botToken.'/setMessageReaction',
+            [
+                'chat_id' => $session->channel_id,
+                'message_id' => (int) $messageId,
+                'reaction' => [
+                    ['type' => 'emoji', 'emoji' => $emoji],
+                ],
+            ],
+            ['Content-Type' => 'application/json']
+        );
+
+        if (! $result['success'] || ! ($result['response']?->json()['ok'] ?? false)) {
+            $this->logDebug('Failed to add Telegram reaction', [
+                'chat_id' => $session->channel_id,
+                'message_id' => $messageId,
+                'emoji' => $emoji,
+            ]);
+
+            return ProviderResponse::failure(
+                $result['response']?->json()['description'] ?? 'Failed to add reaction'
+            );
+        }
+
+        return ProviderResponse::success($messageId);
     }
 
     public function supportsThreading(): bool
@@ -181,35 +324,28 @@ class TelegramAdapter extends AbstractConnectorAdapter
     }
 
     /**
-     * Extract message from different Telegram update types.
-     *
      * @return array<string, mixed>
      */
     private function extractMessageFromUpdate(Request $request): array
     {
-        // Standard message
         if ($request->has('message')) {
             return $request->input('message', []);
         }
 
-        // Edited message
         if ($request->has('edited_message')) {
             return $request->input('edited_message', []);
         }
 
-        // Callback query (from inline keyboards)
         if ($request->has('callback_query')) {
             $callbackQuery = $request->input('callback_query', []);
 
             return $callbackQuery['message'] ?? [];
         }
 
-        // Channel post
         if ($request->has('channel_post')) {
             return $request->input('channel_post', []);
         }
 
-        // Edited channel post
         if ($request->has('edited_channel_post')) {
             return $request->input('edited_channel_post', []);
         }
@@ -218,8 +354,6 @@ class TelegramAdapter extends AbstractConnectorAdapter
     }
 
     /**
-     * Extract file attachments from Telegram message.
-     *
      * @param  array<string, mixed>  $message
      * @return array<int, NormalizedAttachment>
      */
@@ -227,9 +361,8 @@ class TelegramAdapter extends AbstractConnectorAdapter
     {
         $attachments = [];
 
-        // Handle photos (array of sizes, take largest)
         if (isset($message['photo']) && is_array($message['photo'])) {
-            $photo = end($message['photo']); // Largest size
+            $photo = end($message['photo']);
             if ($photo) {
                 $attachments[] = new NormalizedAttachment(
                     providerFileId: $photo['file_id'] ?? '',
@@ -240,7 +373,6 @@ class TelegramAdapter extends AbstractConnectorAdapter
             }
         }
 
-        // Handle document
         if (isset($message['document'])) {
             $doc = $message['document'];
             $attachments[] = new NormalizedAttachment(
@@ -251,7 +383,6 @@ class TelegramAdapter extends AbstractConnectorAdapter
             );
         }
 
-        // Handle audio
         if (isset($message['audio'])) {
             $audio = $message['audio'];
             $attachments[] = new NormalizedAttachment(
@@ -262,7 +393,6 @@ class TelegramAdapter extends AbstractConnectorAdapter
             );
         }
 
-        // Handle video
         if (isset($message['video'])) {
             $video = $message['video'];
             $attachments[] = new NormalizedAttachment(
@@ -273,7 +403,6 @@ class TelegramAdapter extends AbstractConnectorAdapter
             );
         }
 
-        // Handle voice message
         if (isset($message['voice'])) {
             $voice = $message['voice'];
             $attachments[] = new NormalizedAttachment(
@@ -284,7 +413,6 @@ class TelegramAdapter extends AbstractConnectorAdapter
             );
         }
 
-        // Handle sticker
         if (isset($message['sticker'])) {
             $sticker = $message['sticker'];
             $attachments[] = new NormalizedAttachment(
@@ -298,9 +426,17 @@ class TelegramAdapter extends AbstractConnectorAdapter
         return $attachments;
     }
 
+    private function storeLastBotMessageId(ChatSession $session, string $messageId): void
+    {
+        Cache::put(
+            sprintf('telegram:last_bot_message:%s:%s', $session->connector_account_id, $session->channel_id),
+            $messageId,
+            86400
+        );
+    }
+
     private function getSecretToken(ConnectorAccount $account): ?string
     {
-        // Check explicit Telegram secret token locations only.
         return $account->config['signature_verification']['secret_token']
             ?? $account->credentials['secret_token']
             ?? null;

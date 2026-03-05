@@ -5,6 +5,7 @@ use App\Http\Controllers\Docs\DocsPageController;
 use App\Http\Controllers\Messenger\AccountLinkController;
 use App\Http\Controllers\Messenger\DeadLetterController;
 use App\Http\Controllers\Messenger\MessengerHealthController;
+use App\Http\Controllers\RuntimeWebController;
 use App\Http\Controllers\TaskProviderOAuthController;
 use App\Models\RepoAnalysisSession;
 use App\Support\Agent\FeatureFlagManager;
@@ -30,6 +31,9 @@ Route::get('/messenger/link/{token}', [AccountLinkController::class, 'show'])
 Route::get('/messenger/health', [MessengerHealthController::class, 'index'])
     ->name('messenger.health');
 
+Route::get('/agent/health/deployment', \App\Http\Controllers\DeploymentHealthController::class)
+    ->name('agent.health.deployment');
+
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/messenger/link/{token}', [AccountLinkController::class, 'store'])
         ->name('messenger.link.store');
@@ -39,6 +43,7 @@ Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
     'verified',
+    'onboarding',
 ])->group(function () {
     Route::get('/integrations/oauth/{provider}/callback', [TaskProviderOAuthController::class, 'callback'])
         ->name('integrations.oauth.callback');
@@ -55,21 +60,42 @@ Route::middleware([
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
+    Route::get('/billing/portal', \App\Http\Controllers\BillingPortalController::class)
+        ->name('billing.portal');
+
+    Route::get('/onboarding', [\App\Http\Controllers\Onboarding\OnboardingController::class, 'welcome'])
+        ->name('onboarding.welcome');
+    Route::post('/onboarding/complete', [\App\Http\Controllers\Onboarding\OnboardingController::class, 'complete'])
+        ->name('onboarding.complete');
+    Route::get('/onboarding/first-job', [\App\Http\Controllers\Onboarding\OnboardingController::class, 'firstJob'])
+        ->name('onboarding.first-job');
+
     Route::get('/docs', [DocsPageController::class, 'index'])
         ->name('docs.index');
     Route::get('/docs/{slug}', [DocsPageController::class, 'show'])
-        ->name('docs.show');
+        ->name('docs.show')
+        ->where('slug', '^(?!api\.json$|api$).*');
 
     Route::get('/agent/jobs', function () {
         return Inertia::render('Agent/Jobs/Index');
     })->name('agent.jobs.index');
 
     Route::get('/agent/jobs/create', function () {
+        $templates = config('vertical_templates.templates', []);
+        $verticalTemplates = collect($templates)->map(fn ($t, $key) => [
+            'key' => $key,
+            'name' => $t['name'] ?? $key,
+            'description' => $t['description'] ?? '',
+            'cron_expression' => $t['cron_expression'] ?? '0 9 * * *',
+            'runner_type' => $t['runner_type'] ?? 'codex',
+        ])->values()->all();
+
         return Inertia::render('Agent/Jobs/Create', [
             'config' => [
                 'targeted_retry' => config('agent.targeted_retry'),
                 'star_preamble' => config('agent.star_preamble'),
             ],
+            'verticalTemplates' => $verticalTemplates,
         ]);
     })->name('agent.jobs.create');
 
@@ -86,6 +112,12 @@ Route::middleware([
     Route::get('/agent/monitor', function () {
         return Inertia::render('Agent/Monitor/Index');
     })->name('agent.monitor.index');
+
+    Route::get('/agent/operator-dashboard', \App\Http\Controllers\Agent\ClientOperatorDashboardController::class)
+        ->name('agent.operator-dashboard');
+
+    Route::get('/help', fn () => redirect()->route('docs.index'))
+        ->name('help');
 
     Route::get('/agent/deployments', [OperatorPageController::class, 'deployments'])
         ->name('agent.deployments.index');
@@ -142,6 +174,10 @@ Route::middleware([
         ]);
     })->name('tools.discovery.session.settings');
 
+    Route::get('/tools/credentials', function () {
+        return Inertia::render('Tools/Credentials/Index');
+    })->name('tools.credentials.index');
+
     Route::get('/tools/backups/settings', function () {
         return Inertia::render('Tools/Backups/Settings');
     })->name('tools.backups.settings');
@@ -178,6 +214,12 @@ Route::middleware([
         ->name('messenger.dead-letters.retry-bulk');
     Route::delete('/messenger/dead-letters/{id}', [DeadLetterController::class, 'destroy'])
         ->name('messenger.dead-letters.destroy');
+
+    // Messenger runtime sessions routes
+    Route::get('/messenger/runtime', [RuntimeWebController::class, 'index'])
+        ->name('messenger.runtime.index');
+    Route::get('/messenger/runtime/{id}', [RuntimeWebController::class, 'show'])
+        ->name('messenger.runtime.show');
 
     Route::get('/tools/discovery/{id}', function (int $id) {
         return Inertia::render('Tools/Discovery/Wizard', [

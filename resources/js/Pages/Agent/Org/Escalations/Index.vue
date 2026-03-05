@@ -14,7 +14,8 @@ import TableCell from '@/Components/ui/TableCell.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
-import { AlertTriangle, ArrowLeft } from 'lucide-vue-next';
+import { AlertTriangle, ArrowLeft, Bot } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const escalations = ref([]);
 const loading = ref(true);
@@ -62,12 +63,22 @@ onMounted(loadEscalations);
                         <ArrowLeft class="h-4 w-4" />
                     </Button>
                 </Link>
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Escalations</h2>
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Bot class="h-5 w-5 text-primary" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Escalations</h2>
+                    <HelpHint
+                        ui-key="org.escalations"
+                        short-text="Track escalations within the org layer."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px] space-y-4">
+            <div class="space-y-4">
                 <p v-if="error" class="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {{ error }}
                 </p>

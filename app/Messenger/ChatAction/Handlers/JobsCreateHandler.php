@@ -26,24 +26,34 @@ class JobsCreateHandler implements ChatActionHandlerInterface
             );
         }
 
+        $runnerType = $params['runner_type'] ?? 'claude';
+        $workingDirectory = $params['working_directory'] ?? '';
+        $description = $params['description'] ?? null;
+        $taskBrief = $params['task_brief'] ?? $params['command'] ?? null;
+
         $job = AgentJob::create([
             'user_id' => $user->id,
             'name' => $params['name'],
-            'description' => $params['description'] ?? null,
+            'description' => $description,
             'cron_expression' => $params['schedule'] ?? '0 0 * * *',
             'timezone' => 'UTC',
             'is_enabled' => false,
             'max_runtime_seconds' => 3600,
             'cooldown_seconds' => 0,
-            'runner_type' => 'claude',
+            'runner_type' => $runnerType,
             'command_template' => '',
             'task_markdown_path' => '',
-            'working_directory' => '',
+            'working_directory' => $workingDirectory,
         ]);
 
         return ChatActionResult::success(
-            "Job '{$job->name}' created successfully (ID: {$job->id})",
-            ['job' => $job->toArray()]
+            "Job **{$job->name}** created successfully (ID: `{$job->id}`)",
+            [
+                'job_id' => $job->id,
+                'name' => $job->name,
+                'runner_type' => $job->runner_type,
+                'schedule' => $job->cron_expression,
+            ]
         );
     }
 }

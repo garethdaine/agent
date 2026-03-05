@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\Org\OrgDispatchDueRitualsJob;
+use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -54,13 +55,25 @@ Schedule::command('code-analysis:prune-artifacts')
 Schedule::command('memory:consolidate')
     ->cron('0 */2 * * *')
     ->withoutOverlapping()
-    ->when(fn () => config('memory.enabled'));
+    ->when(fn () => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED));
 
 // Memory pruning (daily at 03:30 with --force when enabled)
 Schedule::command('memory:prune --force')
     ->dailyAt('03:30')
     ->withoutOverlapping()
-    ->when(fn () => config('memory.enabled'));
+    ->when(fn () => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED));
+
+// Persist messenger metrics to database (hourly)
+Schedule::call(fn () => app(\App\Support\Messenger\MetricsCollector::class)->persistAndReset())
+    ->hourly()
+    ->name('messenger:persist-metrics')
+    ->withoutOverlapping();
+
+// Expire stale runtime approval requests (every 5 minutes)
+Schedule::call(fn () => app(\App\Services\Runtime\ApprovalGate::class)->expireStaleApprovals())
+    ->everyFiveMinutes()
+    ->name('runtime:expire-stale-approvals')
+    ->withoutOverlapping();
 
 // Org ritual scheduling (every minute when org layer enabled)
 Schedule::job(new OrgDispatchDueRitualsJob)

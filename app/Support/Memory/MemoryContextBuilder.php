@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Memory;
 
 use App\Models\AgentJobRun;
+use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -43,7 +44,7 @@ class MemoryContextBuilder
      */
     public function buildContext(AgentJobRun $run): ?string
     {
-        if (! config('memory.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
             return null;
         }
 

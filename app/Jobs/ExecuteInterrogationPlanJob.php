@@ -947,9 +947,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
      * enforced before failure.
      *
      * @param  array<string, mixed>  $planCandidate
-     * @return array<string, mixed>|null Null on pass; review payload on revise
-     *
-     * @throws \RuntimeException when retry limit exhausted
+     * @return array<string, mixed>|null Null on pass/exhausted; review payload on revise
      */
     private function runAdversarialReview(
         InterrogationSession $session,
@@ -1021,9 +1019,18 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
 
             // Revise
             if ($attempt >= $maxRetries) {
-                $metadata['plan']['review_status'] = 'failed';
+                $metadata['plan']['review_status'] = 'accepted_with_warnings';
                 $session->update(['metadata_json' => $metadata]);
-                throw new \RuntimeException('Plan review exhausted retries');
+
+                $writer->appendSystem([
+                    'notice' => 'plan_review_exhausted',
+                    'message' => 'Adversarial plan review exhausted retries ('.$maxRetries.'). Accepting current plan with warnings.',
+                    'issues' => $reviewPayload['issues'] ?? [],
+                    'required_changes' => $reviewPayload['required_changes'] ?? [],
+                    'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                ]);
+
+                return null;
             }
 
             $metadata['plan']['review_status'] = 'revising';

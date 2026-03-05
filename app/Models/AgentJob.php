@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Team;
+use App\Models\User;
 use App\Support\Agent\WorkflowKey;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -87,6 +89,11 @@ class AgentJob extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
+
     public function runs(): HasMany
     {
         return $this->hasMany(AgentJobRun::class);
@@ -105,5 +112,14 @@ class AgentJob extends Model
     public function scopeLatest(Builder $query): void
     {
         $query->orderByDesc('updated_at');
+    }
+
+    public function scopeForUser(Builder $query, User $user): void
+    {
+        $teamIds = $user->allTeams()->pluck('id');
+        $query->where(function (Builder $q) use ($user, $teamIds): void {
+            $q->where('user_id', $user->id)
+                ->orWhereIn('team_id', $teamIds);
+        });
     }
 }

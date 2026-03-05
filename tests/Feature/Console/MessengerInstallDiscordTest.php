@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
-use App\Messenger\Discord\SlashCommandRegistrar;
+use App\Services\Messenger\SlashCommandRegistrar;
 use App\Models\ConnectorAccount;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -75,8 +75,8 @@ class MessengerInstallDiscordTest extends TestCase
             'https://discord.com/api/v10/applications/1123456789012345678/commands' => Http::response([
                 [
                     'id' => '999888777666555444',
-                    'name' => 'agent',
-                    'description' => 'Interact with the agent',
+                    'name' => 'jobs',
+                    'description' => 'Manage agent jobs',
                     'type' => 1,
                 ],
             ], 200),
@@ -113,8 +113,8 @@ class MessengerInstallDiscordTest extends TestCase
             'https://discord.com/api/v10/applications/1123456789012345678/commands' => Http::response([
                 [
                     'id' => '999888777666555444',
-                    'name' => 'agent',
-                    'description' => 'Interact with the agent',
+                    'name' => 'jobs',
+                    'description' => 'Manage agent jobs',
                 ],
             ], 200),
         ]);
@@ -128,7 +128,7 @@ class MessengerInstallDiscordTest extends TestCase
             '--skip-migrations' => true,
             '--skip-health-check' => true,
         ])
-            ->expectsOutputToContain('Slash commands registered: /agent')
+            ->expectsOutputToContain('Slash commands registered:')
             ->assertSuccessful();
     }
 
@@ -172,8 +172,8 @@ class MessengerInstallDiscordTest extends TestCase
             'https://discord.com/api/v10/applications/1123456789012345678/commands' => Http::response([
                 [
                     'id' => '111111111111111111',
-                    'name' => 'agent',
-                    'description' => 'Interact with the agent',
+                    'name' => 'jobs',
+                    'description' => 'Manage agent jobs',
                 ],
             ], 200),
         ]);

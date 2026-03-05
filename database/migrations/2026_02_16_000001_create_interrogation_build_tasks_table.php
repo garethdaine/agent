@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('interrogation_session_id')->constrained()->cascadeOnDelete();
             $table->unsignedInteger('sequence');
+            $table->string('task_category', 24)->default('custom');
             $table->string('title', 255);
             $table->text('description')->nullable();
             $table->longText('instructions_markdown')->nullable();
@@ -25,6 +26,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['interrogation_session_id', 'status'], 'interrogation_build_tasks_session_status_idx');
+            $table->index(['interrogation_session_id', 'task_category'], 'interrogation_build_tasks_session_category_idx');
             $table->unique(['interrogation_session_id', 'sequence'], 'interrogation_build_tasks_session_sequence_unique');
         });
     }

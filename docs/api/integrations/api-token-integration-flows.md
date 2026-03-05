@@ -65,7 +65,7 @@ Create a token, call a protected endpoint, and complete account-link callback ve
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -73,11 +73,51 @@ The block below is generated from code and front-matter metadata.
 | --- | --- | --- | --- |
 | `messenger.link.show` | ok | `messenger/link/{token}` | `GET` |
 
-### Referenced Settings Keys
+### API Endpoints
 
-- `api.tokens.default_expiration_days`
+The following API endpoints are available for this feature:
 
-### Referenced Feature Flags
+- **`GET agent/api/v1/messenger/connectors`**
+  - Controller: `MessengerConnectorController@index`
+  - Auth: `auth:sanctum`
+- **`POST agent/api/v1/messenger/connectors`**
+  - Controller: `MessengerConnectorController@store`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`GET agent/api/v1/messenger/connectors/schema`**
+  - Controller: `MessengerConnectorController@schema`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/messenger/connectors/{id}`**
+  - Controller: `MessengerConnectorController@show`
+  - Auth: `auth:sanctum`
+- **`PUT agent/api/v1/messenger/connectors/{id}`**
+  - Controller: `MessengerConnectorController@update`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`DELETE agent/api/v1/messenger/connectors/{id}`**
+  - Controller: `MessengerConnectorController@destroy`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`GET,PUT agent/api/v1/messenger/connectors/{id}/soul`**
+  - Controller: `MessengerConnectorController@soul`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`POST agent/api/v1/messenger/connectors/{id}/test`**
+  - Controller: `MessengerConnectorController@test`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`GET agent/api/v1/messenger/metrics`**
+  - Controller: `MessengerMetricsController@index`
+  - Auth: `auth:sanctum`
+
+### Configuration Reference
+
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `api.tokens.default_expiration_days` | _not set_ | _default_ |
+
+### Feature Flags
 
 - `docs_center_enabled`
+
 <!-- AUTO-GENERATED:END -->

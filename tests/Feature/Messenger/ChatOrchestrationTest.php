@@ -452,7 +452,7 @@ class ChatOrchestrationTest extends TestCase
                 ],
                 'total' => 2,
             ],
-            message: 'Found 2 job(s)'
+            message: "Your jobs (2):\n- [job-001] Daily Backup (active)\n- [job-002] Hourly Sync (paused)"
         );
 
         $formatted = $formatter->format($result, $action, $this->account);
@@ -484,7 +484,7 @@ class ChatOrchestrationTest extends TestCase
                     ],
                 ],
             ],
-            message: 'Active runs (1):'
+            message: "Active runs (1):\n• [run-123] Nightly Sync (running)"
         );
 
         $formatted = $formatter->format($result, $action, $this->account);
@@ -512,7 +512,7 @@ class ChatOrchestrationTest extends TestCase
                 'run_id' => 'run-456',
                 'queued_at' => now()->toIso8601String(),
             ],
-            message: 'Job queued for immediate execution'
+            message: 'Job `job-123` queued (run `run-456`)'
         );
 
         $formatted = $formatter->format($result, $action, $this->account);
@@ -550,8 +550,9 @@ class ChatOrchestrationTest extends TestCase
     {
         $message = $this->createInboundMessage('list my jobs');
 
-        // Create a mock adapter
         $adapterMock = \Mockery::mock(\App\Contracts\Messenger\ConnectorAdapterInterface::class);
+        $adapterMock->shouldReceive('supportsReactions')->andReturn(false);
+        $adapterMock->shouldReceive('supportsMessageEditing')->andReturn(false);
         $adapterMock->shouldReceive('sendMessage')->andReturn(
             new \App\DTOs\Messenger\ProviderResponse(
                 success: true,
@@ -581,13 +582,13 @@ class ChatOrchestrationTest extends TestCase
             userId: $this->user->id
         );
 
-        // Manually call handle with dependencies
         $job->handle(
             app(ChatIntentParser::class),
             app(ChatActionExecutor::class),
             app(ConfirmationManager::class),
             app(ChatResponseFormatter::class),
-            $connectorManagerMock
+            $connectorManagerMock,
+            app(\App\Services\Messenger\CommandRouter::class)
         );
 
         // Verify action was created and completed

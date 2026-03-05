@@ -68,7 +68,7 @@ Use the `24h` default range to compare current failure rate against the previous
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -76,11 +76,22 @@ The block below is generated from code and front-matter metadata.
 | --- | --- | --- | --- |
 | `dashboard` | ok | `dashboard` | `GET` |
 
-### Referenced Settings Keys
+### API Endpoints
 
-- `dashboard.default_range`
+The following API endpoints are available for this feature:
 
-### Referenced Feature Flags
+- **`GET agent/api/v1/dashboard/metrics`**
+  - Controller: `AgentRunController@dashboardMetrics`
+  - Auth: `auth:sanctum`
+
+### Configuration Reference
+
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `dashboard.default_range` | _not set_ | _default_ |
+
+### Feature Flags
 
 - `docs_center_enabled`
+
 <!-- AUTO-GENERATED:END -->

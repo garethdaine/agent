@@ -257,4 +257,26 @@ return [
         'half_open_requests' => env('MESSENGER_CIRCUIT_HALF_OPEN', 3),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Context Usage and Compaction
+    |--------------------------------------------------------------------------
+    |
+    | Context usage estimation (chars per token, context window size for %).
+    | Compaction triggers when message count or estimated tokens exceed thresholds.
+    |
+    */
+
+    'context' => [
+        'chars_per_token' => (int) env('MESSENGER_CONTEXT_CHARS_PER_TOKEN', 4),
+        'estimated_context_window' => (int) env('MESSENGER_ESTIMATED_CONTEXT_WINDOW', 200_000),
+    ],
+
+    'compaction' => [
+        'enabled' => env('MESSENGER_COMPACTION_ENABLED', true),
+        'trigger_message_count' => (int) env('MESSENGER_COMPACTION_TRIGGER_MESSAGE_COUNT', 30),
+        'trigger_estimated_tokens' => (int) env('MESSENGER_COMPACTION_TRIGGER_TOKENS', 15_000),
+        'target_message_count' => (int) env('MESSENGER_COMPACTION_TARGET_MESSAGES', 10),
+    ],
+
 ];

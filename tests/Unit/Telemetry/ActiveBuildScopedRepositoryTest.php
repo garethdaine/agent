@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Tests\Unit\Telemetry;
 
 use App\Repositories\Projection\WorkflowReliabilityCurrentRepository;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ActiveBuildScopedRepositoryTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     public function test_repository_returns_only_rows_for_active_projection_build(): void
     {

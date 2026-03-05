@@ -19,7 +19,7 @@ import { deriveActiveBuildFreshnessView } from './freshness';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { Heart, Gauge, Radio, RefreshCw, AlertTriangle, ShieldCheck, HelpCircle, Square } from 'lucide-vue-next';
+import { Monitor, Heart, Gauge, Radio, RefreshCw, AlertTriangle, ShieldCheck, HelpCircle, Square } from 'lucide-vue-next';
 
 const runs = ref([]);
 const events = ref([]);
@@ -639,13 +639,18 @@ onBeforeUnmount(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Run Monitor</h2>
-                    <HelpHint
-                        ui-key="monitor.run-states"
-                        short-text="Track run states, approvals, and recovery actions for active executions."
-                        learn-more-href="/docs/overview"
-                    />
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Monitor class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Run Monitor</h2>
+                        <HelpHint
+                            ui-key="monitor.run-states"
+                            short-text="Track run states, approvals, and recovery actions for active executions."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('agent.jobs.index')">
@@ -659,7 +664,7 @@ onBeforeUnmount(() => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 lg:grid-cols-4">
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
                 <Card class="h-full">
                     <div class="flex h-full min-h-[136px] flex-col p-6">
                         <div class="flex items-center gap-2.5">
@@ -728,12 +733,12 @@ onBeforeUnmount(() => {
                 </Card>
             </div>
 
-            <div v-if="consecutiveFailureWarning" class="mx-auto mt-4 max-w-[1440px] flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+            <div v-if="consecutiveFailureWarning" class="mt-4 flex items-center gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
                 <AlertTriangle class="w-4 h-4 shrink-0" />
                 <span>Monitor polling is failing repeatedly. Retries continue automatically. {{ errorMessage }}</span>
             </div>
 
-            <div class="mx-auto mt-6 grid max-w-[1440px] grid-cols-1 gap-6 lg:grid-cols-2">
+            <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card>
                     <div class="px-5 py-4 border-b border-border">
                         <h3 class="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">Latest Runs (24h, max 50)</h3>

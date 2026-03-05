@@ -13,7 +13,8 @@ import Select from '@/Components/ui/Select.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
 import Button from '@/Components/ui/Button.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
-import { ArrowLeft, Plus, Trash2, Save } from 'lucide-vue-next';
+import { ArrowLeft, Plus, Trash2, Save, Bot } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const loading = ref(true);
 const submitting = ref(false);
@@ -234,7 +235,17 @@ onMounted(async () => {
                         <ArrowLeft class="h-4 w-4" />
                     </Button>
                 </Link>
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Create Council</h2>
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Bot class="h-5 w-5 text-primary" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Create Council</h2>
+                    <HelpHint
+                        ui-key="org.councils.create"
+                        short-text="Define a new agent council."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
             </div>
         </template>
 

@@ -6,6 +6,7 @@ namespace App\Support\Memory;
 
 use App\Models\MemoryConsolidationLog;
 use App\Models\MemoryEmbedding;
+use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 
@@ -35,7 +36,7 @@ class ForgettingService
      */
     public function prune(?int $userId = null, bool $dryRun = true): array
     {
-        if (! config('memory.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
             return ['skipped' => true, 'reason' => 'Memory system disabled'];
         }
 

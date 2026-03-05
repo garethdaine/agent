@@ -30,11 +30,13 @@ return new class extends Migration
             $table->text('error_summary')->nullable();
             $table->timestampTz('started_at')->nullable();
             $table->timestampTz('finished_at')->nullable();
+            $table->timestampTz('approved_at')->nullable();
             $table->softDeletes();
             $table->timestamps();
 
             $table->index(['user_id', 'status', 'deleted_at'], 'interr_sessions_user_status_deleted_idx');
             $table->index(['user_id', 'created_at'], 'interr_sessions_user_created_idx');
+            $table->index(['user_id', 'approved_at'], 'interr_sessions_user_approved_idx');
         });
     }
 

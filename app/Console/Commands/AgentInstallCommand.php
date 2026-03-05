@@ -2,11 +2,11 @@
 
 namespace App\Console\Commands;
 
-use App\Messenger\Discord\SlashCommandRegistrar;
 use App\Messenger\Validation\DiscordCredentialValidator;
 use App\Messenger\Validation\IngressProbe;
 use App\Messenger\Validation\WhatsAppCredentialValidator;
 use App\Models\ConnectorAccount;
+use App\Services\Messenger\SlashCommandRegistrar;
 use App\Support\Messenger\ConnectorManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
@@ -27,7 +27,8 @@ class AgentInstallCommand extends Command
         {--mode=local : Ingress mode (local, webhook)}
         {--non-interactive : Fail on missing required values}
         {--skip-migrations : Skip running migrations}
-        {--skip-health-check : Skip final health check}';
+        {--skip-health-check : Skip final health check}
+        {--setup-env : Interactive .env setup wizard for DB and Redis}';
 
     protected $description = 'Install and configure agent messenger integrations for Slack, Telegram, Discord, or WhatsApp';
 
@@ -76,8 +77,17 @@ class AgentInstallCommand extends Command
         $this->info('=== Agent Messenger Control Plane Installation ===');
         $this->newLine();
 
+        if ($this->option('setup-env')) {
+            $this->info('[0/7] Environment setup wizard...');
+            if (! $this->runEnvWizard()) {
+                return self::FAILURE;
+            }
+            $this->newLine();
+        }
+
         // Step 1: Preflight Checks
-        $this->info('[1/6] Running preflight checks...');
+        $stepNum = $this->option('setup-env') ? '1/7' : '1/6';
+        $this->info("[{$stepNum}] Running preflight checks...");
 
         if (! $this->runPreflightChecks()) {
             $this->error('Preflight checks failed. Please fix the issues above and try again.');
@@ -485,11 +495,11 @@ class AgentInstallCommand extends Command
         $registrar = app(SlashCommandRegistrar::class);
         $result = $registrar->register($account);
 
-        if ($result->success) {
+        if ($result->isSuccessful()) {
             $commandNames = $result->getCommandNames();
             $this->info(sprintf('  Slash commands registered: /%s', implode(', /', $commandNames)));
         } else {
-            $this->warn(sprintf('  Failed to register slash commands: %s', $result->error));
+            $this->warn(sprintf('  Failed to register slash commands: %s', $result->getMessage()));
             $this->warn('  You may need to re-run installation or register manually.');
         }
     }
@@ -890,6 +900,109 @@ class AgentInstallCommand extends Command
 
             $this->line(sprintf('  %s %s - %s', $icon, $service, $result['details']));
         }
+    }
+
+    private function runEnvWizard(): bool
+    {
+        $envPath = base_path('.env');
+        if (! file_exists($envPath)) {
+            $example = base_path('.env.example');
+            if (! file_exists($example)) {
+                $this->error('.env.example not found. Cannot run environment wizard.');
+
+                return false;
+            }
+            copy($example, $envPath);
+            $this->info('Created .env from .env.example.');
+        }
+
+        $dbHost = text(
+            label: 'Database host',
+            default: env('DB_HOST', '127.0.0.1'),
+            required: true
+        );
+        $dbPort = text(
+            label: 'Database port',
+            default: env('DB_PORT', '5432'),
+            required: true
+        );
+        $dbDatabase = text(
+            label: 'Database name',
+            default: env('DB_DATABASE', 'agent'),
+            required: true
+        );
+        $dbUsername = text(
+            label: 'Database username',
+            default: env('DB_USERNAME', 'agent'),
+            required: true
+        );
+        $dbPassword = password(
+            label: 'Database password',
+            placeholder: '(leave blank to keep current)',
+            required: false
+        );
+        $redisHost = text(
+            label: 'Redis host',
+            default: env('REDIS_HOST', '127.0.0.1'),
+            required: true
+        );
+        $redisPort = text(
+            label: 'Redis port',
+            default: env('REDIS_PORT', '6379'),
+            required: true
+        );
+
+        $this->setEnvInFile($envPath, 'DB_HOST', $dbHost);
+        $this->setEnvInFile($envPath, 'DB_PORT', $dbPort);
+        $this->setEnvInFile($envPath, 'DB_DATABASE', $dbDatabase);
+        $this->setEnvInFile($envPath, 'DB_USERNAME', $dbUsername);
+        if ($dbPassword !== '') {
+            $this->setEnvInFile($envPath, 'DB_PASSWORD', $dbPassword);
+        }
+        $this->setEnvInFile($envPath, 'REDIS_HOST', $redisHost);
+        $this->setEnvInFile($envPath, 'REDIS_PORT', $redisPort);
+
+        config([
+            'database.connections.pgsql.host' => $dbHost,
+            'database.connections.pgsql.port' => $dbPort,
+            'database.connections.pgsql.database' => $dbDatabase,
+            'database.connections.pgsql.username' => $dbUsername,
+            'database.connections.pgsql.password' => $dbPassword !== '' ? $dbPassword : config('database.connections.pgsql.password'),
+            'database.redis.default.host' => $redisHost,
+            'database.redis.default.port' => $redisPort,
+            'database.redis.cache.host' => $redisHost,
+            'database.redis.cache.port' => $redisPort,
+            'database.redis.memory.host' => $redisHost,
+            'database.redis.memory.port' => $redisPort,
+        ]);
+        if ($dbPassword !== '') {
+            putenv('DB_PASSWORD='.$dbPassword);
+        }
+        putenv('DB_HOST='.$dbHost);
+        putenv('REDIS_HOST='.$redisHost);
+
+        if (empty(env('APP_KEY'))) {
+            $this->info('Generating APP_KEY...');
+            Artisan::call('key:generate', ['--force' => true], $this->output);
+        }
+
+        $this->info('Environment file updated. Run preflight checks to verify connectivity.');
+
+        return true;
+    }
+
+    private function setEnvInFile(string $envPath, string $key, string $value): void
+    {
+        $content = file_get_contents($envPath);
+        $value = str_replace(['\\', '"'], ['\\\\', '\\"'], $value);
+        $line = $key.'="'.$value.'"';
+        $pattern = '/^'.preg_quote($key, '/').'=.*$/m';
+        if (preg_match($pattern, $content)) {
+            $content = preg_replace($pattern, $line, $content);
+        } else {
+            $content .= "\n".$line."\n";
+        }
+        file_put_contents($envPath, $content);
     }
 
     private function printNextSteps(): void

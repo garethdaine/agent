@@ -44,9 +44,6 @@ feature_flags:
 locale: en
 reviewed_at: 2026-03-04
 ---
-# Interface Surface Coverage
-
-This page is generated from `config/docs_coverage.php`, route registration, and docs metadata.
 
 ## Settings
 
@@ -87,7 +84,7 @@ After adding a new route to a covered surface, run `php artisan docs:generate` a
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -106,24 +103,47 @@ The block below is generated from code and front-matter metadata.
 | `tools.memory.index` | ok | `tools/memory` | `GET` |
 | `tools.messenger.index` | ok | `tools/messenger` | `GET` |
 
-### Referenced Settings Keys
+### API Endpoints
 
-- `api.tokens.default_expiration_days`
-- `backups.retention_days`
-- `dashboard.default_range`
-- `delegation.max_parallel_tasks`
-- `discovery.default_provider`
-- `features.flags_refresh_minutes`
-- `jobs.default_page_size`
-- `memory.retrieval_limit`
-- `messenger.health_poll_interval_seconds`
-- `monitor.poll_interval_seconds`
-- `org.default_execution_window_minutes`
-- `profile.session_timeout_minutes`
+The following API endpoints are available for this feature:
 
-### Referenced Feature Flags
+- **`GET agent/api/v1/dashboard/metrics`**
+  - Controller: `AgentRunController@dashboardMetrics`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/docs/coverage`**
+  - Controller: `DocsCoverageController@index`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/docs/diagnostics`**
+  - Controller: `DiagnosticsController`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/docs/fragments/{uiKey}`**
+  - Controller: `DocsFragmentController@show`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/docs/search`**
+  - Controller: `DocsSearchController@index`
+  - Auth: `auth:sanctum`
+
+### Configuration Reference
+
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `api.tokens.default_expiration_days` | _not set_ | _default_ |
+| `backups.retention_days` | _not set_ | _default_ |
+| `dashboard.default_range` | _not set_ | _default_ |
+| `delegation.max_parallel_tasks` | _not set_ | _default_ |
+| `discovery.default_provider` | _not set_ | _default_ |
+| `features.flags_refresh_minutes` | _not set_ | _default_ |
+| `jobs.default_page_size` | _not set_ | _default_ |
+| `memory.retrieval_limit` | _not set_ | _default_ |
+| `messenger.health_poll_interval_seconds` | _not set_ | _default_ |
+| `monitor.poll_interval_seconds` | _not set_ | _default_ |
+| `org.default_execution_window_minutes` | _not set_ | _default_ |
+| `profile.session_timeout_minutes` | _not set_ | _default_ |
+
+### Feature Flags
 
 - `docs_center_enabled`
 - `docs_search_enabled`
 - `help_hint_enabled`
+
 <!-- AUTO-GENERATED:END -->

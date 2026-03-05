@@ -13,7 +13,8 @@ import Input from '@/Components/ui/Input.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
 import Button from '@/Components/ui/Button.vue';
 import Spinner from '@/Components/ui/Spinner.vue';
-import { Plus, Trash2, AlertCircle, AlertTriangle, ArrowLeft } from 'lucide-vue-next';
+import { Plus, Trash2, AlertCircle, AlertTriangle, ArrowLeft, GitBranch } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const mode = ref('linear');
 const name = ref('');
@@ -118,7 +119,17 @@ const create = async () => {
                         <ArrowLeft class="h-4 w-4" />
                     </Button>
                 </Link>
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Create Delegation Graph</h2>
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <GitBranch class="h-5 w-5 text-primary" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Create Delegation Graph</h2>
+                    <HelpHint
+                        ui-key="delegation.create"
+                        short-text="Define a new delegation graph with tasks and profiles."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
             </div>
         </template>
 

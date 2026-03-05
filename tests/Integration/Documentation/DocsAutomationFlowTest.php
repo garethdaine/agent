@@ -44,11 +44,11 @@ class DocsAutomationFlowTest extends TestCase
         $repoPath = storage_path('framework/testing/docs-automation-git-repo');
         File::deleteDirectory($repoPath);
         File::ensureDirectoryExists($repoPath.'/docs');
-        File::ensureDirectoryExists($repoPath.'/storage/app/docs-sync');
+        File::ensureDirectoryExists($repoPath.'/docs-sync');
         File::ensureDirectoryExists($repoPath.'/bin');
 
         File::put($repoPath.'/docs/generated.md', "stale\n");
-        File::put($repoPath.'/storage/app/docs-sync/manifest.json', "{}\n");
+        File::put($repoPath.'/docs-sync/manifest.json', "{}\n");
 
         $this->runProcess(['git', 'init'], $repoPath);
         $this->runProcess(['git', 'config', 'user.email', 'docs-bot@example.com'], $repoPath);
@@ -62,7 +62,7 @@ class DocsAutomationFlowTest extends TestCase
 set -euo pipefail
 
 printf "fresh\n" > docs/generated.md
-printf '{"mode":"commit"}\n' > storage/app/docs-sync/manifest.json
+printf '{"mode":"commit"}\n' > docs-sync/manifest.json
 BASH
         );
         chmod($fakeSyncCommand, 0755);
@@ -77,7 +77,7 @@ BASH
 
         $staged = $this->runProcess(['git', 'diff', '--cached', '--name-only'], $repoPath);
         $this->assertStringContainsString('docs/generated.md', $staged->getOutput());
-        $this->assertStringContainsString('storage/app/docs-sync/manifest.json', $staged->getOutput());
+        $this->assertStringContainsString('docs-sync/manifest.json', $staged->getOutput());
     }
 
     public function test_commit_mode_sync_failure_does_not_block_commit_hook(): void
@@ -148,8 +148,7 @@ BASH
         $state = (object) ['attempts' => 0, 'sleeps' => []];
 
         $this->app->bind('App\\Support\\Documentation\\DocsReindexExecutor', function () use ($state) {
-            return new class($state)
-                implements \App\Support\Documentation\DocsReindexExecutor
+            return new class($state) implements \App\Support\Documentation\DocsReindexExecutor
             {
                 public function __construct(private object $state) {}
 
@@ -168,8 +167,7 @@ BASH
         });
 
         $this->app->bind('App\\Support\\Documentation\\DocsSyncSleeper', function () use ($state) {
-            return new class($state)
-                implements \App\Support\Documentation\DocsSyncSleeper
+            return new class($state) implements \App\Support\Documentation\DocsSyncSleeper
             {
                 public function __construct(private object $state) {}
 

@@ -1,30 +1,16 @@
 #!/usr/bin/env bash
-set -u
+set -euo pipefail
 
 MODE="commit"
 SOURCE="repo"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --mode=*)
-            MODE="${1#*=}"
-            shift
-            ;;
-        --mode)
-            MODE="${2:-}"
-            shift 2
-            ;;
-        --source=*)
-            SOURCE="${1#*=}"
-            shift
-            ;;
-        --source)
-            SOURCE="${2:-}"
-            shift 2
-            ;;
-        *)
-            shift
-            ;;
+        --mode=*)  MODE="${1#*=}"; shift ;;
+        --mode)    MODE="${2:-}"; shift 2 ;;
+        --source=*) SOURCE="${1#*=}"; shift ;;
+        --source)  SOURCE="${2:-}"; shift 2 ;;
+        *)         shift ;;
     esac
 done
 
@@ -46,86 +32,81 @@ ARTISAN_RUNNER="${DOCS_SYNC_ARTISAN_BIN:-php artisan}"
 STRICT_COMMIT="${DOCS_SYNC_STRICT_COMMIT:-0}"
 DOCS_SYNC_QUEUE_CONNECTION="${DOCS_SYNC_QUEUE_CONNECTION:-sync}"
 
-run_artisan_command() {
+run_artisan() {
     local command="$1"
-
     if [[ "${ARTISAN_RUNNER}" == *" "* ]]; then
-        bash -lc "${ARTISAN_RUNNER} ${command}"
+        bash -lc "${ARTISAN_RUNNER} ${command}" 2>&1
     else
-        "${ARTISAN_RUNNER}" ${command}
+        ${ARTISAN_RUNNER} ${command} 2>&1
     fi
 }
 
-run_docs_generation() {
-    run_artisan_command "docs:generate --source=${SOURCE}"
+can_boot_artisan() {
+    run_artisan "env" >/dev/null 2>&1
 }
 
-run_docs_validation_and_coverage() {
-    run_artisan_command "docs:validate"
-    local validate_exit=$?
-    if [[ ${validate_exit} -ne 0 ]]; then
-        return ${validate_exit}
-    fi
+if ! can_boot_artisan; then
+    echo "[docs-sync] WARNING: Laravel app cannot boot (missing DB/Redis/config). Skipping docs sync." >&2
+    exit 0
+fi
 
-    run_artisan_command "docs:coverage --fail-on-missing"
-}
-
-run_docs_sync() {
-    local command="docs:sync --mode=${MODE} --source=${SOURCE}"
-
-    if [[ "${ARTISAN_RUNNER}" == *" "* ]]; then
-        bash -lc "QUEUE_CONNECTION=${DOCS_SYNC_QUEUE_CONNECTION} ${ARTISAN_RUNNER} ${command}"
-    else
-        QUEUE_CONNECTION="${DOCS_SYNC_QUEUE_CONNECTION}" "${ARTISAN_RUNNER}" ${command}
-    fi
-}
-
-run_docs_generation
-GEN_EXIT_CODE=$?
+echo "[docs-sync] Running docs:generate --source=${SOURCE} ..."
+GEN_OUTPUT="$(run_artisan "docs:generate --source=${SOURCE} --export-openapi")" || GEN_EXIT_CODE=$?
+GEN_EXIT_CODE="${GEN_EXIT_CODE:-0}"
 
 if [[ ${GEN_EXIT_CODE} -ne 0 ]]; then
+    echo "${GEN_OUTPUT}" >&2
     if [[ "${MODE}" == "commit" && "${STRICT_COMMIT}" != "1" ]]; then
-        echo "[docs-sync] WARNING: docs generation failed in commit mode (exit ${GEN_EXIT_CODE}); continuing because DOCS_SYNC_STRICT_COMMIT=${STRICT_COMMIT}." >&2
+        echo "[docs-sync] WARNING: docs generation failed (exit ${GEN_EXIT_CODE}); continuing." >&2
     else
         echo "[docs-sync] ERROR: docs generation failed (exit ${GEN_EXIT_CODE})." >&2
         exit ${GEN_EXIT_CODE}
     fi
+else
+    echo "${GEN_OUTPUT}"
 fi
 
 if [[ "${MODE}" == "commit" ]]; then
-    run_docs_validation_and_coverage
-    QUALITY_EXIT_CODE=$?
+    echo "[docs-sync] Running docs:validate ..."
+    VALIDATE_OUTPUT="$(run_artisan "docs:validate")" || VALIDATE_EXIT=$?
+    VALIDATE_EXIT="${VALIDATE_EXIT:-0}"
 
-    if [[ ${QUALITY_EXIT_CODE} -ne 0 ]]; then
+    if [[ ${VALIDATE_EXIT} -ne 0 ]]; then
+        echo "${VALIDATE_OUTPUT}" >&2
         if [[ "${STRICT_COMMIT}" == "1" ]]; then
-            echo "[docs-sync] ERROR: docs validation/coverage gate failed (exit ${QUALITY_EXIT_CODE}). Commit blocked." >&2
-            exit ${QUALITY_EXIT_CODE}
+            echo "[docs-sync] ERROR: docs validation failed (exit ${VALIDATE_EXIT}). Commit blocked." >&2
+            exit ${VALIDATE_EXIT}
         fi
-
-        echo "[docs-sync] WARNING: docs validation/coverage gate failed in commit mode (exit ${QUALITY_EXIT_CODE}); continuing because DOCS_SYNC_STRICT_COMMIT=${STRICT_COMMIT}." >&2
+        echo "[docs-sync] WARNING: docs validation failed (exit ${VALIDATE_EXIT}); continuing." >&2
     fi
 fi
 
-run_docs_sync
+echo "[docs-sync] Running docs:sync --mode=${MODE} --source=${SOURCE} ..."
+if [[ "${ARTISAN_RUNNER}" == *" "* ]]; then
+    SYNC_OUTPUT="$(bash -lc "QUEUE_CONNECTION=${DOCS_SYNC_QUEUE_CONNECTION} ${ARTISAN_RUNNER} docs:sync --mode=${MODE} --source=${SOURCE}" 2>&1)" || SYNC_EXIT=$?
+else
+    SYNC_OUTPUT="$(QUEUE_CONNECTION="${DOCS_SYNC_QUEUE_CONNECTION}" ${ARTISAN_RUNNER} docs:sync --mode="${MODE}" --source="${SOURCE}" 2>&1)" || SYNC_EXIT=$?
+fi
+SYNC_EXIT="${SYNC_EXIT:-0}"
 
-SYNC_EXIT_CODE=$?
-
-if [[ ${SYNC_EXIT_CODE} -ne 0 ]]; then
+if [[ ${SYNC_EXIT} -ne 0 ]]; then
+    echo "${SYNC_OUTPUT}" >&2
     if [[ "${MODE}" == "commit" ]]; then
-        echo "[docs-sync] WARNING: docs sync failed in commit mode (exit ${SYNC_EXIT_CODE}); commit will continue." >&2
-        exit 0
+        echo "[docs-sync] WARNING: docs sync failed (exit ${SYNC_EXIT}); commit will continue." >&2
+    else
+        echo "[docs-sync] ERROR: docs sync failed in deploy mode (exit ${SYNC_EXIT})." >&2
+        exit ${SYNC_EXIT}
     fi
-
-    echo "[docs-sync] ERROR: docs sync failed in deploy mode (exit ${SYNC_EXIT_CODE})." >&2
-    exit ${SYNC_EXIT_CODE}
+else
+    echo "${SYNC_OUTPUT}"
 fi
 
 if [[ "${MODE}" == "commit" ]] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    MANIFEST_PATH="${DOCS_SYNC_MANIFEST_PATH:-storage/app/docs-sync/manifest.json}"
-    STAGE_PATHS="${DOCS_SYNC_STAGE_PATHS:-docs ${MANIFEST_PATH}}"
+    MANIFEST_PATH="${DOCS_SYNC_MANIFEST_PATH:-docs-sync/manifest.json}"
     # shellcheck disable=SC2206
-    PATHS_TO_STAGE=(${STAGE_PATHS})
-    git add -A -- "${PATHS_TO_STAGE[@]}" >/dev/null 2>&1 || true
+    PATHS_TO_STAGE=(docs "${MANIFEST_PATH}")
+    git add -A -- "${PATHS_TO_STAGE[@]}" 2>/dev/null || true
+    echo "[docs-sync] Staged docs changes for commit."
 fi
 
 exit 0

@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature\Telemetry;
 
 use App\Services\Telemetry\IngestionService;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class TerminalizationGapTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     public function test_terminal_gap_creates_synthetic_audit_event(): void
     {

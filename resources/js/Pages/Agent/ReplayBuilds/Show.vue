@@ -2,6 +2,8 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import { RotateCcw } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
     build: {
@@ -41,9 +43,21 @@ const activeBuildAgeLabel = computed(() => {
     <AppLayout :title="`Replay Build ${build.id}`">
         <template #header>
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Replay Build Detail</h2>
-                    <p class="mt-1 font-mono text-xs text-muted-foreground">{{ build.id }}</p>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <RotateCcw class="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-xl font-semibold leading-tight text-foreground">Replay Build Detail</h2>
+                            <HelpHint
+                                ui-key="replay-builds.detail"
+                                short-text="Inspect replay build progress and status."
+                                learn-more-href="/docs/overview"
+                            />
+                        </div>
+                        <p class="mt-1 font-mono text-xs text-muted-foreground">{{ build.id }}</p>
+                    </div>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.replayBuilds">Back to replay builds</Link>

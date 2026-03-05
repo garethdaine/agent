@@ -1,0 +1,91 @@
+<?php
+
+namespace App\Models\Runtime;
+
+use App\Enums\Runtime\BrowserPersistenceMode;
+use App\Enums\Runtime\RuntimeMode;
+use App\Enums\Runtime\RuntimeSessionStatus;
+use App\Models\ChatSession;
+use App\Models\Team;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class RuntimeSession extends Model
+{
+    use HasFactory;
+    use HasUuids;
+
+    protected $fillable = [
+        'chat_session_id',
+        'user_id',
+        'team_id',
+        'status',
+        'mode',
+        'title',
+        'workspace_root',
+        'browser_persistence_mode',
+        'started_at',
+        'ended_at',
+        'total_input_tokens',
+        'total_output_tokens',
+        'total_cost_usd',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => RuntimeSessionStatus::class,
+            'mode' => RuntimeMode::class,
+            'browser_persistence_mode' => BrowserPersistenceMode::class,
+            'started_at' => 'datetime',
+            'ended_at' => 'datetime',
+            'total_input_tokens' => 'integer',
+            'total_output_tokens' => 'integer',
+            'total_cost_usd' => 'decimal:6',
+        ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
+
+    public function chatSession(): BelongsTo
+    {
+        return $this->belongsTo(ChatSession::class);
+    }
+
+    public function turns(): HasMany
+    {
+        return $this->hasMany(RuntimeTurn::class)->orderBy('sequence');
+    }
+
+    public function artifacts(): HasMany
+    {
+        return $this->hasMany(RuntimeArtifact::class);
+    }
+
+    public function policySnapshots(): HasMany
+    {
+        return $this->hasMany(RuntimePolicySnapshot::class)->orderBy('captured_at');
+    }
+
+    public function scopeForUser(Builder $query, User $user): void
+    {
+        $teamIds = $user->allTeams()->pluck('id');
+        $query->where(function (Builder $q) use ($user, $teamIds): void {
+            $q->where('user_id', $user->id)
+                ->orWhereIn('team_id', $teamIds);
+        });
+    }
+}

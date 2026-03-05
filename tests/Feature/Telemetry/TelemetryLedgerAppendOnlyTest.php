@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace Tests\Feature\Telemetry;
 
 use Illuminate\Database\QueryException;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class TelemetryLedgerAppendOnlyTest extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
+
+    protected array $tablesToTruncate = [
+        'telemetry_event_ledger',
+    ];
 
     public function test_ledger_has_v1_contract_columns(): void
     {

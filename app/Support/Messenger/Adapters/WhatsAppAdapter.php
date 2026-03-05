@@ -159,11 +159,14 @@ class WhatsAppAdapter extends AbstractConnectorAdapter
         // Normalize phone number to E.164 format
         $toPhoneNumber = $this->normalizePhone($payload->channelId);
 
+        // Normalize content to handle escaped newlines and formatting issues
+        $normalizedContent = $this->normalizeContent($payload->content);
+
         $data = [
             'messaging_product' => 'whatsapp',
             'to' => $toPhoneNumber,
             'type' => 'text',
-            'text' => ['body' => $payload->content],
+            'text' => ['body' => $normalizedContent],
         ];
 
         // Add quote reply context if replying to a message
@@ -282,6 +285,61 @@ class WhatsAppAdapter extends AbstractConnectorAdapter
         }
 
         return ProviderResponse::success($messageId, $responseData);
+    }
+
+    public function supportsReactions(): bool
+    {
+        return true;
+    }
+
+    public function addReaction(ChatSession $session, string $messageId, string $emoji): ProviderResponse
+    {
+        $account = $session->connectorAccount;
+
+        if (! $account) {
+            return ProviderResponse::failure('No connector account associated with session');
+        }
+
+        $phoneNumberId = $this->getPhoneNumberId($account);
+        $accessToken = $this->getAccessToken($account);
+
+        if (! $phoneNumberId || ! $accessToken) {
+            return ProviderResponse::failure('Missing WhatsApp credentials');
+        }
+
+        $httpClient = new MessengerHttpClient($account);
+
+        $result = $httpClient->post(
+            self::API_BASE_URL.'/'.$phoneNumberId.'/messages',
+            [
+                'messaging_product' => 'whatsapp',
+                'recipient_type' => 'individual',
+                'to' => $this->normalizePhone($session->channel_id),
+                'type' => 'reaction',
+                'reaction' => [
+                    'message_id' => $messageId,
+                    'emoji' => $emoji,
+                ],
+            ],
+            [
+                'Authorization' => 'Bearer '.$accessToken,
+                'Content-Type' => 'application/json',
+            ]
+        );
+
+        if (! $result['success']) {
+            $this->logDebug('Failed to add WhatsApp reaction', [
+                'phone_number' => $session->channel_id,
+                'message_id' => $messageId,
+                'emoji' => $emoji,
+            ]);
+
+            return ProviderResponse::failure(
+                $result['response']?->json()['error']['message'] ?? 'Failed to add reaction'
+            );
+        }
+
+        return ProviderResponse::success($messageId);
     }
 
     public function supportsThreading(): bool

@@ -51,7 +51,7 @@ Update profile metadata, rotate password, then verify active sessions follow tim
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -59,11 +59,14 @@ The block below is generated from code and front-matter metadata.
 | --- | --- | --- | --- |
 | `profile.show` | ok | `user/profile` | `GET` |
 
-### Referenced Settings Keys
+### Configuration Reference
 
-- `profile.session_timeout_minutes`
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `profile.session_timeout_minutes` | _not set_ | _default_ |
 
-### Referenced Feature Flags
+### Feature Flags
 
 - `docs_center_enabled`
+
 <!-- AUTO-GENERATED:END -->

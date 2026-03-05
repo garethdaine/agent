@@ -4,11 +4,13 @@ namespace App\Services\Messenger;
 
 use App\DTOs\Messenger\ParsedAction;
 use App\Enums\Messenger\ChatActionType;
+use App\Models\ChatAttachment;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Storage;
 
 class ChatIntentParser
 {
@@ -27,14 +29,30 @@ class ChatIntentParser
             return null;
         }
 
-        // First try pattern matching for common commands
         $patternResult = $this->tryPatternMatch($content);
         if ($patternResult !== null) {
             return $patternResult;
         }
 
-        // Fall back to AI parsing for complex intents
-        return $this->parseWithAI($content, $session);
+        $attachmentContext = $this->buildAttachmentContext($message);
+
+        $aiResult = $this->parseWithAI($content, $session, $attachmentContext);
+
+        if ($aiResult !== null) {
+            return $aiResult;
+        }
+
+        return new ParsedAction(
+            type: ChatActionType::GENERAL_TASK,
+            parameters: [
+                'task_description' => $content,
+                'original_message' => $content,
+                'attachment_context' => $attachmentContext,
+            ],
+            confidence: 0.8,
+            requiresConfirmation: false,
+            rawIntent: $content,
+        );
     }
 
     /**
@@ -105,16 +123,78 @@ class ChatIntentParser
             );
         }
 
+        // Run history commands
+        if (preg_match('/^(show|list|get)\s+(run\s+)?history(\s+(?:for\s+)?(?:job\s+)?([a-z0-9_-]+))?$/i', $normalized, $matches)) {
+            $parameters = [];
+            if (isset($matches[4]) && $matches[4] !== '') {
+                $parameters['job_id'] = $matches[4];
+            }
+
+            return new ParsedAction(
+                type: ChatActionType::RUNS_LIST_HISTORY,
+                parameters: $parameters,
+                confidence: 0.95,
+                requiresConfirmation: false,
+                rawIntent: $content,
+            );
+        }
+
+        // "did job X complete" / "did jobs X and Y complete" patterns
+        if (preg_match('/^(?:did|has|have)\s+jobs?\s+([\d,\s]+(?:and\s+\d+)?)\s+(?:complete|finish|succeed|run|pass)/i', $normalized, $matches)) {
+            $jobIds = preg_split('/[\s,]+(?:and\s+)?/', trim($matches[1]));
+            $jobIds = array_filter(array_map('trim', $jobIds ?: []), fn ($id) => $id !== '');
+
+            if (count($jobIds) === 1) {
+                return new ParsedAction(
+                    type: ChatActionType::RUNS_LIST_HISTORY,
+                    parameters: ['job_id' => $jobIds[0]],
+                    confidence: 0.9,
+                    requiresConfirmation: false,
+                    rawIntent: $content,
+                );
+            }
+
+            return new ParsedAction(
+                type: ChatActionType::RUNS_LIST_HISTORY,
+                parameters: ['job_ids' => $jobIds],
+                confidence: 0.9,
+                requiresConfirmation: false,
+                rawIntent: $content,
+            );
+        }
+
+        // Show specific job details
+        if (preg_match('/^(?:show|get|describe|info)\s+(?:job\s+)(\d+)$/i', $normalized, $matches)) {
+            return new ParsedAction(
+                type: ChatActionType::JOBS_SHOW,
+                parameters: ['job_id' => $matches[1]],
+                confidence: 0.95,
+                requiresConfirmation: false,
+                rawIntent: $content,
+            );
+        }
+
+        // Show specific run details
+        if (preg_match('/^(?:show|get|describe|info)\s+(?:run\s+)(\d+)$/i', $normalized, $matches)) {
+            return new ParsedAction(
+                type: ChatActionType::RUNS_SHOW,
+                parameters: ['run_id' => $matches[1]],
+                confidence: 0.95,
+                requiresConfirmation: false,
+                rawIntent: $content,
+            );
+        }
+
         return null;
     }
 
     /**
      * Parse intent using AI (Claude CLI).
      */
-    private function parseWithAI(string $content, ChatSession $session): ?ParsedAction
+    private function parseWithAI(string $content, ChatSession $session, string $attachmentContext = ''): ?ParsedAction
     {
         $sessionHistory = $this->buildSessionContext($session);
-        $prompt = $this->buildParsingPrompt($content, $sessionHistory);
+        $prompt = $this->buildParsingPrompt($content, $sessionHistory, $attachmentContext);
 
         try {
             $result = Process::timeout(30)->run([
@@ -151,33 +231,106 @@ class ChatIntentParser
     /**
      * Build the prompt for AI intent parsing.
      */
-    private function buildParsingPrompt(string $content, string $sessionHistory): string
+    private function buildParsingPrompt(string $content, string $sessionHistory, string $attachmentContext = ''): string
     {
         $availableActions = implode(', ', ChatActionType::values());
 
+        $attachmentSection = $attachmentContext !== ''
+            ? "\nAttached files:\n{$attachmentContext}\n"
+            : '';
+
         return <<<PROMPT
-You are an intent parser for a job/run management system. Parse the user's message into a structured action.
+You are an intent parser for an agent operations system. Parse the user's message into a structured action.
 
 Available actions: {$availableActions}
 
 Action descriptions:
 - jobs.list: List all configured jobs
-- jobs.create: Create a new scheduled job (requires name, command, schedule)
+- jobs.create: Create a new scheduled job (requires name; runner_type, working_directory, task_brief, schedule optional)
 - jobs.update: Update an existing job configuration
 - jobs.delete: Permanently delete a job
+- jobs.show: Show detailed information about a specific job (requires job_id)
 - runs.list_active: List currently active runs
+- runs.list_history: List run history for a job or all jobs (optional: job_id, status, limit)
+- runs.show: Show detailed information about a specific run (requires run_id)
 - runs.stop: Stop a running process (requires run_id)
 - runs.run_now: Trigger immediate execution of a job (requires job_id)
 - runs.retry: Retry a failed or stopped run (requires run_id)
 - runs.steer: Provide guidance to a running process (requires run_id, guidance)
+- general.task: Handle any general question, request, or task that doesn't fit the above categories
+
+IMPORTANT: If the user's message is a general question, greeting, request for help, capability inquiry, or any task that doesn't clearly map to a specific job/run action, use general.task with task_description set to the user's full message. Do NOT return clarification_needed for general questions — use general.task instead.
 
 Session context:
 {$sessionHistory}
-
+{$attachmentSection}
 User message: {$content}
 
-Parse this message and return the structured action. If the intent is unclear or ambiguous, set clarification_needed to a question that would help clarify the intent. Set confidence to a value between 0 and 1 indicating how confident you are in the parsing.
+Parse this message and return the structured action. If the user has attached files, consider their content as part of the request context. If the intent could be a specific job/run action but is genuinely ambiguous between two specific actions, set clarification_needed. Set confidence to a value between 0 and 1.
 PROMPT;
+    }
+
+    private function buildAttachmentContext(ChatMessage $message): string
+    {
+        $attachments = $message->attachments()->get();
+
+        if ($attachments->isEmpty()) {
+            return '';
+        }
+
+        $context = [];
+        $disk = Storage::disk(config('messenger.attachment_config.storage_disk', 'local'));
+        $maxInlineBytes = 50_000;
+
+        foreach ($attachments as $attachment) {
+            /** @var ChatAttachment $attachment */
+            $entry = sprintf(
+                '- %s (%s, %s bytes)',
+                $attachment->filename,
+                $attachment->mime_type,
+                number_format($attachment->size_bytes)
+            );
+
+            if ($this->isReadableTextMime($attachment->mime_type) && $attachment->size_bytes <= $maxInlineBytes) {
+                try {
+                    $contents = $disk->get($attachment->storage_path);
+                    if ($contents !== null && mb_check_encoding($contents, 'UTF-8')) {
+                        $entry .= "\n```\n".trim($contents)."\n```";
+                    }
+                } catch (\Throwable $e) {
+                    Log::debug('ChatIntentParser: Could not read attachment content', [
+                        'attachment_id' => $attachment->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            $context[] = $entry;
+        }
+
+        return implode("\n", $context);
+    }
+
+    private function isReadableTextMime(string $mimeType): bool
+    {
+        if (str_starts_with($mimeType, 'text/')) {
+            return true;
+        }
+
+        $readableMimes = [
+            'application/json',
+            'application/xml',
+            'application/x-yaml',
+            'application/yaml',
+            'application/javascript',
+            'application/typescript',
+            'application/x-sh',
+            'application/csv',
+            'application/sql',
+            'application/x-httpd-php',
+        ];
+
+        return in_array($mimeType, $readableMimes, true);
     }
 
     /**

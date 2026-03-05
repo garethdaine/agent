@@ -24,6 +24,10 @@ class ChatResponseFormatter
             return $this->formatError(new \RuntimeException($result->error ?? 'Unknown error'), $action, $account);
         }
 
+        if ($actionType === ChatActionType::GENERAL_TASK) {
+            return $result->message ?? '';
+        }
+
         return match ($verbosity) {
             'full' => $this->formatFull($result, $actionType),
             'errors_only' => $this->formatErrorsOnly($result, $actionType),
@@ -60,11 +64,16 @@ class ChatResponseFormatter
     private function formatFull(ActionResult $result, ?ChatActionType $actionType): string
     {
         $response = $this->formatHeader($result, $actionType);
-        $response .= $this->formatDataFull($result->data, $actionType);
+
+        if ($result->message === null || $result->message === '') {
+            $response .= $this->formatDataFull($result->data, $actionType);
+        }
 
         if ($result->hasWarnings()) {
             $response .= $this->formatWarnings($result->warnings);
         }
+
+        $response .= $this->formatUsage($result->usage);
 
         return $response;
     }
@@ -75,11 +84,16 @@ class ChatResponseFormatter
     private function formatSummary(ActionResult $result, ?ChatActionType $actionType): string
     {
         $response = $this->formatHeader($result, $actionType);
-        $response .= $this->formatDataSummary($result->data, $actionType);
+
+        if ($result->message === null || $result->message === '') {
+            $response .= $this->formatDataSummary($result->data, $actionType);
+        }
 
         if ($result->hasWarnings()) {
             $response .= $this->formatWarnings($result->warnings);
         }
+
+        $response .= $this->formatUsage($result->usage);
 
         return $response;
     }
@@ -132,6 +146,8 @@ class ChatResponseFormatter
             ChatActionType::RUNS_STOP => $this->formatRunStopFull($data),
             ChatActionType::RUNS_RETRY => $this->formatRunRetryFull($data),
             ChatActionType::RUNS_RUN_NOW => $this->formatRunNowFull($data),
+            ChatActionType::GENERAL_TASK, ChatActionType::RUNS_LIST_HISTORY,
+            ChatActionType::RUNS_SHOW, ChatActionType::JOBS_SHOW => '',
             default => $this->formatGenericData($data),
         };
     }
@@ -154,6 +170,8 @@ class ChatResponseFormatter
             ChatActionType::RUNS_STOP => $this->formatRunStopSummary($data),
             ChatActionType::RUNS_RETRY => $this->formatRunRetrySummary($data),
             ChatActionType::RUNS_RUN_NOW => $this->formatRunNowSummary($data),
+            ChatActionType::GENERAL_TASK, ChatActionType::RUNS_LIST_HISTORY,
+            ChatActionType::RUNS_SHOW, ChatActionType::JOBS_SHOW => '',
             default => $this->formatGenericData($data),
         };
     }
@@ -385,6 +403,34 @@ class ChatResponseFormatter
         }
 
         return $output;
+    }
+
+    /**
+     * @param  array{input_tokens?: int, output_tokens?: int, cost_usd?: float}|null  $usage
+     */
+    private function formatUsage(?array $usage): string
+    {
+        if ($usage === null) {
+            return '';
+        }
+
+        $input = (int) ($usage['input_tokens'] ?? 0);
+        $output = (int) ($usage['output_tokens'] ?? 0);
+        $cost = $usage['cost_usd'] ?? null;
+
+        if ($input === 0 && $output === 0) {
+            return '';
+        }
+
+        $parts = [];
+        $parts[] = number_format($input).' in';
+        $parts[] = number_format($output).' out';
+
+        if (is_float($cost) && $cost > 0) {
+            $parts[] = '$'.number_format($cost, 4);
+        }
+
+        return "\n`tokens: ".implode(' / ', $parts)."`\n";
     }
 
     /**

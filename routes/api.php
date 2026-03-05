@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\AgentRunController;
 use App\Http\Controllers\Api\V1\ChatActionController;
 use App\Http\Controllers\Api\V1\ChatSessionController;
 use App\Http\Controllers\Api\V1\ComplianceController;
+use App\Http\Controllers\Api\V1\CredentialsController;
 use App\Http\Controllers\Api\V1\DelegateeProfileController;
 use App\Http\Controllers\Api\V1\DelegationGraphController;
 use App\Http\Controllers\Api\V1\DelegationTaskController;
@@ -31,6 +32,8 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\Org;
 use App\Http\Controllers\Api\V1\ProjectionReplayBuildController;
 use App\Http\Controllers\Api\V1\RepoAnalysisSessionController;
+use App\Http\Controllers\Api\V1\Runtime\RuntimeSessionController;
+use App\Http\Controllers\Api\V1\Runtime\RuntimeToolCallController;
 use App\Http\Controllers\Api\V1\SystemDirectoryPickerController;
 use App\Http\Controllers\Api\V1\WorkflowCostController;
 use App\Http\Controllers\Api\V1\WorkflowEscalationController;
@@ -57,6 +60,8 @@ Route::middleware([AgentApiVersionHeader::class])
         Route::get('/health', fn () => response()->json([
             'ok' => true,
         ]));
+
+        Route::post('/n8n/webhook', \App\Http\Controllers\Api\V1\N8nWebhookController::class);
 
         Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/jobs', [AgentJobController::class, 'index']);
@@ -109,6 +114,10 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::post('/backups/run-now', [AgentBackupSettingsController::class, 'runNow'])->middleware('throttle:agent-mutations');
             Route::get('/features/settings', [AgentFeatureSettingsController::class, 'index']);
             Route::put('/features/settings', [AgentFeatureSettingsController::class, 'update'])->middleware('throttle:agent-mutations');
+
+            Route::get('/credentials', [CredentialsController::class, 'index']);
+            Route::post('/credentials', [CredentialsController::class, 'store'])->middleware('throttle:agent-mutations');
+            Route::delete('/credentials', [CredentialsController::class, 'destroy'])->middleware('throttle:agent-mutations');
 
             Route::prefix('docs')->group(function (): void {
                 Route::get('/search', [DocsSearchController::class, 'index']);
@@ -210,6 +219,18 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::post('/chat/actions/{id}/cancel', [ChatActionController::class, 'cancel'])
                 ->middleware('throttle:agent-mutations');
 
+            // Runtime session endpoints
+            Route::prefix('chat/runtime')->group(function (): void {
+                Route::get('/sessions', [RuntimeSessionController::class, 'index']);
+                Route::get('/sessions/{id}', [RuntimeSessionController::class, 'show']);
+                Route::post('/sessions/{id}/stop', [RuntimeSessionController::class, 'stop'])
+                    ->middleware('throttle:agent-mutations');
+                Route::post('/tool-calls/{id}/approve', [RuntimeToolCallController::class, 'approve'])
+                    ->middleware('throttle:agent-mutations');
+                Route::post('/tool-calls/{id}/deny', [RuntimeToolCallController::class, 'deny'])
+                    ->middleware('throttle:agent-mutations');
+            });
+
             // Messenger connector management endpoints
             Route::get('/messenger/connectors/schema', [MessengerConnectorController::class, 'schema']);
             Route::get('/messenger/connectors', [MessengerConnectorController::class, 'index']);
@@ -221,6 +242,8 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::delete('/messenger/connectors/{id}', [MessengerConnectorController::class, 'destroy'])
                 ->middleware('throttle:agent-mutations');
             Route::post('/messenger/connectors/{id}/test', [MessengerConnectorController::class, 'test'])
+                ->middleware('throttle:agent-mutations');
+            Route::match(['get', 'put'], '/messenger/connectors/{id}/soul', [MessengerConnectorController::class, 'soul'])
                 ->middleware('throttle:agent-mutations');
 
             // Memory settings routes — always accessible so users can configure

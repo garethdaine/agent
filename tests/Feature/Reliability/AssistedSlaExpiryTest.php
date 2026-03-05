@@ -8,13 +8,13 @@ use App\Enums\ReliabilityRunClassification;
 use App\Models\AgentJobRun;
 use App\Models\RunClassification;
 use Carbon\CarbonImmutable;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class AssistedSlaExpiryTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     protected function tearDown(): void
     {

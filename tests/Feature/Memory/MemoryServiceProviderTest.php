@@ -58,19 +58,18 @@ class MemoryServiceProviderTest extends TestCase
     }
 
     /**
-     * Test that MemorySettingsService throws when memory is disabled.
+     * Test that MemorySettingsService is always resolvable (even when memory disabled)
+     * because users need to configure provider keys before enabling the system.
      */
-    public function test_memory_settings_service_throws_when_disabled(): void
+    public function test_memory_settings_service_resolvable_when_disabled(): void
     {
         config(['memory.enabled' => false]);
 
-        // Unbind the singleton so we get a fresh resolution
         app()->forgetInstance(MemorySettingsService::class);
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Memory system is disabled');
+        $service = app(MemorySettingsService::class);
 
-        app(MemorySettingsService::class);
+        $this->assertInstanceOf(MemorySettingsService::class, $service);
     }
 
     /**

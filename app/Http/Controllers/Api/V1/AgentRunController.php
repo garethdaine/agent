@@ -39,9 +39,9 @@ class AgentRunController extends Controller
         $windowStart = $now->subHours($hours);
         $todayStart = $now->startOfDay();
 
-        $baseQuery = AgentJobRun::query()->where('user_id', $request->user()->id);
+        $baseQuery = AgentJobRun::query()->forUser($request->user());
         $windowTerminalQuery = AgentJobRun::query()
-            ->where('user_id', $request->user()->id)
+            ->forUser($request->user())
             ->where('created_at', '>=', $windowStart)
             ->whereIn('status', [
                 AgentJobRun::STATUS_SUCCEEDED,
@@ -110,7 +110,7 @@ class AgentRunController extends Controller
         $limit = min(200, max(1, (int) $request->integer('limit', 50)));
 
         $runs = AgentJobRun::query()
-            ->where('user_id', $request->user()->id)
+            ->forUser($request->user())
             ->where('created_at', '>=', CarbonImmutable::now('UTC')->subHours($hours))
             ->latest('created_at')
             ->limit($limit)
@@ -130,9 +130,11 @@ class AgentRunController extends Controller
     {
         $run = AgentJobRun::query()->with('job')->find($id);
 
-        if ($run === null || $run->user_id !== $request->user()->id) {
+        if ($run === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Resource not found.', 404);
         }
+
+        $this->authorize('view', $run);
 
         $response = [
             'id' => $run->id,
@@ -204,9 +206,11 @@ class AgentRunController extends Controller
     {
         $run = AgentJobRun::query()->find($id);
 
-        if ($run === null || $run->user_id !== $request->user()->id) {
+        if ($run === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Resource not found.', 404);
         }
+
+        $this->authorize('view', $run);
 
         $after = max(0, (int) $request->integer('after_sequence', 0));
         $limit = min(500, max(1, (int) $request->integer('limit', 100)));
@@ -249,9 +253,11 @@ class AgentRunController extends Controller
     ): JsonResponse {
         $run = AgentJobRun::query()->find($id);
 
-        if ($run === null || $run->user_id !== $request->user()->id) {
+        if ($run === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Resource not found.', 404);
         }
+
+        $this->authorize('update', $run);
 
         if (in_array($run->status, AgentJobRun::TERMINAL_STATUSES, true)) {
             return response()->json([
@@ -431,10 +437,7 @@ class AgentRunController extends Controller
     {
         $run = AgentJobRun::with('job.user')->findOrFail($id);
 
-        // Authorization check
-        if ($run->job->user_id !== $request->user()->id) {
-            abort(403, 'Unauthorized');
-        }
+        $this->authorize('update', $run);
 
         // Validate run is in failed state
         if ($run->status !== AgentJobRun::STATUS_FAILED) {
@@ -460,9 +463,7 @@ class AgentRunController extends Controller
     {
         $run = AgentJobRun::with('job.user')->findOrFail($id);
 
-        if ($run->job->user_id !== $request->user()->id) {
-            abort(403, 'Unauthorized');
-        }
+        $this->authorize('update', $run);
 
         $metadata = $run->metadata_json ?? [];
         $suggestedLesson = $metadata['failure_mode_hint']['suggested_lesson'] ?? null;

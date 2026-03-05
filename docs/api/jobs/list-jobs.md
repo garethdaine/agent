@@ -80,7 +80,7 @@ Call `GET /agent/api/v1/jobs?page=1&per_page=25` to retrieve first page with exp
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -88,11 +88,14 @@ The block below is generated from code and front-matter metadata.
 | --- | --- | --- | --- |
 | `agent.jobs.index` | ok | `agent/jobs` | `GET` |
 
-### Referenced Settings Keys
+### Configuration Reference
 
-- `jobs.default_page_size`
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `jobs.default_page_size` | _not set_ | _default_ |
 
-### Referenced Feature Flags
+### Feature Flags
 
 - `docs_search_enabled`
+
 <!-- AUTO-GENERATED:END -->

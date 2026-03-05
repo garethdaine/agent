@@ -57,7 +57,7 @@ Filter by `failed` status, open the latest failed run, inspect stderr and struct
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -65,11 +65,14 @@ The block below is generated from code and front-matter metadata.
 | --- | --- | --- | --- |
 | `agent.monitor.index` | ok | `agent/monitor` | `GET` |
 
-### Referenced Settings Keys
+### Configuration Reference
 
-- `monitor.poll_interval_seconds`
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `monitor.poll_interval_seconds` | _not set_ | _default_ |
 
-### Referenced Feature Flags
+### Feature Flags
 
 - `docs_center_enabled`
+
 <!-- AUTO-GENERATED:END -->

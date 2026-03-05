@@ -21,6 +21,7 @@ return new class extends Migration
             $table->json('evidence_json')->nullable();
             $table->timestampTz('started_at')->nullable();
             $table->timestampTz('finished_at')->nullable();
+            $table->timestampTz('expires_at')->nullable();
             $table->timestamps();
 
             $table->index(

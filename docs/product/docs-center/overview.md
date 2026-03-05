@@ -66,7 +66,7 @@ The Docs Center provides internal documentation for product surfaces and API con
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -74,12 +74,32 @@ The block below is generated from code and front-matter metadata.
 | --- | --- | --- | --- |
 | `docs.index` | ok | `docs` | `GET` |
 
-### Referenced Settings Keys
+### API Endpoints
 
-- `docs.search.enabled`
+The following API endpoints are available for this feature:
 
-### Referenced Feature Flags
+- **`GET agent/api/v1/docs/coverage`**
+  - Controller: `DocsCoverageController@index`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/docs/diagnostics`**
+  - Controller: `DiagnosticsController`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/docs/fragments/{uiKey}`**
+  - Controller: `DocsFragmentController@show`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/docs/search`**
+  - Controller: `DocsSearchController@index`
+  - Auth: `auth:sanctum`
+
+### Configuration Reference
+
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `docs.search.enabled` | _not set_ | _default_ |
+
+### Feature Flags
 
 - `docs_center_enabled`
 - `docs_search_enabled`
+
 <!-- AUTO-GENERATED:END -->

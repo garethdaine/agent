@@ -11,7 +11,8 @@ import Textarea from '@/Components/ui/Textarea.vue';
 import Button from '@/Components/ui/Button.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import Spinner from '@/Components/ui/Spinner.vue';
-import { ArrowLeft, Check, X } from 'lucide-vue-next';
+import { ArrowLeft, Check, X, GitBranch } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
     graphId: {
@@ -85,13 +86,23 @@ onMounted(load);
                         <ArrowLeft class="h-4 w-4" />
                     </Button>
                 </Link>
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <GitBranch class="h-5 w-5 text-primary" />
+                </div>
                 <div>
                     <div class="text-sm text-muted-foreground mb-1">
                         <Link :href="route('agent.delegation.task', { graphId: graphId, taskId: taskId })" class="hover:text-foreground transition-colors">
                             Back to Task
                         </Link>
                     </div>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Human Verification Approval</h2>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Human Verification Approval</h2>
+                        <HelpHint
+                            ui-key="delegation.verification"
+                            short-text="Review and approve delegation verification results."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
             </div>
         </template>

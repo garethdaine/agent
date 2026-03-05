@@ -8,7 +8,8 @@ import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
 import DirectoryPickerInput from '@/Components/ui/DirectoryPickerInput.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowLeft } from 'lucide-vue-next';
+import { ArrowLeft, FileCode } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { reactive, ref } from 'vue';
 
@@ -61,7 +62,19 @@ const submit = async () => {
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">New Code Analysis Session</h2>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <FileCode class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">New Code Analysis Session</h2>
+                        <HelpHint
+                            ui-key="code-analysis.create"
+                            short-text="Start a new code analysis session."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
+                </div>
                 <Link :href="route('tools.code-analysis.index')">
                     <Button variant="outline" size="sm">
                         <ArrowLeft class="h-4 w-4" />

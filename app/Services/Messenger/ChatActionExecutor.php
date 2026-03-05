@@ -7,15 +7,20 @@ use App\Enums\Messenger\ChatActionType;
 use App\Messenger\ChatAction\ChatActionContext;
 use App\Messenger\ChatAction\ChatActionResult;
 use App\Messenger\ChatAction\Handlers\ChatActionHandlerInterface;
+use App\Messenger\ChatAction\Handlers\GeneralTaskHandler;
 use App\Messenger\ChatAction\Handlers\JobsCreateHandler;
 use App\Messenger\ChatAction\Handlers\JobsDeleteHandler;
 use App\Messenger\ChatAction\Handlers\JobsListHandler;
+use App\Messenger\ChatAction\Handlers\JobsShowHandler;
 use App\Messenger\ChatAction\Handlers\JobsUpdateHandler;
 use App\Messenger\ChatAction\Handlers\RunsListActiveHandler;
+use App\Messenger\ChatAction\Handlers\RunsListHistoryHandler;
 use App\Messenger\ChatAction\Handlers\RunsRetryHandler;
 use App\Messenger\ChatAction\Handlers\RunsRunNowHandler;
+use App\Messenger\ChatAction\Handlers\RunsShowHandler;
 use App\Messenger\ChatAction\Handlers\RunsSteerHandler;
 use App\Messenger\ChatAction\Handlers\RunsStopHandler;
+use App\Messenger\ChatAction\Handlers\StreamableHandlerInterface;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\ChatAction;
@@ -33,11 +38,15 @@ class ChatActionExecutor
         'jobs.create' => JobsCreateHandler::class,
         'jobs.update' => JobsUpdateHandler::class,
         'jobs.delete' => JobsDeleteHandler::class,
+        'jobs.show' => JobsShowHandler::class,
         'runs.list_active' => RunsListActiveHandler::class,
+        'runs.list_history' => RunsListHistoryHandler::class,
+        'runs.show' => RunsShowHandler::class,
         'runs.stop' => RunsStopHandler::class,
         'runs.retry' => RunsRetryHandler::class,
         'runs.run_now' => RunsRunNowHandler::class,
         'runs.steer' => RunsSteerHandler::class,
+        'general.task' => GeneralTaskHandler::class,
     ];
 
     public function __construct(
@@ -160,6 +169,65 @@ class ChatActionExecutor
         }
 
         return ActionResult::failure($result->getMessage(), $result->getData());
+    }
+
+    /**
+     * Execute a chat action with streaming output.
+     *
+     * Falls back to non-streaming execution if the handler doesn't support it,
+     * delivering the full response via a single $onChunk call.
+     *
+     * @param  callable(string): void  $onChunk
+     */
+    public function executeStreaming(ChatAction $action, User $user, callable $onChunk): ActionResult
+    {
+        $actionType = ChatActionType::tryFrom($action->action_type);
+
+        if ($actionType === null) {
+            return ActionResult::failure("Unknown action type: {$action->action_type}");
+        }
+
+        $policyResult = $this->policyValidator->validate($action, $user);
+
+        if (! $policyResult->allowed) {
+            return ActionResult::failure($policyResult->reason);
+        }
+
+        $handler = $this->resolveHandler($action->action_type);
+
+        if ($handler === null) {
+            return ActionResult::failure("No handler registered for action: {$action->action_type}");
+        }
+
+        $context = $this->buildContext($action, $user);
+
+        try {
+            if ($handler instanceof StreamableHandlerInterface) {
+                $result = $handler->handleStreaming($context, $onChunk);
+
+                Log::info('ChatActionExecutor: Streaming action executed', [
+                    'action_id' => $action->id,
+                    'action_type' => $action->action_type,
+                    'success' => $result->isSuccess(),
+                ]);
+
+                return $this->convertResult($result);
+            }
+
+            $result = $handler->handle($context);
+            $converted = $this->convertResult($result);
+            $onChunk($converted->message ?? '');
+
+            return $converted;
+
+        } catch (\Throwable $e) {
+            Log::error('ChatActionExecutor: Streaming execution failed', [
+                'action_id' => $action->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ActionResult::failure("Action execution failed: {$e->getMessage()}");
+        }
     }
 
     /**

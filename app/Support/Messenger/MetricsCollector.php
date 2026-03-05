@@ -2,13 +2,15 @@
 
 namespace App\Support\Messenger;
 
+use App\Models\AgentAuditLog;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class MetricsCollector
 {
     private const CACHE_PREFIX = 'messenger_metrics:';
 
-    private const CACHE_TTL = 3600; // 1 hour
+    private const CACHE_TTL = 3600;
 
     public function incrementInboundMessages(string $provider): void
     {
@@ -197,6 +199,37 @@ class MetricsCollector
         }
 
         return $metrics;
+    }
+
+    /**
+     * Persist current Redis metrics to the audit log for durable storage,
+     * then reset the in-memory counters.
+     *
+     * Designed to be called from a scheduled command (e.g. hourly).
+     */
+    public function persistAndReset(): void
+    {
+        $metrics = $this->getMetrics();
+
+        $hasData = collect($metrics)->contains(fn ($section) => ! empty($section));
+
+        if (! $hasData) {
+            return;
+        }
+
+        try {
+            AgentAuditLog::create([
+                'actor_type' => 'system',
+                'action' => 'messenger.metrics.snapshot',
+                'context' => $metrics,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to persist messenger metrics', ['error' => $e->getMessage()]);
+
+            return;
+        }
+
+        $this->resetMetrics();
     }
 
     public function resetMetrics(): void

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->string('actor_type', 24);
-            $table->unsignedBigInteger('actor_id')->nullable();
+            $table->string('actor_id', 64)->nullable();
             $table->string('action', 120);
             $table->string('target_type', 120);
             $table->string('target_id', 120);

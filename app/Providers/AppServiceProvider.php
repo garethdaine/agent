@@ -26,6 +26,7 @@ use App\Policies\OrgRitualRunPolicy;
 use App\Policies\OrgRitualTemplatePolicy;
 use App\Policies\RepoAnalysisSessionPolicy;
 use App\Policies\WorkflowGovernancePolicy;
+use App\Support\Agent\DatabaseDestructionGuard;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Agent\WorkflowKey;
 use App\Support\Compliance\ComplexityClassifier;
@@ -47,9 +48,23 @@ use App\Support\Interrogation\InterrogationBuildCommandGuard;
 use App\Support\Interrogation\ReviewerContextBuilder;
 use App\Support\Interrogation\ReviewerPayloadGuard;
 use App\Support\Interrogation\ReviewerPayloadNormalizer;
+use App\Services\Runtime\Adapters\AgentApiToolAdapter;
+use App\Services\Runtime\Adapters\BrowserToolAdapter;
+use App\Services\Runtime\Adapters\DiscoveryToolAdapter;
+use App\Services\Runtime\Adapters\FsToolAdapter;
+use App\Services\Runtime\Adapters\McpToolAdapter;
+use App\Services\Runtime\Adapters\RuntimeToolAdapter;
+use App\Services\Credentials\CredentialsManager;
+use App\Services\Credentials\OAuthTokenService;
+use App\Services\Runtime\Adapters\WebToolAdapter;
+use App\Services\Runtime\ToolGateway;
+use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -84,6 +99,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ComplianceFlagResolver::class);
 
         $this->app->singleton(LessonsManager::class, fn () => LessonsManager::fromConfig());
+
+        $this->app->singleton(CredentialsManager::class);
+        $this->app->singleton(OAuthTokenService::class);
+        $this->app->singleton(ToolGateway::class);
     }
 
     /**
@@ -91,11 +110,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(Dispatcher $events): void
     {
+        $gateway = $this->app->make(ToolGateway::class);
+        $gateway->register($this->app->make(FsToolAdapter::class));
+        $gateway->register($this->app->make(RuntimeToolAdapter::class));
+        $gateway->register($this->app->make(WebToolAdapter::class));
+        $gateway->register($this->app->make(BrowserToolAdapter::class));
+        $gateway->register($this->app->make(DiscoveryToolAdapter::class));
+        $gateway->register($this->app->make(AgentApiToolAdapter::class));
+        $gateway->register($this->app->make(McpToolAdapter::class));
+
         Route::pattern('workflowKey', WorkflowKey::routePattern());
         Route::pattern('workflow_key', WorkflowKey::routePattern());
 
         if ($this->app->runningInConsole()) {
             app(InterrogationBuildCommandGuard::class)->enforceFromGlobals();
+            app(DatabaseDestructionGuard::class)->enforceFromGlobals();
         }
 
         $events->subscribe(DelegationCoordinator::class);
@@ -169,6 +198,12 @@ class AppServiceProvider extends ServiceProvider
                     );
                 });
         });
+
+        Scramble::configure()
+            ->routes(fn (RoutingRoute $route) => str_starts_with($route->uri, 'agent/api/v1'))
+            ->withDocumentTransformers(function (OpenApi $openApi): void {
+                $openApi->secure(SecurityScheme::http('bearer'));
+            });
 
         RateLimiter::for('memory-writes', function (Request $request) {
             return Limit::perMinute(30)

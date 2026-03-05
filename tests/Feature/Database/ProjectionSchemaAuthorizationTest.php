@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace Tests\Feature\Database;
 
 use Illuminate\Database\QueryException;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ProjectionSchemaAuthorizationTest extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
+
+    protected array $tablesToTruncate = [
+        'agent_projection.run_attempts',
+        'agent_projection.projection_auth_probe',
+    ];
 
     /** @var list<string> */
     private array $rolesToDrop = [];

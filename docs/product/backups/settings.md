@@ -51,7 +51,7 @@ Set retention to 30 days, trigger `Run now`, and verify successful artifact crea
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -59,11 +59,30 @@ The block below is generated from code and front-matter metadata.
 | --- | --- | --- | --- |
 | `tools.backups.settings` | ok | `tools/backups/settings` | `GET` |
 
-### Referenced Settings Keys
+### API Endpoints
 
-- `backups.retention_days`
+The following API endpoints are available for this feature:
 
-### Referenced Feature Flags
+- **`POST agent/api/v1/backups/run-now`**
+  - Controller: `AgentBackupSettingsController@runNow`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`GET agent/api/v1/backups/settings`**
+  - Controller: `AgentBackupSettingsController@show`
+  - Auth: `auth:sanctum`
+- **`PUT agent/api/v1/backups/settings`**
+  - Controller: `AgentBackupSettingsController@update`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+
+### Configuration Reference
+
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `backups.retention_days` | _not set_ | _default_ |
+
+### Feature Flags
 
 - `docs_center_enabled`
+
 <!-- AUTO-GENERATED:END -->

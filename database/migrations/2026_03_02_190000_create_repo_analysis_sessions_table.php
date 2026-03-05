@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name', 255)->nullable();
             $table->string('project_directory', 1024);
             $table->string('analyzer_profile', 64)->default('default');
+            $table->string('runner_type', 32)->default('claude');
             $table->string('status', 32)->default('setup');
             $table->unsignedTinyInteger('phase')->default(0);
             $table->string('snapshot_hash', 64)->nullable();

@@ -10,7 +10,8 @@ import TableRow from '@/Components/ui/TableRow.vue';
 import TableHead from '@/Components/ui/TableHead.vue';
 import TableCell from '@/Components/ui/TableCell.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { Plus } from 'lucide-vue-next';
+import { FileCode, Plus } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { confirmDialog } from '@/Support/confirmDialog';
@@ -188,7 +189,19 @@ onUnmounted(leaveRealtime);
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Code Analysis</h2>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <FileCode class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Code Analysis</h2>
+                        <HelpHint
+                            ui-key="code-analysis.overview"
+                            short-text="Manage repository analysis sessions."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
+                </div>
                 <Link :href="route('tools.code-analysis.create')">
                     <Button size="sm">
                         <Plus class="h-4 w-4" />
@@ -199,7 +212,7 @@ onUnmounted(leaveRealtime);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px] space-y-4">
+            <div class="space-y-4">
                 <div
                     v-if="!websocketActive"
                     class="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300"

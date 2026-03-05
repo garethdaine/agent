@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs\Memory;
 
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Memory\ConsolidationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -63,7 +64,7 @@ class MemoryConsolidationJob implements ShouldQueue
      */
     public function handle(ConsolidationService $service): void
     {
-        if (! config('memory.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
             Log::debug('MemoryConsolidationJob: Skipped (memory disabled)');
 
             return;
@@ -96,7 +97,7 @@ class MemoryConsolidationJob implements ShouldQueue
      */
     public function shouldQueue(): bool
     {
-        return config('memory.enabled', false);
+        return app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED);
     }
 
     /**

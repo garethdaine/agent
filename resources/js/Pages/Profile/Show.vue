@@ -6,6 +6,7 @@ import LogoutOtherBrowserSessionsForm from '@/Pages/Profile/Partials/LogoutOther
 import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthenticationForm.vue';
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue';
+import { UserCircle } from 'lucide-vue-next';
 
 defineProps({
     confirmsTwoFactorAuthentication: Boolean,
@@ -16,20 +17,25 @@ defineProps({
 <template>
     <AppLayout title="Profile">
         <template #header>
-            <div class="flex items-center gap-2">
-                <h2 class="font-semibold text-xl text-foreground leading-tight">
-                    Profile
-                </h2>
-                <HelpHint
-                    ui-key="profile.security"
-                    short-text="Manage account profile, password, two-factor auth, and active sessions."
-                    learn-more-href="/docs/overview"
-                />
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <UserCircle class="h-5 w-5 text-primary" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <h2 class="font-semibold text-xl text-foreground leading-tight">
+                        Profile
+                    </h2>
+                    <HelpHint
+                        ui-key="profile.security"
+                        short-text="Manage account profile, password, two-factor auth, and active sessions."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
             </div>
         </template>
 
         <div>
-            <div class="max-w-[1440px] mx-auto py-10 sm:px-6 lg:px-8">
+            <div class="py-10 sm:px-6 lg:px-8">
                 <div v-if="$page.props.jetstream.canUpdateProfileInformation">
                     <UpdateProfileInformationForm :user="$page.props.auth.user" />
 

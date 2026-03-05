@@ -17,7 +17,7 @@ return new class extends Migration
             $table->decimal('confidence', 3, 2)->nullable();
             $table->string('cron_result', 100)->nullable();
             $table->json('active_hours_result')->nullable();
-            $table->string('status', 20); // queued, running, completed, failed
+            $table->string('status', 30);
             $table->boolean('user_confirmed')->default(false);
             $table->text('error_message')->nullable();
             $table->timestamps();

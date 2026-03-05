@@ -2,13 +2,11 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('agent_job_runs', function (Blueprint $table) {
@@ -33,6 +31,7 @@ return new class extends Migration
             $table->text('error_summary')->nullable();
             $table->string('error_code', 100)->nullable();
             $table->json('metadata_json')->nullable();
+            $table->string('star_ab_group', 16)->nullable();
             $table->timestamps();
 
             $table->index(['agent_job_id', 'status', 'created_at'], 'agent_job_runs_job_status_created_idx');
@@ -42,11 +41,13 @@ return new class extends Migration
                 'agent_job_runs_schedule_idempotency_unique'
             );
         });
+
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE agent_job_runs ADD CONSTRAINT agent_job_runs_status_check CHECK (status IN ('queued','starting','running','stopping','succeeded','failed','killed','timed_out','skipped'))");
+            DB::statement("ALTER TABLE agent_job_runs ADD CONSTRAINT agent_job_runs_trigger_check CHECK (trigger_type IN ('schedule','manual'))");
+        }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('agent_job_runs');

@@ -18,7 +18,7 @@ import TableHead from '@/Components/ui/TableHead.vue';
 import TableCell from '@/Components/ui/TableCell.vue';
 import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { RefreshCw, AlertCircle } from 'lucide-vue-next';
+import { RefreshCw, AlertCircle, Pencil, X, Save, MessageSquare } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, ref, watch } from 'vue';
 import { confirmDialog } from '@/Support/confirmDialog';
@@ -38,6 +38,18 @@ const connectorSchema = ref({
 });
 const connectFieldErrors = ref({});
 const actionBusyByConnector = ref({});
+const editingConnectorId = ref(null);
+const editSaving = ref(false);
+const editError = ref('');
+const editForm = ref({
+    name: '',
+    soul: {
+        name: '',
+        personality: '',
+        system_prompt: '',
+        user_context: '',
+    },
+});
 
 const health = ref({
     status: 'unknown',
@@ -439,6 +451,54 @@ const getConnectorStatusVariant = (status) => {
     return 'outline';
 };
 
+const startEditing = async (connector) => {
+    editingConnectorId.value = connector.id;
+    editError.value = '';
+    editForm.value.name = connector.name ?? '';
+
+    try {
+        const soulResponse = await axios.get(`/agent/api/v1/messenger/connectors/${connector.id}/soul`);
+        const soul = soulResponse?.data?.data ?? {};
+        editForm.value.soul = {
+            name: soul.name ?? '',
+            personality: soul.personality ?? '',
+            system_prompt: soul.system_prompt ?? '',
+            user_context: soul.user_context ?? '',
+        };
+    } catch (requestError) {
+        editForm.value.soul = { name: '', personality: '', system_prompt: '', user_context: '' };
+    }
+};
+
+const cancelEditing = () => {
+    editingConnectorId.value = null;
+    editError.value = '';
+};
+
+const saveEditing = async () => {
+    if (!editingConnectorId.value) return;
+
+    editSaving.value = true;
+    editError.value = '';
+
+    try {
+        const connectorId = editingConnectorId.value;
+
+        await axios.put(`/agent/api/v1/messenger/connectors/${connectorId}`, {
+            name: editForm.value.name,
+        });
+        await axios.put(`/agent/api/v1/messenger/connectors/${connectorId}/soul`, editForm.value.soul);
+
+        editingConnectorId.value = null;
+        connectSuccess.value = 'Connector updated successfully.';
+        await loadOverview();
+    } catch (requestError) {
+        editError.value = extractApiErrorMessage(requestError, 'Failed to save changes.');
+    } finally {
+        editSaving.value = false;
+    }
+};
+
 const getConnectorRuntimeStateClass = (runtimeState) => {
     switch (runtimeState) {
         case 'connected':
@@ -486,13 +546,18 @@ onMounted(async () => {
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2">
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Messenger Control Plane</h2>
-                    <HelpHint
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <MessageSquare class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Messenger Control Plane</h2>
+                        <HelpHint
                         ui-key="messenger.control-plane"
                         short-text="Use connector health, session activity, and dead-letter workflows safely."
                         learn-more-href="/docs/api-contracts"
                     />
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('messenger.dead-letters.index')">
@@ -518,7 +583,7 @@ onMounted(async () => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px] space-y-4">
+            <div class="space-y-4">
                 <Skeleton v-if="loading" class="h-8 w-64" />
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ error }}</div>
                 <div v-if="connectError" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ connectError }}</div>
@@ -668,7 +733,8 @@ onMounted(async () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    <TableRow v-for="connector in connectors" :key="connector.id">
+                                    <template v-for="connector in connectors" :key="connector.id">
+                                    <TableRow>
                                         <TableCell>
                                             <p class="font-medium">{{ connector.name }}</p>
                                             <p v-if="connector.setup?.webhook_url" class="mt-0.5 break-all text-xs text-muted-foreground">
@@ -694,6 +760,15 @@ onMounted(async () => {
                                                     variant="outline"
                                                     size="sm"
                                                     :disabled="isConnectorActionBusy(connector.id)"
+                                                    @click="startEditing(connector)"
+                                                >
+                                                    <Pencil class="h-3.5 w-3.5 mr-1" />
+                                                    Edit
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    :disabled="isConnectorActionBusy(connector.id)"
                                                     @click="retestConnector(connector)"
                                                 >
                                                     Retest
@@ -709,6 +784,67 @@ onMounted(async () => {
                                             </div>
                                         </TableCell>
                                     </TableRow>
+                                    <TableRow v-if="editingConnectorId === connector.id" :key="'edit-' + connector.id">
+                                        <TableCell colspan="6" class="bg-muted/30 p-0">
+                                            <div class="px-4 py-4 space-y-4">
+                                                <div class="flex items-center justify-between">
+                                                    <h4 class="text-sm font-semibold text-foreground">Edit {{ connector.name }}</h4>
+                                                    <Button variant="ghost" size="sm" @click="cancelEditing">
+                                                        <X class="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                                <div v-if="editError" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ editError }}</div>
+                                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                    <label class="text-sm text-muted-foreground">
+                                                        Connector Name
+                                                        <Input v-model="editForm.name" type="text" class="mt-1" :disabled="editSaving" />
+                                                    </label>
+                                                    <label class="text-sm text-muted-foreground">
+                                                        Agent Name
+                                                        <Input v-model="editForm.soul.name" type="text" class="mt-1" :disabled="editSaving" placeholder="e.g. AxiomSpark" />
+                                                    </label>
+                                                </div>
+                                                <label class="block text-sm text-muted-foreground">
+                                                    Personality
+                                                    <textarea
+                                                        v-model="editForm.soul.personality"
+                                                        rows="2"
+                                                        class="mt-1 flex w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                        :disabled="editSaving"
+                                                        placeholder="Describe the agent's personality and tone..."
+                                                    ></textarea>
+                                                </label>
+                                                <label class="block text-sm text-muted-foreground">
+                                                    System Prompt
+                                                    <textarea
+                                                        v-model="editForm.soul.system_prompt"
+                                                        rows="4"
+                                                        class="mt-1 flex w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                        :disabled="editSaving"
+                                                        placeholder="Additional system instructions for the agent..."
+                                                    ></textarea>
+                                                </label>
+                                                <label class="block text-sm text-muted-foreground">
+                                                    User Context
+                                                    <textarea
+                                                        v-model="editForm.soul.user_context"
+                                                        rows="2"
+                                                        class="mt-1 flex w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                        :disabled="editSaving"
+                                                        placeholder="Context about the user (name, role, preferences)..."
+                                                    ></textarea>
+                                                </label>
+                                                <div class="flex items-center gap-2">
+                                                    <Button :disabled="editSaving" @click="saveEditing">
+                                                        <Save class="h-4 w-4 mr-1" />
+                                                        {{ editSaving ? 'Saving...' : 'Save Changes' }}
+                                                    </Button>
+                                                    <Button variant="outline" :disabled="editSaving" @click="cancelEditing">Cancel</Button>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                    </template>
                                     <TableRow v-if="connectors.length === 0">
                                         <TableCell colspan="6" class="text-center text-muted-foreground">No connectors found.</TableCell>
                                     </TableRow>

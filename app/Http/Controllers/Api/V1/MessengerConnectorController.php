@@ -224,10 +224,10 @@ class MessengerConnectorController extends Controller
             $validated['credentials'] = $normalizedCredentials;
         }
 
-        $connectionMode = array_key_exists('connection_mode', $validated)
-            ? $credentialManager->normalizeConnectionMode($provider, (string) ($validated['connection_mode'] ?? null))
-            : $connector->connection_mode;
-        $validated['connection_mode'] = $connectionMode;
+        if (array_key_exists('connection_mode', $validated)) {
+            $validated['connection_mode'] = $credentialManager->normalizeConnectionMode($provider, (string) ($validated['connection_mode'] ?? null));
+        }
+        $connectionMode = $validated['connection_mode'] ?? $connector->connection_mode;
 
         $missingRequired = $credentialManager->missingRequiredCredentials($provider, $normalizedCredentials, $connectionMode);
         if ($missingRequired !== []) {
@@ -333,6 +333,46 @@ class MessengerConnectorController extends Controller
                 'id' => $connector->id,
                 'deleted' => true,
             ],
+        ]);
+    }
+
+    public function soul(Request $request, string $id, AuditLogger $auditLogger): JsonResponse
+    {
+        $connector = ConnectorAccount::findOrFail($id);
+
+        if ($request->isMethod('GET')) {
+            return response()->json([
+                'data' => $connector->getSoul(),
+            ]);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => ['nullable', 'string', 'max:100'],
+            'personality' => ['nullable', 'string', 'max:2000'],
+            'system_prompt' => ['nullable', 'string', 'max:5000'],
+            'user_context' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        if ($validator->fails()) {
+            return ErrorEnvelope::make('VALIDATION_ERROR', 'The given data was invalid.', 422, $validator->errors()->toArray());
+        }
+
+        $before = $connector->getSoul();
+        $connector->setSoul($validator->validated());
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'connector.soul.update',
+            targetType: 'connector_account',
+            targetId: $connector->id,
+            ownerUserId: $request->user()->id,
+            changedFields: ['config.soul'],
+            before: $before,
+            after: $connector->getSoul(),
+        );
+
+        return response()->json([
+            'data' => $connector->getSoul(),
         ]);
     }
 

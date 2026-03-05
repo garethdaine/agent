@@ -112,7 +112,7 @@ onMounted(load);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px] space-y-6">
+            <div class="space-y-6">
                 <!-- Status Message -->
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {{ error }}
@@ -210,22 +210,31 @@ onMounted(load);
                             <CardDescription>API usage and cost tracking for memory operations.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div v-if="stats?.provider_usage && Object.keys(stats.provider_usage).length > 0" class="space-y-4">
+                            <div v-if="stats?.provider_usage" class="space-y-4">
+                                <div class="flex items-center justify-between rounded-lg border bg-muted/30 p-4">
+                                    <div>
+                                        <p class="font-medium">Totals</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-medium">{{ formatNumber(stats.provider_usage.total_tokens) }} tokens</p>
+                                        <p class="text-sm text-muted-foreground">{{ formatCost(stats.provider_usage.total_cost) }} est. cost</p>
+                                    </div>
+                                </div>
                                 <div
-                                    v-for="(usage, provider) in stats.provider_usage"
+                                    v-for="(usage, provider) in stats.provider_usage.by_provider"
                                     :key="provider"
                                     class="flex items-center justify-between rounded-lg border p-4"
                                 >
                                     <div>
                                         <p class="font-medium capitalize">{{ provider }}</p>
-                                        <p class="text-sm text-muted-foreground">
-                                            {{ formatNumber(usage.requests) }} requests
-                                        </p>
                                     </div>
                                     <div class="text-right">
                                         <p class="font-medium">{{ formatNumber(usage.tokens) }} tokens</p>
                                         <p class="text-sm text-muted-foreground">{{ formatCost(usage.cost) }} est. cost</p>
                                     </div>
+                                </div>
+                                <div v-if="!stats.provider_usage.by_provider || Object.keys(stats.provider_usage.by_provider).length === 0" class="text-sm text-muted-foreground">
+                                    No per-provider usage recorded yet.
                                 </div>
                             </div>
                             <div v-else class="text-sm text-muted-foreground">

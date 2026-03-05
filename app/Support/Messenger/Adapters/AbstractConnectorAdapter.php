@@ -3,6 +3,9 @@
 namespace App\Support\Messenger\Adapters;
 
 use App\Contracts\Messenger\ConnectorAdapterInterface;
+use App\DTOs\Messenger\ProviderResponse;
+use App\DTOs\Messenger\StreamingConfig;
+use App\Models\ChatSession;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -82,6 +85,31 @@ abstract class AbstractConnectorAdapter implements ConnectorAdapterInterface
         RateLimiter::clear($this->getCircuitBreakerKey());
     }
 
+    public function editMessage(ChatSession $session, string $providerMessageId, string $content): ProviderResponse
+    {
+        return ProviderResponse::failure('Message editing not supported by this provider');
+    }
+
+    public function supportsMessageEditing(): bool
+    {
+        return false;
+    }
+
+    public function supportsReactions(): bool
+    {
+        return false;
+    }
+
+    public function addReaction(ChatSession $session, string $messageId, string $emoji): ProviderResponse
+    {
+        return ProviderResponse::failure('Reactions not supported by this provider');
+    }
+
+    public function getStreamingConfig(): StreamingConfig
+    {
+        return StreamingConfig::fallback();
+    }
+
     /**
      * Log an error with context.
      *
@@ -130,5 +158,24 @@ abstract class AbstractConnectorAdapter implements ConnectorAdapterInterface
         $jitter = mt_rand(-intval($jitterRange * 1000), intval($jitterRange * 1000)) / 1000;
 
         return max(1, intval($delay + $jitter));
+    }
+
+    /**
+     * Normalize content for messenger display.
+     *
+     * Converts escaped newline sequences to actual newlines and handles
+     * other common formatting issues from AI-generated responses.
+     */
+    protected function normalizeContent(string $content): string
+    {
+        // Convert escaped newline sequences to actual newlines
+        // This handles cases where AI responses contain literal \n instead of newlines
+        $content = str_replace('\n', "\n", $content);
+
+        // Normalize multiple consecutive newlines to at most two
+        $content = preg_replace('/\n{3,}/', "\n\n", $content) ?? $content;
+
+        // Trim leading/trailing whitespace
+        return trim($content);
     }
 }

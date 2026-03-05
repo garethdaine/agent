@@ -72,13 +72,18 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Delegation Graphs</h2>
-                    <HelpHint
-                        ui-key="delegation.graphs"
-                        short-text="Understand graph lifecycle, task states, and verification checkpoints."
-                        learn-more-href="/docs/overview"
-                    />
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <GitBranch class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Delegation Graphs</h2>
+                        <HelpHint
+                            ui-key="delegation.graphs"
+                            short-text="Understand graph lifecycle, task states, and verification checkpoints."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
                 <Link :href="route('agent.delegation.create')">
                     <Button>
@@ -90,7 +95,7 @@ onMounted(load);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px] space-y-4">
+            <div class="space-y-4">
                 <div class="flex items-center gap-2">
                     <Button
                         :variant="filters.status === '' ? 'default' : 'outline'"

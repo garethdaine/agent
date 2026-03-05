@@ -7,7 +7,7 @@ import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
-import { Users, Calendar, Scale, AlertTriangle, DollarSign } from 'lucide-vue-next';
+import { Users, Calendar, Scale, AlertTriangle, DollarSign, Bot } from 'lucide-vue-next';
 </script>
 
 <template>
@@ -15,18 +15,23 @@ import { Users, Calendar, Scale, AlertTriangle, DollarSign } from 'lucide-vue-ne
         <Head title="Agents" />
 
         <template #header>
-            <div class="flex items-center gap-2">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Agents</h2>
-                <HelpHint
-                    ui-key="org.overview"
-                    short-text="Navigate agents, rituals, councils, escalations, and cost governance."
-                    learn-more-href="/docs/overview"
-                />
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Bot class="h-5 w-5 text-primary" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Agents</h2>
+                    <HelpHint
+                        ui-key="org.overview"
+                        short-text="Navigate agents, rituals, councils, escalations, and cost governance."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
             </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px]">
+            <div class="">
                 <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <Link :href="route('org.agents.index')">
                         <Card class="cursor-pointer transition-colors hover:bg-muted/50">

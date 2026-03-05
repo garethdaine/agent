@@ -3,6 +3,7 @@
 namespace App\Support\Interrogation\Adapters;
 
 use App\Models\InterrogationSession;
+use App\Support\Agent\DatabaseIsolationEnvironment;
 use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 use RuntimeException;
 
@@ -234,9 +235,51 @@ class CodexAdapter implements InterrogationRunnerAdapter
             $payload['cli_session_id'] = $decoded['session_id'];
         }
 
+        $usage = $this->extractUsageFromEvent($decoded);
+        if ($usage !== null) {
+            $payload['usage'] = $usage;
+        }
+
         return [
             'type' => (string) ($decoded['type'] ?? 'message'),
             'payload' => $payload,
+        ];
+    }
+
+    /**
+     * Extract token usage from a stream event when present.
+     *
+     * @param  array<string, mixed>  $decoded
+     * @return array{input_tokens: int, output_tokens: int}|null
+     */
+    private function extractUsageFromEvent(array $decoded): ?array
+    {
+        $usage = $decoded['usage'] ?? null;
+
+        if (! is_array($usage)) {
+            $item = is_array($decoded['item'] ?? null) ? $decoded['item'] : [];
+            $usage = $item['usage'] ?? null;
+        }
+
+        if (! is_array($usage)) {
+            $result = is_array($decoded['result'] ?? null) ? $decoded['result'] : [];
+            $usage = $result['usage'] ?? null;
+        }
+
+        if (! is_array($usage)) {
+            return null;
+        }
+
+        $input = (int) ($usage['input_tokens'] ?? $usage['prompt_tokens'] ?? 0);
+        $output = (int) ($usage['output_tokens'] ?? $usage['completion_tokens'] ?? 0);
+
+        if ($input === 0 && $output === 0) {
+            return null;
+        }
+
+        return [
+            'input_tokens' => $input,
+            'output_tokens' => $output,
         ];
     }
 
@@ -802,25 +845,15 @@ class CodexAdapter implements InterrogationRunnerAdapter
      */
     public function buildEnvironment(InterrogationSession $session): array
     {
-        $env = [];
+        $env = DatabaseIsolationEnvironment::build($_ENV);
+
         $blockedKeys = [
             'CODEX_THREAD_ID',
             'CODEX_SESSION_ID',
             'CODEX_INTERNAL_ORIGINATOR_OVERRIDE',
         ];
 
-        foreach ($_ENV as $key => $value) {
-            if (in_array((string) $key, $blockedKeys, true)) {
-                continue;
-            }
-
-            if (is_string($key) && is_scalar($value)) {
-                $env[$key] = (string) $value;
-            }
-        }
-
         foreach ($blockedKeys as $blockedKey) {
-            // Symfony Process treats false as "unset this inherited env var".
             $env[$blockedKey] = false;
         }
 

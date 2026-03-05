@@ -2,44 +2,36 @@
 import axios from 'axios';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import AppSidebar from '@/Components/AppSidebar.vue';
 import Banner from '@/Components/Banner.vue';
 import AppConfirmDialog from '@/Components/AppConfirmDialog.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
-import NavLink from '@/Components/NavLink.vue';
 import NotificationDrawer from '@/Components/NotificationDrawer.vue';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import {
     applyThemePreference,
     getStoredThemePreference,
     setStoredThemePreference,
 } from '@/Support/theme';
 import {
-    Clock,
-    LayoutDashboard,
-    Briefcase,
-    Rocket,
-    Activity,
-    MessageSquare,
-    Wrench,
-    GitBranch,
-    Building2,
     ChevronDown,
-    ChevronsUpDown,
     Menu,
     X,
-    Check,
     Moon,
     Sun,
     Bell,
-    BookOpen,
+    PanelLeftClose,
+    PanelLeftOpen,
 } from 'lucide-vue-next';
 
 defineProps({
     title: String,
 });
 
-const showingNavigationDropdown = ref(false);
+const SIDEBAR_STORAGE_KEY = 'agent-ops-sidebar-collapsed';
+
+const sidebarCollapsed = ref(localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true');
+const mobileMenuOpen = ref(false);
 const themePreference = ref(getStoredThemePreference());
 const resolvedTheme = ref('light');
 const page = usePage();
@@ -56,6 +48,11 @@ let notificationPollInterval = null;
 const isDarkTheme = computed(() => resolvedTheme.value === 'dark');
 const isSystemTheme = computed(() => themePreference.value === 'system');
 const hasUnreadNotifications = computed(() => unreadNotificationCount.value > 0);
+
+const toggleSidebar = () => {
+    sidebarCollapsed.value = !sidebarCollapsed.value;
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, sidebarCollapsed.value);
+};
 
 const syncTheme = () => {
     resolvedTheme.value = applyThemePreference(themePreference.value);
@@ -77,14 +74,6 @@ const handleSystemThemeChange = () => {
     if (themePreference.value === 'system') {
         syncTheme();
     }
-};
-
-const switchToTeam = (team) => {
-    router.put(route('current-team.update'), {
-        team_id: team.id,
-    }, {
-        preserveState: false,
-    });
 };
 
 const logout = () => {
@@ -250,409 +239,240 @@ onBeforeUnmount(() => {
 
         <Banner />
 
-        <div class="min-h-screen bg-background">
-            <nav class="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
-                <!-- Primary Navigation Menu -->
-                <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="flex justify-between h-14">
-                        <div class="flex">
-                            <!-- Logo -->
-                            <div class="shrink-0 flex items-center">
-                                <Link :href="route('dashboard')" class="flex items-center gap-2.5">
-                                    <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                                        <Clock class="w-4 h-4 text-primary-foreground" />
-                                    </div>
-                                    <span class="text-foreground font-semibold text-[15px]">Agent Ops</span>
-                                </Link>
-                            </div>
-
-                            <!-- Navigation Links -->
-                            <div class="hidden space-x-1 sm:-my-px sm:ms-8 sm:flex sm:items-center">
-                                <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
-                                    <LayoutDashboard class="w-4 h-4 mr-1.5" />
-                                    Dashboard
-                                </NavLink>
-                                <NavLink :href="route('docs.index')" :active="route().current('docs.*')">
-                                    <BookOpen class="w-4 h-4 mr-1.5" />
-                                    Docs
-                                </NavLink>
-                                <NavLink :href="route('agent.jobs.index')" :active="route().current('agent.jobs.*')">
-                                    <Briefcase class="w-4 h-4 mr-1.5" />
-                                    Jobs
-                                </NavLink>
-                                <NavLink :href="$page.props.operatorNavigation.deployments" :active="route().current('agent.deployments.*')">
-                                    <Rocket class="w-4 h-4 mr-1.5" />
-                                    Deployment
-                                </NavLink>
-                                <NavLink :href="$page.props.operatorNavigation.systemOverview" :active="route().current('agent.system-overview.*')">
-                                    <Activity class="w-4 h-4 mr-1.5" />
-                                    System
-                                </NavLink>
-                                <NavLink :href="route('agent.monitor.index')" :active="route().current('agent.monitor.*')">
-                                    <Activity class="w-4 h-4 mr-1.5" />
-                                    Monitor
-                                </NavLink>
-                                <NavLink :href="route('tools.messenger.index')" :active="route().current('tools.messenger.*')">
-                                    <MessageSquare class="w-4 h-4 mr-1.5" />
-                                    Messenger
-                                </NavLink>
-                                <NavLink :href="route('tools.index')" :active="route().current('tools.index') || route().current('tools.discovery.*') || route().current('tools.backups.*') || route().current('tools.features.*') || route().current('tools.memory.*') || route().current('tools.code-analysis.*')">
-                                    <Wrench class="w-4 h-4 mr-1.5" />
-                                    Tools
-                                </NavLink>
-                                <NavLink
-                                    v-if="$page.props.delegationEnabled"
-                                    :href="route('agent.delegation.index')"
-                                    :active="route().current('agent.delegation.*')"
-                                >
-                                    <GitBranch class="w-4 h-4 mr-1.5" />
-                                    Delegation
-                                </NavLink>
-                                <NavLink
-                                    v-if="$page.props.orgLayerEnabled"
-                                    :href="route('org.index')"
-                                    :active="route().current('org.*')"
-                                >
-                                    <Building2 class="w-4 h-4 mr-1.5" />
-                                    Agents
-                                </NavLink>
-                            </div>
-                        </div>
-
-                        <div class="hidden sm:flex sm:items-center sm:ms-6 gap-2">
-                            <div class="ms-3 relative">
-                                <!-- Teams Dropdown -->
-                                <Dropdown v-if="$page.props.jetstream.hasTeamFeatures" align="right" width="60">
-                                    <template #trigger>
-                                        <span class="inline-flex rounded-md">
-                                            <button type="button" class="inline-flex items-center px-3 py-2 border border-border text-sm leading-4 font-medium rounded-lg text-muted-foreground bg-card hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/50 transition ease-in-out duration-150">
-                                                {{ $page.props.auth.user.current_team.name }}
-
-                                                <ChevronsUpDown class="ms-2 -me-0.5 w-4 h-4" />
-                                            </button>
-                                        </span>
-                                    </template>
-
-                                    <template #content>
-                                        <div class="w-60">
-                                            <!-- Team Management -->
-                                            <div class="block px-4 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                                                Manage Team
-                                            </div>
-
-                                            <!-- Team Settings -->
-                                            <DropdownLink :href="route('teams.show', $page.props.auth.user.current_team)">
-                                                Team Settings
-                                            </DropdownLink>
-
-                                            <DropdownLink v-if="$page.props.jetstream.canCreateTeams" :href="route('teams.create')">
-                                                Create New Team
-                                            </DropdownLink>
-
-                                            <!-- Team Switcher -->
-                                            <template v-if="$page.props.auth.user.all_teams.length > 1">
-                                                <div class="border-t border-border my-1" />
-
-                                                <div class="block px-4 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                                                    Switch Teams
-                                                </div>
-
-                                                <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
-                                                    <form @submit.prevent="switchToTeam(team)">
-                                                        <DropdownLink as="button">
-                                                            <div class="flex items-center">
-                                                                <Check v-if="team.id == $page.props.auth.user.current_team_id" class="me-2 w-5 h-5 text-success" />
-                                                                <div>{{ team.name }}</div>
-                                                            </div>
-                                                        </DropdownLink>
-                                                    </form>
-                                                </template>
-                                            </template>
+        <div class="flex h-screen overflow-hidden bg-background">
+            <!-- Desktop Sidebar -->
+            <div class="hidden sm:flex shrink-0">
+                <AppSidebar :collapsed="sidebarCollapsed">
+                    <template #footer>
+                        <div :class="sidebarCollapsed ? 'flex flex-col items-center' : ''">
+                            <!-- User Dropdown -->
+                            <Dropdown align="left" width="48" position="top">
+                                <template #trigger>
+                                    <button
+                                        type="button"
+                                        class="group relative flex items-center rounded-lg text-[13px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
+                                        :class="sidebarCollapsed ? 'justify-center w-10 h-10 mx-auto' : 'w-full gap-3 px-3 py-2'"
+                                    >
+                                        <div v-if="$page.props.jetstream.managesProfilePhotos" class="shrink-0">
+                                            <img class="w-6 h-6 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.name">
                                         </div>
-                                    </template>
-                                </Dropdown>
-                            </div>
-
-                            <button
-                                type="button"
-                                class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
-                                :aria-label="isDarkTheme ? 'Switch to light mode' : 'Switch to dark mode'"
-                                @click="toggleTheme"
-                            >
-                                <Sun v-if="isDarkTheme" class="h-4 w-4" />
-                                <Moon v-else class="h-4 w-4" />
-                            </button>
-
-                            <button
-                                type="button"
-                                class="relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
-                                aria-label="Open notifications"
-                                @click="toggleNotificationDrawer"
-                            >
-                                <Bell class="h-4 w-4" />
-                                <span
-                                    v-if="hasUnreadNotifications"
-                                    class="absolute -right-1 -top-1 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground"
-                                >
-                                    {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
-                                </span>
-                            </button>
-
-                            <!-- Settings Dropdown -->
-                            <div class="ms-3 relative">
-                                <Dropdown align="right" width="48">
-                                    <template #trigger>
-                                        <button v-if="$page.props.jetstream.managesProfilePhotos" type="button" class="flex text-sm border-2 border-transparent rounded-full focus:outline-none focus:ring-2 focus:ring-ring/50 transition">
-                                            <img class="w-8 h-8 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.name">
-                                        </button>
-
-                                        <span v-else class="inline-flex rounded-md">
-                                            <button type="button" class="inline-flex items-center px-3 py-2 border border-border text-sm leading-4 font-medium rounded-lg text-muted-foreground bg-card hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/50 transition ease-in-out duration-150">
-                                                {{ $page.props.auth.user.name }}
-
-                                                <ChevronDown class="ms-2 -me-0.5 w-4 h-4" />
-                                            </button>
-                                        </span>
-                                    </template>
-
-                                    <template #content>
-                                        <!-- Account Management -->
-                                        <div class="block px-4 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                                            Manage Account
+                                        <div v-else class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                                            {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
                                         </div>
-
-                                        <DropdownLink :href="route('profile.show')">
-                                            Profile
-                                        </DropdownLink>
-
-                                        <DropdownLink v-if="$page.props.jetstream.hasApiFeatures" :href="route('api-tokens.index')">
-                                            API Tokens
-                                        </DropdownLink>
-
-                                        <div class="border-t border-border my-1" />
-
-                                        <div class="block px-4 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                                            Appearance
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            class="block w-full px-4 py-2 text-start text-sm leading-5 text-foreground hover:bg-muted focus:outline-none focus:bg-muted transition duration-150 ease-in-out"
-                                            @click="toggleTheme"
+                                        <span v-if="!sidebarCollapsed" class="truncate">{{ $page.props.auth.user.name }}</span>
+                                        <ChevronDown v-if="!sidebarCollapsed" class="ml-auto h-3.5 w-3.5 shrink-0 opacity-50" />
+                                        <div
+                                            v-if="sidebarCollapsed"
+                                            class="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 rounded-md bg-popover px-2 py-1 text-xs font-medium text-popover-foreground shadow-md border border-border opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50"
                                         >
-                                            {{ isDarkTheme ? 'Switch to Light Mode' : 'Switch to Dark Mode' }}
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            class="block w-full px-4 py-2 text-start text-sm leading-5 text-foreground hover:bg-muted focus:outline-none focus:bg-muted transition duration-150 ease-in-out"
-                                            :disabled="isSystemTheme"
-                                            @click="useSystemTheme"
-                                        >
-                                            Use System Theme
-                                        </button>
-
-                                        <div class="border-t border-border my-1" />
-
-                                        <!-- Authentication -->
-                                        <form @submit.prevent="logout">
-                                            <DropdownLink as="button">
-                                                Log Out
-                                            </DropdownLink>
-                                        </form>
-                                    </template>
-                                </Dropdown>
-                            </div>
-                        </div>
-
-                        <!-- Hamburger -->
-                        <div class="-me-2 flex items-center sm:hidden">
-                            <button class="inline-flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/50 transition duration-150 ease-in-out" @click="showingNavigationDropdown = ! showingNavigationDropdown">
-                                <Menu v-if="!showingNavigationDropdown" class="w-6 h-6" />
-                                <X v-else class="w-6 h-6" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Responsive Navigation Menu -->
-                <div :class="{'block': showingNavigationDropdown, 'hidden': ! showingNavigationDropdown}" class="sm:hidden">
-                    <div class="pt-2 pb-3 space-y-1 px-2">
-                        <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
-                            <LayoutDashboard class="w-5 h-5" />
-                            Dashboard
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('docs.index')" :active="route().current('docs.*')">
-                            <BookOpen class="w-5 h-5" />
-                            Docs
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('agent.jobs.index')" :active="route().current('agent.jobs.*')">
-                            <Briefcase class="w-5 h-5" />
-                            Jobs
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="$page.props.operatorNavigation.deployments" :active="route().current('agent.deployments.*')">
-                            <Rocket class="w-5 h-5" />
-                            Deployment
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="$page.props.operatorNavigation.systemOverview" :active="route().current('agent.system-overview.*')">
-                            <Activity class="w-5 h-5" />
-                            System
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('agent.monitor.index')" :active="route().current('agent.monitor.*')">
-                            <Activity class="w-5 h-5" />
-                            Monitor
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('tools.messenger.index')" :active="route().current('tools.messenger.*')">
-                            <MessageSquare class="w-5 h-5" />
-                            Messenger
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('tools.index')" :active="route().current('tools.index') || route().current('tools.discovery.*') || route().current('tools.backups.*') || route().current('tools.features.*') || route().current('tools.memory.*') || route().current('tools.code-analysis.*')">
-                            <Wrench class="w-5 h-5" />
-                            Tools
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="$page.props.delegationEnabled"
-                            :href="route('agent.delegation.index')"
-                            :active="route().current('agent.delegation.*')"
-                        >
-                            <GitBranch class="w-5 h-5" />
-                            Delegation
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            v-if="$page.props.orgLayerEnabled"
-                            :href="route('org.index')"
-                            :active="route().current('org.*')"
-                        >
-                            <Building2 class="w-5 h-5" />
-                            Agents
-                        </ResponsiveNavLink>
-                    </div>
-
-                    <!-- Responsive Settings Options -->
-                    <div class="pt-4 pb-1 border-t border-border">
-                        <div class="flex items-center px-4">
-                            <div v-if="$page.props.jetstream.managesProfilePhotos" class="shrink-0 me-3">
-                                <img class="w-10 h-10 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.name">
-                            </div>
-                            <div v-else class="shrink-0 me-3">
-                                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                                    {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
-                                </div>
-                            </div>
-
-                            <div>
-                                <div class="font-medium text-base text-foreground">
-                                    {{ $page.props.auth.user.name }}
-                                </div>
-                                <div class="font-medium text-sm text-muted-foreground">
-                                    {{ $page.props.auth.user.email }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-3 px-4">
-                            <button
-                                type="button"
-                                class="inline-flex h-8 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-foreground transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/50"
-                                @click="showingNavigationDropdown = false; toggleNotificationDrawer()"
-                            >
-                                <Bell class="h-3.5 w-3.5" />
-                                Notifications
-                                <span
-                                    v-if="hasUnreadNotifications"
-                                    class="inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 text-primary-foreground"
-                                >
-                                    {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
-                                </span>
-                            </button>
-                            <button
-                                type="button"
-                                class="inline-flex h-8 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-foreground transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/50"
-                                @click="toggleTheme"
-                            >
-                                <Sun v-if="isDarkTheme" class="h-3.5 w-3.5" />
-                                <Moon v-else class="h-3.5 w-3.5" />
-                                {{ isDarkTheme ? 'Light mode' : 'Dark mode' }}
-                            </button>
-                            <button
-                                type="button"
-                                class="ms-2 inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium text-foreground transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50"
-                                :disabled="isSystemTheme"
-                                @click="useSystemTheme"
-                            >
-                                System
-                            </button>
-                        </div>
-
-                        <div class="mt-3 space-y-1 px-2">
-                            <ResponsiveNavLink :href="route('profile.show')" :active="route().current('profile.show')">
-                                Profile
-                            </ResponsiveNavLink>
-
-                            <ResponsiveNavLink v-if="$page.props.jetstream.hasApiFeatures" :href="route('api-tokens.index')" :active="route().current('api-tokens.index')">
-                                API Tokens
-                            </ResponsiveNavLink>
-
-                            <!-- Authentication -->
-                            <form method="POST" @submit.prevent="logout">
-                                <ResponsiveNavLink as="button">
-                                    Log Out
-                                </ResponsiveNavLink>
-                            </form>
-
-                            <!-- Team Management -->
-                            <template v-if="$page.props.jetstream.hasTeamFeatures">
-                                <div class="border-t border-border my-2" />
-
-                                <div class="block px-3 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                                    Manage Team
-                                </div>
-
-                                <!-- Team Settings -->
-                                <ResponsiveNavLink :href="route('teams.show', $page.props.auth.user.current_team)" :active="route().current('teams.show')">
-                                    Team Settings
-                                </ResponsiveNavLink>
-
-                                <ResponsiveNavLink v-if="$page.props.jetstream.canCreateTeams" :href="route('teams.create')" :active="route().current('teams.create')">
-                                    Create New Team
-                                </ResponsiveNavLink>
-
-                                <!-- Team Switcher -->
-                                <template v-if="$page.props.auth.user.all_teams.length > 1">
-                                    <div class="border-t border-border my-2" />
-
-                                    <div class="block px-3 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                                        Switch Teams
-                                    </div>
-
-                                    <template v-for="team in $page.props.auth.user.all_teams" :key="team.id">
-                                        <form @submit.prevent="switchToTeam(team)">
-                                            <ResponsiveNavLink as="button">
-                                                <div class="flex items-center">
-                                                    <Check v-if="team.id == $page.props.auth.user.current_team_id" class="me-2 w-5 h-5 text-success" />
-                                                    <div>{{ team.name }}</div>
-                                                </div>
-                                            </ResponsiveNavLink>
-                                        </form>
-                                    </template>
+                                            {{ $page.props.auth.user.name }}
+                                        </div>
+                                    </button>
                                 </template>
+
+                                <template #content>
+                                    <div class="block px-4 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                                        Manage Account
+                                    </div>
+                                    <DropdownLink :href="route('profile.show')">
+                                        Profile
+                                    </DropdownLink>
+                                    <DropdownLink v-if="$page.props.jetstream.hasApiFeatures" :href="route('api-tokens.index')">
+                                        API Tokens
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('billing.portal')">
+                                        Billing
+                                    </DropdownLink>
+
+                                    <template v-if="$page.props.jetstream.hasTeamFeatures && $page.props.auth.user.current_team">
+                                        <div class="border-t border-border my-1" />
+                                        <div class="block px-4 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                                            Team
+                                        </div>
+                                        <DropdownLink :href="route('teams.show', $page.props.auth.user.current_team)">
+                                            {{ $page.props.auth.user.current_team.name }}
+                                        </DropdownLink>
+                                    </template>
+
+                                    <div class="border-t border-border my-1" />
+
+                                    <div class="block px-4 py-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                                        Appearance
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="block w-full px-4 py-2 text-start text-sm leading-5 text-foreground hover:bg-muted focus:outline-none focus:bg-muted transition duration-150 ease-in-out"
+                                        @click="toggleTheme"
+                                    >
+                                        {{ isDarkTheme ? 'Switch to Light Mode' : 'Switch to Dark Mode' }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="block w-full px-4 py-2 text-start text-sm leading-5 text-foreground hover:bg-muted focus:outline-none focus:bg-muted transition duration-150 ease-in-out"
+                                        :disabled="isSystemTheme"
+                                        @click="useSystemTheme"
+                                    >
+                                        Use System Theme
+                                    </button>
+
+                                    <div class="border-t border-border my-1" />
+
+                                    <form @submit.prevent="logout">
+                                        <DropdownLink as="button">
+                                            Log Out
+                                        </DropdownLink>
+                                    </form>
+                                </template>
+                            </Dropdown>
+                        </div>
+                    </template>
+                </AppSidebar>
+            </div>
+
+            <!-- Mobile Sidebar Overlay -->
+            <Teleport to="body">
+                <Transition
+                    enter-active-class="transition-opacity duration-300 ease-out"
+                    enter-from-class="opacity-0"
+                    enter-to-class="opacity-100"
+                    leave-active-class="transition-opacity duration-200 ease-in"
+                    leave-from-class="opacity-100"
+                    leave-to-class="opacity-0"
+                >
+                    <div
+                        v-if="mobileMenuOpen"
+                        class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm sm:hidden"
+                        @click="mobileMenuOpen = false"
+                    />
+                </Transition>
+
+                <Transition
+                    enter-active-class="transition-transform duration-300 ease-out"
+                    enter-from-class="-translate-x-full"
+                    enter-to-class="translate-x-0"
+                    leave-active-class="transition-transform duration-200 ease-in"
+                    leave-from-class="translate-x-0"
+                    leave-to-class="-translate-x-full"
+                >
+                    <div
+                        v-if="mobileMenuOpen"
+                        class="fixed inset-y-0 left-0 z-50 w-[240px] sm:hidden"
+                    >
+                        <AppSidebar :collapsed="false">
+                            <template #footer>
+                                <div class="space-y-0.5">
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
+                                        @click="toggleTheme"
+                                    >
+                                        <Sun v-if="isDarkTheme" class="h-4 w-4 shrink-0" />
+                                        <Moon v-else class="h-4 w-4 shrink-0" />
+                                        {{ isDarkTheme ? 'Light Mode' : 'Dark Mode' }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
+                                        @click="mobileMenuOpen = false; toggleNotificationDrawer()"
+                                    >
+                                        <div class="relative shrink-0">
+                                            <Bell class="h-4 w-4" />
+                                        </div>
+                                        Notifications
+                                        <span
+                                            v-if="hasUnreadNotifications"
+                                            class="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-primary/15 px-1.5 text-[11px] font-semibold text-primary"
+                                        >
+                                            {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
+                                        </span>
+                                    </button>
+                                    <Link
+                                        :href="route('profile.show')"
+                                        class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
+                                    >
+                                        <div v-if="$page.props.jetstream.managesProfilePhotos" class="shrink-0">
+                                            <img class="w-6 h-6 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_url" :alt="$page.props.auth.user.name">
+                                        </div>
+                                        <div v-else class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                                            {{ $page.props.auth.user.name.charAt(0).toUpperCase() }}
+                                        </div>
+                                        {{ $page.props.auth.user.name }}
+                                    </Link>
+                                </div>
                             </template>
+                        </AppSidebar>
+                    </div>
+                </Transition>
+            </Teleport>
+
+            <!-- Main Content Area -->
+            <div class="flex flex-1 flex-col overflow-hidden">
+                <!-- Top Header Bar -->
+                <header class="flex h-14 shrink-0 items-center border-b border-border bg-card/95 backdrop-blur-sm px-4 sm:px-6">
+                    <div class="flex flex-1 items-center min-w-0">
+                        <!-- Mobile hamburger -->
+                        <button
+                            type="button"
+                            class="inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition sm:hidden"
+                            @click="mobileMenuOpen = !mobileMenuOpen"
+                        >
+                            <Menu v-if="!mobileMenuOpen" class="h-5 w-5" />
+                            <X v-else class="h-5 w-5" />
+                        </button>
+
+                        <!-- Sidebar collapse toggle (desktop) -->
+                        <button
+                            type="button"
+                            class="hidden sm:inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none mr-3"
+                            aria-label="Toggle sidebar"
+                            @click="toggleSidebar"
+                        >
+                            <PanelLeftClose v-if="!sidebarCollapsed" class="h-4 w-4" />
+                            <PanelLeftOpen v-else class="h-4 w-4" />
+                        </button>
+
+                        <!-- Page heading -->
+                        <div v-if="$slots.header" class="min-w-0 flex-1 text-sm font-medium text-foreground">
+                            <slot name="header" />
                         </div>
                     </div>
-                </div>
-            </nav>
 
-            <!-- Page Heading -->
-            <header v-if="$slots.header" class="bg-card border-b border-border">
-                <div class="max-w-[1440px] mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                    <slot name="header" />
-                </div>
-            </header>
+                    <!-- Vertical divider + utility icons -->
+                    <div class="hidden sm:flex items-center ml-4">
+                        <div class="h-5 w-px bg-border" />
 
-            <!-- Page Content -->
-            <main class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <slot />
-            </main>
+                        <button
+                            type="button"
+                            class="ml-3 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none"
+                            :aria-label="isDarkTheme ? 'Switch to light mode' : 'Switch to dark mode'"
+                            @click="toggleTheme"
+                        >
+                            <Sun v-if="isDarkTheme" class="h-4 w-4" />
+                            <Moon v-else class="h-4 w-4" />
+                        </button>
+
+                        <button
+                            type="button"
+                            class="relative ml-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted hover:text-foreground focus:outline-none"
+                            aria-label="Open notifications"
+                            @click="toggleNotificationDrawer"
+                        >
+                            <Bell class="h-4 w-4" />
+                            <span
+                                v-if="hasUnreadNotifications"
+                                class="absolute right-1 top-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-semibold leading-none text-primary-foreground"
+                            >
+                                {{ unreadNotificationCount > 9 ? '9+' : unreadNotificationCount }}
+                            </span>
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Page Content -->
+                <main class="flex-1 overflow-y-auto px-6 py-6">
+                    <slot />
+                </main>
+            </div>
         </div>
 
         <NotificationDrawer

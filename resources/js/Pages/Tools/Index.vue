@@ -6,7 +6,8 @@ import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { Search, Database, MessageSquare, Settings, Brain, GitBranchPlus } from 'lucide-vue-next';
+import { Search, MessageSquare, Brain, GitBranchPlus, Wrench } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
     codeAnalysis: {
@@ -28,13 +29,6 @@ const baseTools = [
         icon: Search,
     },
     {
-        route: 'tools.backups.settings',
-        category: 'Operations',
-        title: 'Database backup settings',
-        description: 'Configure daily DB backups, retention window, timezone, and run immediate backups.',
-        icon: Database,
-    },
-    {
         route: 'tools.messenger.index',
         category: 'Messenger',
         title: 'Control plane dashboard',
@@ -42,17 +36,10 @@ const baseTools = [
         icon: MessageSquare,
     },
     {
-        route: 'tools.features.settings',
-        category: 'Configuration',
-        title: 'Feature flag settings',
-        description: 'Enable or disable runtime feature flags without changing env/config files.',
-        icon: Settings,
-    },
-    {
-        route: 'tools.memory.settings',
+        route: 'tools.memory.index',
         category: 'Agent Memory',
-        title: 'Memory settings & diagnostics',
-        description: 'Configure memory providers, view usage, and manage memory retention.',
+        title: 'Memory dashboard & diagnostics',
+        description: 'View memory diagnostics, operating mode, provider usage, and manage retention.',
         icon: Brain,
     },
 ];
@@ -79,11 +66,23 @@ const tools = computed(() => {
         <Head title="Tools" />
 
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-foreground">Tools</h2>
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Wrench class="h-5 w-5 text-primary" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Tools</h2>
+                    <HelpHint
+                        ui-key="tools.overview"
+                        short-text="Access discovery, analysis, memory, and messenger tools."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
+            </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px]">
+            <div class="">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <Link
                         v-for="tool in tools"

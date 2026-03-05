@@ -272,7 +272,6 @@ class AdversarialReviewerPlanTest extends TestCase
             'review_notes' => '',
         ];
 
-        // Create service that always returns revise
         $mockAdapter = Mockery::mock(ClaudeAdapter::class);
         $mockAdapter->shouldReceive('buildReviewerCommand')->andReturn(['echo', 'test']);
         $mockAdapter->shouldReceive('parseReviewerResponse')
@@ -290,22 +289,28 @@ class AdversarialReviewerPlanTest extends TestCase
 
         $job = new ExecuteInterrogationPlanJob($session->id);
 
-        // Run 2 attempts
-        for ($i = 0; $i < 2; $i++) {
-            try {
-                $this->invokeAdversarialReview($job, $session, ['plan_markdown' => "# Test Plan v{$i}"]);
-                $session->refresh();
-            } catch (\RuntimeException $e) {
-                // Expected on 2nd attempt
-                $this->assertStringContainsString('exhausted retries', $e->getMessage());
-            }
-        }
-
+        // First attempt returns revise payload for regeneration
+        $result1 = $this->invokeAdversarialReview($job, $session, ['plan_markdown' => '# Test Plan v0']);
         $session->refresh();
-        $metadata = $session->metadata_json ?? [];
+        $this->assertNotNull($result1);
+        $this->assertSame('revise', $result1['verdict']);
 
-        $this->assertSame('failed', $metadata['plan']['review_status'] ?? null);
+        // Second attempt degrades gracefully — accepts plan with warnings
+        $result2 = $this->invokeAdversarialReview($job, $session, ['plan_markdown' => '# Test Plan v1']);
+        $session->refresh();
+
+        $this->assertNull($result2);
+
+        $metadata = $session->metadata_json ?? [];
+        $this->assertSame('accepted_with_warnings', $metadata['plan']['review_status'] ?? null);
         $this->assertCount(2, $metadata['plan']['review_history'] ?? []);
+
+        $exhaustedEvent = $session->events()
+            ->where('event_type', InterrogationEvent::TYPE_SYSTEM)
+            ->get()
+            ->first(fn ($e) => ($e->payload['notice'] ?? '') === 'plan_review_exhausted');
+
+        $this->assertNotNull($exhaustedEvent, 'Expected plan_review_exhausted system event');
     }
 
     public function test_shadow_mode_logs_but_does_not_gate(): void

@@ -47,6 +47,7 @@ class HandleInertiaRequests extends Middleware
                 'deployments' => '/agent/deployments',
                 'systemOverview' => '/agent/system-overview',
             ],
+            'showGuidedTour' => fn () => session('onboarding_completed', false),
             'notifications' => fn () => $this->notificationPayload($request),
         ];
     }

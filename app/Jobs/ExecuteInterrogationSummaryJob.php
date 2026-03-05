@@ -194,9 +194,40 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
 
             $writer->appendSummary($summary);
 
-            // Run adversarial review in shadow mode (logs findings but does not gate)
+            // Run adversarial review — may gate the summary if in gating mode.
+            $reviewResult = null;
             if ($featureFlags->enabled(FeatureFlagManager::ADVERSARIAL_REVIEW_ENABLED)) {
-                $this->runAdversarialReview($session, $summary, $writer);
+                $reviewResult = $this->runAdversarialReview($session, $summary, $writer);
+            }
+
+            // When gating mode returns a revise verdict, auto-dispatch a revision
+            // pass using the required_changes as amendment notes.
+            if (is_array($reviewResult) && ! isset($reviewResult['halt'])) {
+                $requiredChanges = array_filter(
+                    (array) ($reviewResult['required_changes'] ?? []),
+                    static fn ($v): bool => is_string($v) && trim($v) !== ''
+                );
+
+                if ($requiredChanges !== []) {
+                    $revisionNotes = "Adversarial review required changes:\n- "
+                        .implode("\n- ", array_values($requiredChanges));
+
+                    ExecuteInterrogationSummaryJob::dispatch((int) $session->id, $revisionNotes);
+
+                    return;
+                }
+            }
+
+            // If review halted for clarification, don't mark summary as ready.
+            if (is_array($reviewResult) && isset($reviewResult['halt'])) {
+                return;
+            }
+
+            // Guard against stale job: user may have approved the summary and
+            // moved to the plan phase while this long-running job was in flight.
+            $session->refresh();
+            if ((int) $session->phase !== InterrogationSession::PHASE_SUMMARY) {
+                return;
             }
 
             $writer->appendSystem([
@@ -205,6 +236,12 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
             ]);
         } catch (\Throwable $throwable) {
             report($throwable);
+
+            // Don't crash a session that has already moved past the summary phase.
+            $session->refresh();
+            if ((int) $session->phase !== InterrogationSession::PHASE_SUMMARY) {
+                return;
+            }
 
             $transitions->transition(
                 (int) $session->id,
@@ -405,9 +442,7 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
      * warning but does not block. Max retries enforced before failure.
      *
      * @param  array<string, mixed>  $summaryCandidate
-     * @return array<string, mixed>|null Null on pass; review payload on revise; halt signal on clarification
-     *
-     * @throws \RuntimeException when retry limit exhausted
+     * @return array<string, mixed>|null Null on pass/exhausted; review payload on revise; halt signal on clarification
      */
     private function runAdversarialReview(
         InterrogationSession $session,
@@ -472,9 +507,18 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
 
                 case 'revise':
                     if ($attempt >= $maxRetries) {
-                        $metadata['summary']['review_status'] = 'failed';
+                        $metadata['summary']['review_status'] = 'accepted_with_warnings';
                         $session->update(['metadata_json' => $metadata]);
-                        throw new \RuntimeException('Summary review exhausted retries');
+
+                        $writer->appendSystem([
+                            'notice' => 'summary_review_exhausted',
+                            'message' => 'Adversarial review exhausted retries ('.$maxRetries.'). Accepting current summary with warnings.',
+                            'issues' => $reviewPayload['issues'] ?? [],
+                            'required_changes' => $reviewPayload['required_changes'] ?? [],
+                            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                        ]);
+
+                        return null;
                     }
                     $metadata['summary']['review_status'] = 'revising';
                     $session->update(['metadata_json' => $metadata]);

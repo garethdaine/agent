@@ -114,5 +114,6 @@ return [
     'openapi' => [
         'artifact_path' => env('DOCS_OPENAPI_ARTIFACT_PATH', base_path('docs/openapi/messenger.yaml')),
         'linked_doc_slugs_extension' => env('DOCS_OPENAPI_LINKED_SLUGS_EXTENSION', 'x-linked-doc-slugs'),
+        'scramble_enabled' => (bool) env('DOCS_SCRAMBLE_ENABLED', true),
     ],
 ];

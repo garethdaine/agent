@@ -27,8 +27,7 @@ class ComplianceController extends Controller
     {
         $user = auth()->user();
 
-        // Get job IDs for this user
-        $jobIds = AgentJob::where('user_id', $user->id)->pluck('id');
+        $jobIds = AgentJob::query()->forUser($user)->pluck('id');
 
         $totalJobs = $jobIds->count();
 

@@ -1172,6 +1172,16 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
     private function shouldUseDynamicQuestionBank(InterrogationSession $session): bool
     {
         $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+
+        // When the summary open question queue is active, the round job must use
+        // the standard AI runner path so the queued open question prompt is sent
+        // directly. The dynamic question bank would otherwise auto-complete
+        // interrogation because all its canonical keys are already exhausted.
+        $queueActive = (bool) data_get($metadata, 'summary_open_question_queue.active', false);
+        if ($queueActive) {
+            return false;
+        }
+
         $mode = data_get($metadata, 'dynamic_question_bank_mode');
 
         if (is_bool($mode)) {

@@ -2,18 +2,32 @@
 
 namespace App\Actions\Jetstream;
 
+use App\Models\Team;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Laravel\Jetstream\Contracts\DeletesTeams;
 use Laravel\Jetstream\Contracts\DeletesUsers;
 
 class DeleteUser implements DeletesUsers
 {
-    /**
-     * Delete the given user.
-     */
+    public function __construct(protected DeletesTeams $deletesTeams) {}
+
     public function delete(User $user): void
     {
-        $user->deleteProfilePhoto();
-        $user->tokens->each->delete();
-        $user->delete();
+        DB::transaction(function () use ($user) {
+            $this->deleteTeams($user);
+            $user->deleteProfilePhoto();
+            $user->tokens->each->delete();
+            $user->delete();
+        });
+    }
+
+    protected function deleteTeams(User $user): void
+    {
+        $user->teams()->detach();
+
+        $user->ownedTeams->each(function (Team $team) {
+            $this->deletesTeams->delete($team);
+        });
     }
 }

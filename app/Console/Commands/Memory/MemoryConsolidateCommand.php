@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands\Memory;
 
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Memory\ConsolidationService;
 use Illuminate\Console\Command;
 
@@ -38,8 +39,8 @@ class MemoryConsolidateCommand extends Command
      */
     public function handle(ConsolidationService $service): int
     {
-        if (! config('memory.enabled', false)) {
-            $this->warn('Memory system is disabled. Enable it with MEMORY_ENABLED=true');
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
+            $this->warn('Memory system is disabled. Enable the "Agent Memory" feature flag.');
 
             return self::SUCCESS;
         }

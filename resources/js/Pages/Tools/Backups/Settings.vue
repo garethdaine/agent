@@ -10,7 +10,7 @@ import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Head } from '@inertiajs/vue3';
-import { Play } from 'lucide-vue-next';
+import { Play, Database } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, reactive, ref } from 'vue';
 
@@ -103,13 +103,18 @@ onMounted(load);
         <Head title="Backup Settings" />
 
         <template #header>
-            <div class="flex items-center gap-2">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Database Backup Settings</h2>
-                <HelpHint
-                    ui-key="backups.settings"
-                    short-text="Confirm schedule, retention, and manual run behavior before enabling backups."
-                    learn-more-href="/docs/overview"
-                />
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Database class="h-5 w-5 text-primary" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Database Backup Settings</h2>
+                    <HelpHint
+                        ui-key="backups.settings"
+                        short-text="Confirm schedule, retention, and manual run behavior before enabling backups."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
             </div>
         </template>
 

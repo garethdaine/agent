@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace Tests\Feature\Telemetry;
 
 use App\Services\Telemetry\IngestionService;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class IngestionDedupeTest extends TestCase
 {
-    use DatabaseMigrations;
+    use DatabaseTruncation;
+
+    protected array $tablesToTruncate = [
+        'telemetry_event_ledger',
+    ];
 
     public function test_ingestion_is_idempotent_for_duplicate_event_and_attempt(): void
     {

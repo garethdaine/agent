@@ -8,6 +8,7 @@ use App\Models\AgentJobRun;
 use App\Models\MemoryConsolidationLog;
 use App\Models\MemoryEmbedding;
 use App\Models\MemoryFormationFailure;
+use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -41,7 +42,7 @@ class ConsolidationService
      */
     public function run(?int $userId = null, ?string $type = null): array
     {
-        if (! config('memory.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
             return ['skipped' => true, 'reason' => 'Memory system disabled'];
         }
 
@@ -69,7 +70,7 @@ class ConsolidationService
      */
     public function runBackfill(?int $userId = null): array
     {
-        if (! config('memory.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
             return ['skipped' => true, 'reason' => 'Memory system disabled', 'processed' => 0];
         }
 
@@ -173,7 +174,7 @@ class ConsolidationService
      */
     public function runDeduplication(?int $userId = null): array
     {
-        if (! config('memory.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
             return ['skipped' => true, 'reason' => 'Memory system disabled', 'duplicates_found' => 0];
         }
 

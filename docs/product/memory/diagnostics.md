@@ -56,7 +56,7 @@ Lower retrieval limit to reduce noise, run retrieval tests, then compare answer 
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -64,11 +64,67 @@ The block below is generated from code and front-matter metadata.
 | --- | --- | --- | --- |
 | `tools.memory.index` | ok | `tools/memory` | `GET` |
 
-### Referenced Settings Keys
+### API Endpoints
 
-- `memory.retrieval_limit`
+The following API endpoints are available for this feature:
 
-### Referenced Feature Flags
+- **`GET agent/api/v1/memory/core-blocks`**
+  - Controller: `MemoryCoreBlockController@index`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-reads`
+- **`GET agent/api/v1/memory/core-blocks/{key}`**
+  - Controller: `MemoryCoreBlockController@show`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-reads`
+- **`PUT agent/api/v1/memory/core-blocks/{key}`**
+  - Controller: `MemoryCoreBlockController@update`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-writes`
+- **`DELETE agent/api/v1/memory/core-blocks/{key}`**
+  - Controller: `MemoryCoreBlockController@destroy`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-writes`
+- **`POST agent/api/v1/memory/retrieve`**
+  - Controller: `MemoryRetrievalController@retrieve`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-reads`
+- **`GET agent/api/v1/memory/settings`**
+  - Controller: `MemorySettingsController@index`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-reads`
+- **`PUT agent/api/v1/memory/settings`**
+  - Controller: `MemorySettingsController@update`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-writes`
+- **`GET agent/api/v1/memory/settings/capabilities`**
+  - Controller: `MemorySettingsController@capabilities`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-reads`
+- **`POST agent/api/v1/memory/settings/test-connection`**
+  - Controller: `MemorySettingsController@testConnection`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-writes`
+- **`GET agent/api/v1/memory/stats`**
+  - Controller: `MemoryDiagnosticsController@stats`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-reads`
+- **`POST agent/api/v1/memory/working/append`**
+  - Controller: `MemoryWorkingController@append`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-writes`
+- **`GET agent/api/v1/memory/working/{runId}`**
+  - Controller: `MemoryWorkingController@show`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-reads`
+
+### Configuration Reference
+
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `memory.retrieval_limit` | _not set_ | _default_ |
+
+### Feature Flags
 
 - `docs_center_enabled`
+
 <!-- AUTO-GENERATED:END -->

@@ -6,6 +6,7 @@ namespace App\Jobs\Memory;
 
 use App\Models\AgentJobRun;
 use App\Models\MemoryFormationFailure;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Memory\MemoryFormationPipeline;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -73,7 +74,7 @@ class MemoryFormationJob implements ShouldQueue
      */
     public function shouldQueue(): bool
     {
-        return (bool) config('memory.enabled', false);
+        return app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED);
     }
 
     /**
@@ -82,7 +83,7 @@ class MemoryFormationJob implements ShouldQueue
     public function handle(MemoryFormationPipeline $pipeline): void
     {
         // Check if memory is enabled
-        if (! config('memory.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
             Log::debug('MemoryFormationJob: Memory disabled, skipping', [
                 'run_id' => $this->runId,
             ]);

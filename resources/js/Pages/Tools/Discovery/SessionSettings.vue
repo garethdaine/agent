@@ -10,7 +10,8 @@ import Input from '@/Components/ui/Input.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, ExternalLink, RefreshCw, Trash2, Plus } from 'lucide-vue-next';
+import { ArrowLeft, ExternalLink, RefreshCw, Search, Trash2, Plus } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 
@@ -349,9 +350,21 @@ watch(() => providerTeamForm.team_id, (nextTeamId) => {
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <div>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Session Settings</h2>
-                    <p class="mt-1 text-xs text-muted-foreground">{{ session?.name || `Session #${sessionId}` }}</p>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Search class="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-xl font-semibold leading-tight text-foreground">Session Settings</h2>
+                            <HelpHint
+                                ui-key="discovery.session-settings"
+                                short-text="Adjust settings for this discovery session."
+                                learn-more-href="/docs/overview"
+                            />
+                        </div>
+                        <p class="mt-1 text-xs text-muted-foreground">{{ session?.name || `Session #${sessionId}` }}</p>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('tools.discovery.wizard', sessionId)">

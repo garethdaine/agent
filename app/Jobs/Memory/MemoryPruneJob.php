@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs\Memory;
 
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Memory\ForgettingService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -63,7 +64,7 @@ class MemoryPruneJob implements ShouldQueue
      */
     public function handle(ForgettingService $service): void
     {
-        if (! config('memory.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
             Log::debug('MemoryPruneJob: Skipped (memory disabled)');
 
             return;
@@ -97,7 +98,7 @@ class MemoryPruneJob implements ShouldQueue
      */
     public function shouldQueue(): bool
     {
-        return config('memory.enabled', false);
+        return app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED);
     }
 
     /**

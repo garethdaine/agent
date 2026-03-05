@@ -3,7 +3,8 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import Button from '@/Components/ui/Button.vue';
 import Form from '@/Pages/Agent/Org/Agents/Form.vue';
-import { ArrowLeft } from 'lucide-vue-next';
+import { ArrowLeft, Bot } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 </script>
 
 <template>
@@ -17,7 +18,17 @@ import { ArrowLeft } from 'lucide-vue-next';
                         <ArrowLeft class="h-4 w-4" />
                     </Button>
                 </Link>
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Create Agent</h2>
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Bot class="h-5 w-5 text-primary" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Create Agent</h2>
+                    <HelpHint
+                        ui-key="org.agents.create"
+                        short-text="Register a new agent with capabilities and constraints."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
             </div>
         </template>
 

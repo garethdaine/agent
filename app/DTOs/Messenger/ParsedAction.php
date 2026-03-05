@@ -50,6 +50,23 @@ final readonly class ParsedAction
     }
 
     /**
+     * Return a new instance with additional parameters merged in.
+     *
+     * @param  array<string, mixed>  $extra
+     */
+    public function withMergedParameters(array $extra): self
+    {
+        return new self(
+            type: $this->type,
+            parameters: array_merge($this->parameters, $extra),
+            confidence: $this->confidence,
+            requiresConfirmation: $this->requiresConfirmation,
+            rawIntent: $this->rawIntent,
+            clarificationNeeded: $this->clarificationNeeded,
+        );
+    }
+
+    /**
      * Convert to array for JSON serialization.
      *
      * @return array<string, mixed>

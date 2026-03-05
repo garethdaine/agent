@@ -6,14 +6,14 @@ namespace Tests\Unit\Telemetry;
 
 use App\Services\Telemetry\ActiveBuildFreshnessService;
 use Carbon\CarbonImmutable;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ActiveBuildFreshnessServiceTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     protected function tearDown(): void
     {

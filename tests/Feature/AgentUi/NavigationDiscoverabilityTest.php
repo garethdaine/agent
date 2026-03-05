@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\AgentUi;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class NavigationDiscoverabilityTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -23,7 +23,7 @@ class NavigationDiscoverabilityTest extends TestCase
 
     public function test_dashboard_exposes_top_level_operator_navigation_links(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
 
         $this->actingAs($user)
             ->get('/dashboard')
@@ -36,7 +36,7 @@ class NavigationDiscoverabilityTest extends TestCase
 
     public function test_deployments_index_exposes_operator_secondary_links_within_two_clicks(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
 
         $workflowKey = 'eng.repo-analysis.v1';
         $activeBuildId = (string) str()->uuid();
@@ -61,7 +61,7 @@ class NavigationDiscoverabilityTest extends TestCase
 
     public function test_workflow_detail_exposes_required_deep_links(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
 
         $workflowKey = 'eng.repo-analysis.v1';
         $activeBuildId = (string) str()->uuid();

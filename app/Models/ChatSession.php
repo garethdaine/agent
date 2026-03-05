@@ -25,7 +25,9 @@ class ChatSession extends Model
 
     protected function casts(): array
     {
-        return [];
+        return [
+            'compaction_at' => 'datetime',
+        ];
     }
 
     public function user(): BelongsTo

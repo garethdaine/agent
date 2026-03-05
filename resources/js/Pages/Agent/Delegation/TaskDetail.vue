@@ -16,7 +16,8 @@ import TableCell from '@/Components/ui/TableCell.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Button from '@/Components/ui/Button.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
-import { ArrowLeft, ClipboardCheck } from 'lucide-vue-next';
+import { ArrowLeft, ClipboardCheck, GitBranch } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
     graphId: {
@@ -84,13 +85,23 @@ onMounted(load);
                             <ArrowLeft class="h-4 w-4" />
                         </Button>
                     </Link>
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <GitBranch class="h-5 w-5 text-primary" />
+                    </div>
                     <div>
                         <div class="text-sm text-muted-foreground mb-1">
                             <Link :href="route('agent.delegation.show', graphId)" class="hover:text-foreground transition-colors">
                                 Back to Graph
                             </Link>
                         </div>
-                        <h2 class="text-xl font-semibold leading-tight text-foreground">{{ task?.name ?? 'Loading...' }}</h2>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-xl font-semibold leading-tight text-foreground">{{ task?.name ?? 'Loading...' }}</h2>
+                            <HelpHint
+                                ui-key="delegation.task"
+                                short-text="Inspect task assignment details and verification status."
+                                learn-more-href="/docs/overview"
+                            />
+                        </div>
                     </div>
                 </div>
                 <Link
@@ -106,7 +117,7 @@ onMounted(load);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px] space-y-6">
+            <div class="space-y-6">
                 <p v-if="error" class="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {{ error }}
                 </p>

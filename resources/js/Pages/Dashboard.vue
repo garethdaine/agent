@@ -9,7 +9,7 @@ import CardContent from '@/Components/ui/CardContent.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
-import { RefreshCw } from 'lucide-vue-next';
+import { LayoutDashboard, RefreshCw } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
 
@@ -79,13 +79,18 @@ onMounted(loadMetrics);
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2">
-                    <h2 class="font-semibold text-xl text-foreground leading-tight">Dashboard</h2>
-                    <HelpHint
-                        ui-key="dashboard.overview"
-                        short-text="Understand dashboard metrics, scheduler health, and safe interpretation."
-                        learn-more-href="/docs/overview"
-                    />
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <LayoutDashboard class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="font-semibold text-xl text-foreground leading-tight">Dashboard</h2>
+                        <HelpHint
+                            ui-key="dashboard.overview"
+                            short-text="Understand dashboard metrics, scheduler health, and safe interpretation."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <select
@@ -104,7 +109,7 @@ onMounted(loadMetrics);
         </template>
 
         <div class="py-8">
-            <div class="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
+            <div class="px-4 sm:px-6 lg:px-8">
                 <p v-if="errorMessage" class="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {{ errorMessage }}
                 </p>

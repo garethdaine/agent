@@ -58,7 +58,7 @@ Open a new discovery session, answer generated questions, approve the summary an
 <!-- AUTO-GENERATED:START -->
 ## Runtime Contract Snapshot
 
-The block below is generated from code and front-matter metadata.
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
 
 ### Verified Route Bindings
 
@@ -66,11 +66,14 @@ The block below is generated from code and front-matter metadata.
 | --- | --- | --- | --- |
 | `tools.discovery.index` | ok | `tools/discovery` | `GET` |
 
-### Referenced Settings Keys
+### Configuration Reference
 
-- `discovery.default_provider`
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `discovery.default_provider` | _not set_ | _default_ |
 
-### Referenced Feature Flags
+### Feature Flags
 
 - `docs_center_enabled`
+
 <!-- AUTO-GENERATED:END -->

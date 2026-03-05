@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support\Messenger\Adapters;
 
 use App\DTOs\Messenger\NormalizedAttachment;
@@ -7,12 +9,14 @@ use App\DTOs\Messenger\NormalizedMessage;
 use App\DTOs\Messenger\OutboundPayload;
 use App\DTOs\Messenger\ProviderResponse;
 use App\DTOs\Messenger\ReplayProtectionStrategy;
+use App\DTOs\Messenger\StreamingConfig;
 use App\DTOs\Messenger\ThreadingStrategy;
 use App\Models\ChatSession;
 use App\Models\ConnectorAccount;
 use App\Support\Messenger\MessengerHttpClient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SlackAdapter extends AbstractConnectorAdapter
 {
@@ -49,14 +53,11 @@ class SlackAdapter extends AbstractConnectorAdapter
             return false;
         }
 
-        // Construct the signature base string
         $body = $request->getContent();
         $sigBaseString = 'v0:'.$timestamp.':'.$body;
 
-        // Calculate expected signature
         $expectedSignature = 'v0='.hash_hmac('sha256', $sigBaseString, $signingSecret);
 
-        // Timing-safe comparison
         return hash_equals($expectedSignature, $signature);
     }
 
@@ -65,7 +66,6 @@ class SlackAdapter extends AbstractConnectorAdapter
         $event = $request->input('event', []);
         $eventType = $event['type'] ?? '';
 
-        // Handle different event types
         $content = $this->extractContent($event, $eventType);
         $attachments = $this->extractAttachments($event);
 
@@ -101,16 +101,16 @@ class SlackAdapter extends AbstractConnectorAdapter
             return ProviderResponse::failure('Missing bot token');
         }
 
+        $normalizedContent = $this->normalizeContent($payload->content);
+
         $data = [
             'channel' => $payload->channelId,
-            'text' => $payload->content,
+            'text' => $normalizedContent,
         ];
 
-        // Add threading support (thread_ts)
         if ($payload->threadId) {
             $data['thread_ts'] = $payload->threadId;
         } elseif ($payload->replyToMessageId) {
-            // Use reply_to_message_id as thread_ts for Slack
             $data['thread_ts'] = $payload->replyToMessageId;
         }
 
@@ -140,7 +140,6 @@ class SlackAdapter extends AbstractConnectorAdapter
 
         $responseData = $result['response']->json();
 
-        // Check Slack API response for success
         if (! ($responseData['ok'] ?? false)) {
             $this->logError('Slack API returned error', [
                 'account_id' => $account->id,
@@ -160,6 +159,8 @@ class SlackAdapter extends AbstractConnectorAdapter
             return ProviderResponse::failure('No message timestamp in response', $responseData);
         }
 
+        $this->storeLastBotMessageId($session, $messageTs);
+
         $this->logInfo('Message sent successfully', [
             'account_id' => $account->id,
             'channel' => $payload->channelId,
@@ -167,6 +168,223 @@ class SlackAdapter extends AbstractConnectorAdapter
         ]);
 
         return ProviderResponse::success($messageTs, $responseData);
+    }
+
+    public function editMessage(ChatSession $session, string $providerMessageId, string $content): ProviderResponse
+    {
+        $account = $session->connectorAccount;
+
+        if (! $account) {
+            return ProviderResponse::failure('No connector account associated with session');
+        }
+
+        $botToken = $this->getBotToken($account);
+
+        if (! $botToken) {
+            return ProviderResponse::failure('Missing bot token');
+        }
+
+        $normalizedContent = $this->normalizeContent($content);
+
+        $httpClient = new MessengerHttpClient($account);
+
+        $result = $httpClient->post(
+            self::API_BASE_URL.'/chat.update',
+            [
+                'channel' => $session->channel_id,
+                'ts' => $providerMessageId,
+                'text' => $normalizedContent,
+            ],
+            [
+                'Authorization' => 'Bearer '.$botToken,
+                'Content-Type' => 'application/json',
+            ]
+        );
+
+        if (! $result['success'] || ! ($result['response']?->json()['ok'] ?? false)) {
+            $slackError = $result['response']?->json()['error'] ?? $result['error'] ?? 'Unknown';
+
+            // "not_modified" is a no-op success during streaming
+            if ($slackError === 'not_modified') {
+                return ProviderResponse::success($providerMessageId);
+            }
+
+            $this->logError('Failed to edit Slack message', [
+                'account_id' => $account->id,
+                'channel' => $session->channel_id,
+                'message_ts' => $providerMessageId,
+                'error' => $slackError,
+            ]);
+
+            return ProviderResponse::failure($slackError, $result['response']?->json() ?? []);
+        }
+
+        return ProviderResponse::success($providerMessageId, $result['response']->json());
+    }
+
+    public function supportsMessageEditing(): bool
+    {
+        return true;
+    }
+
+    public function getStreamingConfig(): StreamingConfig
+    {
+        return StreamingConfig::slack();
+    }
+
+    /**
+     * Start a native Slack stream (chat.startStream).
+     *
+     * Requires thread_ts — streamed messages must be replies.
+     * Returns the stream message ts on success.
+     *
+     * @return array{ok: bool, ts: ?string, error: ?string}
+     */
+    public function startStream(ChatSession $session, string $threadTs, ?string $initialText = null): array
+    {
+        $account = $session->connectorAccount;
+        $botToken = $account ? $this->getBotToken($account) : null;
+
+        if (! $botToken || ! $account) {
+            return ['ok' => false, 'ts' => null, 'error' => 'Missing bot token or account'];
+        }
+
+        $httpClient = new MessengerHttpClient($account);
+
+        $payload = [
+            'channel' => $session->channel_id,
+            'thread_ts' => $threadTs,
+        ];
+
+        if ($initialText !== null && $initialText !== '') {
+            $payload['markdown_text'] = $this->normalizeContent($initialText);
+        }
+
+        $result = $httpClient->post(
+            self::API_BASE_URL.'/chat.startStream',
+            $payload,
+            ['Authorization' => 'Bearer '.$botToken, 'Content-Type' => 'application/json']
+        );
+
+        if (! $result['success'] || ! ($result['response']?->json()['ok'] ?? false)) {
+            return [
+                'ok' => false,
+                'ts' => null,
+                'error' => $result['response']?->json()['error'] ?? $result['error'] ?? 'Unknown',
+            ];
+        }
+
+        $data = $result['response']->json();
+
+        return ['ok' => true, 'ts' => $data['ts'] ?? null, 'error' => null];
+    }
+
+    /**
+     * Append text to an active Slack stream (chat.appendStream).
+     */
+    public function appendStream(ChatSession $session, string $streamTs, string $text): bool
+    {
+        $account = $session->connectorAccount;
+        $botToken = $account ? $this->getBotToken($account) : null;
+
+        if (! $botToken || ! $account) {
+            return false;
+        }
+
+        $httpClient = new MessengerHttpClient($account);
+
+        $result = $httpClient->post(
+            self::API_BASE_URL.'/chat.appendStream',
+            [
+                'channel' => $session->channel_id,
+                'ts' => $streamTs,
+                'markdown_text' => $this->normalizeContent($text),
+            ],
+            ['Authorization' => 'Bearer '.$botToken, 'Content-Type' => 'application/json']
+        );
+
+        return $result['success'] && ($result['response']?->json()['ok'] ?? false);
+    }
+
+    /**
+     * Stop an active Slack stream (chat.stopStream).
+     */
+    public function stopStream(ChatSession $session, string $streamTs, ?string $finalText = null): bool
+    {
+        $account = $session->connectorAccount;
+        $botToken = $account ? $this->getBotToken($account) : null;
+
+        if (! $botToken || ! $account) {
+            return false;
+        }
+
+        $httpClient = new MessengerHttpClient($account);
+
+        $payload = [
+            'channel' => $session->channel_id,
+            'ts' => $streamTs,
+        ];
+
+        if ($finalText !== null && $finalText !== '') {
+            $payload['markdown_text'] = $this->normalizeContent($finalText);
+        }
+
+        $result = $httpClient->post(
+            self::API_BASE_URL.'/chat.stopStream',
+            $payload,
+            ['Authorization' => 'Bearer '.$botToken, 'Content-Type' => 'application/json']
+        );
+
+        return $result['success'] && ($result['response']?->json()['ok'] ?? false);
+    }
+
+    public function supportsReactions(): bool
+    {
+        return true;
+    }
+
+    public function addReaction(ChatSession $session, string $messageId, string $emoji): ProviderResponse
+    {
+        $account = $session->connectorAccount;
+
+        if (! $account) {
+            return ProviderResponse::failure('No connector account associated with session');
+        }
+
+        $botToken = $this->getBotToken($account);
+
+        if (! $botToken) {
+            return ProviderResponse::failure('Missing bot token');
+        }
+
+        $httpClient = new MessengerHttpClient($account);
+
+        $result = $httpClient->post(
+            self::API_BASE_URL.'/reactions.add',
+            [
+                'channel' => $session->channel_id,
+                'timestamp' => $messageId,
+                'name' => $emoji,
+            ],
+            [
+                'Authorization' => 'Bearer '.$botToken,
+                'Content-Type' => 'application/json',
+            ]
+        );
+
+        if (! $result['success'] || ! ($result['response']?->json()['ok'] ?? false)) {
+            $this->logDebug('Failed to add Slack reaction', [
+                'channel' => $session->channel_id,
+                'timestamp' => $messageId,
+                'emoji' => $emoji,
+            ]);
+
+            return ProviderResponse::failure(
+                $result['response']?->json()['error'] ?? 'Failed to add reaction'
+            );
+        }
+
+        return ProviderResponse::success($messageId);
     }
 
     public function supportsThreading(): bool
@@ -185,18 +403,14 @@ class SlackAdapter extends AbstractConnectorAdapter
     }
 
     /**
-     * Extract text content from various Slack event types.
-     *
      * @param  array<string, mixed>  $event
      */
     private function extractContent(array $event, string $eventType): string
     {
-        // Handle blocks structure (rich text)
         if (isset($event['blocks']) && is_array($event['blocks'])) {
             return $this->extractTextFromBlocks($event['blocks']);
         }
 
-        // Handle attachments text
         if (isset($event['attachments']) && is_array($event['attachments'])) {
             $attachmentTexts = [];
             foreach ($event['attachments'] as $attachment) {
@@ -214,13 +428,10 @@ class SlackAdapter extends AbstractConnectorAdapter
             }
         }
 
-        // Default to plain text field
         return $event['text'] ?? '';
     }
 
     /**
-     * Extract text content from Slack blocks structure.
-     *
      * @param  array<int, array<string, mixed>>  $blocks
      */
     private function extractTextFromBlocks(array $blocks): string
@@ -261,8 +472,6 @@ class SlackAdapter extends AbstractConnectorAdapter
     }
 
     /**
-     * Extract text from a rich text element.
-     *
      * @param  array<string, mixed>  $element
      */
     private function extractTextFromRichTextElement(array $element): string
@@ -284,8 +493,6 @@ class SlackAdapter extends AbstractConnectorAdapter
     }
 
     /**
-     * Extract file attachments from Slack event.
-     *
      * @param  array<string, mixed>  $event
      * @return array<int, NormalizedAttachment>
      */
@@ -310,9 +517,17 @@ class SlackAdapter extends AbstractConnectorAdapter
         return $attachments;
     }
 
+    private function storeLastBotMessageId(ChatSession $session, string $messageTs): void
+    {
+        Cache::put(
+            sprintf('slack:last_bot_message:%s:%s', $session->connector_account_id, $session->channel_id),
+            $messageTs,
+            86400
+        );
+    }
+
     private function getSigningSecret(ConnectorAccount $account): ?string
     {
-        // Check config first, then credentials
         return $account->config['signature_verification']['signing_secret']
             ?? $account->credentials['signing_secret']
             ?? null;

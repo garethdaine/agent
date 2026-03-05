@@ -86,15 +86,14 @@ class MemoryApiTest extends TestCase
     // MEMORY DISABLED TESTS (503 Service Unavailable)
     // =========================================================================
 
-    public function test_returns_503_when_memory_disabled(): void
+    public function test_settings_accessible_when_memory_disabled(): void
     {
         Config::set('memory.enabled', false);
 
         $response = $this->actingAs($this->user)
             ->getJson("{$this->baseUrl}/settings");
 
-        $response->assertStatus(503)
-            ->assertJsonPath('error.code', 'MEMORY_DISABLED');
+        $response->assertStatus(200);
     }
 
     public function test_core_blocks_returns_503_when_memory_disabled(): void

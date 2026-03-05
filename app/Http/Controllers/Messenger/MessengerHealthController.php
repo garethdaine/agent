@@ -8,6 +8,9 @@ use App\Models\ConnectorAccount;
 use App\Models\MessengerDeadLetter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Redis;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,7 +53,70 @@ class MessengerHealthController extends Controller
             'status' => $status,
             'summary' => $summary,
             'connectors' => $connectorDetails->values(),
+            'dependencies' => $this->checkDependencies(),
         ], 200);
+    }
+
+    /**
+     * @return array<string, array{status: string, latency_ms: int|null, error: string|null}>
+     */
+    private function checkDependencies(): array
+    {
+        return [
+            'database' => $this->checkDatabase(),
+            'redis' => $this->checkRedis(),
+            'queue' => $this->checkQueue(),
+        ];
+    }
+
+    /**
+     * @return array{status: string, latency_ms: int|null, error: string|null}
+     */
+    private function checkDatabase(): array
+    {
+        $start = hrtime(true);
+        try {
+            DB::select('SELECT 1');
+
+            return ['status' => 'ok', 'latency_ms' => $this->elapsedMs($start), 'error' => null];
+        } catch (\Throwable $e) {
+            return ['status' => 'error', 'latency_ms' => $this->elapsedMs($start), 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * @return array{status: string, latency_ms: int|null, error: string|null}
+     */
+    private function checkRedis(): array
+    {
+        $start = hrtime(true);
+        try {
+            Redis::connection()->ping();
+
+            return ['status' => 'ok', 'latency_ms' => $this->elapsedMs($start), 'error' => null];
+        } catch (\Throwable $e) {
+            return ['status' => 'error', 'latency_ms' => $this->elapsedMs($start), 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * @return array{status: string, latency_ms: int|null, error: string|null}
+     */
+    private function checkQueue(): array
+    {
+        $start = hrtime(true);
+        try {
+            $size = Queue::size('agent');
+
+            return ['status' => 'ok', 'latency_ms' => $this->elapsedMs($start), 'error' => null];
+        } catch (\Throwable $e) {
+            return ['status' => 'error', 'latency_ms' => $this->elapsedMs($start), 'error' => $e->getMessage()];
+        }
+    }
+
+    private function elapsedMs(int $start): int
+    {
+        return (int) ((hrtime(true) - $start) / 1_000_000);
     }
 
     /**

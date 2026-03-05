@@ -6,11 +6,17 @@ import CardContent from '@/Components/ui/CardContent.vue';
 import { Head, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { reactive, ref } from 'vue';
+import { Briefcase } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
     config: {
         type: Object,
         default: () => ({}),
+    },
+    verticalTemplates: {
+        type: Array,
+        default: () => [],
     },
 });
 
@@ -54,6 +60,13 @@ const applyApiErrors = (e) => {
     errors._form = [apiError?.message ?? 'Unable to create this job right now.'];
 };
 
+const applyTemplate = (template) => {
+    if (!template) return;
+    model.name = template.name ?? model.name;
+    model.cron_expression = template.cron_expression ?? model.cron_expression;
+    model.runner_type = template.runner_type ?? model.runner_type;
+};
+
 const onSubmit = async ({ payload, invalidEnvJson, invalidTaskMarkdown }) => {
     clearErrors();
 
@@ -90,13 +103,41 @@ const onSubmit = async ({ payload, invalidEnvJson, invalidTaskMarkdown }) => {
         <Head title="Create Job" />
 
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-foreground">Create Agent Job</h2>
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Briefcase class="h-5 w-5 text-primary" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Create Agent Job</h2>
+                    <HelpHint
+                        ui-key="jobs.create"
+                        short-text="Configure runner, schedule, and task for a new agent job."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
+            </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px]">
+            <div class="">
                 <Card>
                     <CardContent class="pt-6">
+                        <div v-if="verticalTemplates.length > 0" class="mb-4 flex flex-wrap items-center gap-2">
+                            <label class="text-sm font-medium text-muted-foreground">Start from template:</label>
+                            <select
+                                class="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                                @change="(e) => applyTemplate(verticalTemplates.find((t) => t.key === (e.target.value)) || null)"
+                            >
+                                <option value="">None</option>
+                                <option
+                                    v-for="t in verticalTemplates"
+                                    :key="t.key"
+                                    :value="t.key"
+                                >
+                                    {{ t.name }}
+                                </option>
+                            </select>
+                        </div>
                         <JobForm
                             v-model="model"
                             :errors="errors"

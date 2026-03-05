@@ -10,6 +10,7 @@ use App\Models\MemoryCoreBlock;
 use App\Models\MemoryEmbedding;
 use App\Models\MemoryFormationFailure;
 use App\Models\MemoryProviderUsage;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Memory\Neo4jGraphStore;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -46,8 +47,8 @@ class MemoryStatsCommand extends Command
      */
     public function handle(Neo4jGraphStore $graphStore): int
     {
-        if (! config('memory.enabled', false)) {
-            $this->warn('Memory system is disabled. Enable it with MEMORY_ENABLED=true');
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
+            $this->warn('Memory system is disabled. Enable the "Agent Memory" feature flag.');
 
             return self::SUCCESS;
         }

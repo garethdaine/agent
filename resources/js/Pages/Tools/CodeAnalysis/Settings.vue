@@ -9,6 +9,8 @@ import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
 import DirectoryPickerInput from '@/Components/ui/DirectoryPickerInput.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { FileCode } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { onMounted, reactive, ref } from 'vue';
 
@@ -83,7 +85,19 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-semibold leading-tight text-foreground">Code Analysis Settings</h2>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <FileCode class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Code Analysis Settings</h2>
+                        <HelpHint
+                            ui-key="code-analysis.settings"
+                            short-text="Configure analysis session settings."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
+                </div>
                 <div class="flex items-center gap-2">
                     <Link :href="route('tools.code-analysis.wizard', sessionId)">
                         <Button variant="outline" size="sm">Back to Wizard</Button>

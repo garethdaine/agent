@@ -7,6 +7,8 @@ import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Head, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { reactive, ref, onMounted } from 'vue';
+import { Briefcase } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
     jobId: {
@@ -139,11 +141,23 @@ onMounted(load);
         <Head title="Edit Job" />
 
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-foreground">Edit Agent Job</h2>
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Briefcase class="h-5 w-5 text-primary" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-semibold leading-tight text-foreground">Edit Agent Job</h2>
+                    <HelpHint
+                        ui-key="jobs.edit"
+                        short-text="Modify runner, schedule, and task configuration."
+                        learn-more-href="/docs/overview"
+                    />
+                </div>
+            </div>
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-[1440px]">
+            <div class="">
                 <Card>
                     <CardContent class="pt-6">
                         <div v-if="loading" class="space-y-4">

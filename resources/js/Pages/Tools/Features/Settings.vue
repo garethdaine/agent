@@ -10,7 +10,7 @@ import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft } from 'lucide-vue-next';
+import { ArrowLeft, ToggleLeft } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
 
@@ -77,13 +77,18 @@ onMounted(load);
 
         <template #header>
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">Feature Settings</h2>
-                    <HelpHint
-                        ui-key="features.settings"
-                        short-text="Review feature-flag impact before enabling flags in production workflows."
-                        learn-more-href="/docs/overview"
-                    />
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <ToggleLeft class="h-5 w-5 text-primary" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold leading-tight text-foreground">Feature Settings</h2>
+                        <HelpHint
+                            ui-key="features.settings"
+                            short-text="Review feature-flag impact before enabling flags in production workflows."
+                            learn-more-href="/docs/overview"
+                        />
+                    </div>
                 </div>
                 <Link :href="route('tools.index')">
                     <Button variant="outline" size="sm">

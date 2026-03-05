@@ -7,6 +7,7 @@ use App\DTOs\Messenger\NormalizedMessage;
 use App\DTOs\Messenger\OutboundPayload;
 use App\DTOs\Messenger\ProviderResponse;
 use App\DTOs\Messenger\ReplayProtectionStrategy;
+use App\DTOs\Messenger\StreamingConfig;
 use App\DTOs\Messenger\ThreadingStrategy;
 use App\Models\ChatSession;
 use App\Support\Messenger\ConnectorManager;
@@ -98,6 +99,16 @@ class StubConnectorAdapter implements ConnectorAdapterInterface
         return ProviderResponse::success('msg-789');
     }
 
+    public function editMessage(ChatSession $session, string $providerMessageId, string $content): ProviderResponse
+    {
+        return ProviderResponse::success($providerMessageId);
+    }
+
+    public function supportsMessageEditing(): bool
+    {
+        return false;
+    }
+
     public function supportsThreading(): bool
     {
         return true;
@@ -111,5 +122,20 @@ class StubConnectorAdapter implements ConnectorAdapterInterface
     public function getReplayProtectionStrategy(): ReplayProtectionStrategy
     {
         return ReplayProtectionStrategy::Timestamp;
+    }
+
+    public function supportsReactions(): bool
+    {
+        return false;
+    }
+
+    public function addReaction(ChatSession $session, string $messageId, string $emoji): ProviderResponse
+    {
+        return ProviderResponse::success($messageId);
+    }
+
+    public function getStreamingConfig(): StreamingConfig
+    {
+        return StreamingConfig::fallback();
     }
 }
