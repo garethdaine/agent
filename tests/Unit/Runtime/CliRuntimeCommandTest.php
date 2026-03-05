@@ -27,19 +27,27 @@ class CliRuntimeCommandTest extends TestCase
         $this->assertContains('-p', $command);
     }
 
-    public function test_supervised_mode_includes_dangerously_skip_permissions(): void
+    public function test_supervised_mode_uses_allowed_tools_with_write(): void
     {
         $command = $this->buildCommand(ApprovalMode::Supervised);
 
-        $this->assertContains('--dangerously-skip-permissions', $command);
+        $this->assertNotContains('--dangerously-skip-permissions', $command);
+        $this->assertContains('--allowedTools', $command);
+        $allowedIdx = array_search('--allowedTools', $command);
+        $this->assertStringContainsString('Write', $command[$allowedIdx + 1]);
+        $this->assertStringContainsString('Edit', $command[$allowedIdx + 1]);
         $this->assertContains('-p', $command);
     }
 
-    public function test_restricted_mode_excludes_dangerously_skip_permissions(): void
+    public function test_restricted_mode_uses_read_only_allowed_tools(): void
     {
         $command = $this->buildCommand(ApprovalMode::Restricted);
 
         $this->assertNotContains('--dangerously-skip-permissions', $command);
+        $this->assertContains('--allowedTools', $command);
+        $allowedIdx = array_search('--allowedTools', $command);
+        $this->assertStringNotContainsString('Write', $command[$allowedIdx + 1]);
+        $this->assertStringNotContainsString('Edit', $command[$allowedIdx + 1]);
         $this->assertContains('-p', $command);
     }
 

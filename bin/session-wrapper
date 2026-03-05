@@ -276,7 +276,8 @@ function buildCommand(
         $command[] = '--strict-mcp-config';
 
         match ($approvalMode) {
-            'autonomous', 'supervised' => $command[] = '--dangerously-skip-permissions',
+            'autonomous' => $command[] = '--dangerously-skip-permissions',
+            'supervised' => array_push($command, '--allowedTools', 'Read,Write,Edit,Grep,Glob,LS,WebSearch,WebFetch'),
             'restricted' => array_push($command, '--allowedTools', 'Read,Grep,Glob,LS,WebSearch,WebFetch'),
         };
 

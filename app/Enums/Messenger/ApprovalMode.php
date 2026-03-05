@@ -21,8 +21,8 @@ enum ApprovalMode: string
     {
         return match ($this) {
             self::Autonomous => 'Auto-approve all tool usage without prompting.',
-            self::Supervised => 'Surface tool calls for user approval via interactive buttons.',
-            self::Restricted => 'Block dangerous tools entirely; read-only access only.',
+            self::Supervised => 'Allow file and web tools but block shell/command execution.',
+            self::Restricted => 'Read-only access only; no file writes or execution.',
         };
     }
 }

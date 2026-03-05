@@ -58,7 +58,7 @@ curl -s https://agent.test/agent/api/v1/runtime/sessions?status=active | jq .
 
 **Causes & Fixes:**
 - Approval gate blocking → check pending approvals in session detail
-- LLM provider unreachable → verify API keys in Settings → Secrets
+- LLM provider unreachable → verify API keys in Settings → Credentials
 - Policy engine rejecting tool → check runtime policy at Tools → Runtime
 - Queue timeout → check Horizon failed jobs
 
@@ -90,7 +90,7 @@ php artisan memory:stats
 **Causes & Fixes:**
 - Scheduler not running → `php artisan schedule:work`
 - pgvector extension missing → `CREATE EXTENSION IF NOT EXISTS vector;`
-- Embedding provider key missing → check Settings → Secrets → OpenAI
+- Embedding provider key missing → check Settings → Credentials → OpenAI
 
 ### 6. Slow API Responses
 

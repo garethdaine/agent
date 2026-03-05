@@ -57,8 +57,8 @@ function installCeilingLights(api) {
                 const z = zone.cz - zone.d / 2 + zone.d * (r + 0.5) / rows;
                 api.addCeilingLight(zone.id, x, z, {
                     color: 0xffeedd,
-                    maxIntensity: 1.0,
-                    distance: Math.max(zone.w, zone.d) * 0.8,
+                    maxIntensity: 40,
+                    distance: Math.max(zone.w, zone.d) * 1.2,
                     height: 3.2,
                 });
             }

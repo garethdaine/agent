@@ -50,9 +50,9 @@ class ActiveBuildReadScopingApiTest extends TestCase
             'Historical-build projection row should never be served by runtime API reads.'
         );
 
-        $healthResponse = $this->getJson('/agent/api/v1/workflows/eng.repo-analysis.v1/health');
+        $reliabilityResponse = $this->getJson('/agent/api/v1/workflows/eng.repo-analysis.v1/reliability');
 
-        $healthResponse->assertOk()
+        $reliabilityResponse->assertOk()
             ->assertJsonPath('data.active_projection_build_id', $activeBuildId)
             ->assertJsonPath('data.active_build_age_seconds', 60);
     }

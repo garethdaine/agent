@@ -54,21 +54,6 @@ class ChatSessionController extends Controller
         return response()->json(['data' => $session]);
     }
 
-    public function history(Request $request, string $id): JsonResponse
-    {
-        $session = ChatSession::where('user_id', $request->user()->id)->findOrFail($id);
-
-        $messages = $session->messages()
-            ->orderByDesc('created_at')
-            ->limit(min((int) $request->input('limit', 50), 200))
-            ->get(['id', 'direction', 'content', 'provider_message_id', 'created_at']);
-
-        return response()->json([
-            'data' => $messages->reverse()->values(),
-            'meta' => ['session_id' => $session->id],
-        ]);
-    }
-
     public function send(Request $request, string $id): JsonResponse
     {
         $session = ChatSession::with('connectorAccount')

@@ -174,10 +174,6 @@ Route::middleware([
         ]);
     })->name('tools.discovery.session.settings');
 
-    Route::get('/tools/credentials', function () {
-        return Inertia::render('Tools/Credentials/Index');
-    })->name('tools.credentials.index');
-
     Route::get('/tools/backups/settings', function () {
         return Inertia::render('Tools/Backups/Settings');
     })->name('tools.backups.settings');
@@ -218,9 +214,9 @@ Route::middleware([
         return Inertia::render('Settings/Configuration/Index');
     })->name('settings.configuration.index');
 
-    Route::get('/settings/secrets', function () {
+    Route::get('/settings/credentials', function () {
         return Inertia::render('Settings/Secrets/Index');
-    })->name('settings.secrets.index');
+    })->name('settings.credentials.index');
 
     Route::get('/tools/messenger', function () {
         return Inertia::render('Tools/Messenger/Index');

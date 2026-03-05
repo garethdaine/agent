@@ -116,7 +116,7 @@ class OperatorPageController extends Controller
                 'countability_label' => $countabilityLabel,
                 'links' => [
                     'detail' => '/agent/deployments/'.$workflowKey,
-                    'health' => '/agent/api/v1/workflows/'.$workflowKey.'/health',
+                    'reliability' => '/agent/api/v1/workflows/'.$workflowKey.'/reliability',
                 ],
             ];
         })->values();
@@ -179,7 +179,6 @@ class OperatorPageController extends Controller
                 'countabilityLabel' => $countabilityLabel,
             ],
             'deepLinks' => [
-                'health' => '/agent/api/v1/workflows/'.$workflowKey.'/health',
                 'reliability' => '/agent/api/v1/workflows/'.$workflowKey.'/reliability',
                 'cost' => '/agent/api/v1/workflows/'.$workflowKey.'/cost',
                 'attemptLineage' => '/agent/monitor?workflow='.$workflowKey,

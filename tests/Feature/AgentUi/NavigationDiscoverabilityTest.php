@@ -76,7 +76,6 @@ class NavigationDiscoverabilityTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Agent/Deployments/Show')
                 ->where('workflowKey', $workflowKey)
-                ->where('deepLinks.health', '/agent/api/v1/workflows/'.$workflowKey.'/health')
                 ->where('deepLinks.reliability', '/agent/api/v1/workflows/'.$workflowKey.'/reliability')
                 ->where('deepLinks.cost', '/agent/api/v1/workflows/'.$workflowKey.'/cost')
                 ->where('deepLinks.attemptLineage', '/agent/monitor?workflow='.$workflowKey)

@@ -94,7 +94,6 @@ const freshnessLabel = computed(() => {
                 <div class="rounded-lg border border-border bg-card p-4">
                     <h3 class="text-sm font-semibold">Deep Links</h3>
                     <div class="mt-3 grid gap-2 text-sm md:grid-cols-2">
-                        <a class="text-primary underline-offset-2 hover:underline" :href="deepLinks.health">Health</a>
                         <a class="text-primary underline-offset-2 hover:underline" :href="deepLinks.reliability">Reliability</a>
                         <a class="text-primary underline-offset-2 hover:underline" :href="deepLinks.cost">Cost</a>
                         <a class="text-primary underline-offset-2 hover:underline" :href="deepLinks.attemptLineage">Attempt lineage</a>

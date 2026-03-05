@@ -290,16 +290,6 @@ const page = usePage();
                     Audit Log
                 </SidebarNavLink>
                 <SidebarNavLink
-                    :href="route('tools.credentials.index')"
-                    :active="route().current('tools.credentials.*')"
-                    :collapsed="collapsed"
-                >
-                    <template #icon>
-                        <Key class="h-4 w-4 shrink-0" />
-                    </template>
-                    Credentials
-                </SidebarNavLink>
-                <SidebarNavLink
                     :href="route('tools.backups.settings')"
                     :active="route().current('tools.backups.*')"
                     :collapsed="collapsed"
@@ -340,14 +330,14 @@ const page = usePage();
                     Configuration
                 </SidebarNavLink>
                 <SidebarNavLink
-                    :href="route('settings.secrets.index')"
-                    :active="route().current('settings.secrets.*')"
+                    :href="route('settings.credentials.index')"
+                    :active="route().current('settings.credentials.*')"
                     :collapsed="collapsed"
                 >
                     <template #icon>
                         <Key class="h-4 w-4 shrink-0" />
                     </template>
-                    Secrets
+                    Credentials
                 </SidebarNavLink>
             </SidebarNavGroup>
         </nav>

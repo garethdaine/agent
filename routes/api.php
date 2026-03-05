@@ -84,7 +84,6 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::post('/jobs/{id}/run-now', [AgentJobController::class, 'runNow'])->middleware('throttle:agent-mutations');
             Route::get('/jobs/{id}/runs', [AgentJobController::class, 'runs']);
             Route::get('/workflows/{workflowKey}/reliability', [WorkflowReliabilityController::class, 'show']);
-            Route::get('/workflows/{workflowKey}/health', [WorkflowReliabilityController::class, 'show']);
             Route::get('/workflows/{workflowKey}/cost', [WorkflowCostController::class, 'show']);
             Route::get('/workflows/{workflowKey}/escalations', [WorkflowEscalationController::class, 'index']);
             Route::get('/workflows/{workflowKey}/gate-transitions', [WorkflowGateTransitionController::class, 'index']);
@@ -138,11 +137,6 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/logs', [LogTailController::class, 'index']);
             Route::get('/logs/export', [LogTailController::class, 'export']);
 
-            Route::get('/chat-sessions', [ChatSessionController::class, 'index']);
-            Route::get('/chat-sessions/{id}', [ChatSessionController::class, 'show']);
-            Route::get('/chat-sessions/{id}/history', [ChatSessionController::class, 'history']);
-            Route::post('/chat-sessions/{id}/send', [ChatSessionController::class, 'send'])->middleware('throttle:agent-mutations');
-            Route::post('/chat-sessions/{id}/archive', [ChatSessionController::class, 'archive'])->middleware('throttle:agent-mutations');
             Route::get('/office/state', \App\Http\Controllers\Api\V1\OfficeStateController::class);
 
             Route::prefix('docs')->group(function (): void {
@@ -236,6 +230,8 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/chat/sessions/{id}', [ChatSessionController::class, 'show']);
             Route::get('/chat/sessions/{id}/messages', [ChatSessionController::class, 'messages']);
             Route::get('/chat/sessions/{id}/actions', [ChatSessionController::class, 'actions']);
+            Route::post('/chat/sessions/{id}/send', [ChatSessionController::class, 'send'])->middleware('throttle:agent-mutations');
+            Route::post('/chat/sessions/{id}/archive', [ChatSessionController::class, 'archive'])->middleware('throttle:agent-mutations');
 
             // Chat action endpoints
             Route::get('/chat/actions/{id}', [ChatActionController::class, 'show']);

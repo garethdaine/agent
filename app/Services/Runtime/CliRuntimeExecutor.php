@@ -154,7 +154,8 @@ class CliRuntimeExecutor
             $command[] = '--strict-mcp-config';
 
             match ($approvalMode) {
-                ApprovalMode::Autonomous, ApprovalMode::Supervised => $command[] = '--dangerously-skip-permissions',
+                ApprovalMode::Autonomous => $command[] = '--dangerously-skip-permissions',
+                ApprovalMode::Supervised => array_push($command, '--allowedTools', 'Read,Write,Edit,Grep,Glob,LS,WebSearch,WebFetch'),
                 ApprovalMode::Restricted => array_push($command, '--allowedTools', 'Read,Grep,Glob,LS,WebSearch,WebFetch'),
             };
 

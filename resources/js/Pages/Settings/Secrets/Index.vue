@@ -98,8 +98,8 @@ onMounted(load);
 </script>
 
 <template>
-    <AppLayout title="Secrets">
-        <Head title="Secrets" />
+    <AppLayout title="Credentials">
+        <Head title="Credentials" />
 
         <template #header>
             <div class="flex items-center gap-3">
@@ -108,10 +108,10 @@ onMounted(load);
                 </div>
                 <div class="flex items-center gap-2">
                     <h2 class="text-base font-semibold text-foreground truncate">
-                        Secrets
+                        Credentials
                     </h2>
                     <HelpHint
-                        ui-key="secrets"
+                        ui-key="credentials"
                         short-text="Manage encrypted API keys and tokens. Values are stored encrypted and never displayed."
                         learn-more-href="/docs/overview"
                     />

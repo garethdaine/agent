@@ -144,9 +144,9 @@ export function useOfficeScene(containerRef, options = {}) {
 
     function addCeilingLight(zoneId, x, z, options = {}) {
         if (!scene) return;
-        const { color = 0xffeedd, maxIntensity = 1.2, distance = 10, height = 3.0 } = options;
+        const { color = 0xffeedd, maxIntensity = 40, distance = 12, height = 3.0 } = options;
 
-        const spot = new SpotLight(color, 0, distance, Math.PI / 4, 0.5, 1.5);
+        const spot = new SpotLight(color, 0, distance, Math.PI / 3, 0.6, 2);
         spot.position.set(x, height, z);
         spot.target.position.set(x, 0, z);
         spot.castShadow = false;
@@ -162,7 +162,7 @@ export function useOfficeScene(containerRef, options = {}) {
         const bulbMat = new MeshStandardMaterial({
             color, emissive: color, emissiveIntensity: 0,
         });
-        const bulb = new Mesh(new BoxGeometry(0.2, 0.03, 0.2), bulbMat);
+        const bulb = new Mesh(new BoxGeometry(0.25, 0.04, 0.25), bulbMat);
         bulb.position.set(x, height - 0.02, z);
         scene.add(bulb);
 
@@ -181,17 +181,18 @@ export function useOfficeScene(containerRef, options = {}) {
     }
 
     function updateCeilingLights(delta) {
-        const lerpSpeed = 2.5;
+        const lerpSpeed = 3.0;
         ceilingLights.forEach((lights) => {
             lights.forEach((entry) => {
                 const diff = entry.targetIntensity - entry.currentIntensity;
-                if (Math.abs(diff) < 0.005) {
+                if (Math.abs(diff) < 0.01) {
                     entry.currentIntensity = entry.targetIntensity;
                 } else {
                     entry.currentIntensity += diff * Math.min(lerpSpeed * delta, 1);
                 }
                 entry.spot.intensity = entry.currentIntensity;
-                entry.bulbMat.emissiveIntensity = entry.currentIntensity * 0.6;
+                const t = entry.maxIntensity > 0 ? entry.currentIntensity / entry.maxIntensity : 0;
+                entry.bulbMat.emissiveIntensity = t * 2.5;
             });
         });
     }
@@ -211,8 +212,8 @@ export function useOfficeScene(containerRef, options = {}) {
         const delta = lastTime ? (time - lastTime) / 1000 : 0;
         lastTime = time;
         processWASD(delta);
-        updateCeilingLights(delta);
         if (typeof onFrame === 'function') onFrame(delta, time / 1000);
+        updateCeilingLights(delta);
         if (controls) controls.update();
         if (renderer && scene && camera) renderer.render(scene, camera);
     }

@@ -39,7 +39,7 @@ const load = async (page = 1) => {
         const params = { page, per_page: 25 };
         if (statusFilter.value) params.status = statusFilter.value;
 
-        const response = await axios.get('/agent/api/v1/chat-sessions', { params });
+        const response = await axios.get('/agent/api/v1/chat/sessions', { params });
         sessions.value = response.data.data;
         meta.value = response.data.meta;
     } catch (e) {
@@ -61,8 +61,8 @@ const toggleSession = async (session) => {
     history.value = [];
 
     try {
-        const response = await axios.get(`/agent/api/v1/chat-sessions/${session.id}/history`);
-        history.value = response.data.data.messages;
+        const response = await axios.get(`/agent/api/v1/chat/sessions/${session.id}/messages`);
+        history.value = response.data.data;
     } catch {
         history.value = [];
     } finally {
@@ -75,12 +75,12 @@ const sendMessage = async (sessionId) => {
 
     sendLoading.value = true;
     try {
-        await axios.post(`/agent/api/v1/chat-sessions/${sessionId}/send`, {
+        await axios.post(`/agent/api/v1/chat/sessions/${sessionId}/send`, {
             content: sendContent.value,
         });
         sendContent.value = '';
-        const response = await axios.get(`/agent/api/v1/chat-sessions/${sessionId}/history`);
-        history.value = response.data.data.messages;
+        const response = await axios.get(`/agent/api/v1/chat/sessions/${sessionId}/messages`);
+        history.value = response.data.data;
     } catch (e) {
         error.value = e?.response?.data?.error ?? 'Failed to send message.';
     } finally {
@@ -92,7 +92,7 @@ const archiveSession = async (sessionId) => {
     if (!confirm('Archive this session?')) return;
 
     try {
-        await axios.post(`/agent/api/v1/chat-sessions/${sessionId}/archive`);
+        await axios.post(`/agent/api/v1/chat/sessions/${sessionId}/archive`);
         await load(meta.value.current_page);
     } catch (e) {
         error.value = e?.response?.data?.message ?? 'Failed to archive session.';

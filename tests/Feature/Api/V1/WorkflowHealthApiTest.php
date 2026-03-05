@@ -81,7 +81,7 @@ class WorkflowHealthApiTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $healthResponse = $this->getJson('/agent/api/v1/workflows/'.$workflowKey.'/health');
+        $healthResponse = $this->getJson('/agent/api/v1/workflows/'.$workflowKey.'/reliability');
 
         $healthResponse->assertOk()
             ->assertJsonPath('data.workflow_key', $workflowKey)
