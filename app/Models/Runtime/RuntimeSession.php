@@ -24,6 +24,8 @@ class RuntimeSession extends Model
         'chat_session_id',
         'user_id',
         'team_id',
+        'parent_session_id',
+        'spawn_depth',
         'status',
         'mode',
         'title',
@@ -49,6 +51,7 @@ class RuntimeSession extends Model
             'total_input_tokens' => 'integer',
             'total_output_tokens' => 'integer',
             'total_cost_usd' => 'decimal:6',
+            'spawn_depth' => 'integer',
         ];
     }
 
@@ -83,6 +86,16 @@ class RuntimeSession extends Model
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_session_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_session_id');
     }
 
     public function chatSession(): BelongsTo

@@ -20,6 +20,7 @@ use App\Messenger\SlashCommands\NewCommandHandler;
 use App\Messenger\SlashCommands\RunsCommandHandler;
 use App\Messenger\SlashCommands\SessionsCommandHandler;
 use App\Messenger\SlashCommands\StatusCommandHandler;
+use App\Messenger\SlashCommands\SubAgentsCommandHandler;
 use App\Messenger\SlashCommands\WhoamiCommandHandler;
 use App\Models\User;
 
@@ -63,6 +64,7 @@ final class CommandRouter
         'commands' => CommandsCommandHandler::class,
         'whoami' => WhoamiCommandHandler::class,
         'compact' => CompactCommandHandler::class,
+        'subagents' => SubAgentsCommandHandler::class,
     ];
 
     /**

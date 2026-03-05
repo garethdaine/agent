@@ -98,6 +98,12 @@ class ProcessRuntimeTurnJob implements ShouldQueue
             throw $e;
         }
 
+        if (($result['status'] ?? '') === 'yielded') {
+            $this->handleYielded($result, $connectorManager);
+
+            return;
+        }
+
         if ($this->chatSessionId === null || $account === null) {
             return;
         }
@@ -283,6 +289,65 @@ class ProcessRuntimeTurnJob implements ShouldQueue
         }
 
         return $parts !== [] ? implode("\n\n", $parts) : null;
+    }
+
+    private function handleYielded(array $result, ConnectorManager $connectorManager): void
+    {
+        $elapsed = $result['elapsed_seconds'] ?? 0;
+        $totalTimeout = (int) config('runtime.cli.timeout_seconds', 1800);
+        $remaining = max(60, $totalTimeout - $elapsed);
+
+        $this->sendProgressToChat($connectorManager, $elapsed);
+
+        ResumeRuntimeTurnJob::dispatch(
+            runtimeSessionId: $this->runtimeSessionId,
+            remainingTimeout: $remaining,
+            chatSessionId: $this->chatSessionId,
+            connectorAccountId: $this->connectorAccountId,
+            placeholderMessageId: $this->placeholderMessageId,
+        )->delay(now()->addSeconds(5));
+
+        Log::info('ProcessRuntimeTurnJob: Turn yielded, resume scheduled', [
+            'runtime_session_id' => $this->runtimeSessionId,
+            'elapsed_seconds' => $elapsed,
+            'remaining_timeout' => $remaining,
+        ]);
+    }
+
+    private function sendProgressToChat(ConnectorManager $connectorManager, int $elapsed): void
+    {
+        if ($this->chatSessionId === null || $this->connectorAccountId === null) {
+            return;
+        }
+
+        $account = ConnectorAccount::find($this->connectorAccountId);
+        if ($account === null) {
+            return;
+        }
+
+        $adapter = $connectorManager->resolve($account->provider);
+        $chatSession = $account->sessions()->whereKey($this->chatSessionId)->first();
+        if ($chatSession === null) {
+            return;
+        }
+
+        $minutes = intdiv($elapsed, 60);
+        $seconds = $elapsed % 60;
+        $timeStr = $minutes > 0 ? "{$minutes}m {$seconds}s" : "{$seconds}s";
+
+        try {
+            if ($this->placeholderMessageId !== null && $adapter->supportsMessageEditing()) {
+                $adapter->editMessage($chatSession, $this->placeholderMessageId, "⏳ Still working on this… ({$timeStr} elapsed)");
+            } else {
+                $adapter->sendMessage($chatSession, new OutboundPayload(
+                    content: "Still working on this — I'll report back when done. ({$timeStr} elapsed)",
+                    channelId: $chatSession->channel_id,
+                    threadId: $chatSession->thread_id,
+                ));
+            }
+        } catch (\Throwable $e) {
+            Log::debug('ProcessRuntimeTurnJob: yield progress message failed', ['error' => $e->getMessage()]);
+        }
     }
 
     public function tags(): array

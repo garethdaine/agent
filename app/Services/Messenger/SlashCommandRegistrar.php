@@ -18,7 +18,7 @@ use Throwable;
  */
 final class SlashCommandRegistrar
 {
-    private const COMMAND_VERSION = '2.1.0';
+    private const COMMAND_VERSION = '2.2.0';
 
     private const DISCORD_API_BASE = 'https://discord.com/api/v10';
 
@@ -162,6 +162,19 @@ final class SlashCommandRegistrar
                 'description' => 'Run compaction (summarize older messages)',
                 'options' => [
                     ['name' => 'instructions', 'description' => 'Optional instructions for summarization', 'type' => 3, 'required' => false],
+                ],
+            ],
+            [
+                'name' => 'subagents',
+                'description' => 'Manage sub-agents for the current session',
+                'options' => [
+                    ['name' => 'list', 'description' => 'List active and recent sub-agents', 'type' => 1],
+                    ['name' => 'spawn', 'description' => 'Spawn a sub-agent with a task', 'type' => 1, 'options' => [
+                        ['name' => 'task', 'description' => 'Task description for the sub-agent', 'type' => 3, 'required' => true],
+                    ]],
+                    ['name' => 'kill', 'description' => 'Stop a running sub-agent', 'type' => 1, 'options' => [
+                        ['name' => 'id', 'description' => 'Sub-agent session ID', 'type' => 3, 'required' => true],
+                    ]],
                 ],
             ],
         ];

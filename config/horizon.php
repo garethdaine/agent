@@ -321,6 +321,20 @@ return [
             'timeout' => (int) env('HORIZON_REPO_ANALYSIS_TIMEOUT', $defaultRepoAnalysisTimeout),
             'nice' => 0,
         ],
+        'supervisor-subagent' => [
+            'connection' => 'redis',
+            'queue' => ['subagent'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(4, (int) env('HORIZON_SUBAGENT_MAX_PROCESSES', 2))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 1,
+            'backoff' => 0,
+            'timeout' => (int) env('HORIZON_SUBAGENT_TIMEOUT', 3600),
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [
@@ -365,6 +379,11 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-subagent' => [
+                'maxProcesses' => max(1, min(4, (int) env('HORIZON_SUBAGENT_MAX_PROCESSES', 2))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
         ],
 
         'local' => [
@@ -392,6 +411,9 @@ return [
                 //
             ],
             'supervisor-code-analysis' => [
+                //
+            ],
+            'supervisor-subagent' => [
                 //
             ],
         ],

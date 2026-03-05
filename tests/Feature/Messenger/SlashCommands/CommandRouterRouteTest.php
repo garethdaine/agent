@@ -129,6 +129,7 @@ final class CommandRouterRouteTest extends TestCase
         $this->assertContains('commands', $commands);
         $this->assertContains('whoami', $commands);
         $this->assertContains('compact', $commands);
-        $this->assertCount(15, $commands);
+        $this->assertContains('subagents', $commands);
+        $this->assertCount(16, $commands);
     }
 }

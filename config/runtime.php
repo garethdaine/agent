@@ -205,9 +205,29 @@ return [
         'wrapper_idle_timeout' => (int) env('RUNTIME_WRAPPER_IDLE_TIMEOUT', 3600),
         'tool_approval_timeout' => (int) env('RUNTIME_TOOL_APPROVAL_TIMEOUT', 300),
         'tool_approval_poll_interval' => 2,
+        'yield_enabled' => (bool) env('RUNTIME_YIELD_ENABLED', false),
+        'yield_after_seconds' => (int) env('RUNTIME_YIELD_AFTER', 120),
     ],
 
     'queue' => env('RUNTIME_QUEUE', 'agent'), // Use "default" to process runtime with `php artisan queue:work` (no Horizon).
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sub-Agent Dispatch
+    |--------------------------------------------------------------------------
+    |
+    | Controls sub-agent spawning from messenger runtime sessions. Sub-agents
+    | run independently and announce results back to the parent's channel.
+    |
+    */
+
+    'subagents' => [
+        'enabled' => (bool) env('RUNTIME_SUBAGENTS_ENABLED', false),
+        'max_concurrent_per_session' => (int) env('RUNTIME_SUBAGENT_MAX_CONCURRENT', 4),
+        'max_spawn_depth' => (int) env('RUNTIME_SUBAGENT_MAX_DEPTH', 1),
+        'default_timeout_seconds' => (int) env('RUNTIME_SUBAGENT_TIMEOUT', 1800),
+        'queue' => env('RUNTIME_SUBAGENT_QUEUE', 'subagent'),
+    ],
 
     /*
     |--------------------------------------------------------------------------

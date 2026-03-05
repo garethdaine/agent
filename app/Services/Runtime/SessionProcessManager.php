@@ -20,6 +20,8 @@ class SessionProcessManager
 
     private const PROCESS_PREFIX = 'runtime:wrapper_pid:';
 
+    private const TURN_BUFFER_PREFIX = 'runtime:turn_buffer:';
+
     private const TTL_SECONDS = 86400;
 
     /** @var array<string, array{resource: resource, pipes: array, pid: int}> */
@@ -320,6 +322,10 @@ class SessionProcessManager
                         ]);
                     }
                 }
+
+                if ($this->shouldYield($elapsed)) {
+                    return $this->yieldTurn($runtimeSessionId, $fragments, $runnerSessionId, $startTime);
+                }
             }
 
             if ($line === false) {
@@ -406,5 +412,193 @@ class SessionProcessManager
         }
 
         return $decoded;
+    }
+
+    private function shouldYield(int $elapsedSeconds): bool
+    {
+        if (! config('runtime.cli.yield_enabled', false)) {
+            return false;
+        }
+
+        return $elapsedSeconds >= (int) config('runtime.cli.yield_after_seconds', 120);
+    }
+
+    /**
+     * @param  array<int, string>  $fragments
+     * @return array{status: 'yielded', session_id: string, elapsed_seconds: int}
+     */
+    private function yieldTurn(string $runtimeSessionId, array $fragments, ?string $runnerSessionId, int $startTime): array
+    {
+        $elapsed = time() - $startTime;
+
+        Cache::put(self::TURN_BUFFER_PREFIX.$runtimeSessionId, [
+            'fragments' => $fragments,
+            'runner_session_id' => $runnerSessionId,
+            'start_time' => $startTime,
+        ], 3600);
+
+        Log::info('SessionProcessManager: turn yielded', [
+            'session_id' => $runtimeSessionId,
+            'elapsed_seconds' => $elapsed,
+            'fragment_count' => count($fragments),
+        ]);
+
+        return [
+            'status' => 'yielded',
+            'session_id' => $runtimeSessionId,
+            'elapsed_seconds' => $elapsed,
+        ];
+    }
+
+    /**
+     * Resume reading a previously yielded turn. Loads buffered fragments from cache
+     * and continues reading from the wrapper's stdout pipe.
+     *
+     * @return array{status: 'completed'|'failed'|'yielded', text?: string, error?: string, session_id?: string, runner_session_id?: string, elapsed_seconds?: int}
+     */
+    public function resumeReadTurnResponse(string $runtimeSessionId, int $timeoutSeconds, ?\Closure $onProgress = null, int $heartbeatInterval = 30): array
+    {
+        $entry = self::$activeProcesses[$runtimeSessionId] ?? null;
+        if ($entry === null) {
+            Cache::forget(self::TURN_BUFFER_PREFIX.$runtimeSessionId);
+
+            return ['status' => 'failed', 'error' => 'No active process for session.'];
+        }
+
+        $bufferKey = self::TURN_BUFFER_PREFIX.$runtimeSessionId;
+        $buffered = Cache::get($bufferKey, [
+            'fragments' => [],
+            'runner_session_id' => null,
+            'start_time' => time(),
+        ]);
+
+        $fragments = $buffered['fragments'] ?? [];
+        $runnerSessionId = $buffered['runner_session_id'] ?? null;
+        $originalStartTime = $buffered['start_time'] ?? time();
+
+        Cache::forget($bufferKey);
+
+        Log::info('SessionProcessManager: resuming turn', [
+            'session_id' => $runtimeSessionId,
+            'buffered_fragments' => count($fragments),
+            'original_elapsed' => time() - $originalStartTime,
+        ]);
+
+        $stdout = $entry['pipes'][1];
+        $stderr = $entry['pipes'][2];
+        $resumeStart = time();
+        $deadline = $resumeStart + $timeoutSeconds;
+        $lastHeartbeat = $resumeStart;
+
+        while (time() < $deadline) {
+            $line = @fgets($stdout);
+            if ($line !== false && trim($line) !== '') {
+                $decoded = json_decode(trim($line), true);
+
+                if (is_array($decoded) && ($decoded['type'] ?? '') === 'turn_complete') {
+                    $runnerSessionId = $decoded['session_id'] ?? $runnerSessionId;
+                    $exitCode = $decoded['exit_code'] ?? 0;
+
+                    if ($runnerSessionId !== null) {
+                        $this->setRunnerSessionId($runtimeSessionId, $runnerSessionId);
+                    }
+
+                    if ($exitCode !== 0 && $fragments === []) {
+                        return [
+                            'status' => 'failed',
+                            'error' => 'Request failed with exit code '.$exitCode,
+                            'runner_session_id' => $runnerSessionId,
+                        ];
+                    }
+
+                    $text = $this->extractTextFromFragments($fragments);
+
+                    return [
+                        'status' => 'completed',
+                        'text' => $text !== '' ? $text : 'Done.',
+                        'runner_session_id' => $runnerSessionId,
+                    ];
+                }
+
+                if (is_array($decoded)) {
+                    $sessionId = $decoded['session_id'] ?? null;
+                    if (is_string($sessionId) && $sessionId !== '') {
+                        $runnerSessionId = $sessionId;
+                    }
+                    $event = $this->unwrapStreamEvent($decoded);
+                    $eventSessionId = $event['session_id'] ?? null;
+                    if (is_string($eventSessionId) && $eventSessionId !== '') {
+                        $runnerSessionId = $eventSessionId;
+                    }
+                }
+
+                $fragments[] = trim($line);
+            }
+
+            $stderrLine = @fgets($stderr);
+            if ($stderrLine !== false && trim($stderrLine) !== '') {
+                Log::debug('SessionProcessManager: wrapper stderr (resume)', [
+                    'session_id' => $runtimeSessionId,
+                    'line' => trim($stderrLine),
+                ]);
+            }
+
+            if ((time() - $lastHeartbeat) >= $heartbeatInterval) {
+                $lastHeartbeat = time();
+                $totalElapsed = time() - $originalStartTime;
+
+                Log::debug('SessionProcessManager: resume turn activity', [
+                    'session_id' => $runtimeSessionId,
+                    'total_elapsed_seconds' => $totalElapsed,
+                    'fragment_count' => count($fragments),
+                    'runner_session_id' => $runnerSessionId,
+                ]);
+
+                if ($onProgress !== null) {
+                    try {
+                        $onProgress([
+                            'elapsed_seconds' => $totalElapsed,
+                            'has_partial_output' => $fragments !== [],
+                            'fragment_count' => count($fragments),
+                        ]);
+                    } catch (\Throwable $e) {
+                        Log::debug('SessionProcessManager: progress callback error (resume)', [
+                            'session_id' => $runtimeSessionId,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                if ($this->shouldYield(time() - $resumeStart)) {
+                    return $this->yieldTurn($runtimeSessionId, $fragments, $runnerSessionId, $originalStartTime);
+                }
+            }
+
+            if ($line === false) {
+                $resource = $entry['resource'];
+                $status = proc_get_status($resource);
+                if (! $status['running']) {
+                    $text = $this->extractTextFromFragments($fragments);
+
+                    return [
+                        'status' => $text !== '' ? 'completed' : 'failed',
+                        'text' => $text !== '' ? $text : null,
+                        'error' => $text === '' ? 'Process exited unexpectedly.' : null,
+                        'runner_session_id' => $runnerSessionId,
+                    ];
+                }
+
+                usleep(10_000);
+            }
+        }
+
+        $text = $this->extractTextFromFragments($fragments);
+
+        return [
+            'status' => 'failed',
+            'error' => 'Request timed out after '.$timeoutSeconds.'s.',
+            'text' => $text !== '' ? $text : null,
+            'runner_session_id' => $runnerSessionId,
+        ];
     }
 }

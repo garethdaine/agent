@@ -27,7 +27,7 @@ class DebugPanelController extends Controller
         $activeSessions = RuntimeSession::where('status', 'active')->count();
         $totalSessions = RuntimeSession::count();
 
-        $activeJobs = AgentJob::where('is_active', true)->count();
+        $activeJobs = AgentJob::enabled()->count();
         $recentRuns = AgentJobRun::where('created_at', '>=', now()->subHours(24))->count();
         $failedRuns24h = AgentJobRun::where('created_at', '>=', now()->subHours(24))
             ->where('status', 'failed')
