@@ -31,29 +31,31 @@ Report written to `docs/review/solid-analysis-2026-03-06.md`. Verified by readin
 
 | Severity | Count |
 |----------|-------|
-| Critical | 7 |
-| High | 44 |
+| Critical | 9 |
+| High | 48 |
 | Medium | 44 |
 | Low | 12 |
-| **Total** | **107** |
+| **Total** | **113** |
 
 | Principle | Violations |
 |-----------|-----------|
-| Single Responsibility (SRP) | 62 |
-| Open/Closed (OCP) | 25 |
+| Single Responsibility (SRP) | 66 |
+| Open/Closed (OCP) | 27 |
 | Liskov Substitution (LSP) | 2 |
 | Interface Segregation (ISP) | 4 |
 | Dependency Inversion (DIP) | 14 |
 
-**Delta from Task 91:** +28 total violations (+4 critical, +11 high, +12 medium, +1 low). Major new violations in `ExecuteAgentRunJob` (Critical SRP — 450+ lines, 7+ responsibilities), `ProcessChatIntent` (Critical SRP), `ExecuteInterrogationSummaryJob` (Critical SRP), `ProcessRuntimeTurnJob` (Critical SRP), `AiCriticCompletedJob` (High SRP), `RitualCouncilDeliberationListener` (SRP), and `AppServiceProvider` (SRP growth). All 6 new files from the licensing subsystem are SOLID-compliant — well-separated concerns, proper DI, readonly DTOs.
+**Delta from Task 91:** +34 total violations (+6 critical, +15 high, +12 medium, +1 low). Major new violations in `ExecuteAgentRunJob` (Critical SRP — 450+ lines, 7+ responsibilities), `ProcessChatIntent` (Critical SRP), `ExecuteInterrogationSummaryJob` (Critical SRP), `ProcessRuntimeTurnJob` (Critical SRP), `AiCriticCompletedJob` (High SRP), `RitualCouncilDeliberationListener` (SRP), and `AppServiceProvider` (SRP growth). All 6 new files from the licensing subsystem are SOLID-compliant — well-separated concerns, proper DI, readonly DTOs.
 
-**Top structural risks (unchanged):**
-1. `InterrogationSessionController` (4,124 lines, ~90 methods) — critical SRP violation
-2. `RunEventWriter` (1,000 lines, 10 regex constants, 7+ detection responsibilities) — critical SRP violation
-3. `SessionProcessManager` (727 lines, duplicated read loops) — critical SRP violation (elevated from high)
-4. `ConnectorAccount` model (288 lines, 18 config methods) — high SRP+OCP
-5. Several models embed pricing, encryption, and state machine logic that belongs in services
-6. `DiscordAdapter` (1,039 lines, 8+ responsibilities) — high SRP violation
+**Top structural risks:**
+1. `InterrogationSessionController` (4,124 lines, ~90 methods) — critical SRP violation (unchanged)
+2. `AgentInstallCommand` (1,146 lines, ~10 responsibilities) — critical SRP+OCP violation (newly identified)
+3. `RunEventWriter` (1,000 lines, 10 regex constants, 7+ detection responsibilities) — critical SRP violation
+4. `ExecuteAgentRunJob` (857 lines, 7+ responsibilities) — critical SRP+DIP+OCP violation (newly identified)
+5. `SessionProcessManager` (727 lines, duplicated read loops) — critical SRP violation (elevated from high)
+6. `DelegationCoordinator` (379 lines, 6 dependencies, mixed orchestration) — critical SRP+OCP violation (newly identified)
+7. `DiscordAdapter` (1,039 lines, 8+ responsibilities) — high SRP violation
+8. Several models embed pricing, encryption, and state machine logic that belongs in services
 7. `InterrogationTaskProviderSyncService` (962 lines, 8 responsibilities) — high SRP violation
 8. `ReportComposer` (1,196 lines) — mixes composition and rendering
 
@@ -227,7 +229,18 @@ Hardcoded `ALLOWED_CHANNELS` array (line 12). Log path resolution uses `match` s
 
 ---
 
-### 1.15 ChatSessionController — SRP (Low)
+### 1.15 AgentRunController — SRP (High)
+
+**File:** `app/Http/Controllers/Api/V1/AgentRunController.php`
+**Lines:** 21-551
+
+Controller handles 7 distinct concerns: dashboard metrics (lines 23-105), run indexing (lines 107-127), run details (lines 129-178), events retrieval (lines 205-246), run stopping (lines 248-434), run retry (lines 436-460), and lesson confirmation (lines 462-496). Scheduler health checking logic at lines 508-539 mixes business logic with HTTP presentation.
+
+**Remediation:** Create `RunMetricsService`, `RunStopService`, `RunRetryService`, `LessonConfirmationService`.
+
+---
+
+### 1.16 ChatSessionController — SRP (Low)
 
 **File:** `app/Http/Controllers/Api/V1/ChatSessionController.php`
 **Lines:** 57-97
@@ -997,7 +1010,29 @@ Well-structured: single responsibility, proper DI via `handle()` method paramete
 
 ## 5. Listeners (`app/Listeners`)
 
-### 5.1 RitualCouncilDeliberationListener — SRP (Medium) [NEW]
+### 5.1 DelegationCoordinator — SRP + OCP (Critical)
+
+**File:** `app/Listeners/DelegationCoordinator.php`
+**Lines:** 35-379
+
+Event subscriber handles graph coordination, task state transitions, delegatee assignment, verification spawning, and graph completion checking. Constructor receives 6 dependencies, suggesting excessive coupling. Lines 216-244 spawn tasks with inline parallelism logic. Lines 301-352 check graph completion with complex state logic. Status comparisons hardcoded throughout (lines 61-73, 217-220, 311-320, 333-339).
+
+**Remediation:** Create `DelegationOrchestrationService` to handle the flow. Listener becomes thin event dispatcher to service. Create `DelegationStatusHelper` with `isActive()`, `isTerminal()`, `canTransitionTo()`.
+
+---
+
+### 5.2 DelegationRecoveryHandler — SRP (High)
+
+**File:** `app/Listeners/DelegationRecoveryHandler.php`
+**Lines:** 28-144
+
+Event listener handles failed attempt classification (error type determination), retry logic, re-delegation logic, and escalation. The `executeRecoveryChain` method (lines 84-100+) implements complex recovery strategy inline.
+
+**Remediation:** Extract `DelegationRecoveryService`. Listener dispatches to service. Service handles retry, re-delegation, and escalation logic separately.
+
+---
+
+### 5.3 RitualCouncilDeliberationListener — SRP (Medium) [NEW]
 
 **File:** `app/Listeners/Org/RitualCouncilDeliberationListener.php`
 **Lines:** 61-99
@@ -1033,7 +1068,32 @@ The transaction block (lines 44-61) handles user creation, onboarding flag setti
 
 ---
 
-### 6.2 AgentCheckLicenseCommand — Compliant [NEW]
+### 6.2 AgentInstallCommand — SRP + OCP (Critical)
+
+**File:** `app/Console/Commands/AgentInstallCommand.php`
+**Lines:** 26-1171
+
+At 1,146 lines, this is a monolithic command handling ~10 distinct responsibilities: environment setup, license validation, preflight checks, migrations, user creation, connector configuration, credential validation (with hardcoded provider switch at lines 720-909), webhook setup, and health checks. Adding new connectors requires modifying the command's validation switch statement.
+
+**Remediation:**
+- Break into specialized commands: `agent:setup-env`, `agent:validate-license`, `agent:configure-connectors`, `agent:health-check`
+- Create `ConnectorValidatorInterface` with per-provider implementations
+- Use coordinator command or Laravel command nesting for the full install flow
+
+---
+
+### 6.3 AgentJobCreateCommand — SRP (High)
+
+**File:** `app/Console/Commands/AgentJobCreateCommand.php`
+**Lines:** 15-203
+
+Command handles argument parsing, file content reading, validation setup, user resolution, duplicate checking, workflow key generation, task storage, and job creation.
+
+**Remediation:** Create `JobValidator`, `UserResolver`, `JobCreationService`. Command becomes orchestrator.
+
+---
+
+### 6.4 AgentCheckLicenseCommand — Compliant [NEW]
 
 **File:** `app/Console/Commands/AgentCheckLicenseCommand.php`
 
@@ -1051,7 +1111,18 @@ Clean orchestration of post-update tasks. Proper DI of `LicenseService`.
 
 ## 7. Middleware (`app/Http/Middleware`)
 
-### 7.1 EnsureLicenseValid — Compliant [NEW]
+### 7.1 VerifyWebhookSignature — OCP (High)
+
+**File:** `app/Http/Middleware/Messenger/VerifyWebhookSignature.php`
+**Lines:** 14-215
+
+Provider-specific logic hardcoded throughout: Slack team_id extraction (lines 112-125), Slack-specific replay protection (lines 147-176), Discord vs Slack timestamp headers (lines 180-184), WhatsApp GET request handling (lines 30-32). Adding a new provider requires modifying the middleware.
+
+**Remediation:** Create `WebhookVerifierInterface` with per-provider implementations. Use factory to resolve based on provider. Middleware delegates to verifier.
+
+---
+
+### 7.2 EnsureLicenseValid — Compliant [NEW]
 
 **File:** `app/Http/Middleware/EnsureLicenseValid.php`
 

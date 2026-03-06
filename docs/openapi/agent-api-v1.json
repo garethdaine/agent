@@ -23400,7 +23400,7 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "open_incidents": {
-                                                            "type": "integer"
+                                                            "type": "string"
                                                         },
                                                         "pending_org_escalations": {
                                                             "type": "integer",
