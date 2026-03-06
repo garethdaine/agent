@@ -4797,7 +4797,10 @@
                                                     "type": "string"
                                                 },
                                                 "provider_message_id": {
-                                                    "type": "string"
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
                                                 },
                                                 "sent": {
                                                     "type": "boolean"
@@ -4812,34 +4815,6 @@
                                     },
                                     "required": [
                                         "data"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "",
-                        "content": {
-                            "application\/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "error": {
-                                            "anyOf": [
-                                                {
-                                                    "type": "string"
-                                                },
-                                                {
-                                                    "type": "string",
-                                                    "enum": [
-                                                        "Failed to send message."
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    },
-                                    "required": [
-                                        "error"
                                     ]
                                 }
                             }
