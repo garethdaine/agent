@@ -8,6 +8,7 @@ use Throwable;
 
 class FeatureFlagManager
 {
+    // Core feature flags
     public const DELEGATION_ENABLED = 'delegation.enabled';
 
     public const DELEGATION_UI_ENABLED = 'delegation.ui_enabled';
@@ -25,13 +26,13 @@ class FeatureFlagManager
     // Org layer flag constants
     public const ORG_ENABLED = 'agent.org.enabled';
 
-    public const ORG_PROFILES_ENABLED = 'org_profiles_enabled';
+    public const ORG_PROFILES_ENABLED = 'agent.org.features.profiles';
 
-    public const ORG_RITUALS_ENABLED = 'org_rituals_enabled';
+    public const ORG_RITUALS_ENABLED = 'agent.org.features.rituals';
 
-    public const ORG_COUNCILS_ENABLED = 'org_councils_enabled';
+    public const ORG_COUNCILS_ENABLED = 'agent.org.features.councils';
 
-    public const ORG_COST_ENABLED = 'org_cost_enabled';
+    public const ORG_COST_ENABLED = 'agent.org.features.cost_governance';
 
     // Compliance flag constants
     public const COMPLIANCE_ENABLED = 'compliance.enabled';
@@ -46,10 +47,31 @@ class FeatureFlagManager
 
     public const COMPLIANCE_LESSONS = 'compliance.lessons_enabled';
 
+    // Runtime flag constants
+    public const STAR_PREAMBLE_ENABLED = 'agent.star_preamble.enabled';
+
+    public const TARGETED_RETRY_ENABLED = 'agent.targeted_retry.enabled';
+
+    public const WEBHOOKS_ENABLED = 'agent.webhooks.enabled';
+
+    public const MCP_ENABLED = 'runtime.mcp.enabled';
+
+    public const WRAPPER_ENABLED = 'runtime.cli.wrapper_enabled';
+
+    public const YIELD_ENABLED = 'runtime.cli.yield_enabled';
+
+    public const SUBAGENTS_ENABLED = 'runtime.subagents.enabled';
+
+    // Platform flag constants
+    public const BILLING_ENABLED = 'billing.enabled';
+
+    public const COMPACTION_ENABLED = 'messenger.compaction.enabled';
+
     /**
      * @var array<string, array{label: string, description: string}>
      */
     private const DEFINITIONS = [
+        // Core features
         self::DELEGATION_ENABLED => [
             'label' => 'Delegation API & Engine',
             'description' => 'Enable delegation API routes, coordinator processing, and scheduled delegation jobs.',
@@ -78,9 +100,89 @@ class FeatureFlagManager
             'label' => 'Code Analysis AI Tasks',
             'description' => 'Enable AI-driven task execution and narrative report synthesis for Code Analysis sessions.',
         ],
+
+        // Org layer
         self::ORG_ENABLED => [
             'label' => 'Org Layer',
-            'description' => 'Enable organizational AI workforce orchestration layer',
+            'description' => 'Enable organizational AI workforce orchestration layer.',
+        ],
+        self::ORG_PROFILES_ENABLED => [
+            'label' => 'Org Profiles',
+            'description' => 'Enable agent profile management within the org layer. Requires Org Layer to be enabled.',
+        ],
+        self::ORG_RITUALS_ENABLED => [
+            'label' => 'Org Rituals',
+            'description' => 'Enable automated ritual scheduling and execution within the org layer. Requires Org Layer to be enabled.',
+        ],
+        self::ORG_COUNCILS_ENABLED => [
+            'label' => 'Org Councils',
+            'description' => 'Enable council deliberation workflows within the org layer. Requires Org Layer to be enabled.',
+        ],
+        self::ORG_COST_ENABLED => [
+            'label' => 'Org Cost Governance',
+            'description' => 'Enable cost tracking and budget enforcement for the org layer. Requires Org Layer to be enabled.',
+        ],
+
+        // Compliance
+        self::COMPLIANCE_ENABLED => [
+            'label' => 'Compliance Engine',
+            'description' => 'Enable the compliance review engine for agent job runs.',
+        ],
+        self::COMPLIANCE_PLAN_GATE => [
+            'label' => 'Compliance Plan Gate',
+            'description' => 'Require plan compliance checks before job execution. Requires Compliance Engine to be enabled.',
+        ],
+        self::COMPLIANCE_VERIFICATION_GATE => [
+            'label' => 'Compliance Verification Gate',
+            'description' => 'Require verification compliance checks after job execution. Requires Compliance Engine to be enabled.',
+        ],
+        self::COMPLIANCE_ELEGANCE_GATE => [
+            'label' => 'Compliance Elegance Gate',
+            'description' => 'Require code elegance checks during compliance review. Requires Compliance Engine to be enabled.',
+        ],
+        self::COMPLIANCE_LESSONS => [
+            'label' => 'Compliance Lessons',
+            'description' => 'Enable lessons-learned extraction from compliance reviews. Requires Compliance Engine to be enabled.',
+        ],
+
+        // Runtime
+        self::STAR_PREAMBLE_ENABLED => [
+            'label' => 'STAR Preamble',
+            'description' => 'Inject STAR-format preamble into agent prompts for structured reasoning.',
+        ],
+        self::TARGETED_RETRY_ENABLED => [
+            'label' => 'Targeted Retry',
+            'description' => 'Enable targeted retry of failed agent runs with adjusted prompts.',
+        ],
+        self::WEBHOOKS_ENABLED => [
+            'label' => 'Webhooks',
+            'description' => 'Enable outbound webhook notifications for agent events.',
+        ],
+        self::MCP_ENABLED => [
+            'label' => 'MCP Integration',
+            'description' => 'Enable Model Context Protocol server integration for runtime tool access.',
+        ],
+        self::WRAPPER_ENABLED => [
+            'label' => 'CLI Wrapper',
+            'description' => 'Enable persistent CLI wrapper process for session reuse and reduced startup overhead.',
+        ],
+        self::YIELD_ENABLED => [
+            'label' => 'Turn Yielding',
+            'description' => 'Enable automatic turn yielding for long-running agent sessions.',
+        ],
+        self::SUBAGENTS_ENABLED => [
+            'label' => 'Sub-Agents',
+            'description' => 'Enable spawning of sub-agent processes from messenger runtime sessions.',
+        ],
+
+        // Platform
+        self::BILLING_ENABLED => [
+            'label' => 'Billing',
+            'description' => 'Enable Stripe-based billing, usage metering, and subscription management.',
+        ],
+        self::COMPACTION_ENABLED => [
+            'label' => 'Messenger Compaction',
+            'description' => 'Enable automatic compaction of long messenger conversation threads.',
         ],
     ];
 
@@ -103,7 +205,6 @@ class FeatureFlagManager
     {
         return [
             self::COMPLIANCE_ENABLED,
-            self::COMPLIANCE_ENFORCEMENT_MODE,
             self::COMPLIANCE_PLAN_GATE,
             self::COMPLIANCE_VERIFICATION_GATE,
             self::COMPLIANCE_ELEGANCE_GATE,
@@ -139,11 +240,15 @@ class FeatureFlagManager
      */
     public function isOrgFeatureEnabled(string $subFeature): bool
     {
-        if (! $this->isEnabled(self::ORG_ENABLED) && ! config('agent.org.enabled', false)) {
+        if (! $this->isEnabled(self::ORG_ENABLED)) {
             return false;
         }
 
-        return (bool) config("agent.org.features.{$subFeature}", false);
+        $key = "agent.org.features.{$subFeature}";
+
+        return $this->isManagedKey($key)
+            ? $this->enabled($key)
+            : (bool) config($key, false);
     }
 
     /**

@@ -7658,16 +7658,13 @@
                                                         "type": "object",
                                                         "properties": {
                                                             "total": {
-                                                                "type": "integer",
-                                                                "minimum": 0
+                                                                "type": "integer"
                                                             },
                                                             "completed": {
-                                                                "type": "integer",
-                                                                "minimum": 0
+                                                                "type": "integer"
                                                             },
                                                             "running": {
-                                                                "type": "integer",
-                                                                "minimum": 0
+                                                                "type": "integer"
                                                             }
                                                         },
                                                         "required": [
@@ -7951,16 +7948,13 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "total": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "completed": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "running": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         }
                                                     },
                                                     "required": [
@@ -8095,16 +8089,13 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "total": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "completed": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "running": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         }
                                                     },
                                                     "required": [
@@ -8300,16 +8291,13 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "total": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "completed": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "running": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         }
                                                     },
                                                     "required": [
@@ -8642,16 +8630,13 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "total": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "completed": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "running": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         }
                                                     },
                                                     "required": [
@@ -8925,16 +8910,13 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "total": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "completed": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "running": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         }
                                                     },
                                                     "required": [
@@ -9174,16 +9156,13 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "total": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "completed": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "running": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         }
                                                     },
                                                     "required": [
@@ -9441,16 +9420,13 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "total": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "completed": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         },
                                                         "running": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "integer"
                                                         }
                                                     },
                                                     "required": [

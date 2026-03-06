@@ -3,6 +3,7 @@
 namespace App\Jobs\Org;
 
 use App\Models\OrgRitualTemplate;
+use App\Support\Agent\FeatureFlagManager;
 use Cron\CronExpression;
 use DateTimeZone;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -20,7 +21,7 @@ class OrgDispatchDueRitualsJob implements ShouldQueue
     public function handle(): void
     {
         // Skip if org layer is disabled
-        if (! config('agent.org.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::ORG_ENABLED)) {
             return;
         }
 

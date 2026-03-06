@@ -41,8 +41,7 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
             'delegationEnabled' => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::DELEGATION_UI_ENABLED),
-            'orgLayerEnabled' => app(FeatureFlagManager::class)->isEnabled(FeatureFlagManager::ORG_ENABLED)
-                || config('agent.org.enabled', false),
+            'orgLayerEnabled' => app(FeatureFlagManager::class)->isEnabled(FeatureFlagManager::ORG_ENABLED),
             'office3dEnabled' => config('agent.office_3d_enabled', true),
             'operatorNavigation' => [
                 'deployments' => '/agent/deployments',

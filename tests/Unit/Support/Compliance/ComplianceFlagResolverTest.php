@@ -102,14 +102,14 @@ final class ComplianceFlagResolverTest extends TestCase
 
         $this->assertIsArray($result);
         $this->assertArrayHasKey(FeatureFlagManager::COMPLIANCE_ENABLED, $result);
-        $this->assertArrayHasKey(FeatureFlagManager::COMPLIANCE_ENFORCEMENT_MODE, $result);
         $this->assertArrayHasKey(FeatureFlagManager::COMPLIANCE_PLAN_GATE, $result);
         $this->assertArrayHasKey(FeatureFlagManager::COMPLIANCE_VERIFICATION_GATE, $result);
         $this->assertArrayHasKey(FeatureFlagManager::COMPLIANCE_ELEGANCE_GATE, $result);
         $this->assertArrayHasKey(FeatureFlagManager::COMPLIANCE_LESSONS, $result);
+        // enforcement_mode is a string, not a boolean toggle — resolved via getEffectiveMode()
+        $this->assertArrayNotHasKey(FeatureFlagManager::COMPLIANCE_ENFORCEMENT_MODE, $result);
 
         $this->assertTrue($result[FeatureFlagManager::COMPLIANCE_ENABLED]);
-        $this->assertSame('warning', $result[FeatureFlagManager::COMPLIANCE_ENFORCEMENT_MODE]);
         $this->assertTrue($result[FeatureFlagManager::COMPLIANCE_PLAN_GATE]);
         $this->assertFalse($result[FeatureFlagManager::COMPLIANCE_VERIFICATION_GATE]);
         $this->assertTrue($result[FeatureFlagManager::COMPLIANCE_ELEGANCE_GATE]);

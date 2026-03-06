@@ -1,6 +1,9 @@
 <?php
 
+use App\Jobs\Memory\MemoryConsolidationJob;
+use App\Jobs\Memory\MemoryPruneJob;
 use App\Jobs\Org\OrgDispatchDueRitualsJob;
+use App\Jobs\Org\OrgEscalationTimeoutJob;
 use App\Jobs\RecalculateTrustScoresJob;
 use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Foundation\Inspiring;
@@ -53,13 +56,13 @@ Schedule::command('code-analysis:prune-artifacts')
     ->withoutOverlapping();
 
 // Memory consolidation (every 2 hours when enabled)
-Schedule::command('memory:consolidate')
+Schedule::job(new MemoryConsolidationJob)
     ->cron('0 */2 * * *')
     ->withoutOverlapping()
     ->when(fn () => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED));
 
-// Memory pruning (daily at 03:30 with --force when enabled)
-Schedule::command('memory:prune --force')
+// Memory pruning (daily at 03:30 when enabled)
+Schedule::job(new MemoryPruneJob(dryRun: false))
     ->dailyAt('03:30')
     ->withoutOverlapping()
     ->when(fn () => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED));
@@ -85,4 +88,10 @@ Schedule::job(new RecalculateTrustScoresJob)
 Schedule::job(new OrgDispatchDueRitualsJob)
     ->everyMinute()
     ->withoutOverlapping()
-    ->when(fn () => config('agent.org.enabled'));
+    ->when(fn () => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::ORG_ENABLED));
+
+// Org escalation timeout check (every minute when org layer enabled)
+Schedule::job(new OrgEscalationTimeoutJob)
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->when(fn () => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::ORG_ENABLED));

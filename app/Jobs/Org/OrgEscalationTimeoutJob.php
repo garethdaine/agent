@@ -4,6 +4,7 @@ namespace App\Jobs\Org;
 
 use App\Events\Org\OrgRitualEscalationTimedOut;
 use App\Models\OrgEscalation;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Org\OrgEscalationService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -28,7 +29,7 @@ class OrgEscalationTimeoutJob implements ShouldQueue
     public function handle(OrgEscalationService $escalationService): void
     {
         // Skip if org layer is disabled
-        if (! config('agent.org.enabled', false)) {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::ORG_ENABLED)) {
             return;
         }
 

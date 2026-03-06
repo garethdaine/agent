@@ -12,8 +12,7 @@ class OrgUiFeatureGate
 
     public function handle(Request $request, Closure $next)
     {
-        if (! $this->featureFlags->isEnabled(FeatureFlagManager::ORG_ENABLED)
-            && ! config('agent.org.enabled', false)) {
+        if (! $this->featureFlags->isEnabled(FeatureFlagManager::ORG_ENABLED)) {
             abort(404);
         }
 

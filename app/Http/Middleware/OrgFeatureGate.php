@@ -14,8 +14,7 @@ class OrgFeatureGate
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $this->featureFlags->isEnabled(FeatureFlagManager::ORG_ENABLED)
-            && ! config('agent.org.enabled', false)) {
+        if (! $this->featureFlags->isEnabled(FeatureFlagManager::ORG_ENABLED)) {
             return ErrorEnvelope::make('FEATURE_DISABLED', 'Org layer is not enabled.', 404);
         }
 

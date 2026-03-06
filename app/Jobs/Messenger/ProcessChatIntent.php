@@ -513,31 +513,11 @@ class ProcessChatIntent implements ShouldQueue
         ConnectorAccount $account,
         ConnectorAdapterInterface $adapter
     ): void {
-        $payload = new OutboundPayload(
+        SendOutboundMessage::dispatch(
+            sessionId: $session->id,
             content: $content,
-            channelId: $session->channel_id,
             threadId: $session->thread_id,
         );
-
-        try {
-            $response = $adapter->sendMessage($session, $payload);
-
-            ChatMessage::create([
-                'chat_session_id' => $session->id,
-                'connector_account_id' => $account->id,
-                'direction' => ChatMessage::DIRECTION_OUTBOUND,
-                'content' => $content,
-                'idempotency_key' => hash('sha256', Str::uuid()->toString()),
-                'provider_message_id' => $response->providerMessageId,
-                'provider_timestamp' => now(),
-            ]);
-
-        } catch (\Throwable $e) {
-            Log::error('ProcessChatIntent: Failed to send response', [
-                'session_id' => $session->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
     }
 
     private function handleButtonCallback(
