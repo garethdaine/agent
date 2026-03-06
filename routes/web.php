@@ -62,9 +62,8 @@ Route::middleware([
         ]);
     })->name('tools.discovery.provider.callback');
 
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
+        ->name('dashboard');
 
     Route::get('/billing/portal', \App\Http\Controllers\BillingPortalController::class)
         ->name('billing.portal');
@@ -119,7 +118,8 @@ Route::middleware([
         return Inertia::render('Agent/Monitor/Index');
     })->name('agent.monitor.index');
 
-    Route::get('/agent/operator-dashboard', \App\Http\Controllers\Agent\ClientOperatorDashboardController::class)
+    // Legacy route: redirect to unified dashboard.
+    Route::get('/agent/operator-dashboard', fn () => redirect()->route('dashboard'))
         ->name('agent.operator-dashboard');
 
     Route::get('/help', fn () => redirect()->route('docs.index'))
@@ -129,7 +129,8 @@ Route::middleware([
         ->name('agent.deployments.index');
     Route::get('/agent/deployments/{workflowKey}', [OperatorPageController::class, 'deployment'])
         ->name('agent.deployments.show');
-    Route::get('/agent/system-overview', [OperatorPageController::class, 'systemOverview'])
+    // Legacy route: redirect to unified dashboard.
+    Route::get('/agent/system-overview', fn () => redirect()->route('dashboard'))
         ->name('agent.system-overview.index');
     Route::get('/agent/escalations', [OperatorPageController::class, 'escalations'])
         ->name('agent.escalations.index');
@@ -200,9 +201,9 @@ Route::middleware([
         return Inertia::render('Tools/Logs/Index');
     })->name('tools.logs.index');
 
-    Route::get('/tools/runtime', function () {
-        return Inertia::render('Tools/Runtime/Index');
-    })->name('tools.runtime.index');
+    // Legacy route: redirect runtime to dashboard.
+    Route::get('/tools/runtime', fn () => redirect()->route('dashboard'))
+        ->name('tools.runtime.index');
 
     Route::get('/tools/audit', function () {
         return Inertia::render('Tools/Audit/Index');
@@ -397,7 +398,7 @@ Route::middleware([
         ]);
     })->name('tools.code-analysis.settings');
 
-    // Org Layer routes (guarded by org UI feature flag)
+    // Workforce routes (guarded by org UI feature flag)
     Route::middleware(['org.ui'])->prefix('agent/org')->group(function () {
         Route::get('/', fn () => Inertia::render('Agent/Org/Index'))
             ->name('org.index');

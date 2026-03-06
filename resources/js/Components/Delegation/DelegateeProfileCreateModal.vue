@@ -5,6 +5,7 @@ import Modal from '@/Components/Modal.vue';
 import Input from '@/Components/ui/Input.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import Select from '@/Components/ui/Select.vue';
+import Textarea from '@/Components/ui/Textarea.vue';
 import Button from '@/Components/ui/Button.vue';
 import DirectoryPickerInput from '@/Components/ui/DirectoryPickerInput.vue';
 import ApprovalModeSelect from '@/Components/Agent/ApprovalModeSelect.vue';
@@ -32,6 +33,9 @@ const form = ref({
     command_template: DEFAULT_COMMAND_TEMPLATES.claude,
     working_directory: '',
     capability_ids: [],
+    soul_personality: '',
+    soul_system_prompt: '',
+    soul_user_context: '',
 });
 
 const runnerTypeOptions = [
@@ -59,6 +63,9 @@ watch(
                 command_template: DEFAULT_COMMAND_TEMPLATES.claude,
                 working_directory: '',
                 capability_ids: [],
+                soul_personality: '',
+                soul_system_prompt: '',
+                soul_user_context: '',
             };
             loadCapabilities();
         }
@@ -112,6 +119,11 @@ const submit = async () => {
             config_json: {},
             is_active: true,
             capability_ids: form.value.capability_ids,
+            soul: {
+                personality: form.value.soul_personality || null,
+                system_prompt: form.value.soul_system_prompt || null,
+                user_context: form.value.soul_user_context || null,
+            },
         };
         const { data } = await axios.post('/agent/api/v1/delegation/delegatee-profiles', payload);
         emit('created', data.data);
@@ -230,6 +242,37 @@ const close = () => {
                             {{ cap.slug }}
                         </button>
                         <span v-if="capabilities.length === 0" class="text-sm text-muted-foreground">Loading…</span>
+                    </div>
+                </div>
+
+                <div class="border-t border-border pt-4 space-y-3">
+                    <InputLabel class="mb-0 text-xs font-medium text-muted-foreground uppercase tracking-wider">Soul / Identity</InputLabel>
+                    <div class="space-y-2">
+                        <InputLabel>Personality</InputLabel>
+                        <Textarea
+                            v-model="form.soul_personality"
+                            :rows="2"
+                            placeholder="How this agent should behave and communicate..."
+                            :disabled="submitting"
+                        />
+                    </div>
+                    <div class="space-y-2">
+                        <InputLabel>System prompt</InputLabel>
+                        <Textarea
+                            v-model="form.soul_system_prompt"
+                            :rows="3"
+                            placeholder="Core instructions for the agent..."
+                            :disabled="submitting"
+                        />
+                    </div>
+                    <div class="space-y-2">
+                        <InputLabel>User context</InputLabel>
+                        <Textarea
+                            v-model="form.soul_user_context"
+                            :rows="2"
+                            placeholder="Additional context about you or your project..."
+                            :disabled="submitting"
+                        />
                     </div>
                 </div>
 

@@ -7,11 +7,10 @@ import CardDescription from '@/Components/ui/CardDescription.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import Button from '@/Components/ui/Button.vue';
 import Input from '@/Components/ui/Input.vue';
-import Select from '@/Components/ui/Select.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { ArrowLeft, Brain, CheckCircle, XCircle, AlertCircle, Loader2, Wifi, WifiOff } from 'lucide-vue-next';
+import { ArrowLeft, Brain, CheckCircle, XCircle, AlertCircle, Loader2, Wifi, WifiOff, KeyRound, ExternalLink } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { onMounted, onUnmounted, reactive, ref, computed } from 'vue';
@@ -30,11 +29,15 @@ const diagnostics = ref({ formation: [], usage: [] });
 const wsConnected = ref(false);
 const wsChannel = ref(null);
 
-// Form state
+// Credential status (from credential manager)
+const credentials = ref({ openai: false, anthropic: false });
+
+// Dynamic model lists
+const modelsLoading = ref(false);
+const availableModels = ref({});
+
+// Form state (no longer includes provider keys)
 const form = reactive({
-    // Provider keys
-    provider_key_openai: '',
-    provider_key_anthropic: '',
     // Model selections
     extraction_model: 'gpt-4o-mini',
     summarization_model: 'gpt-4.1-nano',
@@ -55,20 +58,49 @@ const form = reactive({
     anthropic_tpm: 100000,
 });
 
-// Model options
-const extractionModels = [
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini (OpenAI)' },
-    { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (Anthropic)' },
-];
+// Computed: whether any provider key is configured
+const hasAnyProvider = computed(() => credentials.value.openai || credentials.value.anthropic);
 
-const summarizationModels = [
-    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano (OpenAI)' },
-    { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (Anthropic)' },
-];
+// Computed model option lists
+const extractionModels = computed(() => {
+    const models = [];
+    if (availableModels.value.openai?.extraction) {
+        availableModels.value.openai.extraction.forEach(m => models.push({ value: m, label: `${m} (OpenAI)` }));
+    }
+    if (availableModels.value.anthropic?.extraction) {
+        availableModels.value.anthropic.extraction.forEach(m => models.push({ value: m, label: `${m} (Anthropic)` }));
+    }
+    // Ensure current selection is always an option
+    if (form.extraction_model && !models.find(m => m.value === form.extraction_model)) {
+        models.unshift({ value: form.extraction_model, label: form.extraction_model });
+    }
+    return models;
+});
 
-const embeddingsModels = [
-    { value: 'text-embedding-3-small', label: 'Text Embedding 3 Small (OpenAI)' },
-];
+const summarizationModels = computed(() => {
+    const models = [];
+    if (availableModels.value.openai?.summarization) {
+        availableModels.value.openai.summarization.forEach(m => models.push({ value: m, label: `${m} (OpenAI)` }));
+    }
+    if (availableModels.value.anthropic?.summarization) {
+        availableModels.value.anthropic.summarization.forEach(m => models.push({ value: m, label: `${m} (Anthropic)` }));
+    }
+    if (form.summarization_model && !models.find(m => m.value === form.summarization_model)) {
+        models.unshift({ value: form.summarization_model, label: form.summarization_model });
+    }
+    return models;
+});
+
+const embeddingsModels = computed(() => {
+    const models = [];
+    if (availableModels.value.openai?.embeddings) {
+        availableModels.value.openai.embeddings.forEach(m => models.push({ value: m, label: `${m} (OpenAI)` }));
+    }
+    if (form.embeddings_model && !models.find(m => m.value === form.embeddings_model)) {
+        models.unshift({ value: form.embeddings_model, label: form.embeddings_model });
+    }
+    return models;
+});
 
 // Computed
 const operatingMode = computed(() => capabilities.value?.mode || 'unknown');
@@ -104,6 +136,11 @@ const load = async () => {
         const settings = settingsRes.data?.data || [];
         capabilities.value = capabilitiesRes.data?.data || null;
 
+        // Update credential status
+        if (settingsRes.data?.credentials) {
+            credentials.value = settingsRes.data.credentials;
+        }
+
         // Populate form from settings
         const numericKeys = [
             'context_budget_percent', 'context_floor_tokens', 'context_ceiling_tokens',
@@ -117,10 +154,28 @@ const load = async () => {
                 form[key] = numericKeys.includes(key) && value !== null ? Number(value) : value;
             }
         });
+
+        // Fetch available models if any provider is configured
+        if (credentials.value.openai || credentials.value.anthropic) {
+            loadModels();
+        }
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load settings.';
     } finally {
         loading.value = false;
+    }
+};
+
+// Fetch available models from providers
+const loadModels = async () => {
+    modelsLoading.value = true;
+    try {
+        const res = await axios.get(`${baseUrl}/models`);
+        availableModels.value = res.data?.data || {};
+    } catch (e) {
+        // Silently fail — fallback models will be empty, current selection preserved
+    } finally {
+        modelsLoading.value = false;
     }
 };
 
@@ -131,13 +186,8 @@ const save = async () => {
     success.value = '';
 
     try {
-        // Build settings object, excluding masked keys unless changed
         const settings = {};
         Object.entries(form).forEach(([key, value]) => {
-            // Skip masked API keys (contain ****)
-            if (key.startsWith('provider_key_') && String(value).includes('****')) {
-                return;
-            }
             settings[key] = value;
         });
 
@@ -170,7 +220,7 @@ const testConnection = async (provider) => {
         if (data.success) {
             success.value = `${provider} connection successful!`;
         } else {
-            error.value = data.error || `${provider} connection failed.`;
+            error.value = data.message || `${provider} connection failed.`;
         }
         setTimeout(() => { success.value = ''; }, 3000);
     } catch (e) {
@@ -284,7 +334,7 @@ onUnmounted(() => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-4xl space-y-6">
+            <div class="space-y-6">
                 <!-- Status Messages -->
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {{ error }}
@@ -300,82 +350,116 @@ onUnmounted(() => {
                     <Card>
                         <CardHeader>
                             <CardTitle>Provider Configuration</CardTitle>
-                            <CardDescription>Configure API keys and models for memory operations.</CardDescription>
+                            <CardDescription>API key status and model selection for memory operations.</CardDescription>
                         </CardHeader>
                         <CardContent class="space-y-4">
-                            <!-- OpenAI -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium">OpenAI API Key</label>
-                                <div class="flex gap-2">
-                                    <Input
-                                        v-model="form.provider_key_openai"
-                                        type="password"
-                                        placeholder="sk-..."
-                                        class="flex-1"
-                                    />
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        :disabled="testingProvider === 'openai' || !form.provider_key_openai"
-                                        @click="testConnection('openai')"
+                            <!-- Credential Status -->
+                            <div class="rounded-md border border-border bg-muted/30 px-4 py-3">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <KeyRound class="h-4 w-4 text-muted-foreground" />
+                                    <span class="text-sm font-medium">API Keys</span>
+                                    <span class="text-xs text-muted-foreground">(managed in Credentials)</span>
+                                </div>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2">
+                                            <component
+                                                :is="credentials.openai ? CheckCircle : XCircle"
+                                                :class="['h-4 w-4', credentials.openai ? 'text-green-500' : 'text-muted-foreground']"
+                                            />
+                                            <span class="text-sm">OpenAI</span>
+                                        </div>
+                                        <Button
+                                            v-if="credentials.openai"
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-7 px-2"
+                                            :disabled="testingProvider === 'openai'"
+                                            @click="testConnection('openai')"
+                                        >
+                                            <Loader2 v-if="testingProvider === 'openai'" class="h-3 w-3 animate-spin" />
+                                            <span v-else class="text-xs">Test</span>
+                                        </Button>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2">
+                                            <component
+                                                :is="credentials.anthropic ? CheckCircle : XCircle"
+                                                :class="['h-4 w-4', credentials.anthropic ? 'text-green-500' : 'text-muted-foreground']"
+                                            />
+                                            <span class="text-sm">Anthropic</span>
+                                        </div>
+                                        <Button
+                                            v-if="credentials.anthropic"
+                                            variant="ghost"
+                                            size="sm"
+                                            class="h-7 px-2"
+                                            :disabled="testingProvider === 'anthropic'"
+                                            @click="testConnection('anthropic')"
+                                        >
+                                            <Loader2 v-if="testingProvider === 'anthropic'" class="h-3 w-3 animate-spin" />
+                                            <span v-else class="text-xs">Test</span>
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <Link
+                                        :href="route('settings.credentials.index')"
+                                        class="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                                     >
-                                        <Loader2 v-if="testingProvider === 'openai'" class="h-4 w-4 animate-spin" />
-                                        <span v-else>Test</span>
-                                    </Button>
+                                        <ExternalLink class="h-3 w-3" />
+                                        Manage API keys in Credentials
+                                    </Link>
                                 </div>
                             </div>
 
-                            <!-- Anthropic -->
-                            <div class="space-y-2">
-                                <label class="block text-sm font-medium">Anthropic API Key</label>
-                                <div class="flex gap-2">
-                                    <Input
-                                        v-model="form.provider_key_anthropic"
-                                        type="password"
-                                        placeholder="sk-ant-..."
-                                        class="flex-1"
-                                    />
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        :disabled="testingProvider === 'anthropic' || !form.provider_key_anthropic"
-                                        @click="testConnection('anthropic')"
-                                    >
-                                        <Loader2 v-if="testingProvider === 'anthropic'" class="h-4 w-4 animate-spin" />
-                                        <span v-else>Test</span>
-                                    </Button>
+                            <!-- Model Selections (shown only when at least one provider key is configured) -->
+                            <template v-if="hasAnyProvider">
+                                <div v-if="modelsLoading" class="text-sm text-muted-foreground">
+                                    Loading available models...
                                 </div>
-                            </div>
-
-                            <!-- Model Selections -->
-                            <div class="grid gap-4 sm:grid-cols-3">
-                                <div>
-                                    <label class="block text-sm font-medium">Extraction Model</label>
-                                    <Select
-                                        v-model="form.extraction_model"
-                                        :options="extractionModels"
-                                        class="mt-1"
-                                    />
-                                    <p class="mt-1 text-xs text-muted-foreground">Entity extraction & importance scoring</p>
+                                <div class="grid gap-4 sm:grid-cols-3">
+                                    <div>
+                                        <label class="block text-sm font-medium">Extraction Model</label>
+                                        <select
+                                            v-model="form.extraction_model"
+                                            class="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                        >
+                                            <option v-for="opt in extractionModels" :key="opt.value" :value="opt.value">
+                                                {{ opt.label }}
+                                            </option>
+                                        </select>
+                                        <p class="mt-1 text-xs text-muted-foreground">Entity extraction & importance scoring</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium">Summarization Model</label>
+                                        <select
+                                            v-model="form.summarization_model"
+                                            class="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                        >
+                                            <option v-for="opt in summarizationModels" :key="opt.value" :value="opt.value">
+                                                {{ opt.label }}
+                                            </option>
+                                        </select>
+                                        <p class="mt-1 text-xs text-muted-foreground">Working memory eviction</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium">Embeddings Model</label>
+                                        <select
+                                            v-model="form.embeddings_model"
+                                            class="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                        >
+                                            <option v-for="opt in embeddingsModels" :key="opt.value" :value="opt.value">
+                                                {{ opt.label }}
+                                            </option>
+                                        </select>
+                                        <p class="mt-1 text-xs text-muted-foreground">Semantic vector embeddings</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium">Summarization Model</label>
-                                    <Select
-                                        v-model="form.summarization_model"
-                                        :options="summarizationModels"
-                                        class="mt-1"
-                                    />
-                                    <p class="mt-1 text-xs text-muted-foreground">Working memory eviction</p>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium">Embeddings Model</label>
-                                    <Select
-                                        v-model="form.embeddings_model"
-                                        :options="embeddingsModels"
-                                        class="mt-1"
-                                    />
-                                    <p class="mt-1 text-xs text-muted-foreground">Semantic vector embeddings</p>
-                                </div>
+                            </template>
+                            <div v-else class="rounded-md border border-yellow-500/30 bg-yellow-500/5 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-400">
+                                <AlertCircle class="mr-2 inline h-4 w-4" />
+                                Configure at least one provider API key in Credentials to select models.
                             </div>
                         </CardContent>
                     </Card>

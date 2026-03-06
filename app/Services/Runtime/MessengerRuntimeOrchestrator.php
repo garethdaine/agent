@@ -162,7 +162,7 @@ class MessengerRuntimeOrchestrator
                 'error' => 'Max tool iterations exceeded',
             ];
         } catch (\Throwable $e) {
-            Log::error('MessengerRuntimeOrchestrator: turn failed', [
+            Log::channel('runtime')->error('MessengerRuntimeOrchestrator: turn failed', [
                 'turn_id' => $turn->id,
                 'error' => $e->getMessage(),
             ]);

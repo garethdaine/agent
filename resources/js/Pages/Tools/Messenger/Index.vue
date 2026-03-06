@@ -18,10 +18,11 @@ import TableHead from '@/Components/ui/TableHead.vue';
 import TableCell from '@/Components/ui/TableCell.vue';
 import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { RefreshCw, AlertCircle, Pencil, X, Save, MessageSquare } from 'lucide-vue-next';
+import { RefreshCw, AlertCircle, Pencil, X, Save, MessageSquare, Info, RotateCcw, Unplug } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, ref, watch } from 'vue';
 import { confirmDialog } from '@/Support/confirmDialog';
+import { formatDateTime, relativeTime } from '@/Utils/formatDate';
 
 const loading = ref(false);
 const refreshing = ref(false);
@@ -765,81 +766,82 @@ onMounted(async () => {
                         <CardHeader>
                             <CardTitle>Connectors</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Provider</TableHead>
-                                        <TableHead>Mode</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Policy</TableHead>
-                                        <TableHead>Sessions</TableHead>
-                                        <TableHead>Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    <template v-for="connector in connectors" :key="connector.id">
-                                    <TableRow>
-                                        <TableCell>
-                                            <p class="font-medium">{{ connector.name }}</p>
-                                            <p v-if="connector.setup?.webhook_url" class="mt-0.5 break-all text-xs text-muted-foreground">
-                                                {{ connector.setup.webhook_url }}
-                                            </p>
-                                        </TableCell>
-                                        <TableCell class="text-muted-foreground">{{ connector.provider }}</TableCell>
-                                        <TableCell class="text-muted-foreground">{{ connector.connection_mode }}</TableCell>
-                                        <TableCell>
-                                            <div class="flex items-center gap-2">
-                                                <span
-                                                    class="status-dot"
-                                                    :class="getConnectorRuntimeStateClass(connector.runtime_state)"
-                                                    :title="connector.runtime_error_message"
-                                                ></span>
-                                                <span class="capitalize">{{ connector.runtime_state || connector.status }}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div v-if="connectorPolicies[connector.id]" class="flex flex-wrap gap-1">
-                                                <Badge variant="outline" class="text-[10px]">DM: {{ connectorPolicies[connector.id].dm_policy }}</Badge>
-                                                <Badge variant="outline" class="text-[10px]">Scope: {{ connectorPolicies[connector.id].dm_session_scope }}</Badge>
-                                                <Badge v-if="connectorPolicies[connector.id].group_policy?.require_mention" variant="outline" class="text-[10px]">@mention</Badge>
-                                            </div>
-                                            <span v-else class="text-xs text-muted-foreground">—</span>
-                                        </TableCell>
-                                        <TableCell class="text-muted-foreground">{{ connector.sessions_count ?? 0 }}</TableCell>
-                                        <TableCell>
-                                            <div class="flex flex-wrap gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    :disabled="isConnectorActionBusy(connector.id)"
-                                                    @click="startEditing(connector)"
-                                                >
-                                                    <Pencil class="h-3.5 w-3.5 mr-1" />
-                                                    Edit
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    :disabled="isConnectorActionBusy(connector.id)"
-                                                    @click="retestConnector(connector)"
-                                                >
-                                                    Retest
-                                                </Button>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    :disabled="isConnectorActionBusy(connector.id)"
-                                                    @click="disconnectConnector(connector)"
-                                                >
-                                                    Disconnect
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                    <TableRow v-if="editingConnectorId === connector.id" :key="'edit-' + connector.id">
-                                        <TableCell colspan="7" class="bg-muted/30 p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Provider</TableHead>
+                                    <TableHead>Mode</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Sessions</TableHead>
+                                    <TableHead class="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <template v-for="connector in connectors" :key="connector.id">
+                                <TableRow>
+                                    <TableCell class="font-medium">
+                                        {{ connector.name }}
+                                    </TableCell>
+                                    <TableCell class="capitalize text-muted-foreground">{{ connector.provider }}</TableCell>
+                                    <TableCell class="text-muted-foreground">{{ connector.connection_mode }}</TableCell>
+                                    <TableCell>
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="status-dot"
+                                                :class="getConnectorRuntimeStateClass(connector.runtime_state)"
+                                                :title="connector.runtime_error_message"
+                                            ></span>
+                                            <span class="capitalize">{{ connector.runtime_state || connector.status }}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell class="text-muted-foreground">{{ connector.sessions_count ?? 0 }}</TableCell>
+                                    <TableCell class="text-right">
+                                        <div class="inline-flex items-center gap-1">
+                                            <Button
+                                                v-if="connector.setup?.webhook_url"
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-8 w-8 p-0"
+                                                :title="connector.setup.webhook_url"
+                                            >
+                                                <Info class="h-3.5 w-3.5 text-muted-foreground" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-8 w-8 p-0"
+                                                title="Edit"
+                                                :disabled="isConnectorActionBusy(connector.id)"
+                                                @click="startEditing(connector)"
+                                            >
+                                                <Pencil class="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-8 w-8 p-0"
+                                                title="Retest"
+                                                :disabled="isConnectorActionBusy(connector.id)"
+                                                @click="retestConnector(connector)"
+                                            >
+                                                <RotateCcw class="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                class="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                                title="Disconnect"
+                                                :disabled="isConnectorActionBusy(connector.id)"
+                                                @click="disconnectConnector(connector)"
+                                            >
+                                                <Unplug class="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                                <TableRow v-if="editingConnectorId === connector.id" :key="'edit-' + connector.id">
+                                    <TableCell colspan="6" class="bg-muted/30 p-0">
                                             <div class="px-4 py-4 space-y-4">
                                                 <div class="flex items-center justify-between">
                                                     <h4 class="text-sm font-semibold text-foreground">Edit {{ connector.name }}</h4>
@@ -922,13 +924,12 @@ onMounted(async () => {
                                             </div>
                                         </TableCell>
                                     </TableRow>
-                                    </template>
-                                    <TableRow v-if="connectors.length === 0">
-                                        <TableCell colspan="7" class="text-center text-muted-foreground">No connectors found.</TableCell>
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
-                        </CardContent>
+                                </template>
+                                <TableRow v-if="connectors.length === 0">
+                                    <TableCell colspan="6" class="text-center text-muted-foreground py-8">No connectors found.</TableCell>
+                                </TableRow>
+                            </TableBody>
+                        </Table>
                     </Card>
 
                     <Card>
@@ -1001,7 +1002,7 @@ onMounted(async () => {
                                     <p class="mb-2 text-sm font-medium text-muted-foreground">Messages</p>
                                     <div class="max-h-64 space-y-2 overflow-auto rounded-md border border-border bg-muted/30 p-2">
                                         <div v-for="message in sessionMessages" :key="message.id" class="rounded-md border border-border bg-card px-2 py-1.5 text-sm">
-                                            <p class="font-medium">{{ message.direction }} · {{ message.created_at }}</p>
+                                            <p class="font-medium">{{ message.direction }} · {{ formatDateTime(message.created_at) }}</p>
                                             <MarkdownRenderer
                                                 v-if="isLikelyMarkdown(message.content)"
                                                 :markdown="String(message.content ?? '')"
@@ -1018,7 +1019,7 @@ onMounted(async () => {
                                     <div class="max-h-64 space-y-2 overflow-auto rounded-md border border-border bg-muted/30 p-2">
                                         <div v-for="action in sessionActions" :key="action.id" class="rounded-md border border-border bg-card px-2 py-1.5 text-sm">
                                             <p class="font-medium">{{ action.action_type }}</p>
-                                            <p class="mt-0.5 text-muted-foreground">Status: {{ action.status }} · {{ action.created_at }}</p>
+                                            <p class="mt-0.5 text-muted-foreground">Status: {{ action.status }} · {{ formatDateTime(action.created_at) }}</p>
                                             <p v-if="action.error" class="mt-1 text-destructive">{{ action.error }}</p>
                                         </div>
                                         <p v-if="sessionActions.length === 0" class="text-sm text-muted-foreground">No actions found for this session.</p>

@@ -18,6 +18,7 @@ import Button from '@/Components/ui/Button.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { ArrowLeft, ClipboardCheck, GitBranch } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
+import { formatDateTime } from '@/Utils/formatDate';
 
 const props = defineProps({
     graphId: {
@@ -136,11 +137,11 @@ onMounted(load);
                                 </div>
                                 <div>
                                     <span class="text-xs font-medium uppercase text-muted-foreground">Started</span>
-                                    <div class="mt-2 text-sm text-foreground">{{ task.started_at ?? '-' }}</div>
+                                    <div class="mt-2 text-sm text-foreground">{{ formatDateTime(task.started_at) }}</div>
                                 </div>
                                 <div>
                                     <span class="text-xs font-medium uppercase text-muted-foreground">Finished</span>
-                                    <div class="mt-2 text-sm text-foreground">{{ task.finished_at ?? '-' }}</div>
+                                    <div class="mt-2 text-sm text-foreground">{{ formatDateTime(task.finished_at) }}</div>
                                 </div>
                             </div>
                         </CardContent>
@@ -155,11 +156,10 @@ onMounted(load);
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card class="overflow-hidden">
                         <CardHeader>
                             <CardTitle>Attempts</CardTitle>
                         </CardHeader>
-                        <CardContent class="p-0">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -179,8 +179,8 @@ onMounted(load);
                                         </TableCell>
                                         <TableCell class="text-muted-foreground">{{ attempt.profile?.name ?? '-' }}</TableCell>
                                         <TableCell class="text-muted-foreground">{{ attempt.duration_ms ? `${attempt.duration_ms}ms` : '-' }}</TableCell>
-                                        <TableCell class="text-xs text-muted-foreground">{{ attempt.started_at ?? '-' }}</TableCell>
-                                        <TableCell class="text-xs text-muted-foreground">{{ attempt.finished_at ?? '-' }}</TableCell>
+                                        <TableCell class="text-xs text-muted-foreground">{{ formatDateTime(attempt.started_at) }}</TableCell>
+                                        <TableCell class="text-xs text-muted-foreground">{{ formatDateTime(attempt.finished_at) }}</TableCell>
                                     </TableRow>
                                     <TableRow v-if="!task.attempts || task.attempts.length === 0">
                                         <TableCell colspan="6" class="py-8 text-center text-muted-foreground">
@@ -189,7 +189,6 @@ onMounted(load);
                                     </TableRow>
                                 </TableBody>
                             </Table>
-                        </CardContent>
                     </Card>
 
                     <Card>

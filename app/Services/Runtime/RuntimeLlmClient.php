@@ -65,7 +65,7 @@ class RuntimeLlmClient
         ])->timeout(120)->post('https://api.anthropic.com/v1/messages', $payload);
 
         if (! $response->successful()) {
-            Log::error('RuntimeLlmClient: API error', [
+            Log::channel('runtime')->error('RuntimeLlmClient: API error', [
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);

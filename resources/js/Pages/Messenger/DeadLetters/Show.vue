@@ -12,6 +12,7 @@ import { ArrowLeft, RotateCcw, Trash2, Clock, AlertCircle, MailWarning } from 'l
 import HelpHint from '@/Components/HelpHint.vue';
 import { ref } from 'vue';
 import { confirmDialog } from '@/Support/confirmDialog';
+import { formatDateTime } from '@/Utils/formatDate';
 
 const props = defineProps({
     deadLetter: Object,
@@ -51,10 +52,7 @@ const deleteSingle = async () => {
     router.delete(route('messenger.dead-letters.destroy', { id: props.deadLetter.id }));
 };
 
-const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString();
-};
+const formatDate = (d) => formatDateTime(d);
 
 const formatJson = (data) => {
     try {

@@ -100,7 +100,7 @@ onMounted(load);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-4xl space-y-4">
+            <div class="space-y-4">
                 <Skeleton v-if="loading" class="h-8 w-48" />
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ error }}</div>
                 <div v-if="success" class="rounded-md border border-success/50 bg-success/10 px-3 py-2 text-sm text-success">{{ success }}</div>

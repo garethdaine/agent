@@ -8,8 +8,6 @@ import {
     BookOpen,
     Briefcase,
     Rocket,
-    Activity,
-    BarChart2,
     Monitor,
     MessageSquare,
     Play,
@@ -24,7 +22,6 @@ import {
     FileCode,
     ShieldCheck,
     Stethoscope,
-    Sliders,
     ScrollText,
     UserCheck,
     Settings,
@@ -75,16 +72,6 @@ const page = usePage();
                     Dashboard
                 </SidebarNavLink>
                 <SidebarNavLink
-                    :href="route('agent.operator-dashboard')"
-                    :active="route().current('agent.operator-dashboard')"
-                    :collapsed="collapsed"
-                >
-                    <template #icon>
-                        <BarChart2 class="h-4 w-4 shrink-0" />
-                    </template>
-                    Operator Overview
-                </SidebarNavLink>
-                <SidebarNavLink
                     :href="route('docs.index')"
                     :active="route().current('docs.*')"
                     :collapsed="collapsed"
@@ -126,16 +113,6 @@ const page = usePage();
                         <Rocket class="h-4 w-4 shrink-0" />
                     </template>
                     Deployment
-                </SidebarNavLink>
-                <SidebarNavLink
-                    :href="$page.props.operatorNavigation.systemOverview"
-                    :active="route().current('agent.system-overview.index')"
-                    :collapsed="collapsed"
-                >
-                    <template #icon>
-                        <Activity class="h-4 w-4 shrink-0" />
-                    </template>
-                    System
                 </SidebarNavLink>
                 <SidebarNavLink
                     :href="route('agent.monitor.index')"
@@ -268,16 +245,6 @@ const page = usePage();
                         <FileText class="h-4 w-4 shrink-0" />
                     </template>
                     Logs
-                </SidebarNavLink>
-                <SidebarNavLink
-                    :href="route('tools.runtime.index')"
-                    :active="route().current('tools.runtime.*')"
-                    :collapsed="collapsed"
-                >
-                    <template #icon>
-                        <Sliders class="h-4 w-4 shrink-0" />
-                    </template>
-                    Runtime
                 </SidebarNavLink>
                 <SidebarNavLink
                     :href="route('tools.audit.index')"

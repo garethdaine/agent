@@ -86,7 +86,7 @@ const severityVariant = (severity) => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-4xl space-y-4">
+            <div class="space-y-4">
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {{ error }}
                 </div>
@@ -128,34 +128,33 @@ const severityVariant = (severity) => {
                                 No findings.
                             </div>
 
-                            <div v-else class="overflow-x-auto rounded-md border">
-                                <table class="w-full text-sm">
-                                    <thead class="border-b bg-muted/50">
+                            <div v-else class="overflow-hidden rounded-lg border border-border bg-card">
+                                <table class="min-w-full divide-y divide-border text-sm">
+                                    <thead class="bg-muted/40">
                                         <tr>
-                                            <th class="px-3 py-2 text-left font-medium">Check</th>
-                                            <th class="px-3 py-2 text-left font-medium">Severity</th>
-                                            <th class="px-3 py-2 text-left font-medium">Message</th>
-                                            <th class="px-3 py-2 text-left font-medium">Fix</th>
+                                            <th class="px-4 py-3 text-left font-medium">Check</th>
+                                            <th class="px-4 py-3 text-left font-medium">Severity</th>
+                                            <th class="px-4 py-3 text-left font-medium">Message</th>
+                                            <th class="px-4 py-3 text-left font-medium">Fix</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody class="divide-y divide-border">
                                         <tr
                                             v-for="(f, i) in result.findings"
                                             :key="i"
-                                            class="border-b last:border-0"
                                         >
-                                            <td class="px-3 py-2 font-mono text-xs">
+                                            <td class="px-4 py-3 font-mono text-xs">
                                                 {{ f.check_id }}
                                             </td>
-                                            <td class="px-3 py-2">
+                                            <td class="px-4 py-3">
                                                 <Badge :variant="severityVariant(f.severity)">
                                                     {{ f.severity }}
                                                 </Badge>
                                             </td>
-                                            <td class="px-3 py-2 text-muted-foreground">
+                                            <td class="px-4 py-3 text-muted-foreground">
                                                 {{ f.message }}
                                             </td>
-                                            <td class="px-3 py-2 text-muted-foreground">
+                                            <td class="px-4 py-3 text-muted-foreground">
                                                 {{ f.fix ?? '—' }}
                                             </td>
                                         </tr>

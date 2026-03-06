@@ -252,6 +252,38 @@ class ConnectorAccount extends Model
     }
 
     /**
+     * Get system notification settings for this connector.
+     *
+     * @return array{enabled: bool, channel_id: string|null, thread_id: string|null, notification_level: string, event_types: array<string>}
+     */
+    public function getSystemNotifications(): array
+    {
+        $sn = $this->config['system_notifications'] ?? [];
+
+        return [
+            'enabled' => (bool) ($sn['enabled'] ?? false),
+            'channel_id' => $sn['channel_id'] ?? null,
+            'thread_id' => $sn['thread_id'] ?? null,
+            'notification_level' => $sn['notification_level'] ?? 'lifecycle',
+            'event_types' => (array) ($sn['event_types'] ?? []),
+        ];
+    }
+
+    /**
+     * Update system notification settings.
+     *
+     * @param  array<string, mixed>  $settings
+     */
+    public function setSystemNotifications(array $settings): void
+    {
+        $config = $this->config ?? [];
+        $config['system_notifications'] = array_intersect_key($settings, array_flip([
+            'enabled', 'channel_id', 'thread_id', 'notification_level', 'event_types',
+        ]));
+        $this->update(['config' => $config]);
+    }
+
+    /**
      * Get the agent soul configuration.
      *
      * @return array{name: string|null, personality: string|null, system_prompt: string|null, user_context: string|null}

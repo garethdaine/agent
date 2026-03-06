@@ -23,6 +23,13 @@ $codexModelArgs = $codexModel !== '' ? ' -m '.$codexModel : '';
 return [
     'version' => '1.0.0',
 
+    'default_runner_type' => env('AGENT_DEFAULT_RUNNER_TYPE', 'claude'),
+
+    'streaming' => [
+        'enabled' => (bool) env('AGENT_STREAMING_ENABLED', false),
+        'chunk_size' => (int) env('AGENT_STREAMING_CHUNK_SIZE', 1800),
+    ],
+
     'license' => [
         'key' => env('AGENT_LICENSE_KEY', ''),
         'validation_url' => env('AGENT_LICENSE_VALIDATION_URL', 'https://agent-ops.com/api/license/validate'),

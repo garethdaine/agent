@@ -1,5 +1,5 @@
 <script setup>
-import { markRaw, ref, computed, onMounted } from 'vue';
+import { markRaw, ref, computed, onMounted, watch } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -8,7 +8,7 @@ import { GraphCanvas } from '@/Components/GraphCanvas';
 import OrgAgentNode from '@/Components/Org/OrgAgentNode.vue';
 import OrgAgentConfigPanel from '@/Components/Org/OrgAgentConfigPanel.vue';
 import DelegateeProfileCreateModal from '@/Components/Delegation/DelegateeProfileCreateModal.vue';
-import { ArrowLeft, Plus, Save, Users } from 'lucide-vue-next';
+import { ArrowLeft, Plus, Users } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 
 const nodeTypes = { orgAgent: markRaw(OrgAgentNode) };
@@ -23,6 +23,124 @@ const validationError = ref('');
 const selectedNodeId = ref(null);
 const showCreateProfileModal = ref(false);
 
+/**
+ * Compute hierarchical positions for org nodes.
+ * Roots (no parent) are placed at the bottom, leaves at the top.
+ * Separate connected components are laid out side by side, largest first.
+ */
+function computeHierarchicalPositions(nodesList, edgesList) {
+    if (nodesList.length === 0) return new Map();
+
+    const NODE_W = 220;
+    const GAP_X = 40;
+    const GAP_Y = 140;
+    const PADDING = 80;
+    const COMPONENT_GAP = 80;
+
+    // edges: source = subordinate, target = manager (parent)
+    const parentOf = new Map();
+    const childrenOf = new Map();
+    nodesList.forEach((n) => childrenOf.set(n.id, []));
+    edgesList.forEach((e) => {
+        parentOf.set(e.source, e.target);
+        if (childrenOf.has(e.target)) childrenOf.get(e.target).push(e.source);
+    });
+
+    // Find connected components via undirected BFS
+    const adjacency = new Map();
+    nodesList.forEach((n) => adjacency.set(n.id, []));
+    edgesList.forEach((e) => {
+        adjacency.get(e.source)?.push(e.target);
+        adjacency.get(e.target)?.push(e.source);
+    });
+
+    const visited = new Set();
+    const components = [];
+    nodesList.forEach((n) => {
+        if (visited.has(n.id)) return;
+        const component = [];
+        const q = [n.id];
+        visited.add(n.id);
+        while (q.length > 0) {
+            const id = q.shift();
+            component.push(id);
+            for (const neighbor of adjacency.get(id) ?? []) {
+                if (!visited.has(neighbor)) {
+                    visited.add(neighbor);
+                    q.push(neighbor);
+                }
+            }
+        }
+        components.push(component);
+    });
+
+    // Sort components largest first so the main org is on the left
+    components.sort((a, b) => b.length - a.length);
+
+    // Layout each component independently, then place side by side
+    const positions = new Map();
+    let offsetX = PADDING;
+
+    for (const component of components) {
+        const compSet = new Set(component);
+
+        // BFS from roots within this component
+        const roots = component.filter((id) => !parentOf.has(id));
+        const depthOf = new Map();
+        const bfsQueue = [...roots];
+        roots.forEach((id) => depthOf.set(id, 0));
+        let maxDepth = 0;
+
+        while (bfsQueue.length > 0) {
+            const id = bfsQueue.shift();
+            const d = depthOf.get(id);
+            for (const cid of childrenOf.get(id) ?? []) {
+                if (compSet.has(cid) && !depthOf.has(cid)) {
+                    depthOf.set(cid, d + 1);
+                    if (d + 1 > maxDepth) maxDepth = d + 1;
+                    bfsQueue.push(cid);
+                }
+            }
+        }
+
+        // Orphans within component
+        component.forEach((id) => {
+            if (!depthOf.has(id)) depthOf.set(id, 0);
+        });
+
+        // Group by depth
+        const levels = new Map();
+        component.forEach((id) => {
+            const d = depthOf.get(id);
+            if (!levels.has(d)) levels.set(d, []);
+            levels.get(d).push(id);
+        });
+
+        // Widest level in this component
+        let maxLevelWidth = 0;
+        levels.forEach((ids) => {
+            const w = ids.length * NODE_W + (ids.length - 1) * GAP_X;
+            if (w > maxLevelWidth) maxLevelWidth = w;
+        });
+
+        // Position nodes within this component
+        levels.forEach((ids, d) => {
+            const row = maxDepth - d;
+            const y = PADDING + row * GAP_Y;
+            const levelWidth = ids.length * NODE_W + (ids.length - 1) * GAP_X;
+            const startX = offsetX + (maxLevelWidth - levelWidth) / 2;
+
+            ids.forEach((id, i) => {
+                positions.set(id, { x: startX + i * (NODE_W + GAP_X), y });
+            });
+        });
+
+        offsetX += maxLevelWidth + COMPONENT_GAP;
+    }
+
+    return positions;
+}
+
 const loadAgentsAndDelegatees = async () => {
     loading.value = true;
     error.value = '';
@@ -34,20 +152,7 @@ const loadAgentsAndDelegatees = async () => {
         const agents = agentsRes.data?.data ?? [];
         delegateeProfiles.value = delegateesRes.data?.data ?? [];
 
-        nodes.value = agents.map((a, i) => ({
-            id: a.id,
-            type: 'orgAgent',
-            position: { x: 120 + (i % 3) * 240, y: 80 + Math.floor(i / 3) * 160 },
-            data: {
-                name: a.name,
-                role_slug: a.role_slug,
-                role_description: a.role_description,
-                delegatee_profile_id: a.delegatee_profile_id,
-                parent_agent_id: a.reporting_edge?.manager_agent_id ?? a.parent_agent_id ?? null,
-                ...a,
-            },
-        }));
-
+        // Build edges first so we can compute hierarchical positions
         const edgeList = [];
         agents.forEach((a) => {
             const managerId = a.reporting_edge?.manager_agent_id ?? a.parent_agent_id;
@@ -61,6 +166,34 @@ const loadAgentsAndDelegatees = async () => {
                 });
             }
         });
+
+        const stubNodes = agents.map((a) => ({ id: a.id }));
+        const posMap = computeHierarchicalPositions(stubNodes, edgeList);
+
+        // Build lookup maps for resolved names
+        const agentNameMap = new Map(agents.map((a) => [a.id, a.name]));
+        const profileNameMap = new Map(delegateeProfiles.value.map((p) => [p.id, p.name]));
+
+        nodes.value = agents.map((a, i) => {
+            const parentId = a.reporting_edge?.manager_agent_id ?? a.parent_agent_id ?? null;
+            return {
+                id: a.id,
+                type: 'orgAgent',
+                position: posMap.get(a.id) ?? { x: 120 + (i % 3) * 240, y: 80 + Math.floor(i / 3) * 160 },
+                data: {
+                    name: a.name,
+                    role_slug: a.role_slug,
+                    role_description: a.role_description,
+                    delegatee_profile_id: a.delegatee_profile_id,
+                    parent_agent_id: parentId,
+                    parentAgentName: parentId ? agentNameMap.get(parentId) ?? null : null,
+                    delegateeProfileName: a.delegatee_profile_id ? profileNameMap.get(a.delegatee_profile_id) ?? null : null,
+                    onDeleteNode: deleteAgent,
+                    ...a,
+                },
+            };
+        });
+
         edges.value = edgeList;
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load agents.';
@@ -80,7 +213,7 @@ const addAgent = () => {
         {
             id,
             type: 'orgAgent',
-            position: { x: 120 + (nodes.value.length % 3) * 240, y: 80 + Math.floor(nodes.value.length / 3) * 160 },
+            position: { x: 120 + (nodes.value.length % 4) * 260, y: 80 },
             data: {
                 name: `Agent ${nodes.value.length + 1}`,
                 role_slug: 'agent',
@@ -88,6 +221,7 @@ const addAgent = () => {
                 delegatee_profile_id: null,
                 parent_agent_id: null,
                 isNew: true,
+                onDeleteNode: deleteAgent,
             },
         },
     ];
@@ -166,6 +300,26 @@ const onProfileCreated = (profile) => {
     onAgentConfigUpdate({ delegatee_profile_id: profile.id });
 };
 
+const deleteAgent = async (nodeId) => {
+    error.value = '';
+
+    if (nodeId.startsWith('temp-')) {
+        nodes.value = nodes.value.filter((n) => n.id !== nodeId);
+        edges.value = edges.value.filter((e) => e.source !== nodeId && e.target !== nodeId);
+        if (selectedNodeId.value === nodeId) selectedNodeId.value = null;
+        return;
+    }
+
+    try {
+        await axios.delete(`/agent/api/v1/org/agents/${nodeId}`);
+        nodes.value = nodes.value.filter((n) => n.id !== nodeId);
+        edges.value = edges.value.filter((e) => e.source !== nodeId && e.target !== nodeId);
+        if (selectedNodeId.value === nodeId) selectedNodeId.value = null;
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to delete agent.';
+    }
+};
+
 function topoSortForCreate(nodesList, edgesList) {
     const outdegree = new Map();
     const incoming = new Map();
@@ -192,6 +346,7 @@ function topoSortForCreate(nodesList, edgesList) {
 }
 
 const save = async () => {
+    if (saving.value) return;
     saving.value = true;
     error.value = '';
     validationError.value = '';
@@ -250,11 +405,36 @@ const save = async () => {
         saving.value = false;
     }
 };
+
+// --- Autosave: debounce save when graph changes ---
+let autosaveTimer = null;
+const scheduleAutosave = () => {
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => save(), 800);
+};
+
+// Watch for config panel updates and connection changes to trigger autosave
+watch(
+    () => nodes.value.map((n) => {
+        const d = n.data ?? {};
+        return `${n.id}:${d.name}:${d.role_slug}:${d.role_description}:${d.delegatee_profile_id}:${d.parent_agent_id}`;
+    }).join('|'),
+    (newVal, oldVal) => {
+        if (oldVal && newVal !== oldVal) scheduleAutosave();
+    },
+);
+
+watch(
+    () => edges.value.map((e) => `${e.source}->${e.target}`).sort().join('|'),
+    (newVal, oldVal) => {
+        if (oldVal && newVal !== oldVal) scheduleAutosave();
+    },
+);
 </script>
 
 <template>
-    <AppLayout title="Org Layer Builder">
-        <Head title="Org Layer Builder" />
+    <AppLayout title="Workforce">
+        <Head title="Workforce" />
 
         <template #header>
             <div class="flex items-center justify-between">
@@ -269,7 +449,7 @@ const save = async () => {
                     </div>
                     <div class="flex items-center gap-2">
                         <h2 class="text-base font-semibold text-foreground truncate">
-                            Org Layer Builder
+                            Workforce
                         </h2>
                         <HelpHint
                             ui-key="org.layer-builder"
@@ -281,48 +461,59 @@ const save = async () => {
             </div>
         </template>
 
-        <div class="flex h-[calc(100vh-8rem)] flex-col px-4 py-4 sm:px-6 lg:px-8">
+        <div class="relative flex h-[calc(100vh-8rem)] flex-col px-4 py-4 sm:px-6 lg:px-8">
             <div class="mb-4 flex flex-wrap items-center gap-3">
                 <Button variant="outline" size="sm" @click="addAgent">
                     <Plus class="mr-2 h-4 w-4" />
                     Add agent
                 </Button>
-                <Button variant="outline" size="sm" :disabled="saving" @click="save">
-                    <Save class="mr-2 h-4 w-4" />
-                    Save
-                </Button>
+                <span v-if="saving" class="text-xs text-muted-foreground">Saving…</span>
             </div>
 
             <p v-if="error" class="mb-2 text-sm text-destructive">{{ error }}</p>
             <p v-if="validationError" class="mb-2 text-sm text-amber-600 dark:text-amber-400">{{ validationError }}</p>
 
-            <div class="flex min-h-0 flex-1 gap-4">
-                <div class="min-h-0 flex-1 rounded-lg border border-border">
-                    <GraphCanvas
-                        v-if="!loading"
-                        v-model:nodes="nodes"
-                        v-model:edges="edges"
-                        :edit-mode="true"
-                        :node-types="nodeTypes"
-                        @nodes-change="onNodesChange"
-                        @edges-change="onEdgesChange"
-                        @connect="onConnect"
-                        @node-click="onNodeClick"
-                    />
-                    <div v-else class="flex h-full items-center justify-center text-muted-foreground">
-                        Loading agents…
-                    </div>
+            <div class="relative min-h-0 flex-1 rounded-lg border border-border">
+                <GraphCanvas
+                    v-if="!loading"
+                    v-model:nodes="nodes"
+                    v-model:edges="edges"
+                    :edit-mode="true"
+                    :fit-view="true"
+                    :node-types="nodeTypes"
+                    @nodes-change="onNodesChange"
+                    @edges-change="onEdgesChange"
+                    @connect="onConnect"
+                    @node-click="onNodeClick"
+                />
+                <div v-else class="flex h-full items-center justify-center text-muted-foreground">
+                    Loading agents…
                 </div>
-                <aside v-if="selectedNode" class="flex shrink-0 flex-col gap-2">
-                    <OrgAgentConfigPanel
-                        :node="selectedNode"
-                        :delegatee-profiles="delegateeProfiles"
-                        :agents="agentListForPanel"
-                        @close="selectedNodeId = null"
-                        @update="onAgentConfigUpdate"
-                        @create-profile="showCreateProfileModal = true"
-                    />
-                </aside>
+
+                <!-- Config panel slides over the graph -->
+                <Transition
+                    enter-active-class="transition-transform duration-200 ease-out"
+                    leave-active-class="transition-transform duration-150 ease-in"
+                    enter-from-class="translate-x-full"
+                    enter-to-class="translate-x-0"
+                    leave-from-class="translate-x-0"
+                    leave-to-class="translate-x-full"
+                >
+                    <aside
+                        v-if="selectedNode"
+                        class="absolute right-3 top-3 z-10 w-80 max-h-[calc(100%-1.5rem)] overflow-y-auto"
+                    >
+                        <OrgAgentConfigPanel
+                            :node="selectedNode"
+                            :delegatee-profiles="delegateeProfiles"
+                            :agents="agentListForPanel"
+                            @close="selectedNodeId = null"
+                            @update="onAgentConfigUpdate"
+                            @delete="deleteAgent"
+                            @create-profile="showCreateProfileModal = true"
+                        />
+                    </aside>
+                </Transition>
             </div>
         </div>
 

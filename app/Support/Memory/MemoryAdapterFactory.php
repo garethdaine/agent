@@ -251,13 +251,15 @@ class MemoryAdapterFactory
     /**
      * Create an adapter instance for a provider.
      *
+     * API keys are resolved from the credential manager via MemorySettingsService.
+     *
      * @param  int  $userId  User ID for settings lookup
      * @param  string  $provider  Provider name
      * @return OpenAIAdapter|AnthropicAdapter|null Adapter instance or null
      */
     private function createAdapter(int $userId, string $provider): OpenAIAdapter|AnthropicAdapter|null
     {
-        $apiKey = $this->settingsService->get($userId, "provider_key_{$provider}");
+        $apiKey = $this->settingsService->getProviderKey($userId, $provider);
 
         if ($apiKey === null || $apiKey === '') {
             return null;

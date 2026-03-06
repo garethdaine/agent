@@ -90,6 +90,61 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Known Models (Fallback)
+    |--------------------------------------------------------------------------
+    |
+    | Curated model lists used when the provider API is unreachable or
+    | doesn't expose a models endpoint (e.g. Anthropic). Grouped by
+    | provider and capability.
+    |
+    */
+    'known_models' => [
+        'openai' => [
+            'extraction' => [
+                'gpt-4o',
+                'gpt-4o-mini',
+                'gpt-4.1',
+                'gpt-4.1-mini',
+                'gpt-4.1-nano',
+                'gpt-4-turbo',
+                'o4-mini',
+                'o3-mini',
+            ],
+            'summarization' => [
+                'gpt-4o',
+                'gpt-4o-mini',
+                'gpt-4.1',
+                'gpt-4.1-mini',
+                'gpt-4.1-nano',
+                'gpt-4-turbo',
+                'o4-mini',
+                'o3-mini',
+            ],
+            'embeddings' => [
+                'text-embedding-3-large',
+                'text-embedding-3-small',
+                'text-embedding-ada-002',
+            ],
+        ],
+        'anthropic' => [
+            'extraction' => [
+                'claude-sonnet-4-20250514',
+                'claude-haiku-4-5-20251001',
+                'claude-3-5-sonnet-20241022',
+                'claude-3-haiku-20240307',
+            ],
+            'summarization' => [
+                'claude-sonnet-4-20250514',
+                'claude-haiku-4-5-20251001',
+                'claude-3-5-sonnet-20241022',
+                'claude-3-haiku-20240307',
+            ],
+            'embeddings' => [],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Rate Limiting
     |--------------------------------------------------------------------------
     |

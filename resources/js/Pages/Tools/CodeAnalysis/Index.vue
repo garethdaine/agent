@@ -14,6 +14,7 @@ import { FileCode, Plus } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { onMounted, onUnmounted, ref } from 'vue';
+import { formatDateTime } from '@/Utils/formatDate';
 import { confirmDialog } from '@/Support/confirmDialog';
 
 const props = defineProps({
@@ -248,7 +249,7 @@ onUnmounted(leaveRealtime);
                                     <TableCell class="text-xs text-muted-foreground">{{ session.runner_type || 'claude' }}</TableCell>
                                     <TableCell class="text-xs">{{ session.status }}</TableCell>
                                     <TableCell class="text-xs text-muted-foreground">{{ session.phase }}</TableCell>
-                                    <TableCell class="text-xs text-muted-foreground">{{ session.updated_at || '—' }}</TableCell>
+                                    <TableCell class="text-xs text-muted-foreground">{{ formatDateTime(session.updated_at) }}</TableCell>
                                     <TableCell class="text-right">
                                         <div class="flex items-center justify-end gap-2">
                                             <Button

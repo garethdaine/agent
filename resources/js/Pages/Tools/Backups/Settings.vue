@@ -13,6 +13,7 @@ import { Head } from '@inertiajs/vue3';
 import { Play, Database } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, reactive, ref } from 'vue';
+import { formatDateTime } from '@/Utils/formatDate';
 
 const loading = ref(false);
 const saving = ref(false);
@@ -119,7 +120,7 @@ onMounted(load);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-3xl space-y-4">
+            <div class="space-y-4">
                 <Skeleton v-if="loading" class="h-8 w-48" />
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ error }}</div>
                 <div v-if="success" class="rounded-md border border-success/50 bg-success/10 px-3 py-2 text-sm text-success">{{ success }}</div>
@@ -159,7 +160,7 @@ onMounted(load);
 
                         <div class="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
                             <p><span class="font-medium">Configured Run Time:</span> {{ runTimeLabel }} ({{ form.timezone }})</p>
-                            <p><span class="font-medium">Last Run At:</span> {{ form.last_run_at || 'Never' }}</p>
+                            <p><span class="font-medium">Last Run At:</span> {{ form.last_run_at ? formatDateTime(form.last_run_at) : 'Never' }}</p>
                             <p><span class="font-medium">Last Status:</span> {{ form.last_status || 'N/A' }}</p>
                             <p><span class="font-medium">Last Error:</span> {{ form.last_error || 'None' }}</p>
                         </div>

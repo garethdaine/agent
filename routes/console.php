@@ -95,3 +95,12 @@ Schedule::job(new OrgEscalationTimeoutJob)
     ->everyMinute()
     ->withoutOverlapping()
     ->when(fn () => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::ORG_ENABLED));
+
+// Projection auto-maintenance: activate parity-passed builds and trigger rebuilds when stale
+Schedule::call(fn () => app(\App\Services\Telemetry\ProjectionBuildManager::class)->autoMaintain(
+    app(\App\Services\Telemetry\ActiveBuildFreshnessService::class),
+    app(\App\Services\Telemetry\ActiveProjectionBuildStateService::class),
+))
+    ->everyFiveMinutes()
+    ->name('telemetry:projection-auto-maintain')
+    ->withoutOverlapping();

@@ -17,12 +17,14 @@ class ConfigurationController extends Controller
                 'schema' => $schema->getSchema(),
                 'values' => $schema->getCurrentValues(),
                 'runtime' => [
-                    'default_mode' => config('runtime.default_mode'),
-                    'approval_model' => config('runtime.approval_model'),
+                    'default_mode' => config('runtime.default_mode', 'safe'),
+                    'approval_model' => config('runtime.approval_model', 'strict'),
                     'tool_deny' => config('runtime.tool_deny', []),
                     'tool_allow' => config('runtime.tool_allow', []),
-                    'session_timeout_minutes' => config('runtime.session_timeout_minutes', 120),
-                    'concurrent_session_limit' => config('runtime.concurrent_session_limit', 3),
+                    'session_timeout_minutes' => config('runtime.session_timeout')
+                        ? (int) round(config('runtime.session_timeout') / 60)
+                        : null,
+                    'concurrent_session_limit' => config('runtime.concurrent_session_limit_default', 3),
                 ],
                 'messenger' => [
                     'default_runner_type' => config('agent.default_runner_type', 'claude'),
@@ -53,8 +55,9 @@ class ConfigurationController extends Controller
 
     public function update(Request $request, ConfigSchemaService $schema): JsonResponse
     {
-        $rules = $schema->getValidationRules();
+        $fieldMap = $schema->getEditableFieldMap();
 
+        $rules = $schema->getValidationRules();
         $validated = $request->validate(
             collect($rules)
                 ->mapWithKeys(fn (array $r, string $key) => [str_replace('.', '_', $key) => $r])
@@ -65,13 +68,15 @@ class ConfigurationController extends Controller
         $envUpdates = [];
 
         foreach ($validated as $flatKey => $value) {
-            $dotKey = str_replace('_', '.', $flatKey);
-            $envKey = $this->configKeyToEnv($dotKey);
-            if ($envKey) {
-                $envUpdates[$envKey] = is_bool($value) ? ($value ? 'true' : 'false')
-                    : (is_array($value) ? implode(',', $value) : (string) $value);
-                $changes[$dotKey] = $value;
+            $field = $fieldMap[$flatKey] ?? null;
+
+            if (! $field || empty($field['envKey'])) {
+                continue;
             }
+
+            $envUpdates[$field['envKey']] = is_bool($value) ? ($value ? 'true' : 'false')
+                : (is_array($value) ? implode(',', $value) : (string) $value);
+            $changes[$field['key']] = $value;
         }
 
         if (empty($changes)) {
@@ -93,22 +98,6 @@ class ConfigurationController extends Controller
                 'values' => $schema->getCurrentValues(),
             ],
         ]);
-    }
-
-    private function configKeyToEnv(string $key): ?string
-    {
-        return match ($key) {
-            'runtime.default.mode' => 'RUNTIME_DEFAULT_MODE',
-            'runtime.approval.model' => 'RUNTIME_APPROVAL_MODEL',
-            'runtime.session.timeout.minutes' => 'RUNTIME_SESSION_TIMEOUT_MINUTES',
-            'runtime.concurrent.session.limit' => 'RUNTIME_CONCURRENT_SESSION_LIMIT',
-            'agent.default.runner.type' => 'AGENT_DEFAULT_RUNNER_TYPE',
-            'agent.streaming.enabled' => 'AGENT_STREAMING_ENABLED',
-            'agent.streaming.chunk.size' => 'AGENT_STREAMING_CHUNK_SIZE',
-            'agent.webhooks.enabled' => 'AGENT_WEBHOOKS_ENABLED',
-            'agent.webhooks.url' => 'AGENT_WEBHOOK_URL',
-            default => null,
-        };
     }
 
     private function writeEnvValues(array $values): void

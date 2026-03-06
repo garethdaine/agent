@@ -62,6 +62,9 @@ class FeatureFlagManager
 
     public const SUBAGENTS_ENABLED = 'runtime.subagents.enabled';
 
+    // Messenger flag constants
+    public const MESSENGER_SYSTEM_NOTIFICATIONS_ENABLED = 'messenger.system_notifications.enabled';
+
     // Platform flag constants
     public const BILLING_ENABLED = 'billing.enabled';
 
@@ -173,6 +176,12 @@ class FeatureFlagManager
         self::SUBAGENTS_ENABLED => [
             'label' => 'Sub-Agents',
             'description' => 'Enable spawning of sub-agent processes from messenger runtime sessions.',
+        ],
+
+        // Messenger
+        self::MESSENGER_SYSTEM_NOTIFICATIONS_ENABLED => [
+            'label' => 'Messenger System Notifications',
+            'description' => 'Send system event notifications (ritual completions, escalations, job failures) to connected messenger channels.',
         ],
 
         // Platform

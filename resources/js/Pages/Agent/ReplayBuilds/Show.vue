@@ -2,9 +2,25 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
 import HelpHint from '@/Components/HelpHint.vue';
-import { Head, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import { ArrowLeft, RotateCcw } from 'lucide-vue-next';
+import axios from 'axios';
+
+const activating = ref(false);
+
+const activateBuild = async (buildId) => {
+    if (activating.value) return;
+    activating.value = true;
+    try {
+        await axios.post(`/agent/api/v1/telemetry/replay/builds/${buildId}/activate`);
+        router.reload();
+    } catch (e) {
+        alert(e?.response?.data?.error?.message ?? 'Failed to activate build.');
+    } finally {
+        activating.value = false;
+    }
+};
 
 const props = defineProps({
     build: {
@@ -63,12 +79,14 @@ const activeBuildAgeLabel = computed(() => {
                     </div>
                 </div>
                 <div class="flex shrink-0 gap-2">
-                    <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.systemOverview">System Overview</Link>
+                    <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.dashboard">Dashboard</Link>
                     <button
                         v-if="governance.canManageReplay && !build.isActive"
                         type="button"
-                        class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
-                    >Activate replay build</button>
+                        class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
+                        :disabled="activating"
+                        @click="activateBuild(build.id)"
+                    >{{ activating ? 'Activating…' : 'Activate replay build' }}</button>
                 </div>
             </div>
         </template>

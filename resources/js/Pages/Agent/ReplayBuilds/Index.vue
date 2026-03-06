@@ -1,9 +1,25 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import { RotateCcw } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
+import axios from 'axios';
+
+const rebuilding = ref(false);
+
+const startRebuild = async () => {
+    if (rebuilding.value) return;
+    rebuilding.value = true;
+    try {
+        await axios.post('/agent/api/v1/telemetry/replay/builds');
+        router.reload();
+    } catch (e) {
+        alert(e?.response?.data?.error?.message ?? 'Failed to start rebuild.');
+    } finally {
+        rebuilding.value = false;
+    }
+};
 
 const props = defineProps({
     activeProjectionBuildId: {
@@ -62,12 +78,14 @@ const activeBuildAgeLabel = computed(() => {
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.deployments">Deployments</Link>
-                    <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.systemOverview">System Overview</Link>
+                    <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.dashboard">Dashboard</Link>
                     <button
                         v-if="governance.canManageReplay"
                         type="button"
-                        class="rounded-md border border-border px-3 py-2 text-sm"
-                    >Start replay build</button>
+                        class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
+                        :disabled="rebuilding"
+                        @click="startRebuild"
+                    >{{ rebuilding ? 'Starting…' : 'Start replay build' }}</button>
                 </div>
             </div>
         </template>

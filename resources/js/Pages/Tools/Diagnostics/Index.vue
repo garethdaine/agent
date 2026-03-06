@@ -125,7 +125,7 @@ onUnmounted(() => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-6xl space-y-6">
+            <div class="space-y-6">
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {{ error }}
                 </div>
@@ -201,26 +201,25 @@ onUnmounted(() => {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div class="overflow-x-auto rounded-md border">
-                                    <table class="w-full text-sm">
-                                        <thead class="border-b bg-muted/50">
+                                <div class="overflow-hidden rounded-lg border border-border bg-card">
+                                    <table class="min-w-full divide-y divide-border text-sm">
+                                        <thead class="bg-muted/40">
                                             <tr>
-                                                <th class="px-3 py-2 text-left font-medium">Check</th>
-                                                <th class="px-3 py-2 text-left font-medium">Status</th>
-                                                <th class="px-3 py-2 text-left font-medium">Message</th>
+                                                <th class="px-4 py-3 text-left font-medium">Check</th>
+                                                <th class="px-4 py-3 text-left font-medium">Status</th>
+                                                <th class="px-4 py-3 text-left font-medium">Message</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody class="divide-y divide-border">
                                             <tr
                                                 v-for="(c, i) in data.health.checks"
                                                 :key="i"
-                                                class="border-b last:border-0"
                                             >
-                                                <td class="px-3 py-2 font-mono text-xs">{{ c.check_id }}</td>
-                                                <td class="px-3 py-2">
+                                                <td class="px-4 py-3 font-mono text-xs">{{ c.check_id }}</td>
+                                                <td class="px-4 py-3">
                                                     <Badge :variant="statusVariant(c.status)">{{ c.status }}</Badge>
                                                 </td>
-                                                <td class="px-3 py-2 text-xs text-muted-foreground">{{ c.message }}</td>
+                                                <td class="px-4 py-3 text-xs text-muted-foreground">{{ c.message }}</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -279,32 +278,31 @@ onUnmounted(() => {
                             <div v-if="data.recent_events?.length === 0" class="text-sm text-muted-foreground py-4 text-center">
                                 No recent events.
                             </div>
-                            <div v-else class="overflow-x-auto rounded-md border">
-                                <table class="w-full text-sm">
-                                    <thead class="border-b bg-muted/50">
+                            <div v-else class="overflow-hidden rounded-lg border border-border bg-card">
+                                <table class="min-w-full divide-y divide-border text-sm">
+                                    <thead class="bg-muted/40">
                                         <tr>
-                                            <th class="px-3 py-2 text-left font-medium">Time</th>
-                                            <th class="px-3 py-2 text-left font-medium">Action</th>
-                                            <th class="px-3 py-2 text-left font-medium">Actor</th>
-                                            <th class="px-3 py-2 text-left font-medium">Target</th>
-                                            <th class="px-3 py-2 text-left font-medium">Outcome</th>
+                                            <th class="px-4 py-3 text-left font-medium">Time</th>
+                                            <th class="px-4 py-3 text-left font-medium">Action</th>
+                                            <th class="px-4 py-3 text-left font-medium">Actor</th>
+                                            <th class="px-4 py-3 text-left font-medium">Target</th>
+                                            <th class="px-4 py-3 text-left font-medium">Outcome</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody class="divide-y divide-border">
                                         <tr
                                             v-for="e in data.recent_events"
                                             :key="e.id"
-                                            class="border-b last:border-0"
                                         >
-                                            <td class="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
+                                            <td class="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                                                 {{ relativeTime(e.created_at) }}
                                             </td>
-                                            <td class="px-3 py-2 font-mono text-xs">{{ e.action }}</td>
-                                            <td class="px-3 py-2 text-xs text-muted-foreground">{{ e.actor_type }}</td>
-                                            <td class="px-3 py-2 text-xs text-muted-foreground">
+                                            <td class="px-4 py-3 font-mono text-xs">{{ e.action }}</td>
+                                            <td class="px-4 py-3 text-xs text-muted-foreground">{{ e.actor_type }}</td>
+                                            <td class="px-4 py-3 text-xs text-muted-foreground">
                                                 {{ e.target_type }}{{ e.target_id ? ` #${e.target_id}` : '' }}
                                             </td>
-                                            <td class="px-3 py-2">
+                                            <td class="px-4 py-3">
                                                 <Badge :variant="outcomeVariant(e.outcome)">{{ e.outcome }}</Badge>
                                             </td>
                                         </tr>

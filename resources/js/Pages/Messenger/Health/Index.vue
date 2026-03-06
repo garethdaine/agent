@@ -17,6 +17,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { RefreshCw, AlertCircle, CheckCircle, XCircle, Activity, HeartPulse } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import { computed, ref } from 'vue';
+import { formatDateTime as sharedFormatDateTime } from '@/Utils/formatDate';
 
 const props = defineProps({
     health: Object,
@@ -74,11 +75,7 @@ const getConnectorStatusLabel = (runtimeState) => {
     }
 };
 
-const formatDateTime = (isoString) => {
-    if (!isoString) return 'Never';
-    const date = new Date(isoString);
-    return date.toLocaleString();
-};
+const formatDateTime = (d) => sharedFormatDateTime(d);
 </script>
 
 <template>
@@ -240,54 +237,52 @@ const formatDateTime = (isoString) => {
                         <CardTitle>Connectors</CardTitle>
                         <CardDescription>All configured messenger connectors with their current status</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Provider</TableHead>
-                                    <TableHead>Mode</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Last Health Check</TableHead>
-                                    <TableHead>Error</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                <TableRow v-for="connector in health.connectors" :key="connector.id">
-                                    <TableCell class="font-medium">{{ connector.name }}</TableCell>
-                                    <TableCell class="capitalize text-muted-foreground">{{ connector.provider }}</TableCell>
-                                    <TableCell>
-                                        <Badge :variant="connector.mode === 'local' ? 'default' : 'secondary'">
-                                            {{ connector.mode === 'local' ? 'Local' : 'Webhook' }}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div class="flex items-center gap-2">
-                                            <span class="status-dot" :class="getConnectorStatusClass(connector.runtime_state)"></span>
-                                            <span>{{ getConnectorStatusLabel(connector.runtime_state) }}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell class="text-muted-foreground">
-                                        {{ formatDateTime(connector.last_health_check_at) }}
-                                    </TableCell>
-                                    <TableCell>
-                                        <span v-if="connector.error_message" class="text-destructive text-sm" :title="connector.error_message">
-                                            {{ connector.error_message.length > 50 ? connector.error_message.substring(0, 50) + '...' : connector.error_message }}
-                                        </span>
-                                        <span v-else class="text-muted-foreground">-</span>
-                                    </TableCell>
-                                </TableRow>
-                                <TableRow v-if="health.connectors.length === 0">
-                                    <TableCell colspan="6" class="text-center text-muted-foreground py-8">
-                                        No connectors configured.
-                                        <Link :href="route('tools.messenger.index')" class="text-primary underline">
-                                            Add a connector
-                                        </Link>
-                                    </TableCell>
-                                </TableRow>
-                            </TableBody>
-                        </Table>
-                    </CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Provider</TableHead>
+                                <TableHead>Mode</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Last Health Check</TableHead>
+                                <TableHead>Error</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow v-for="connector in health.connectors" :key="connector.id">
+                                <TableCell class="font-medium">{{ connector.name }}</TableCell>
+                                <TableCell class="capitalize text-muted-foreground">{{ connector.provider }}</TableCell>
+                                <TableCell>
+                                    <Badge :variant="connector.mode === 'local' ? 'default' : 'secondary'">
+                                        {{ connector.mode === 'local' ? 'Local' : 'Webhook' }}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <div class="flex items-center gap-2">
+                                        <span class="status-dot" :class="getConnectorStatusClass(connector.runtime_state)"></span>
+                                        <span>{{ getConnectorStatusLabel(connector.runtime_state) }}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell class="text-muted-foreground">
+                                    {{ formatDateTime(connector.last_health_check_at) }}
+                                </TableCell>
+                                <TableCell>
+                                    <span v-if="connector.error_message" class="text-destructive text-sm" :title="connector.error_message">
+                                        {{ connector.error_message.length > 50 ? connector.error_message.substring(0, 50) + '...' : connector.error_message }}
+                                    </span>
+                                    <span v-else class="text-muted-foreground">-</span>
+                                </TableCell>
+                            </TableRow>
+                            <TableRow v-if="health.connectors.length === 0">
+                                <TableCell colspan="6" class="text-center text-muted-foreground py-8">
+                                    No connectors configured.
+                                    <Link :href="route('tools.messenger.index')" class="text-primary underline">
+                                        Add a connector
+                                    </Link>
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
                 </Card>
 
                 <!-- Queue Health -->

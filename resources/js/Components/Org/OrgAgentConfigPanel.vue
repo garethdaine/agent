@@ -1,14 +1,13 @@
 <script setup>
 import { computed } from 'vue';
 import Card from '@/Components/ui/Card.vue';
-import CardHeader from '@/Components/ui/CardHeader.vue';
-import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import Input from '@/Components/ui/Input.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import Select from '@/Components/ui/Select.vue';
 import Button from '@/Components/ui/Button.vue';
-import { X } from 'lucide-vue-next';
+import { X, Trash2 } from 'lucide-vue-next';
+import { confirmDialog } from '@/Support/confirmDialog';
 
 const props = defineProps({
     node: { type: Object, default: null },
@@ -16,7 +15,7 @@ const props = defineProps({
     agents: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(['close', 'update', 'create-profile']);
+const emit = defineEmits(['close', 'update', 'create-profile', 'delete']);
 
 const name = computed(() => props.node?.data?.name ?? '');
 const roleSlug = computed(() => props.node?.data?.role_slug ?? 'agent');
@@ -47,17 +46,29 @@ const parentOptions = computed(() => {
 function updateData(partial) {
     emit('update', { ...props.node?.data, ...partial });
 }
+
+async function handleDelete() {
+    const agentName = props.node?.data?.name ?? 'this agent';
+    const approved = await confirmDialog(`Are you sure you want to delete "${agentName}"? This action cannot be undone.`, {
+        title: 'Delete Agent',
+        confirmText: 'Delete',
+        confirmVariant: 'destructive',
+    });
+    if (approved) {
+        emit('delete', props.node.id);
+    }
+}
 </script>
 
 <template>
     <Card v-if="node" class="w-full max-w-sm shrink-0">
-        <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle class="text-sm font-medium">Agent config</CardTitle>
-            <Button variant="ghost" size="icon" @click="emit('close')">
+        <div class="flex items-center justify-between px-4 pt-4 pb-2">
+            <h3 class="text-sm font-medium text-foreground">Agent config</h3>
+            <Button variant="ghost" size="icon" class="h-7 w-7" @click="emit('close')">
                 <X class="h-4 w-4" />
             </Button>
-        </CardHeader>
-        <CardContent class="space-y-4">
+        </div>
+        <CardContent class="space-y-4 pt-0">
             <div class="space-y-2">
                 <InputLabel>Name</InputLabel>
                 <Input
@@ -107,6 +118,12 @@ function updateData(partial) {
                     :options="parentOptions"
                     @update:model-value="(v) => updateData({ parent_agent_id: v || null })"
                 />
+            </div>
+            <div class="pt-2 border-t border-border">
+                <Button variant="destructive" size="sm" class="w-full" @click="handleDelete">
+                    <Trash2 class="mr-2 h-4 w-4" />
+                    Delete agent
+                </Button>
             </div>
         </CardContent>
     </Card>

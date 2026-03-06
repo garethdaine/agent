@@ -16,6 +16,7 @@ import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Briefcase, Plus, Play, Pencil, Trash2, RotateCcw, ToggleLeft, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import axios from 'axios';
 import { onMounted, reactive, ref } from 'vue';
+import { formatDateTime } from '@/Utils/formatDate';
 
 const loading = ref(false);
 const error = ref('');
@@ -48,6 +49,7 @@ const sourceOptions = [
     { value: '', label: 'All job sources' },
     { value: 'user', label: 'User jobs' },
     { value: 'build', label: 'Build jobs' },
+    { value: 'delegation', label: 'Delegation jobs' },
 ];
 
 const deletedOptions = [
@@ -195,6 +197,13 @@ onMounted(load);
                     >
                         Build Jobs
                     </Button>
+                    <Button
+                        :variant="filters.source === 'delegation' ? 'default' : 'outline'"
+                        size="sm"
+                        @click="setSource('delegation')"
+                    >
+                        Delegation Jobs
+                    </Button>
                 </div>
 
                 <p v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -228,6 +237,7 @@ onMounted(load);
                                     <div class="flex items-center gap-2">
                                         <span class="font-medium text-foreground">{{ job.name }}</span>
                                         <Badge v-if="job.is_build_job" variant="secondary">Build</Badge>
+                                        <Badge v-if="job.is_delegation_job" variant="outline">Delegation</Badge>
                                     </div>
                                     <div class="text-xs text-muted-foreground">{{ job.description }}</div>
                                 </TableCell>
@@ -240,10 +250,10 @@ onMounted(load);
                                 <TableCell class="text-xs text-muted-foreground">
                                     {{ job.cron_expression }}<br>{{ job.timezone }}
                                 </TableCell>
-                                <TableCell class="text-xs text-muted-foreground">{{ job.next_run_utc ?? '—' }}</TableCell>
+                                <TableCell class="text-xs text-muted-foreground">{{ formatDateTime(job.next_run_utc) }}</TableCell>
                                 <TableCell class="text-xs text-muted-foreground">
                                     {{ job.last_run_status ?? 'none' }}<br>
-                                    {{ job.last_run_finished_at ?? '—' }}
+                                    {{ formatDateTime(job.last_run_finished_at) }}
                                 </TableCell>
                                 <TableCell class="text-right">
                                     <div class="flex items-center justify-end gap-1">

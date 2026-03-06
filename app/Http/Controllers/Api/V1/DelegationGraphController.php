@@ -428,6 +428,7 @@ class DelegationGraphController extends Controller
         $mode = $validated['mode'] ?? 'all';
 
         // Build clone tasks based on mode
+        $graph->load('tasks.dependencies');
         $tasksToClone = $graph->tasks;
         if ($mode === 'failed_subtree') {
             // Only clone failed tasks and their dependents
@@ -473,7 +474,7 @@ class DelegationGraphController extends Controller
         );
 
         return response()->json([
-            'data' => $this->transformGraph($newGraph->fresh()->load('tasks'), true),
+            'data' => $this->transformGraph($newGraph->fresh()->load('tasks.dependencies'), true),
         ], 201);
     }
 

@@ -18,6 +18,7 @@ import { Plus, Search, Settings, ChevronLeft, ChevronRight } from 'lucide-vue-ne
 import axios from 'axios';
 import { onMounted, reactive, ref } from 'vue';
 import { confirmDialog } from '@/Support/confirmDialog';
+import { formatDateTime } from '@/Utils/formatDate';
 
 const sessions = ref([]);
 const loading = ref(false);
@@ -252,7 +253,7 @@ onMounted(load);
                                         :build-status="session?.build?.status || session?.metadata_json?.build?.status || ''"
                                     />
                                 </TableCell>
-                                <TableCell class="text-xs text-muted-foreground">{{ session.updated_at || '—' }}</TableCell>
+                                <TableCell class="text-xs text-muted-foreground">{{ formatDateTime(session.updated_at) }}</TableCell>
                                 <TableCell class="text-right">
                                     <div class="flex items-center justify-end gap-2">
                                         <Button

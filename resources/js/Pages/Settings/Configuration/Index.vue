@@ -8,8 +8,9 @@ import CardDescription from '@/Components/ui/CardDescription.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Button from '@/Components/ui/Button.vue';
+import Toggle from '@/Components/ui/Toggle.vue';
 import { Head } from '@inertiajs/vue3';
-import { Settings, Shield, Terminal, MessageSquare, Pencil, Eye, Save } from 'lucide-vue-next';
+import { Settings, Shield, Terminal, MessageSquare, Pencil, Eye, Save, Webhook, Bot } from 'lucide-vue-next';
 import axios from 'axios';
 import { ref, onMounted, reactive } from 'vue';
 
@@ -21,6 +22,14 @@ const config = ref(null);
 const schema = ref(null);
 const mode = ref('view');
 const formValues = reactive({});
+
+const sectionIcons = {
+    runtime: Terminal,
+    messenger: MessageSquare,
+    security: Shield,
+    agent: Bot,
+    webhooks: Webhook,
+};
 
 const load = async () => {
     loading.value = true;
@@ -60,6 +69,12 @@ const saveConfig = async () => {
     } finally {
         saving.value = false;
     }
+};
+
+const formatBadgeValue = (value) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'boolean') return value ? 'Enabled' : 'Disabled';
+    return value;
 };
 
 onMounted(load);
@@ -110,7 +125,7 @@ onMounted(load);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-4xl space-y-6">
+            <div class="space-y-6">
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {{ error }}
                 </div>
@@ -124,7 +139,10 @@ onMounted(load);
                 <template v-if="mode === 'edit' && schema">
                     <Card v-for="(section, sectionKey) in schema" :key="sectionKey">
                         <CardHeader>
-                            <CardTitle>{{ section.label }}</CardTitle>
+                            <CardTitle class="flex items-center gap-2">
+                                <component :is="sectionIcons[sectionKey] || Settings" class="h-4 w-4" />
+                                {{ section.label }}
+                            </CardTitle>
                         </CardHeader>
                         <CardContent class="space-y-4">
                             <div
@@ -134,60 +152,83 @@ onMounted(load);
                             >
                                 <label :for="field.key" class="text-sm font-medium">
                                     {{ field.label }}
+                                    <span v-if="field.readOnly" class="ml-1 text-[10px] font-normal text-muted-foreground">(read-only)</span>
                                 </label>
                                 <p v-if="field.description" class="text-xs text-muted-foreground">
                                     {{ field.description }}
                                 </p>
 
-                                <select
-                                    v-if="field.type === 'select'"
-                                    :id="field.key"
-                                    v-model="formValues[field.key]"
-                                    class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-                                >
-                                    <option v-for="opt in field.options" :key="opt" :value="opt">
-                                        {{ opt }}
-                                    </option>
-                                </select>
+                                <!-- Read-only: display as badges/text -->
+                                <template v-if="field.readOnly">
+                                    <div v-if="field.type === 'tags' && Array.isArray(formValues[field.key])" class="flex flex-wrap gap-1 pt-1">
+                                        <Badge
+                                            v-for="item in formValues[field.key]"
+                                            :key="item"
+                                            variant="outline"
+                                            class="font-mono text-[10px]"
+                                        >
+                                            {{ item }}
+                                        </Badge>
+                                        <span v-if="!formValues[field.key]?.length" class="text-xs text-muted-foreground">None</span>
+                                    </div>
+                                    <div v-else-if="field.type === 'boolean'" class="flex items-center gap-2 pt-1">
+                                        <Badge :variant="formValues[field.key] ? 'default' : 'secondary'">
+                                            {{ formValues[field.key] ? 'Available' : 'Not available' }}
+                                        </Badge>
+                                    </div>
+                                    <p v-else class="text-sm text-muted-foreground pt-1">
+                                        {{ formValues[field.key] ?? 'Not set' }}
+                                    </p>
+                                </template>
 
-                                <input
-                                    v-else-if="field.type === 'number'"
-                                    :id="field.key"
-                                    v-model.number="formValues[field.key]"
-                                    type="number"
-                                    :min="field.min"
-                                    :max="field.max"
-                                    class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-                                />
-
-                                <div v-else-if="field.type === 'boolean'" class="flex items-center gap-2">
-                                    <input
+                                <!-- Editable fields -->
+                                <template v-else>
+                                    <select
+                                        v-if="field.type === 'select'"
                                         :id="field.key"
                                         v-model="formValues[field.key]"
-                                        type="checkbox"
-                                        class="h-4 w-4 rounded border-input text-primary focus:ring-ring"
+                                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                    >
+                                        <option v-for="opt in field.options" :key="opt" :value="opt">
+                                            {{ opt }}
+                                        </option>
+                                    </select>
+
+                                    <input
+                                        v-else-if="field.type === 'number'"
+                                        :id="field.key"
+                                        v-model.number="formValues[field.key]"
+                                        type="number"
+                                        :min="field.min"
+                                        :max="field.max"
+                                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
                                     />
-                                    <label :for="field.key" class="text-sm">
-                                        {{ formValues[field.key] ? 'Enabled' : 'Disabled' }}
-                                    </label>
-                                </div>
 
-                                <input
-                                    v-else-if="field.type === 'url'"
-                                    :id="field.key"
-                                    v-model="formValues[field.key]"
-                                    type="url"
-                                    placeholder="https://..."
-                                    class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-                                />
+                                    <div v-else-if="field.type === 'boolean'" class="flex items-center gap-2 pt-1">
+                                        <Toggle
+                                            :id="field.key"
+                                            :model-value="!!formValues[field.key]"
+                                            @update:model-value="formValues[field.key] = $event"
+                                        />
+                                    </div>
 
-                                <input
-                                    v-else
-                                    :id="field.key"
-                                    v-model="formValues[field.key]"
-                                    type="text"
-                                    class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
-                                />
+                                    <input
+                                        v-else-if="field.type === 'url'"
+                                        :id="field.key"
+                                        v-model="formValues[field.key]"
+                                        type="url"
+                                        placeholder="https://..."
+                                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                    />
+
+                                    <input
+                                        v-else
+                                        :id="field.key"
+                                        v-model="formValues[field.key]"
+                                        type="text"
+                                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                    />
+                                </template>
                             </div>
                         </CardContent>
                     </Card>
@@ -227,7 +268,9 @@ onMounted(load);
                                 </div>
                                 <div>
                                     <dt class="text-xs font-medium text-muted-foreground">Session Timeout</dt>
-                                    <dd class="mt-0.5 text-sm">{{ config.runtime.session_timeout_minutes }} min</dd>
+                                    <dd class="mt-0.5 text-sm">
+                                        {{ config.runtime.session_timeout_minutes ? config.runtime.session_timeout_minutes + ' min' : 'No timeout' }}
+                                    </dd>
                                 </div>
                                 <div>
                                     <dt class="text-xs font-medium text-muted-foreground">Concurrent Session Limit</dt>
@@ -326,7 +369,7 @@ onMounted(load);
                     <Card>
                         <CardHeader>
                             <CardTitle class="flex items-center gap-2">
-                                <Terminal class="h-4 w-4" />
+                                <Bot class="h-4 w-4" />
                                 Agent
                             </CardTitle>
                             <CardDescription>Allowed directories, runners, forbidden env keys.</CardDescription>

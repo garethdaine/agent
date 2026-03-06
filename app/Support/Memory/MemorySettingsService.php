@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Support\Memory;
 
 use App\Models\MemorySetting;
+use App\Models\User;
+use App\Services\Credentials\CredentialsManager;
 
 /**
  * Memory Settings Service.
@@ -13,22 +15,23 @@ use App\Models\MemorySetting;
  * Follows the InterrogationSetting pattern for user-scoped encrypted settings.
  *
  * Features:
- * - Encrypted storage for API keys and sensitive values
+ * - Encrypted storage for non-credential settings (models, thresholds, etc.)
+ * - Provider key lookups delegated to CredentialsManager (credential_vault table)
  * - Masked output for API keys (show last 4 chars)
  * - Per-user settings isolation
- * - Provider key configuration management
  */
 class MemorySettingsService
 {
+    public function __construct(
+        private CredentialsManager $credentialsManager
+    ) {}
+
     /**
      * Setting keys that should be masked in output (API keys).
      *
      * @var array<string>
      */
-    private const SENSITIVE_KEYS = [
-        'provider_key_openai',
-        'provider_key_anthropic',
-    ];
+    private const SENSITIVE_KEYS = [];
 
     /**
      * Get a setting value for a user.
@@ -83,17 +86,39 @@ class MemorySettingsService
     }
 
     /**
-     * Check if a provider API key is configured.
+     * Check if a provider API key is configured via the credential manager.
      *
      * @param  int  $userId  User ID to check
      * @param  string  $provider  Provider name (openai, anthropic)
      */
     public function isProviderKeyConfigured(int $userId, string $provider): bool
     {
-        $key = "provider_key_{$provider}";
-        $value = $this->get($userId, $key);
+        $user = $this->resolveUser($userId);
+
+        if ($user === null) {
+            return false;
+        }
+
+        $value = $this->credentialsManager->get($user, $provider, 'api_key');
 
         return $value !== null && $value !== '';
+    }
+
+    /**
+     * Get the API key for a provider from the credential manager.
+     *
+     * @param  int  $userId  User ID
+     * @param  string  $provider  Provider name (openai, anthropic)
+     */
+    public function getProviderKey(int $userId, string $provider): ?string
+    {
+        $user = $this->resolveUser($userId);
+
+        if ($user === null) {
+            return null;
+        }
+
+        return $this->credentialsManager->get($user, $provider, 'api_key');
     }
 
     /**
@@ -193,6 +218,8 @@ class MemorySettingsService
     /**
      * Test connectivity to a provider.
      *
+     * Uses the credential manager to check for API keys.
+     *
      * @param  int  $userId  User ID to get API key from
      * @param  string  $provider  Provider name (openai, anthropic, neo4j)
      * @return array{success: bool, message: ?string, latency_ms: ?int}
@@ -208,7 +235,7 @@ class MemorySettingsService
         if (! $this->isProviderKeyConfigured($userId, $provider)) {
             return [
                 'success' => false,
-                'message' => "No API key configured for {$provider}",
+                'message' => "No API key configured for {$provider}. Add one in Credentials settings.",
                 'latency_ms' => null,
             ];
         }
@@ -222,6 +249,14 @@ class MemorySettingsService
             'message' => "API key configured for {$provider}",
             'latency_ms' => $latency,
         ];
+    }
+
+    /**
+     * Resolve a User model from an ID.
+     */
+    private function resolveUser(int $userId): ?User
+    {
+        return User::find($userId);
     }
 
     /**

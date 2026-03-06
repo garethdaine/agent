@@ -79,7 +79,7 @@ class CliRuntimeExecutor
                 $env['AGENT_BROWSER_HEADED'] = '1';
             }
 
-            Log::info('CliRuntimeExecutor: Starting CLI process', [
+            Log::channel('runtime')->info('CliRuntimeExecutor: Starting CLI process', [
                 'session_id' => $session->id,
                 'runner_type' => $runnerType,
                 'has_system_prompt' => $systemPrompt !== null && $systemPrompt !== '',
@@ -92,7 +92,7 @@ class CliRuntimeExecutor
             $process->setTimeout((int) config('runtime.cli.timeout_seconds', 300));
             $process->run();
 
-            Log::info('CliRuntimeExecutor: CLI process finished', [
+            Log::channel('runtime')->info('CliRuntimeExecutor: CLI process finished', [
                 'session_id' => $session->id,
                 'exit_code' => $process->getExitCode(),
                 'successful' => $process->isSuccessful(),
@@ -122,7 +122,7 @@ class CliRuntimeExecutor
 
             return ['status' => 'failed', 'error' => $error];
         } catch (\Throwable $e) {
-            Log::error('CliRuntimeExecutor: Process exception', [
+            Log::channel('runtime')->error('CliRuntimeExecutor: Process exception', [
                 'session_id' => $session->id,
                 'error' => $e->getMessage(),
             ]);

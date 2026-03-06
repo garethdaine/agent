@@ -106,11 +106,10 @@ onMounted(loadSummary);
                         </Card>
                     </div>
 
-                    <Card>
+                    <Card class="overflow-hidden">
                         <CardHeader>
                             <CardTitle>Per Agent</CardTitle>
                         </CardHeader>
-                        <CardContent class="p-0">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -132,14 +131,12 @@ onMounted(loadSummary);
                                     </TableRow>
                                 </TableBody>
                             </Table>
-                        </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card class="overflow-hidden">
                         <CardHeader>
                             <CardTitle>Per Ritual Run</CardTitle>
                         </CardHeader>
-                        <CardContent class="p-0">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -161,7 +158,6 @@ onMounted(loadSummary);
                                     </TableRow>
                                 </TableBody>
                             </Table>
-                        </CardContent>
                     </Card>
                 </template>
 

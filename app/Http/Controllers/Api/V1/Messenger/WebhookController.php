@@ -40,7 +40,7 @@ class WebhookController extends Controller
         /** @var ConnectorAccount $account */
         $account = $request->attributes->get('connector_account');
 
-        Log::info('Slack webhook received', [
+        Log::channel('messenger')->info('Slack webhook received', [
             'account_id' => $account->id,
             'event_type' => $request->input('event.type'),
             'event_id' => $request->input('event_id'),
@@ -48,7 +48,7 @@ class WebhookController extends Controller
 
         // Skip bot messages to prevent loops
         if ($this->isBotMessage($request, 'slack')) {
-            Log::debug('Slack webhook: Skipping bot message');
+            Log::channel('messenger')->debug('Slack webhook: Skipping bot message');
 
             return response()->json(['ok' => true]);
         }
@@ -68,7 +68,7 @@ class WebhookController extends Controller
         /** @var ConnectorAccount $account */
         $account = $request->attributes->get('connector_account');
 
-        Log::info('Telegram webhook received', [
+        Log::channel('messenger')->info('Telegram webhook received', [
             'account_id' => $account->id,
             'update_id' => $request->input('update_id'),
         ]);
@@ -81,14 +81,14 @@ class WebhookController extends Controller
             || $request->has('callback_query');
 
         if (! $hasMessageContent) {
-            Log::debug('Telegram webhook: Skipping unsupported update type');
+            Log::channel('messenger')->debug('Telegram webhook: Skipping unsupported update type');
 
             return response()->json(['ok' => true]);
         }
 
         // Skip bot messages to prevent loops
         if ($this->isBotMessage($request, 'telegram')) {
-            Log::debug('Telegram webhook: Skipping bot message');
+            Log::channel('messenger')->debug('Telegram webhook: Skipping bot message');
 
             return response()->json(['ok' => true]);
         }
@@ -109,7 +109,7 @@ class WebhookController extends Controller
         $account = $request->attributes->get('connector_account');
         $type = (int) $request->input('type');
 
-        Log::info('Discord webhook received', [
+        Log::channel('messenger')->info('Discord webhook received', [
             'account_id' => $account->id,
             'type' => $type,
             'interaction_id' => $request->input('id'),
@@ -131,7 +131,7 @@ class WebhookController extends Controller
         }
 
         if ($this->isBotMessage($request, ConnectorAccount::PROVIDER_DISCORD)) {
-            Log::debug('Discord webhook: Skipping bot interaction');
+            Log::channel('messenger')->debug('Discord webhook: Skipping bot interaction');
 
             return response()->json([
                 'type' => self::DISCORD_RESPONSE_DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
@@ -166,7 +166,7 @@ class WebhookController extends Controller
         $account = $request->attributes->get('connector_account');
         $dispatched = 0;
 
-        Log::info('WhatsApp webhook received', [
+        Log::channel('messenger')->info('WhatsApp webhook received', [
             'account_id' => $account->id,
             'object' => $request->input('object'),
         ]);
@@ -217,7 +217,7 @@ class WebhookController extends Controller
             }
         }
 
-        Log::info('WhatsApp webhook processed', [
+        Log::channel('messenger')->info('WhatsApp webhook processed', [
             'account_id' => $account->id,
             'dispatched_messages' => $dispatched,
         ]);
@@ -240,7 +240,7 @@ class WebhookController extends Controller
         $challenge = $request->query('hub_challenge');
 
         if ($mode !== 'subscribe') {
-            Log::warning('WhatsApp verification failed: invalid mode', [
+            Log::channel('messenger')->warning('WhatsApp verification failed: invalid mode', [
                 'mode' => $mode,
             ]);
 
@@ -260,7 +260,7 @@ class WebhookController extends Controller
             });
 
         if ($validAccount !== null) {
-            Log::info('WhatsApp verification successful', [
+            Log::channel('messenger')->info('WhatsApp verification successful', [
                 'account_id' => $validAccount->id,
             ]);
 
@@ -268,7 +268,7 @@ class WebhookController extends Controller
                 ->header('Content-Type', 'text/plain');
         }
 
-        Log::warning('WhatsApp verification failed: invalid verify token');
+        Log::channel('messenger')->warning('WhatsApp verification failed: invalid verify token');
 
         return response('Invalid verify token', 403);
     }

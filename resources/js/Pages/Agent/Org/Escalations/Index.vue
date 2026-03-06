@@ -83,8 +83,7 @@ onMounted(loadEscalations);
                     {{ error }}
                 </p>
 
-                <Card>
-                    <CardContent class="p-0">
+                <Card class="overflow-hidden">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -148,7 +147,6 @@ onMounted(loadEscalations);
                                 </TableRow>
                             </TableBody>
                         </Table>
-                    </CardContent>
                 </Card>
             </div>
         </div>

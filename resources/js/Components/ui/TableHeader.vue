@@ -1,5 +1,5 @@
 <template>
-  <thead class="[&_tr]:border-b">
+  <thead class="bg-muted/40">
     <slot />
   </thead>
 </template>

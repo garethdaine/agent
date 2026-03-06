@@ -100,7 +100,7 @@ onMounted(load);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-6xl space-y-4">
+            <div class="space-y-4">
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {{ error }}
                 </div>
@@ -125,36 +125,35 @@ onMounted(load);
                             </Button>
                         </div>
 
-                        <div v-if="entries.length" class="overflow-x-auto rounded-md border">
-                            <table class="w-full text-sm">
-                                <thead class="border-b bg-muted/50">
+                        <div v-if="entries.length" class="overflow-hidden rounded-lg border border-border bg-card">
+                            <table class="min-w-full divide-y divide-border text-sm">
+                                <thead class="bg-muted/40">
                                     <tr>
-                                        <th class="px-3 py-2 text-left font-medium">Time</th>
-                                        <th class="px-3 py-2 text-left font-medium">Action</th>
-                                        <th class="px-3 py-2 text-left font-medium">Actor</th>
-                                        <th class="px-3 py-2 text-left font-medium">Target</th>
-                                        <th class="px-3 py-2 text-left font-medium">Outcome</th>
+                                        <th class="px-4 py-3 text-left font-medium">Time</th>
+                                        <th class="px-4 py-3 text-left font-medium">Action</th>
+                                        <th class="px-4 py-3 text-left font-medium">Actor</th>
+                                        <th class="px-4 py-3 text-left font-medium">Target</th>
+                                        <th class="px-4 py-3 text-left font-medium">Outcome</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody class="divide-y divide-border">
                                     <tr
                                         v-for="e in entries"
                                         :key="e.id"
-                                        class="border-b last:border-0"
                                     >
-                                        <td class="px-3 py-2 text-muted-foreground whitespace-nowrap text-xs">
+                                        <td class="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">
                                             {{ fmtDate(e.created_at) }}
                                         </td>
-                                        <td class="px-3 py-2 font-mono text-xs">
+                                        <td class="px-4 py-3 font-mono text-xs">
                                             {{ e.action }}
                                         </td>
-                                        <td class="px-3 py-2 text-muted-foreground text-xs">
+                                        <td class="px-4 py-3 text-muted-foreground text-xs">
                                             {{ e.actor_type }}{{ e.actor_id ? ` #${e.actor_id}` : '' }}
                                         </td>
-                                        <td class="px-3 py-2 text-muted-foreground text-xs">
+                                        <td class="px-4 py-3 text-muted-foreground text-xs">
                                             {{ e.target_type }} #{{ e.target_id }}
                                         </td>
-                                        <td class="px-3 py-2">
+                                        <td class="px-4 py-3">
                                             <Badge :variant="outcomeVariant(e.outcome)" class="text-xs">
                                                 {{ e.outcome }}
                                             </Badge>

@@ -53,7 +53,7 @@ defineProps({
                 </div>
                 <div class="flex gap-2">
                     <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.deployments">Deployments</Link>
-                    <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.systemOverview">System Overview</Link>
+                    <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.dashboard">Dashboard</Link>
                 </div>
             </div>
         </template>

@@ -51,7 +51,7 @@ class SendAccountLinkPrompt implements ShouldQueue
         $account = ConnectorAccount::find($this->connectorAccountId);
 
         if (! $account) {
-            Log::warning('SendAccountLinkPrompt: Account not found', [
+            Log::channel('messenger')->warning('SendAccountLinkPrompt: Account not found', [
                 'account_id' => $this->connectorAccountId,
             ]);
 
@@ -59,7 +59,7 @@ class SendAccountLinkPrompt implements ShouldQueue
         }
 
         if (! $account->isConnected()) {
-            Log::warning('SendAccountLinkPrompt: Account not connected', [
+            Log::channel('messenger')->warning('SendAccountLinkPrompt: Account not connected', [
                 'account_id' => $account->id,
                 'status' => $account->status,
             ]);
@@ -97,7 +97,7 @@ class SendAccountLinkPrompt implements ShouldQueue
             );
 
             if (! $response->success) {
-                Log::error('SendAccountLinkPrompt: Failed to send prompt', [
+                Log::channel('messenger')->error('SendAccountLinkPrompt: Failed to send prompt', [
                     'account_id' => $account->id,
                     'provider_user_id' => $this->providerUserId,
                     'channel_id' => $this->channelId,
@@ -107,14 +107,14 @@ class SendAccountLinkPrompt implements ShouldQueue
                 throw new \RuntimeException($response->error ?? 'Failed to send account link prompt');
             }
 
-            Log::info('SendAccountLinkPrompt: Prompt sent successfully', [
+            Log::channel('messenger')->info('SendAccountLinkPrompt: Prompt sent successfully', [
                 'account_id' => $account->id,
                 'provider_user_id' => $this->providerUserId,
                 'channel_id' => $this->channelId,
                 'is_reauth' => $this->isReauth,
             ]);
         } catch (\Throwable $e) {
-            Log::error('SendAccountLinkPrompt: Exception while sending prompt', [
+            Log::channel('messenger')->error('SendAccountLinkPrompt: Exception while sending prompt', [
                 'account_id' => $account->id,
                 'provider_user_id' => $this->providerUserId,
                 'error' => $e->getMessage(),

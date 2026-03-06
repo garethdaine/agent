@@ -4,7 +4,6 @@ import Card from '@/Components/ui/Card.vue';
 import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
-import CardContent from '@/Components/ui/CardContent.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Table from '@/Components/ui/Table.vue';
@@ -19,6 +18,7 @@ import axios from 'axios';
 import { computed, ref } from 'vue';
 import { confirmDialog } from '@/Support/confirmDialog';
 import HelpHint from '@/Components/HelpHint.vue';
+import { formatDateTime } from '@/Utils/formatDate';
 
 const props = defineProps({
     deadLetters: Object,
@@ -149,10 +149,7 @@ const deleteSingle = async (id) => {
     });
 };
 
-const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString();
-};
+const formatDate = (d) => formatDateTime(d);
 
 const truncate = (str, maxLength = 50) => {
     if (!str) return '-';
@@ -256,8 +253,7 @@ const refresh = () => {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <Table>
+                    <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead class="w-12">
@@ -345,26 +341,25 @@ const refresh = () => {
                                     </TableCell>
                                 </TableRow>
                             </TableBody>
-                        </Table>
+                    </Table>
 
-                        <!-- Pagination -->
-                        <div v-if="deadLetters.links?.length > 3" class="mt-4 flex flex-wrap items-center justify-center gap-1">
-                            <template v-for="(link, index) in deadLetters.links" :key="index">
-                                <Link
-                                    v-if="link.url"
-                                    :href="link.url"
-                                    class="px-3 py-1 text-sm rounded-md border"
-                                    :class="link.active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-input hover:bg-muted'"
-                                    v-html="link.label"
-                                />
-                                <span
-                                    v-else
-                                    class="px-3 py-1 text-sm text-muted-foreground"
-                                    v-html="link.label"
-                                />
-                            </template>
-                        </div>
-                    </CardContent>
+                    <!-- Pagination -->
+                    <div v-if="deadLetters.links?.length > 3" class="flex flex-wrap items-center justify-center gap-1 p-6 pt-4">
+                        <template v-for="(link, index) in deadLetters.links" :key="index">
+                            <Link
+                                v-if="link.url"
+                                :href="link.url"
+                                class="px-3 py-1 text-sm rounded-md border"
+                                :class="link.active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-input hover:bg-muted'"
+                                v-html="link.label"
+                            />
+                            <span
+                                v-else
+                                class="px-3 py-1 text-sm text-muted-foreground"
+                                v-html="link.label"
+                            />
+                        </template>
+                    </div>
                 </Card>
             </div>
         </div>

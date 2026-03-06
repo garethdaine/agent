@@ -12,6 +12,7 @@ import { Head } from '@inertiajs/vue3';
 import { UserCheck, Check, X } from 'lucide-vue-next';
 import axios from 'axios';
 import { ref, onMounted } from 'vue';
+import { formatDateTime } from '@/Utils/formatDate';
 
 const loading = ref(false);
 const error = ref('');
@@ -59,10 +60,7 @@ const badgeVariant = (status) => {
     return 'secondary';
 };
 
-const fmtDate = (iso) => {
-    if (!iso) return '—';
-    return new Date(iso).toLocaleString();
-};
+const fmtDate = (d) => formatDateTime(d);
 
 onMounted(load);
 </script>
@@ -90,8 +88,8 @@ onMounted(load);
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-5xl space-y-4">
-                <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <div class="space-y-4">
+                <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                     {{ error }}
                 </div>
 
@@ -122,38 +120,37 @@ onMounted(load);
                             </Button>
                         </div>
 
-                        <div v-if="pairings.length" class="overflow-x-auto rounded-md border">
-                            <table class="w-full text-sm">
-                                <thead class="border-b bg-muted/50">
+                        <div v-if="pairings.length" class="overflow-hidden rounded-lg border border-border bg-card">
+                            <table class="min-w-full divide-y divide-border text-sm">
+                                <thead class="bg-muted/40">
                                     <tr>
-                                        <th class="px-3 py-2 text-left font-medium">User</th>
-                                        <th class="px-3 py-2 text-left font-medium">Connector</th>
-                                        <th class="px-3 py-2 text-left font-medium">Status</th>
-                                        <th class="px-3 py-2 text-left font-medium">Created</th>
-                                        <th class="px-3 py-2 text-left font-medium">Actions</th>
+                                        <th class="px-4 py-3 text-left font-medium">User</th>
+                                        <th class="px-4 py-3 text-left font-medium">Connector</th>
+                                        <th class="px-4 py-3 text-left font-medium">Status</th>
+                                        <th class="px-4 py-3 text-left font-medium">Created</th>
+                                        <th class="px-4 py-3 text-left font-medium">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody class="divide-y divide-border">
                                     <tr
                                         v-for="p in pairings"
                                         :key="p.id"
-                                        class="border-b last:border-0"
                                     >
-                                        <td class="px-3 py-2 text-xs">
+                                        <td class="px-4 py-3 text-xs">
                                             {{ p.provider_username || p.provider_user_id }}
                                         </td>
-                                        <td class="px-3 py-2 text-xs text-muted-foreground">
+                                        <td class="px-4 py-3 text-xs text-muted-foreground">
                                             {{ p.connector_name }} ({{ p.connector_provider }})
                                         </td>
-                                        <td class="px-3 py-2">
+                                        <td class="px-4 py-3">
                                             <Badge :variant="badgeVariant(p.status)" class="text-xs">
                                                 {{ p.status }}
                                             </Badge>
                                         </td>
-                                        <td class="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
+                                        <td class="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                                             {{ fmtDate(p.created_at) }}
                                         </td>
-                                        <td class="px-3 py-2">
+                                        <td class="px-4 py-3">
                                             <div class="flex gap-1">
                                                 <Button
                                                     v-if="p.status === 'pending'"

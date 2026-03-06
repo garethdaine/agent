@@ -20,6 +20,43 @@ final class ProjectionBuildManager
         private readonly AuditLogger $auditLogger,
     ) {}
 
+    /**
+     * Auto-maintain projections: activate parity-passed builds and start rebuilds when stale.
+     */
+    public function autoMaintain(
+        ActiveBuildFreshnessService $freshnessService,
+        ActiveProjectionBuildStateService $buildStateService,
+    ): void {
+        // 1. Auto-activate any build that has reached parity_passed status.
+        $parityPassedBuild = DB::table($this->buildsTable())
+            ->where('status', 'parity_passed')
+            ->orderBy('created_at')
+            ->first(['id']);
+
+        if ($parityPassedBuild !== null) {
+            $result = $this->activateBuild((string) $parityPassedBuild->id);
+            Log::info('telemetry.projection_auto_maintain.activate', [
+                'build_id' => (string) $parityPassedBuild->id,
+                'activated' => $result->isActivated(),
+            ]);
+
+            return;
+        }
+
+        // 2. If active build is stale and no rebuild in progress, start one.
+        $snapshot = $freshnessService->snapshot();
+        $isStale = $snapshot['active_build_is_stale'] ?? false;
+        $rebuildingBuildId = $buildStateService->rebuildingBuildId();
+
+        if ($isStale && $rebuildingBuildId === null) {
+            $result = $this->startRebuild();
+            Log::info('telemetry.projection_auto_maintain.rebuild', [
+                'outcome' => $result->isConflict() ? 'conflict' : 'started',
+                'build_id' => $result->buildId(),
+            ]);
+        }
+    }
+
     public function startRebuild(): ProjectionRebuildStartResult
     {
         try {

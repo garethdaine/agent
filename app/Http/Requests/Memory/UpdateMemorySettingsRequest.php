@@ -25,8 +25,6 @@ class UpdateMemorySettingsRequest extends FormRequest
         'summarization_model',
         'embeddings_provider',
         'embeddings_model',
-        'provider_key_openai',
-        'provider_key_anthropic',
         'embedding_dimensions',
         'context_budget_percent',
         'context_floor_tokens',

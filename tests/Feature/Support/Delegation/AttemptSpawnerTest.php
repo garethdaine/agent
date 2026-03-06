@@ -127,7 +127,7 @@ class AttemptSpawnerTest extends TestCase
         $agentJob = $run->job;
         $this->assertNotNull($agentJob);
         $this->assertEquals($this->user->id, $agentJob->user_id);
-        $this->assertEquals("Delegation: {$this->task->name} #1", $agentJob->name);
+        $this->assertEquals("Delegation: {$this->task->name} [g{$this->task->graph->id}] #1", $agentJob->name);
         $this->assertEquals($this->profile->runner_type, $agentJob->runner_type);
         $this->assertEquals($this->profile->command_template, $agentJob->command_template);
         $this->assertEquals($this->profile->working_directory, $agentJob->working_directory);
@@ -235,5 +235,58 @@ class AttemptSpawnerTest extends TestCase
         $this->task->refresh();
 
         $this->assertArrayNotHasKey('scope_warnings', $this->task->metadata_json ?? []);
+    }
+
+    public function test_soul_injection_appears_in_task_markdown(): void
+    {
+        Bus::fake();
+
+        $this->profile->update([
+            'soul_json' => [
+                'personality' => 'You are a meticulous code reviewer.',
+                'system_prompt' => 'Always check for edge cases.',
+                'user_context' => 'Working on a Laravel project.',
+            ],
+        ]);
+
+        // Remove task_markdown_path from contract so markdown is generated
+        $this->task->update([
+            'contract_json' => array_merge($this->task->contract_json, [
+                'phase_config' => ['instructions' => 'Implement feature X'],
+            ]),
+        ]);
+
+        $spawner = new AttemptSpawner($this->enforcer);
+        $attempt = $spawner->spawn($this->task, $this->profile);
+
+        $run = AgentJobRun::find($attempt->agent_job_run_id);
+        $taskMarkdownPath = $run->job->task_markdown_path;
+
+        $this->assertFileExists($taskMarkdownPath);
+        $content = file_get_contents($taskMarkdownPath);
+
+        $this->assertStringContainsString('## Agent Identity', $content);
+        $this->assertStringContainsString('You are a meticulous code reviewer.', $content);
+        $this->assertStringContainsString('Always check for edge cases.', $content);
+        $this->assertStringContainsString('Working on a Laravel project.', $content);
+    }
+
+    public function test_soul_section_is_skipped_when_no_soul_configured(): void
+    {
+        Bus::fake();
+
+        // Profile has no soul_json set
+        $this->assertNull($this->profile->soul_json);
+
+        $spawner = new AttemptSpawner($this->enforcer);
+        $attempt = $spawner->spawn($this->task, $this->profile);
+
+        $run = AgentJobRun::find($attempt->agent_job_run_id);
+        $taskMarkdownPath = $run->job->task_markdown_path;
+
+        $this->assertFileExists($taskMarkdownPath);
+        $content = file_get_contents($taskMarkdownPath);
+
+        $this->assertStringNotContainsString('## Agent Identity', $content);
     }
 }

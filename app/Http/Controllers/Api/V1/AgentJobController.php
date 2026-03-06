@@ -62,9 +62,12 @@ class AgentJobController extends Controller
                 $builder->where('name', 'like', 'Interrogation Build S%')
                     ->orWhere('env_json->AGENT_JOB_SOURCE', 'interrogation_build');
             });
+        } elseif ($source === 'delegation') {
+            $query->where('name', 'like', 'Delegation: %');
         } elseif ($source === 'user') {
             $query->where(function ($builder): void {
                 $builder->where('name', 'not like', 'Interrogation Build S%')
+                    ->where('name', 'not like', 'Delegation: %')
                     ->where(function ($inner): void {
                         $inner->whereNull('env_json->AGENT_JOB_SOURCE')
                             ->orWhere('env_json->AGENT_JOB_SOURCE', '!=', 'interrogation_build');
@@ -601,7 +604,7 @@ class AgentJobController extends Controller
         }
 
         $activeHold = $this->usageLimitState->getActiveHold((int) $job->id);
-        $jobScope = $this->isBuildJob($job) ? 'build' : 'user';
+        $jobScope = $this->isBuildJob($job) ? 'build' : ($this->isDelegationJob($job) ? 'delegation' : 'user');
 
         $payload = [
             'id' => $job->id,
@@ -633,6 +636,7 @@ class AgentJobController extends Controller
             'rate_limit_hold_active' => $activeHold !== null,
             'job_scope' => $jobScope,
             'is_build_job' => $jobScope === 'build',
+            'is_delegation_job' => $jobScope === 'delegation',
         ];
 
         if ($includeTaskContent) {
@@ -640,6 +644,13 @@ class AgentJobController extends Controller
         }
 
         return $payload;
+    }
+
+    private function isDelegationJob(AgentJob $job): bool
+    {
+        $name = trim((string) $job->name);
+
+        return str_starts_with($name, 'Delegation: ');
     }
 
     private function isBuildJob(AgentJob $job): bool

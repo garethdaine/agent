@@ -6,13 +6,11 @@ namespace App\Http\Controllers\Agent;
 
 use App\Http\Controllers\Controller;
 use App\Models\AgentJob;
-use App\Models\SchedulerHeartbeat;
 use App\Repositories\Projection\WorkflowReliabilityCurrentRepository;
 use App\Services\Reliability\WorkflowGovernanceSnapshotService;
 use App\Services\Telemetry\ActiveBuildFreshnessService;
 use App\Services\Telemetry\ActiveProjectionBuildStateService;
 use App\Support\Telemetry\ProjectionTable;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -125,7 +123,7 @@ class OperatorPageController extends Controller
             'activeProjectionBuildId' => $activeBuildId,
             'freshness' => $freshness,
             'navigation' => [
-                'systemOverview' => '/agent/system-overview',
+                'dashboard' => '/dashboard',
                 'escalations' => '/agent/escalations',
                 'budgets' => '/agent/budgets',
                 'replayBuilds' => '/agent/replay-builds',
@@ -188,7 +186,7 @@ class OperatorPageController extends Controller
             ],
             'navigation' => [
                 'deployments' => '/agent/deployments',
-                'systemOverview' => '/agent/system-overview',
+                'dashboard' => '/dashboard',
                 'escalations' => '/agent/escalations',
                 'budgets' => '/agent/budgets',
                 'replayBuilds' => '/agent/replay-builds',
@@ -197,37 +195,6 @@ class OperatorPageController extends Controller
                 'canPauseResume' => $canPauseResume,
                 'canManageEscalations' => $this->canManageEscalations($request),
                 'canManageReplay' => $this->canManageReplay($request),
-            ],
-        ]);
-    }
-
-    public function systemOverview(
-        ActiveProjectionBuildStateService $buildStateService,
-        ActiveBuildFreshnessService $freshnessService,
-    ): Response {
-        $activeBuildId = $buildStateService->activeProjectionBuildId();
-        $freshness = $freshnessService->snapshot();
-        $rebuildingBuildId = $buildStateService->rebuildingBuildId();
-
-        $heartbeat = SchedulerHeartbeat::query()->where('source', 'scheduler_dispatch')->first();
-        $scheduler = $this->schedulerSnapshot($heartbeat);
-
-        $signals = $this->loadDelayedAndUnobservableSignals($activeBuildId);
-
-        return Inertia::render('Agent/SystemOverview/Show', [
-            'activeProjectionBuildId' => $activeBuildId,
-            'rebuildingBuildId' => $rebuildingBuildId,
-            'freshness' => $freshness,
-            'scheduler' => $scheduler,
-            'signals' => $signals,
-            'reasonState' => $activeBuildId === null
-                ? 'missing_active_projection_build'
-                : 'active_projection_build_ready',
-            'navigation' => [
-                'deployments' => '/agent/deployments',
-                'escalations' => '/agent/escalations',
-                'replayBuilds' => '/agent/replay-builds',
-                'budgets' => '/agent/budgets',
             ],
         ]);
     }
@@ -284,7 +251,7 @@ class OperatorPageController extends Controller
             ],
             'navigation' => [
                 'deployments' => '/agent/deployments',
-                'systemOverview' => '/agent/system-overview',
+                'dashboard' => '/dashboard',
             ],
         ]);
     }
@@ -405,7 +372,7 @@ class OperatorPageController extends Controller
             'rows' => $rows,
             'navigation' => [
                 'deployments' => '/agent/deployments',
-                'systemOverview' => '/agent/system-overview',
+                'dashboard' => '/dashboard',
             ],
         ]);
     }
@@ -458,7 +425,7 @@ class OperatorPageController extends Controller
             ],
             'navigation' => [
                 'deployments' => '/agent/deployments',
-                'systemOverview' => '/agent/system-overview',
+                'dashboard' => '/dashboard',
             ],
         ]);
     }
@@ -505,76 +472,9 @@ class OperatorPageController extends Controller
             ],
             'navigation' => [
                 'replayBuilds' => '/agent/replay-builds',
-                'systemOverview' => '/agent/system-overview',
+                'dashboard' => '/dashboard',
             ],
         ]);
-    }
-
-    /**
-     * @return array{status:string,last_seen_at:?string,age_seconds:?int,meta:?array<string,mixed>}
-     */
-    private function schedulerSnapshot(?SchedulerHeartbeat $heartbeat): array
-    {
-        if ($heartbeat === null) {
-            return [
-                'status' => 'unknown',
-                'last_seen_at' => null,
-                'age_seconds' => null,
-                'meta' => null,
-            ];
-        }
-
-        $lastSeen = CarbonImmutable::parse($heartbeat->last_seen_at, 'UTC')->utc();
-        $ageSeconds = $lastSeen->diffInSeconds(CarbonImmutable::now('UTC'));
-
-        $status = 'healthy';
-        if ($ageSeconds > 300) {
-            $status = 'down';
-        } elseif ($ageSeconds > 90) {
-            $status = 'degraded';
-        }
-
-        return [
-            'status' => $status,
-            'last_seen_at' => $lastSeen->toIso8601String(),
-            'age_seconds' => $ageSeconds,
-            'meta' => is_array($heartbeat->meta_json) ? $heartbeat->meta_json : null,
-        ];
-    }
-
-    /**
-     * @return array{delayed:array<int,array<string,mixed>>,unobservable:array<int,array<string,mixed>>}
-     */
-    private function loadDelayedAndUnobservableSignals(?string $activeBuildId): array
-    {
-        $rows = $this->incidentQuery($activeBuildId)
-            ->whereIn('reason_code', ['telemetry_delayed', 'telemetry_unobservable'])
-            ->orderByDesc('last_triggered_at')
-            ->limit(100)
-            ->get([
-                'id',
-                'workflow_key',
-                'trigger_type',
-                'status',
-                'reason_code',
-                'reason',
-                'last_triggered_at',
-            ]);
-
-        $signals = $rows->map(static fn (object $row): array => [
-            'id' => (int) $row->id,
-            'workflow_key' => (string) $row->workflow_key,
-            'trigger_type' => (string) $row->trigger_type,
-            'status' => (string) $row->status,
-            'reason_code' => isset($row->reason_code) ? (string) $row->reason_code : null,
-            'reason' => isset($row->reason) ? (string) $row->reason : null,
-            'last_triggered_at' => isset($row->last_triggered_at) ? (string) $row->last_triggered_at : null,
-        ]);
-
-        return [
-            'delayed' => $signals->where('reason_code', 'telemetry_delayed')->values()->all(),
-            'unobservable' => $signals->where('reason_code', 'telemetry_unobservable')->values()->all(),
-        ];
     }
 
     private function incidentQuery(?string $activeBuildId)

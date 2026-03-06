@@ -53,8 +53,10 @@ class MemoryServiceProvider extends ServiceProvider
 
         // MemorySettingsService is always available — users need to configure
         // provider keys and view capabilities even before enabling memory.
-        $this->app->singleton(MemorySettingsService::class, function () {
-            return new MemorySettingsService;
+        $this->app->singleton(MemorySettingsService::class, function ($app) {
+            return new MemorySettingsService(
+                $app->make(\App\Services\Credentials\CredentialsManager::class)
+            );
         });
 
         // WorkingMemoryBuffer: Redis-backed sorted set for short-term conversational state.

@@ -4,7 +4,6 @@ import Card from '@/Components/ui/Card.vue';
 import CardHeader from '@/Components/ui/CardHeader.vue';
 import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
-import CardContent from '@/Components/ui/CardContent.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Table from '@/Components/ui/Table.vue';
 import TableHeader from '@/Components/ui/TableHeader.vue';
@@ -16,15 +15,13 @@ import Button from '@/Components/ui/Button.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { RefreshCw, Play, Eye } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
+import { formatDateTime } from '@/Utils/formatDate';
 
 const props = defineProps({
     sessions: Object,
 });
 
-const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString();
-};
+const formatDate = (d) => formatDateTime(d);
 
 const getStatusBadgeVariant = (status) => {
     const variants = {
@@ -78,16 +75,15 @@ const refresh = () => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-7xl space-y-4">
-                <Card>
+            <div class="space-y-4">
+                <Card class="overflow-hidden">
                     <CardHeader>
                         <CardTitle>Sessions</CardTitle>
                         <CardDescription>
                             {{ sessions.total || 0 }} session(s)
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <Table>
+                    <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Title</TableHead>
@@ -139,10 +135,10 @@ const refresh = () => {
                                     </TableCell>
                                 </TableRow>
                             </TableBody>
-                        </Table>
+                    </Table>
 
-                        <!-- Pagination -->
-                        <div v-if="sessions.links?.length > 3" class="mt-4 flex flex-wrap items-center justify-center gap-1">
+                    <!-- Pagination -->
+                    <div v-if="sessions.links?.length > 3" class="border-t px-6 py-4 flex flex-wrap items-center justify-center gap-1">
                             <template v-for="(link, index) in sessions.links" :key="index">
                                 <Link
                                     v-if="link.url"
@@ -157,8 +153,7 @@ const refresh = () => {
                                     v-html="link.label"
                                 />
                             </template>
-                        </div>
-                    </CardContent>
+                    </div>
                 </Card>
             </div>
         </div>

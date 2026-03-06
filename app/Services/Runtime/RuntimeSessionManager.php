@@ -155,7 +155,7 @@ class RuntimeSessionManager
                 'turns_count' => count($turnSummaries),
             ]);
         } catch (\Throwable $e) {
-            Log::warning('Failed to write runtime session memory context', [
+            Log::channel('runtime')->warning('Failed to write runtime session memory context', [
                 'session_id' => $session->id,
                 'error' => $e->getMessage(),
             ]);

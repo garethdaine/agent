@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
+import { formatDateTime } from '@/Utils/formatDate';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import HelpHint from '@/Components/HelpHint.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -69,13 +70,13 @@ const canDelete = (graph) => ['succeeded', 'failed', 'partial', 'cancelled'].inc
 const isDeleted = (graph) => !!graph.deleted_at;
 
 const editGraph = (graph) => {
-    router.visit(route('agent.delegation.graphs.builder.edit', { graphId: graph.id }));
+    router.visit(route('agent.delegation.graphs.builder.edit', { id: graph.id }));
 };
 
 const cloneGraph = async (graph) => {
     try {
         const { data } = await axios.post(`/agent/api/v1/delegation/graphs/${graph.id}/clone`);
-        router.visit(route('agent.delegation.show', data.data.id));
+        router.visit(route('agent.delegation.graphs.builder.edit', { id: data.data.id }));
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to clone graph.';
     }
@@ -193,8 +194,7 @@ onMounted(load);
                     {{ error }}
                 </p>
 
-                <Card>
-                    <CardContent class="p-0">
+                <Card class="overflow-hidden">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -236,7 +236,7 @@ onMounted(load);
                                     <TableCell class="text-muted-foreground">
                                         {{ graph.task_counts?.completed ?? 0 }}/{{ graph.task_counts?.total ?? 0 }}
                                     </TableCell>
-                                    <TableCell class="text-muted-foreground text-xs">{{ graph.created_at }}</TableCell>
+                                    <TableCell class="text-muted-foreground text-xs">{{ formatDateTime(graph.created_at) }}</TableCell>
                                     <TableCell class="text-right" @click.stop>
                                         <div class="flex items-center justify-end gap-1">
                                             <Button
@@ -306,7 +306,6 @@ onMounted(load);
                                 </TableRow>
                             </TableBody>
                         </Table>
-                    </CardContent>
                 </Card>
 
                 <div class="flex items-center justify-between text-sm text-muted-foreground">

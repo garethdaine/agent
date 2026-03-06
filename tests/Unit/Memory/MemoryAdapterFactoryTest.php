@@ -68,12 +68,16 @@ class MemoryAdapterFactoryTest extends TestCase
             ->with($userId)
             ->andReturn(['openai']);
 
+        $this->settingsService
+            ->shouldReceive('getProviderKey')
+            ->with($userId, 'openai')
+            ->andReturn('sk-test-key');
+
         // Mock all possible get() calls with flexible matching
         $this->settingsService
             ->shouldReceive('get')
             ->andReturnUsing(function ($uid, $key, $default = null) {
                 return match ($key) {
-                    'provider_key_openai' => 'sk-test-key',
                     'extraction_model' => 'gpt-4o-mini',
                     'summarization_model' => 'gpt-4.1-nano',
                     'embeddings_model' => 'text-embedding-3-small',
@@ -135,11 +139,15 @@ class MemoryAdapterFactoryTest extends TestCase
             ->andReturn(['openai']);
 
         $this->settingsService
+            ->shouldReceive('getProviderKey')
+            ->with($userId, 'openai')
+            ->andReturn('sk-test-key');
+
+        $this->settingsService
             ->shouldReceive('get')
             ->andReturnUsing(function ($uid, $key, $default = null) {
                 return match ($key) {
                     'extraction_provider' => 'openai',
-                    'provider_key_openai' => 'sk-test-key',
                     'extraction_model' => 'gpt-4o-mini',
                     'summarization_model' => 'gpt-4.1-nano',
                     'embeddings_model' => 'text-embedding-3-small',
@@ -167,11 +175,15 @@ class MemoryAdapterFactoryTest extends TestCase
             ->andReturn(['anthropic']);
 
         $this->settingsService
+            ->shouldReceive('getProviderKey')
+            ->with($userId, 'anthropic')
+            ->andReturn('sk-ant-test-key');
+
+        $this->settingsService
             ->shouldReceive('get')
             ->andReturnUsing(function ($uid, $key, $default = null) {
                 return match ($key) {
                     'extraction_provider' => 'anthropic',
-                    'provider_key_anthropic' => 'sk-ant-test-key',
                     'extraction_model' => 'claude-3-haiku-20240307',
                     'summarization_model' => 'claude-3-haiku-20240307',
                     default => $default,
@@ -215,11 +227,15 @@ class MemoryAdapterFactoryTest extends TestCase
             ->andReturn(['openai']);
 
         $this->settingsService
+            ->shouldReceive('getProviderKey')
+            ->with($userId, 'openai')
+            ->andReturn('sk-test-key');
+
+        $this->settingsService
             ->shouldReceive('get')
             ->andReturnUsing(function ($uid, $key, $default = null) {
                 return match ($key) {
                     'summarization_provider' => 'openai',
-                    'provider_key_openai' => 'sk-test-key',
                     'extraction_model' => 'gpt-4o-mini',
                     'summarization_model' => 'gpt-4.1-nano',
                     'embeddings_model' => 'text-embedding-3-small',
@@ -246,10 +262,14 @@ class MemoryAdapterFactoryTest extends TestCase
             ->andReturn(['openai', 'anthropic']);
 
         $this->settingsService
+            ->shouldReceive('getProviderKey')
+            ->with($userId, 'anthropic')
+            ->andReturn('sk-ant-test-key');
+
+        $this->settingsService
             ->shouldReceive('get')
             ->andReturnUsing(function ($uid, $key, $default = null) {
                 return match ($key) {
-                    'provider_key_anthropic' => 'sk-ant-test-key',
                     'extraction_model' => 'claude-3-haiku-20240307',
                     'summarization_model' => 'claude-3-haiku-20240307',
                     default => $default,
@@ -299,10 +319,14 @@ class MemoryAdapterFactoryTest extends TestCase
             });
 
         $this->settingsService
+            ->shouldReceive('getProviderKey')
+            ->with($userId, 'openai')
+            ->andReturn('sk-test-key');
+
+        $this->settingsService
             ->shouldReceive('get')
             ->andReturnUsing(function ($uid, $key, $default = null) {
                 return match ($key) {
-                    'provider_key_openai' => 'sk-test-key',
                     'extraction_model' => 'gpt-4o-mini',
                     'summarization_model' => 'gpt-4.1-nano',
                     'embeddings_model' => 'text-embedding-3-small',
@@ -337,10 +361,14 @@ class MemoryAdapterFactoryTest extends TestCase
             });
 
         $this->settingsService
+            ->shouldReceive('getProviderKey')
+            ->with($userId, 'openai')
+            ->andReturn('sk-test-key');
+
+        $this->settingsService
             ->shouldReceive('get')
             ->andReturnUsing(function ($uid, $key, $default = null) {
                 return match ($key) {
-                    'provider_key_openai' => 'sk-test-key',
                     'extraction_model' => 'gpt-4o-mini',
                     'summarization_model' => 'gpt-4.1-nano',
                     'embeddings_model' => 'text-embedding-3-small',

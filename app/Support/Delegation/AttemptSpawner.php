@@ -72,7 +72,7 @@ class AttemptSpawner
         $commandTemplate = $this->ensureAutonomousTemplate($profile->command_template, $runnerType);
 
         $taskMarkdownPath = $task->contract_json['task_markdown_path']
-            ?? $this->generateTaskMarkdown($task, $attempt);
+            ?? $this->generateTaskMarkdown($task, $attempt, $profile);
 
         $job = AgentJob::create([
             'user_id' => $task->graph->user_id,
@@ -133,16 +133,22 @@ class AttemptSpawner
         return $template;
     }
 
-    private function generateTaskMarkdown(DelegationTask $task, DelegationAttempt $attempt): string
+    private function generateTaskMarkdown(DelegationTask $task, DelegationAttempt $attempt, DelegateeProfile $profile): string
     {
         $contract = $task->contract_json ?? [];
         $context = $contract['context_inputs'] ?? [];
         $instructions = $contract['phase_config']['instructions'] ?? '';
 
-        $lines = [
-            "# {$task->name}",
-            '',
-        ];
+        $lines = [];
+
+        // Prepend soul/identity section if configured
+        $soulLines = $this->buildSoulSection($profile->getSoul());
+        if ($soulLines !== []) {
+            array_push($lines, ...$soulLines);
+        }
+
+        $lines[] = "# {$task->name}";
+        $lines[] = '';
 
         if ($instructions !== '') {
             $lines[] = $instructions;
@@ -153,7 +159,7 @@ class AttemptSpawner
             $lines[] = '## Context';
             $lines[] = '';
             foreach ($context as $key => $value) {
-                $display = is_array($value) ? implode(', ', array_map('strval', (array) $value)) : (string) $value;
+                $display = is_array($value) ? json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : (string) $value;
                 $lines[] = "- **{$key}**: {$display}";
             }
             $lines[] = '';
@@ -175,5 +181,36 @@ class AttemptSpawner
         File::put($path, implode("\n", $lines));
 
         return $path;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function buildSoulSection(array $soul): array
+    {
+        $parts = [];
+
+        if (! empty($soul['personality'])) {
+            $parts[] = "**Personality:** {$soul['personality']}";
+        }
+
+        if (! empty($soul['system_prompt'])) {
+            $parts[] = "**System Prompt:** {$soul['system_prompt']}";
+        }
+
+        if (! empty($soul['user_context'])) {
+            $parts[] = "**User Context:** {$soul['user_context']}";
+        }
+
+        if ($parts === []) {
+            return [];
+        }
+
+        return [
+            '## Agent Identity',
+            '',
+            ...$parts,
+            '',
+        ];
     }
 }

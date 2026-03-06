@@ -6,6 +6,7 @@ namespace Tests\Feature\Memory;
 
 use App\Models\MemorySetting;
 use App\Models\User;
+use App\Services\Credentials\CredentialsManager;
 use App\Support\Memory\MemorySettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -84,47 +85,32 @@ class MemorySettingsServiceTest extends TestCase
     }
 
     /**
-     * Test that getAll() masks API keys showing last 4 chars.
+     * Test that getAll() returns settings without masking (API keys now in credential_vault).
      */
-    public function test_get_all_masks_api_keys(): void
+    public function test_get_all_returns_settings_unmasked(): void
     {
-        $openaiKey = 'sk-test-1234567890abcdef';
-        $anthropicKey = 'sk-ant-api-key-xyz987';
+        $this->service->set($this->user->id, 'extraction_model', 'gpt-4o-mini');
+        $this->service->set($this->user->id, 'extraction_provider', 'openai');
 
-        $this->service->set($this->user->id, 'provider_key_openai', $openaiKey);
-        $this->service->set($this->user->id, 'provider_key_anthropic', $anthropicKey);
+        $all = $this->service->getAll($this->user->id);
+
+        // All settings returned as-is (no API keys in memory_settings anymore)
+        $this->assertEquals('gpt-4o-mini', $all['extraction_model']);
+        $this->assertEquals('openai', $all['extraction_provider']);
+    }
+
+    /**
+     * Test that API keys are no longer stored in memory_settings.
+     */
+    public function test_api_keys_not_in_memory_settings(): void
+    {
+        // API keys should be managed via CredentialsManager, not memory_settings
         $this->service->set($this->user->id, 'extraction_model', 'gpt-4o-mini');
 
         $all = $this->service->getAll($this->user->id);
 
-        // API keys should be masked with last 4 chars visible
-        // Verify masked length equals original length
-        $this->assertEquals(strlen($openaiKey), strlen($all['provider_key_openai']));
-        $this->assertEquals(strlen($anthropicKey), strlen($all['provider_key_anthropic']));
-
-        // Verify last 4 chars are visible
-        $this->assertStringEndsWith('cdef', $all['provider_key_openai']);
-        $this->assertStringEndsWith('z987', $all['provider_key_anthropic']);
-
-        // Verify starts with asterisks
-        $this->assertStringStartsWith('*', $all['provider_key_openai']);
-        $this->assertStringStartsWith('*', $all['provider_key_anthropic']);
-
-        // Non-sensitive settings should not be masked
-        $this->assertEquals('gpt-4o-mini', $all['extraction_model']);
-    }
-
-    /**
-     * Test that getAll() masks short API keys completely.
-     */
-    public function test_get_all_masks_short_api_keys_completely(): void
-    {
-        $this->service->set($this->user->id, 'provider_key_openai', '1234');
-
-        $all = $this->service->getAll($this->user->id);
-
-        // Short keys should be completely masked
-        $this->assertEquals('****', $all['provider_key_openai']);
+        $this->assertArrayNotHasKey('provider_key_openai', $all);
+        $this->assertArrayNotHasKey('provider_key_anthropic', $all);
     }
 
     /**
@@ -189,13 +175,15 @@ class MemorySettingsServiceTest extends TestCase
     }
 
     /**
-     * Test that isProviderKeyConfigured() checks for non-empty key.
+     * Test that isProviderKeyConfigured() checks credential_vault for non-empty key.
      */
     public function test_is_provider_key_configured_checks_for_non_empty_key(): void
     {
         $this->assertFalse($this->service->isProviderKeyConfigured($this->user->id, 'openai'));
 
-        $this->service->set($this->user->id, 'provider_key_openai', 'sk-test-key');
+        // Store key via CredentialsManager (the canonical source)
+        $credentialsManager = app(CredentialsManager::class);
+        $credentialsManager->store($this->user, 'openai', 'api_key', 'sk-test-key');
 
         $this->assertTrue($this->service->isProviderKeyConfigured($this->user->id, 'openai'));
     }
@@ -205,7 +193,8 @@ class MemorySettingsServiceTest extends TestCase
      */
     public function test_is_provider_key_configured_returns_false_for_empty_string(): void
     {
-        $this->service->set($this->user->id, 'provider_key_openai', '');
+        $credentialsManager = app(CredentialsManager::class);
+        $credentialsManager->store($this->user, 'openai', 'api_key', '');
 
         $this->assertFalse($this->service->isProviderKeyConfigured($this->user->id, 'openai'));
     }
@@ -215,7 +204,8 @@ class MemorySettingsServiceTest extends TestCase
      */
     public function test_get_configured_providers_returns_list_of_configured_providers(): void
     {
-        $this->service->set($this->user->id, 'provider_key_openai', 'sk-test-key');
+        $credentialsManager = app(CredentialsManager::class);
+        $credentialsManager->store($this->user, 'openai', 'api_key', 'sk-test-key');
 
         $providers = $this->service->getConfiguredProviders($this->user->id);
 

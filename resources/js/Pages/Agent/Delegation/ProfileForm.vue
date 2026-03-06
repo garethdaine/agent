@@ -45,6 +45,9 @@ const form = ref({
     config_json: '{}',
     is_active: true,
     capability_ids: [],
+    soul_personality: '',
+    soul_system_prompt: '',
+    soul_user_context: '',
 });
 
 const runnerTypeOptions = [
@@ -80,6 +83,9 @@ const loadProfile = async () => {
             config_json: profile.config_json ? JSON.stringify(profile.config_json, null, 2) : '{}',
             is_active: profile.is_active ?? true,
             capability_ids: profile.capabilities?.map(c => c.id) || [],
+            soul_personality: profile.soul?.personality ?? '',
+            soul_system_prompt: profile.soul?.system_prompt ?? '',
+            soul_user_context: profile.soul?.user_context ?? '',
         };
         profileTrustUpdatedAt.value = profile.trust_updated_at;
     } catch (e) {
@@ -104,6 +110,11 @@ const submit = async () => {
             config_json: JSON.parse(form.value.config_json),
             is_active: form.value.is_active,
             capability_ids: form.value.capability_ids,
+            soul: {
+                personality: form.value.soul_personality || null,
+                system_prompt: form.value.soul_system_prompt || null,
+                user_context: form.value.soul_user_context || null,
+            },
         };
 
         if (isEdit.value) {
@@ -347,6 +358,43 @@ onMounted(async () => {
                                         {{ cap.slug }}
                                     </button>
                                     <span v-if="capabilities.length === 0" class="text-sm text-muted-foreground">No capabilities available.</span>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-border pt-6 space-y-4">
+                                <div>
+                                    <h4 class="text-sm font-medium text-foreground">Soul / Identity</h4>
+                                    <p class="text-xs text-muted-foreground mt-1">Configure how this agent should behave and communicate when performing tasks.</p>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">Personality</label>
+                                    <Textarea
+                                        v-model="form.soul_personality"
+                                        :rows="2"
+                                        placeholder="How this agent should behave and communicate..."
+                                        :disabled="submitting"
+                                    />
+                                    <p v-if="validationErrors['soul.personality']" class="text-xs text-destructive">{{ validationErrors['soul.personality'][0] }}</p>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">System prompt</label>
+                                    <Textarea
+                                        v-model="form.soul_system_prompt"
+                                        :rows="3"
+                                        placeholder="Core instructions for the agent..."
+                                        :disabled="submitting"
+                                    />
+                                    <p v-if="validationErrors['soul.system_prompt']" class="text-xs text-destructive">{{ validationErrors['soul.system_prompt'][0] }}</p>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="block text-sm font-medium text-foreground">User context</label>
+                                    <Textarea
+                                        v-model="form.soul_user_context"
+                                        :rows="2"
+                                        placeholder="Additional context about you or your project..."
+                                        :disabled="submitting"
+                                    />
+                                    <p v-if="validationErrors['soul.user_context']" class="text-xs text-destructive">{{ validationErrors['soul.user_context'][0] }}</p>
                                 </div>
                             </div>
 

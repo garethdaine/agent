@@ -53,7 +53,7 @@ const freshnessLabel = computed(() => {
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.systemOverview">System Overview</Link>
+                    <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.dashboard">Dashboard</Link>
                     <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.escalations">Escalations</Link>
                     <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.budgets">Budgets</Link>
                     <Link class="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted" :href="navigation.replayBuilds">Replay Builds</Link>
@@ -62,7 +62,7 @@ const freshnessLabel = computed(() => {
         </template>
 
         <div class="py-8">
-            <div class="mx-auto max-w-7xl space-y-4 sm:px-6 lg:px-8">
+            <div class="space-y-4 sm:px-6 lg:px-8">
                 <div class="rounded-lg border border-border bg-card p-4">
                     <p class="text-sm text-muted-foreground">Active projection build: <span class="font-mono text-foreground">{{ activeProjectionBuildId ?? 'none' }}</span></p>
                     <p class="text-sm text-muted-foreground">active_build_age_seconds: <span :class="freshness.active_build_is_stale ? 'text-amber-600' : 'text-foreground'">{{ freshnessLabel }}</span></p>

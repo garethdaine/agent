@@ -18,6 +18,10 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+    fitView: {
+        type: Boolean,
+        default: false,
+    },
     nodeTypes: {
         type: Object,
         default: () => ({}),
@@ -76,6 +80,7 @@ function onEdgeClick({ edge }) {
             :nodes-connectable="editMode"
             :elements-selectable="editMode"
             :deletable="editMode"
+            :fit-view-on-init="fitView"
             connect-on-click
             @nodes-change="onNodesChange"
             @edges-change="onEdgesChange"

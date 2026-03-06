@@ -1,5 +1,5 @@
 <template>
-  <tbody class="[&_tr:last-child]:border-0">
+  <tbody class="divide-y divide-border">
     <slot />
   </tbody>
 </template>

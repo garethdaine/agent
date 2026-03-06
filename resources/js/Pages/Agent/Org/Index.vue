@@ -57,7 +57,7 @@ import { Users, Calendar, Scale, AlertTriangle, DollarSign, Bot, GitBranch } fro
                                         <GitBranch class="h-5 w-5 text-primary" />
                                     </div>
                                     <div>
-                                        <CardTitle>Org Layer Builder</CardTitle>
+                                        <CardTitle>Workforce</CardTitle>
                                         <CardDescription>Visual reporting structure</CardDescription>
                                     </div>
                                 </div>

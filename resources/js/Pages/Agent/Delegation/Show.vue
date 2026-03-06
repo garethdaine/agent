@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { formatDateTime } from '@/Utils/formatDate';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -81,7 +82,7 @@ const cancelGraph = async () => {
 const cloneGraph = async () => {
     try {
         const { data } = await axios.post(`/agent/api/v1/delegation/graphs/${props.graphId}/clone`);
-        router.visit(route('agent.delegation.show', data.data.id));
+        router.visit(route('agent.delegation.graphs.builder.edit', { id: data.data.id }));
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to clone graph.';
     }
@@ -114,7 +115,7 @@ const isDeleted = computed(() => !!graph.value?.deleted_at);
 const confirmingDelete = ref(false);
 
 const editGraph = () => {
-    router.visit(route('agent.delegation.graphs.builder.edit', { graphId: props.graphId }));
+    router.visit(route('agent.delegation.graphs.builder.edit', { id: props.graphId }));
 };
 
 const deleteGraph = async () => {
@@ -265,21 +266,20 @@ onMounted(() => {
                                 </div>
                                 <div>
                                     <span class="text-xs font-medium uppercase text-muted-foreground">Started</span>
-                                    <div class="mt-2 text-sm text-foreground">{{ graph.started_at ?? '-' }}</div>
+                                    <div class="mt-2 text-sm text-foreground">{{ formatDateTime(graph.started_at) }}</div>
                                 </div>
                                 <div>
                                     <span class="text-xs font-medium uppercase text-muted-foreground">Finished</span>
-                                    <div class="mt-2 text-sm text-foreground">{{ graph.finished_at ?? '-' }}</div>
+                                    <div class="mt-2 text-sm text-foreground">{{ formatDateTime(graph.finished_at) }}</div>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card class="overflow-hidden">
                         <CardHeader>
                             <CardTitle>Tasks</CardTitle>
                         </CardHeader>
-                        <CardContent class="p-0">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -319,7 +319,6 @@ onMounted(() => {
                                     </TableRow>
                                 </TableBody>
                             </Table>
-                        </CardContent>
                     </Card>
 
                     <Card>
@@ -340,7 +339,7 @@ onMounted(() => {
                                 <div v-for="event in events" :key="event.id" class="rounded-lg border border-border p-4 text-sm">
                                     <div class="flex items-center justify-between">
                                         <span class="font-medium text-foreground">{{ event.event_type }}</span>
-                                        <span class="text-xs text-muted-foreground">{{ event.event_ts }}</span>
+                                        <span class="text-xs text-muted-foreground">{{ formatDateTime(event.event_ts, { second: '2-digit' }) }}</span>
                                     </div>
                                     <pre v-if="event.payload_json" class="mt-3 overflow-x-auto rounded bg-muted p-2 text-xs text-muted-foreground font-mono">{{ JSON.stringify(event.payload_json, null, 2) }}</pre>
                                 </div>

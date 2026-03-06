@@ -123,6 +123,10 @@ class DelegateeProfileController extends Controller
             'is_active' => ['sometimes', 'boolean'],
             'capability_ids' => ['sometimes', 'array'],
             'capability_ids.*' => ['integer', 'exists:delegation_capabilities,id'],
+            'soul' => ['nullable', 'array'],
+            'soul.personality' => ['nullable', 'string', 'max:2000'],
+            'soul.system_prompt' => ['nullable', 'string', 'max:5000'],
+            'soul.user_context' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $profile = $request->user()->delegateeProfiles()->create([
@@ -138,6 +142,10 @@ class DelegateeProfileController extends Controller
         // Sync capabilities if provided
         if (isset($validated['capability_ids'])) {
             $profile->capabilities()->sync($validated['capability_ids']);
+        }
+
+        if (isset($validated['soul'])) {
+            $profile->setSoul($validated['soul']);
         }
 
         $auditLogger->recordUserAction(
@@ -174,6 +182,10 @@ class DelegateeProfileController extends Controller
             'is_active' => ['sometimes', 'boolean'],
             'capability_ids' => ['sometimes', 'array'],
             'capability_ids.*' => ['integer', 'exists:delegation_capabilities,id'],
+            'soul' => ['sometimes', 'array'],
+            'soul.personality' => ['nullable', 'string', 'max:2000'],
+            'soul.system_prompt' => ['nullable', 'string', 'max:5000'],
+            'soul.user_context' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $before = $profile->only(['name', 'runner_type', 'command_template', 'working_directory', 'is_active']);
@@ -189,6 +201,10 @@ class DelegateeProfileController extends Controller
         // Sync capabilities if provided
         if (isset($validated['capability_ids'])) {
             $profile->capabilities()->sync($validated['capability_ids']);
+        }
+
+        if (isset($validated['soul'])) {
+            $profile->setSoul($validated['soul']);
         }
 
         $after = $profile->only(array_keys($before));
@@ -305,6 +321,7 @@ class DelegateeProfileController extends Controller
             'command_template' => $profile->command_template,
             'working_directory' => $profile->working_directory,
             'is_active' => $profile->is_active,
+            'soul' => $profile->getSoul(),
             'trust_score' => $profile->trust_score !== null ? (float) $profile->trust_score : null,
             'trust_updated_at' => optional($profile->trust_updated_at)?->toIso8601String(),
             'deleted_at' => optional($profile->deleted_at)?->toIso8601String(),

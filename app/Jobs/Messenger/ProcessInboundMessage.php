@@ -48,7 +48,7 @@ class ProcessInboundMessage implements ShouldQueue
         $account = ConnectorAccount::find($this->connectorAccountId);
 
         if (! $account) {
-            Log::warning('ProcessInboundMessage: Connector account not found', [
+            Log::channel('messenger')->warning('ProcessInboundMessage: Connector account not found', [
                 'account_id' => $this->connectorAccountId,
             ]);
 
@@ -61,7 +61,7 @@ class ProcessInboundMessage implements ShouldQueue
         $normalizedMessage = $this->parseMessage($adapter, $account);
 
         if (! $normalizedMessage) {
-            Log::debug('ProcessInboundMessage: Could not parse message, skipping', [
+            Log::channel('messenger')->debug('ProcessInboundMessage: Could not parse message, skipping', [
                 'account_id' => $account->id,
                 'provider' => $this->provider,
             ]);
@@ -108,7 +108,7 @@ class ProcessInboundMessage implements ShouldQueue
         // Fast-path dedupe check. This avoids transaction-abort side effects
         // in PostgreSQL test transactions when relying solely on unique violations.
         if (ChatMessage::query()->where('idempotency_key', $idempotencyKey)->exists()) {
-            Log::debug('ProcessInboundMessage: Duplicate message, skipping', [
+            Log::channel('messenger')->debug('ProcessInboundMessage: Duplicate message, skipping', [
                 'idempotency_key' => $idempotencyKey,
                 'account_id' => $account->id,
             ]);
@@ -129,7 +129,7 @@ class ProcessInboundMessage implements ShouldQueue
                 'provider_timestamp' => $normalizedMessage->providerTimestamp,
             ]);
 
-            Log::info('ProcessInboundMessage: Message created', [
+            Log::channel('messenger')->info('ProcessInboundMessage: Message created', [
                 'message_id' => $message->id,
                 'session_id' => $session->id,
                 'account_id' => $account->id,
@@ -149,7 +149,7 @@ class ProcessInboundMessage implements ShouldQueue
         } catch (QueryException $e) {
             // Check if it's a duplicate key violation (idempotency)
             if ($this->isDuplicateKeyException($e)) {
-                Log::debug('ProcessInboundMessage: Duplicate message, skipping', [
+                Log::channel('messenger')->debug('ProcessInboundMessage: Duplicate message, skipping', [
                     'idempotency_key' => $idempotencyKey,
                     'account_id' => $account->id,
                 ]);
@@ -172,7 +172,7 @@ class ProcessInboundMessage implements ShouldQueue
 
             return $adapter->parseInboundMessage($request);
         } catch (\Throwable $e) {
-            Log::warning('ProcessInboundMessage: Failed to parse message', [
+            Log::channel('messenger')->warning('ProcessInboundMessage: Failed to parse message', [
                 'account_id' => $account->id,
                 'provider' => $this->provider,
                 'error' => $e->getMessage(),
@@ -194,7 +194,7 @@ class ProcessInboundMessage implements ShouldQueue
 
         // Rate limit: max 1 prompt per user per hour
         if (Cache::has($rateLimitKey)) {
-            Log::debug('ProcessInboundMessage: Link prompt rate limited', [
+            Log::channel('messenger')->debug('ProcessInboundMessage: Link prompt rate limited', [
                 'account_id' => $account->id,
                 'provider_user_id' => $message->providerUserId,
             ]);
@@ -213,7 +213,7 @@ class ProcessInboundMessage implements ShouldQueue
             threadId: $message->threadId
         )->onQueue('messenger-default');
 
-        Log::info('ProcessInboundMessage: Dispatching account link prompt', [
+        Log::channel('messenger')->info('ProcessInboundMessage: Dispatching account link prompt', [
             'account_id' => $account->id,
             'provider_user_id' => $message->providerUserId,
             'channel_id' => $message->channelId,
@@ -233,7 +233,7 @@ class ProcessInboundMessage implements ShouldQueue
         );
 
         if (Cache::has($rateLimitKey)) {
-            Log::debug('ProcessInboundMessage: Re-auth prompt rate limited', [
+            Log::channel('messenger')->debug('ProcessInboundMessage: Re-auth prompt rate limited', [
                 'account_id' => $account->id,
                 'provider_user_id' => $message->providerUserId,
             ]);
@@ -252,7 +252,7 @@ class ProcessInboundMessage implements ShouldQueue
             isReauth: true
         )->onQueue('messenger-default');
 
-        Log::info('ProcessInboundMessage: Dispatching re-auth prompt for expired link', [
+        Log::channel('messenger')->info('ProcessInboundMessage: Dispatching re-auth prompt for expired link', [
             'account_id' => $account->id,
             'provider_user_id' => $message->providerUserId,
             'link_id' => $link->id,
@@ -277,7 +277,7 @@ class ProcessInboundMessage implements ShouldQueue
         foreach ($normalizedMessage->attachments as $attachment) {
             // Skip attachments without a download URL
             if (empty($attachment->downloadUrl)) {
-                Log::warning('ProcessInboundMessage: Attachment missing download URL', [
+                Log::channel('messenger')->warning('ProcessInboundMessage: Attachment missing download URL', [
                     'message_id' => $message->id,
                     'provider_file_id' => $attachment->providerFileId,
                 ]);
@@ -297,14 +297,14 @@ class ProcessInboundMessage implements ShouldQueue
 
                 $attachmentHandler->processInbound([$attachmentData], $message);
 
-                Log::info('ProcessInboundMessage: Attachment processed', [
+                Log::channel('messenger')->info('ProcessInboundMessage: Attachment processed', [
                     'message_id' => $message->id,
                     'provider_file_id' => $attachment->providerFileId,
                     'filename' => $attachment->filename,
                 ]);
             } catch (AttachmentRejectionException $e) {
                 // Attachment was rejected (size, MIME type, etc.)
-                Log::warning('ProcessInboundMessage: Attachment rejected', [
+                Log::channel('messenger')->warning('ProcessInboundMessage: Attachment rejected', [
                     'message_id' => $message->id,
                     'provider_file_id' => $attachment->providerFileId,
                     'filename' => $attachment->filename,
@@ -312,7 +312,7 @@ class ProcessInboundMessage implements ShouldQueue
                 ]);
             } catch (\Throwable $e) {
                 // Download or storage failure
-                Log::error('ProcessInboundMessage: Attachment processing failed', [
+                Log::channel('messenger')->error('ProcessInboundMessage: Attachment processing failed', [
                     'message_id' => $message->id,
                     'provider_file_id' => $attachment->providerFileId,
                     'filename' => $attachment->filename,

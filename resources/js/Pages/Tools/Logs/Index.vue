@@ -2,8 +2,6 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import HelpHint from '@/Components/HelpHint.vue';
 import Card from '@/Components/ui/Card.vue';
-import CardHeader from '@/Components/ui/CardHeader.vue';
-import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardContent from '@/Components/ui/CardContent.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
@@ -19,6 +17,7 @@ import {
 } from 'lucide-vue-next';
 import axios from 'axios';
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { formatDateTime } from '@/Utils/formatDate';
 
 const channel = ref('laravel');
 const level = ref('');
@@ -75,8 +74,28 @@ const toggleTail = () => {
     }
 };
 
-const exportLog = () => {
-    window.open(`/agent/api/v1/logs/export?channel=${channel.value}`, '_blank');
+const exportLog = async () => {
+    try {
+        const response = await axios.get('/agent/api/v1/logs/export', {
+            params: { channel: channel.value },
+            responseType: 'blob',
+        });
+
+        const disposition = response.headers['content-disposition'] || '';
+        const match = disposition.match(/filename="?([^";\s]+)"?/);
+        const filename = match?.[1] || `${channel.value}-export.log`;
+
+        const url = URL.createObjectURL(response.data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch {
+        error.value = 'Failed to export log file.';
+    }
 };
 
 const levelColor = (lvl) => {
@@ -141,7 +160,7 @@ onUnmounted(() => {
         </template>
 
         <div class="px-4 py-6 sm:px-6 lg:px-8">
-            <div class="mx-auto max-w-6xl space-y-4">
+            <div class="space-y-4">
                 <div v-if="error" class="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                     {{ error }}
                 </div>
@@ -208,45 +227,41 @@ onUnmounted(() => {
                 </Card>
 
                 <!-- Log output -->
-                <Card>
-                    <CardContent class="p-0">
-                        <div
-                            ref="logContainer"
-                            class="max-h-[600px] overflow-y-auto overflow-x-auto bg-zinc-950 rounded-lg font-mono text-xs"
-                        >
-                            <div v-if="loading && lines.length === 0" class="p-4 text-zinc-500">
-                                Loading...
-                            </div>
-                            <div v-else-if="lines.length === 0" class="p-4 text-zinc-500">
-                                No log entries found.
-                            </div>
-                            <table v-else class="w-full">
-                                <tbody>
-                                    <tr
-                                        v-for="(entry, i) in lines"
-                                        :key="i"
-                                        class="hover:bg-zinc-900/50 border-b border-zinc-800/30 align-top"
+                <div
+                    ref="logContainer"
+                    class="max-h-[600px] overflow-y-auto overflow-x-auto rounded-xl bg-zinc-950 font-mono text-xs"
+                >
+                    <div v-if="loading && lines.length === 0" class="p-4 text-zinc-500">
+                        Loading...
+                    </div>
+                    <div v-else-if="lines.length === 0" class="p-4 text-zinc-500">
+                        No log entries found.
+                    </div>
+                    <table v-else class="w-full">
+                        <tbody>
+                            <tr
+                                v-for="(entry, i) in lines"
+                                :key="i"
+                                class="hover:bg-zinc-900/50 border-b border-zinc-800/30 align-top"
+                            >
+                                <td class="px-3 py-1.5 text-zinc-500 whitespace-nowrap select-none w-[180px]">
+                                    {{ formatDateTime(entry.timestamp, { second: '2-digit' }) }}
+                                </td>
+                                <td class="px-2 py-1.5 w-[80px]">
+                                    <span
+                                        class="inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
+                                        :class="levelColor(entry.level)"
                                     >
-                                        <td class="px-2 py-1 text-zinc-600 whitespace-nowrap select-none w-[170px]">
-                                            {{ entry.timestamp }}
-                                        </td>
-                                        <td class="px-2 py-1 w-[80px]">
-                                            <span
-                                                class="inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase"
-                                                :class="levelColor(entry.level)"
-                                            >
-                                                {{ entry.level }}
-                                            </span>
-                                        </td>
-                                        <td class="px-2 py-1 text-zinc-300 whitespace-pre-wrap break-all">
-                                            {{ entry.message }}
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </CardContent>
-                </Card>
+                                        {{ entry.level }}
+                                    </span>
+                                </td>
+                                <td class="px-3 py-1.5 text-zinc-300 whitespace-pre-wrap break-all">
+                                    {{ entry.message }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </AppLayout>

@@ -12,6 +12,7 @@ import { ArrowLeft, CheckCircle, XCircle, StopCircle, Clock, Terminal, Play, Shi
 import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { ref } from 'vue';
+import { formatDateTime } from '@/Utils/formatDate';
 
 const props = defineProps({
     session: Object,
@@ -20,10 +21,7 @@ const props = defineProps({
 
 const processingApproval = ref(null);
 
-const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString();
-};
+const formatDate = (d) => formatDateTime(d);
 
 const getStatusBadgeVariant = (status) => {
     const variants = {

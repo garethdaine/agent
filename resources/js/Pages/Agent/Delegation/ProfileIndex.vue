@@ -138,8 +138,7 @@ onMounted(() => load());
                     {{ error }}
                 </p>
 
-                <Card>
-                    <CardContent class="p-0">
+                <Card class="overflow-hidden">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -230,7 +229,6 @@ onMounted(() => load());
                                 </TableRow>
                             </TableBody>
                         </Table>
-                    </CardContent>
                 </Card>
 
                 <div class="flex items-center justify-between text-sm text-muted-foreground">

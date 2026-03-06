@@ -8,11 +8,23 @@ use App\Listeners\DelegationCoordinator;
 use App\Listeners\DelegationEventPersistenceSubscriber;
 use App\Listeners\DelegationRecoveryHandler;
 use App\Listeners\Documentation\DocumentationTelemetrySubscriber;
+use App\Listeners\Messenger\SendAgentJobFinishedNotification;
+use App\Listeners\Messenger\SendApprovalRequestedNotification;
+use App\Listeners\Messenger\SendDelegationTaskFailedNotification;
+use App\Listeners\Messenger\SendEscalationTimedOutNotification;
+use App\Listeners\Messenger\SendInterrogationPhaseNotification;
+use App\Listeners\Messenger\SendRepoAnalysisCompletedNotification;
+use App\Listeners\Messenger\SendRitualRunCompletedNotification;
 use App\Listeners\Org\RitualCouncilDeliberationListener;
 use App\Listeners\Org\RitualPhaseOutputCaptureListener;
 use App\Listeners\Org\RitualRunCompletionListener;
+use App\Events\AgentJobRunFinished;
 use App\Events\DelegationGraphCompleted;
 use App\Events\DelegationTaskVerified;
+use App\Events\InterrogationPhaseChanged;
+use App\Events\Org\OrgRitualEscalationTimedOut;
+use App\Events\RepoAnalysisSessionUpdated;
+use App\Events\RuntimeApprovalRequested;
 use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
@@ -151,6 +163,15 @@ class AppServiceProvider extends ServiceProvider
         $events->listen(DelegationGraphCompleted::class, RitualRunCompletionListener::class);
         $events->listen(DelegationTaskVerified::class, RitualCouncilDeliberationListener::class);
         $events->listen(DelegationTaskVerified::class, RitualPhaseOutputCaptureListener::class);
+
+        // System event messenger notifications
+        $events->listen(DelegationGraphCompleted::class, SendRitualRunCompletedNotification::class);
+        $events->listen(DelegationTaskVerified::class, SendDelegationTaskFailedNotification::class);
+        $events->listen(AgentJobRunFinished::class, SendAgentJobFinishedNotification::class);
+        $events->listen(OrgRitualEscalationTimedOut::class, SendEscalationTimedOutNotification::class);
+        $events->listen(RuntimeApprovalRequested::class, SendApprovalRequestedNotification::class);
+        $events->listen(RepoAnalysisSessionUpdated::class, SendRepoAnalysisCompletedNotification::class);
+        $events->listen(InterrogationPhaseChanged::class, SendInterrogationPhaseNotification::class);
 
         Gate::policy(AgentJob::class, AgentJobPolicy::class);
         Gate::policy(AgentJobRun::class, AgentJobRunPolicy::class);

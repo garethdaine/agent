@@ -39,10 +39,33 @@ class InterrogationSessionUpdated implements ShouldBroadcast
      */
     public function broadcastWith(): array
     {
+        $payload = $this->payload;
+
+        // Truncate payload to stay under Pusher/Reverb's ~10KB broadcast limit.
+        // If the serialized payload exceeds 8KB, strip large fields and set a
+        // truncated flag so the client knows to fetch the full data via API.
+        $encoded = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($encoded !== false && strlen($encoded) > 8192) {
+            $payload = array_map(function ($value) {
+                if (is_string($value) && strlen($value) > 500) {
+                    return mb_substr($value, 0, 500).'… [truncated]';
+                }
+                if (is_array($value)) {
+                    $nested = json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                    if ($nested !== false && strlen($nested) > 1000) {
+                        return ['_truncated' => true, '_original_size' => strlen($nested)];
+                    }
+                }
+
+                return $value;
+            }, $payload);
+            $payload['_truncated'] = true;
+        }
+
         return [
             'session_id' => $this->sessionId,
             'event_type' => $this->eventType,
-            'payload' => $this->payload,
+            'payload' => $payload,
             'sequence' => $this->sequence,
         ];
     }

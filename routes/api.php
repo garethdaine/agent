@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\V1\LogTailController;
 use App\Http\Controllers\Api\V1\Memory\MemoryCoreBlockController;
 use App\Http\Controllers\Api\V1\Memory\MemoryDiagnosticsController;
 use App\Http\Controllers\Api\V1\Memory\MemoryRetrievalController;
+use App\Http\Controllers\Api\V1\Memory\MemoryModelsController;
 use App\Http\Controllers\Api\V1\Memory\MemorySettingsController;
 use App\Http\Controllers\Api\V1\Memory\MemoryWorkingController;
 use App\Http\Controllers\Api\V1\Messenger\MessengerHealthController;
@@ -226,7 +227,10 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/code-analysis/sessions/{id}/reports', [RepoAnalysisSessionController::class, 'reports']);
 
             // Chat session endpoints
+            Route::get('/chat/commands', [ChatSessionController::class, 'commands']);
+            Route::get('/chat/connectors', [ChatSessionController::class, 'connectors']);
             Route::get('/chat/sessions', [ChatSessionController::class, 'index']);
+            Route::post('/chat/sessions', [ChatSessionController::class, 'store'])->middleware('throttle:agent-mutations');
             Route::get('/chat/sessions/{id}', [ChatSessionController::class, 'show']);
             Route::get('/chat/sessions/{id}/messages', [ChatSessionController::class, 'messages']);
             Route::get('/chat/sessions/{id}/actions', [ChatSessionController::class, 'actions']);
@@ -287,6 +291,8 @@ Route::middleware([AgentApiVersionHeader::class])
                 Route::post('/settings/test-connection', [MemorySettingsController::class, 'testConnection'])
                     ->middleware('throttle:memory-writes');
                 Route::get('/settings/capabilities', [MemorySettingsController::class, 'capabilities'])
+                    ->middleware('throttle:memory-reads');
+                Route::get('/models', MemoryModelsController::class)
                     ->middleware('throttle:memory-reads');
             });
 

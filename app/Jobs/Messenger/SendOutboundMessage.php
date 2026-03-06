@@ -57,7 +57,7 @@ class SendOutboundMessage implements ShouldQueue
         $session = ChatSession::with('connectorAccount')->find($this->sessionId);
 
         if (! $session) {
-            Log::warning('SendOutboundMessage: Session not found', [
+            Log::channel('messenger')->warning('SendOutboundMessage: Session not found', [
                 'session_id' => $this->sessionId,
             ]);
 
@@ -67,7 +67,7 @@ class SendOutboundMessage implements ShouldQueue
         $account = $session->connectorAccount;
 
         if (! $account || ! $account->isConnected()) {
-            Log::warning('SendOutboundMessage: Account not available or disconnected', [
+            Log::channel('messenger')->warning('SendOutboundMessage: Account not available or disconnected', [
                 'session_id' => $this->sessionId,
                 'account_id' => $account?->id,
             ]);
@@ -92,7 +92,7 @@ class SendOutboundMessage implements ShouldQueue
         $response = $adapter->sendMessage($session, $payload);
 
         if (! $response->success) {
-            Log::error('SendOutboundMessage: Failed to send message', [
+            Log::channel('messenger')->error('SendOutboundMessage: Failed to send message', [
                 'session_id' => $this->sessionId,
                 'account_id' => $account->id,
                 'error' => $response->error,
@@ -128,7 +128,7 @@ class SendOutboundMessage implements ShouldQueue
             'provider_timestamp' => now(),
         ]);
 
-        Log::info('SendOutboundMessage: Message sent successfully', [
+        Log::channel('messenger')->info('SendOutboundMessage: Message sent successfully', [
             'session_id' => $this->sessionId,
             'account_id' => $account->id,
             'provider_message_id' => $response->providerMessageId,
@@ -140,7 +140,7 @@ class SendOutboundMessage implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        Log::error('SendOutboundMessage: Job failed permanently', [
+        Log::channel('messenger')->error('SendOutboundMessage: Job failed permanently', [
             'session_id' => $this->sessionId,
             'error' => $exception->getMessage(),
         ]);
@@ -149,7 +149,7 @@ class SendOutboundMessage implements ShouldQueue
             $session = ChatSession::with(['connectorAccount', 'user'])->find($this->sessionId);
         } catch (Throwable $e) {
             // Invalid session ID format (e.g., non-UUID string)
-            Log::warning('SendOutboundMessage: Could not look up session for dead-letter', [
+            Log::channel('messenger')->warning('SendOutboundMessage: Could not look up session for dead-letter', [
                 'session_id' => $this->sessionId,
                 'lookup_error' => $e->getMessage(),
             ]);

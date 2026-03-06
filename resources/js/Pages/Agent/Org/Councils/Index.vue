@@ -146,8 +146,7 @@ onMounted(loadCouncils);
                     </CardContent>
                 </Card>
 
-                <Card v-else>
-                    <CardContent class="p-0">
+                <Card v-else class="overflow-hidden">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -185,7 +184,6 @@ onMounted(loadCouncils);
                                 </TableRow>
                             </TableBody>
                         </Table>
-                    </CardContent>
                 </Card>
             </div>
         </div>

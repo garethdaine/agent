@@ -92,7 +92,7 @@ class SessionProcessManager
         $wrapperScript = base_path('bin/session-wrapper');
 
         if (! file_exists($wrapperScript)) {
-            Log::error('SessionProcessManager: wrapper script not found', [
+            Log::channel('runtime')->error('SessionProcessManager: wrapper script not found', [
                 'session_id' => $runtimeSessionId,
                 'path' => $wrapperScript,
             ]);
@@ -123,7 +123,7 @@ class SessionProcessManager
         $resource = proc_open($command, $descriptors, $pipes, $workingDirectory, $env);
 
         if (! is_resource($resource)) {
-            Log::error('SessionProcessManager: failed to start wrapper', [
+            Log::channel('runtime')->error('SessionProcessManager: failed to start wrapper', [
                 'session_id' => $runtimeSessionId,
             ]);
 
@@ -144,7 +144,7 @@ class SessionProcessManager
             'pid' => $pid,
         ];
 
-        Log::info('SessionProcessManager: wrapper started', [
+        Log::channel('runtime')->info('SessionProcessManager: wrapper started', [
             'session_id' => $runtimeSessionId,
             'pid' => $pid,
             'runner_type' => $runnerType,
@@ -209,7 +209,7 @@ class SessionProcessManager
 
             unset(self::$activeProcesses[$runtimeSessionId]);
 
-            Log::info('SessionProcessManager: process terminated', [
+            Log::channel('runtime')->info('SessionProcessManager: process terminated', [
                 'session_id' => $runtimeSessionId,
             ]);
         } else {
@@ -294,7 +294,7 @@ class SessionProcessManager
 
             $stderrLine = @fgets($stderr);
             if ($stderrLine !== false && trim($stderrLine) !== '') {
-                Log::debug('SessionProcessManager: wrapper stderr', [
+                Log::channel('runtime')->debug('SessionProcessManager: wrapper stderr', [
                     'session_id' => $runtimeSessionId,
                     'line' => trim($stderrLine),
                 ]);
@@ -307,7 +307,7 @@ class SessionProcessManager
 
                 $recentActivity = $this->summarizeRecentFragments($fragments);
 
-                Log::debug('SessionProcessManager: turn activity', [
+                Log::channel('runtime')->debug('SessionProcessManager: turn activity', [
                     'session_id' => $runtimeSessionId,
                     'elapsed_seconds' => $elapsed,
                     'fragment_count' => $fragmentCount,
@@ -325,7 +325,7 @@ class SessionProcessManager
                             'fragment_count' => $fragmentCount,
                         ]);
                     } catch (\Throwable $e) {
-                        Log::debug('SessionProcessManager: progress callback error', [
+                        Log::channel('runtime')->debug('SessionProcessManager: progress callback error', [
                             'session_id' => $runtimeSessionId,
                             'error' => $e->getMessage(),
                         ]);
@@ -503,7 +503,7 @@ class SessionProcessManager
                 'updated_at' => now()->toIso8601String(),
             ], 3600);
         } catch (\Throwable $e) {
-            Log::debug('SessionProcessManager: failed to persist live fragments', [
+            Log::channel('runtime')->debug('SessionProcessManager: failed to persist live fragments', [
                 'session_id' => $runtimeSessionId,
                 'error' => $e->getMessage(),
             ]);
@@ -551,7 +551,7 @@ class SessionProcessManager
             'start_time' => $startTime,
         ], 3600);
 
-        Log::info('SessionProcessManager: turn yielded', [
+        Log::channel('runtime')->info('SessionProcessManager: turn yielded', [
             'session_id' => $runtimeSessionId,
             'elapsed_seconds' => $elapsed,
             'fragment_count' => count($fragments),
@@ -592,7 +592,7 @@ class SessionProcessManager
 
         Cache::forget($bufferKey);
 
-        Log::info('SessionProcessManager: resuming turn', [
+        Log::channel('runtime')->info('SessionProcessManager: resuming turn', [
             'session_id' => $runtimeSessionId,
             'buffered_fragments' => count($fragments),
             'original_elapsed' => time() - $originalStartTime,
@@ -653,7 +653,7 @@ class SessionProcessManager
 
             $stderrLine = @fgets($stderr);
             if ($stderrLine !== false && trim($stderrLine) !== '') {
-                Log::debug('SessionProcessManager: wrapper stderr (resume)', [
+                Log::channel('runtime')->debug('SessionProcessManager: wrapper stderr (resume)', [
                     'session_id' => $runtimeSessionId,
                     'line' => trim($stderrLine),
                 ]);
@@ -665,7 +665,7 @@ class SessionProcessManager
 
                 $recentActivity = $this->summarizeRecentFragments($fragments);
 
-                Log::debug('SessionProcessManager: resume turn activity', [
+                Log::channel('runtime')->debug('SessionProcessManager: resume turn activity', [
                     'session_id' => $runtimeSessionId,
                     'total_elapsed_seconds' => $totalElapsed,
                     'fragment_count' => count($fragments),
@@ -683,7 +683,7 @@ class SessionProcessManager
                             'fragment_count' => count($fragments),
                         ]);
                     } catch (\Throwable $e) {
-                        Log::debug('SessionProcessManager: progress callback error (resume)', [
+                        Log::channel('runtime')->debug('SessionProcessManager: progress callback error (resume)', [
                             'session_id' => $runtimeSessionId,
                             'error' => $e->getMessage(),
                         ]);

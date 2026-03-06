@@ -64,7 +64,7 @@ class ProcessChatIntent implements ShouldQueue
         $user = User::find($this->userId);
 
         if ($message === null || $session === null || $user === null) {
-            Log::warning('ProcessChatIntent: Required entities not found', [
+            Log::channel('messenger')->warning('ProcessChatIntent: Required entities not found', [
                 'message_id' => $this->messageId,
                 'session_id' => $this->sessionId,
                 'user_id' => $this->userId,
@@ -73,10 +73,24 @@ class ProcessChatIntent implements ShouldQueue
             return;
         }
 
+        // Staleness guard: drop messages older than 5 minutes to prevent retries
+        // from routing stale messages to a different active runtime session
+        $messageAgeMinutes = $message->created_at->diffInMinutes(now());
+        if ($messageAgeMinutes > 5 && $this->attempts() > 1) {
+            Log::channel('messenger')->warning('ProcessChatIntent: Dropping stale message on retry', [
+                'message_id' => $this->messageId,
+                'session_id' => $this->sessionId,
+                'age_minutes' => $messageAgeMinutes,
+                'attempt' => $this->attempts(),
+            ]);
+
+            return;
+        }
+
         $account = $session->connectorAccount;
 
         if ($account === null) {
-            Log::warning('ProcessChatIntent: Connector account not found', [
+            Log::channel('messenger')->warning('ProcessChatIntent: Connector account not found', [
                 'session_id' => $session->id,
             ]);
 
@@ -97,7 +111,7 @@ class ProcessChatIntent implements ShouldQueue
             try {
                 $adapter->addReaction($session, $message->provider_message_id, '👀');
             } catch (\Throwable $e) {
-                Log::debug('ProcessChatIntent: Failed to add acknowledgement reaction', [
+                Log::channel('messenger')->debug('ProcessChatIntent: Failed to add acknowledgement reaction', [
                     'message_id' => $message->id,
                     'error' => $e->getMessage(),
                 ]);
@@ -187,7 +201,7 @@ class ProcessChatIntent implements ShouldQueue
         $parsedAction = $intentParser->parse($message, $session);
 
         if ($parsedAction === null) {
-            Log::debug('ProcessChatIntent: Could not parse intent', [
+            Log::channel('messenger')->debug('ProcessChatIntent: Could not parse intent', [
                 'message_id' => $message->id,
                 'content' => $message->content,
             ]);
@@ -252,7 +266,7 @@ class ProcessChatIntent implements ShouldQueue
             'requires_confirmation' => $parsedAction->requiresConfirmation,
         ]);
 
-        Log::info('ProcessChatIntent: Action created', [
+        Log::channel('messenger')->info('ProcessChatIntent: Action created', [
             'action_id' => $action->id,
             'action_type' => $action->action_type,
             'requires_confirmation' => $action->requires_confirmation,
@@ -370,7 +384,7 @@ class ProcessChatIntent implements ShouldQueue
                 'provider_timestamp' => now(),
             ]);
 
-            Log::info('ProcessChatIntent: Streaming action completed', [
+            Log::channel('messenger')->info('ProcessChatIntent: Streaming action completed', [
                 'action_id' => $action->id,
                 'success' => $result->success,
                 'edit_count' => $writer->getEditCount(),
@@ -385,7 +399,7 @@ class ProcessChatIntent implements ShouldQueue
                 'executed_at' => now(),
             ]);
 
-            Log::error('ProcessChatIntent: Streaming action failed', [
+            Log::channel('messenger')->error('ProcessChatIntent: Streaming action failed', [
                 'action_id' => $action->id,
                 'error' => $e->getMessage(),
             ]);
@@ -417,7 +431,7 @@ class ProcessChatIntent implements ShouldQueue
             $formattedResponse = $responseFormatter->format($result, $action, $account);
             $this->sendOrEditResponse($formattedResponse, $session, $account, $adapter, $placeholderMessageId);
 
-            Log::info('ProcessChatIntent: Action executed', [
+            Log::channel('messenger')->info('ProcessChatIntent: Action executed', [
                 'action_id' => $action->id,
                 'success' => $result->success,
             ]);
@@ -432,7 +446,7 @@ class ProcessChatIntent implements ShouldQueue
             $errorResponse = $responseFormatter->formatError($e, $action, $account);
             $this->sendOrEditResponse($errorResponse, $session, $account, $adapter, $placeholderMessageId);
 
-            Log::error('ProcessChatIntent: Action execution failed', [
+            Log::channel('messenger')->error('ProcessChatIntent: Action execution failed', [
                 'action_id' => $action->id,
                 'error' => $e->getMessage(),
             ]);
@@ -458,14 +472,14 @@ class ProcessChatIntent implements ShouldQueue
 
         try {
             $response = $adapter->sendMessage($session, $payload);
-            Log::info('ProcessChatIntent: Placeholder sent', [
+            Log::channel('messenger')->info('ProcessChatIntent: Placeholder sent', [
                 'session_id' => $session->id,
                 'provider_message_id' => $response?->providerMessageId,
             ]);
 
             return $response;
         } catch (\Throwable $e) {
-            Log::warning('ProcessChatIntent: Failed to send placeholder', [
+            Log::channel('messenger')->warning('ProcessChatIntent: Failed to send placeholder', [
                 'session_id' => $session->id,
                 'error' => $e->getMessage(),
             ]);
@@ -500,7 +514,7 @@ class ProcessChatIntent implements ShouldQueue
 
             $this->sendResponse($content, $session, $account, $adapter);
         } catch (\Throwable $e) {
-            Log::error('ProcessChatIntent: Failed to send/edit response', [
+            Log::channel('messenger')->error('ProcessChatIntent: Failed to send/edit response', [
                 'session_id' => $session->id,
                 'error' => $e->getMessage(),
             ]);
@@ -562,7 +576,7 @@ class ProcessChatIntent implements ShouldQueue
             $action = $isApproval ? 'approved' : 'denied';
             $this->sendResponse("Tool **{$toolCall->tool_name}** {$action}.", $session, $account, $adapter);
 
-            Log::info('ProcessChatIntent: Tool approval button handled', [
+            Log::channel('messenger')->info('ProcessChatIntent: Tool approval button handled', [
                 'tool_call_id' => $toolCallId,
                 'approved' => $isApproval,
                 'user_id' => $user->id,
@@ -607,7 +621,7 @@ class ProcessChatIntent implements ShouldQueue
             }
         }
 
-        Log::debug('ProcessChatIntent: Unrecognized button callback', ['custom_id' => $customId]);
+        Log::channel('messenger')->debug('ProcessChatIntent: Unrecognized button callback', ['custom_id' => $customId]);
     }
 
     public function tags(): array

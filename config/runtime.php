@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'default_mode' => 'safe',
+    'default_mode' => env('RUNTIME_DEFAULT_MODE', 'safe'),
 
     /*
     |--------------------------------------------------------------------------
@@ -26,7 +26,7 @@ return [
     |
     */
 
-    'approval_model' => 'strict',
+    'approval_model' => env('RUNTIME_APPROVAL_MODEL', 'strict'),
 
     /*
     |--------------------------------------------------------------------------
@@ -82,7 +82,7 @@ return [
     |
     */
 
-    'concurrent_session_limit_default' => 3,
+    'concurrent_session_limit_default' => (int) env('RUNTIME_CONCURRENT_SESSION_LIMIT', 3),
 
     /*
     |--------------------------------------------------------------------------
@@ -94,7 +94,7 @@ return [
     |
     */
 
-    'session_timeout' => null,
+    'session_timeout' => env('RUNTIME_SESSION_TIMEOUT') ? (int) env('RUNTIME_SESSION_TIMEOUT') : null,
 
     /*
     |--------------------------------------------------------------------------

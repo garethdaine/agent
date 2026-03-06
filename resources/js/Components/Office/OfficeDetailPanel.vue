@@ -47,7 +47,7 @@ const ZONE_ROUTES = {
     mailroom: 'tools.messenger.index',
     vault: 'tools.memory.index',
     workstations: 'agent.jobs.index',
-    securityDesk: 'tools.runtime.index',
+    securityDesk: 'tools.security.index',
     escalation: 'agent.escalations.index',
 };
 

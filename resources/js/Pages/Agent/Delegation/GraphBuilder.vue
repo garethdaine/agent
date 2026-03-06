@@ -6,10 +6,10 @@ import axios from 'axios';
 import Button from '@/Components/ui/Button.vue';
 import { GraphCanvas } from '@/Components/GraphCanvas';
 import DelegationTaskNode from '@/Components/Delegation/DelegationTaskNode.vue';
-import { ArrowLeft, Plus, Save, Play, GitBranch, CheckCircle } from 'lucide-vue-next';
-
-import HelpHint from '@/Components/HelpHint.vue';
 import TaskConfigPanel from '@/Components/Delegation/TaskConfigPanel.vue';
+import DelegateeProfileCreateModal from '@/Components/Delegation/DelegateeProfileCreateModal.vue';
+import { ArrowLeft, Plus, Save, Play, GitBranch, CheckCircle } from 'lucide-vue-next';
+import HelpHint from '@/Components/HelpHint.vue';
 
 const nodeTypes = { delegationTask: markRaw(DelegationTaskNode) };
 
@@ -22,12 +22,14 @@ const description = ref('');
 const nodes = ref([]);
 const edges = ref([]);
 const delegateeProfiles = ref([]);
+const capabilities = ref([]);
 const loading = ref(false);
 const saving = ref(false);
 const validating = ref(false);
 const error = ref('');
 const validationError = ref('');
 const selectedNodeId = ref(null);
+const showCreateProfileModal = ref(false);
 
 const isEditing = computed(() => props.graphId != null);
 
@@ -37,6 +39,15 @@ const loadDelegatees = async () => {
         delegateeProfiles.value = data.data ?? [];
     } catch {
         delegateeProfiles.value = [];
+    }
+};
+
+const loadCapabilities = async () => {
+    try {
+        const { data } = await axios.get('/agent/api/v1/delegation/capabilities');
+        capabilities.value = data.data ?? [];
+    } catch {
+        capabilities.value = [];
     }
 };
 
@@ -54,6 +65,11 @@ const loadGraph = async () => {
         name.value = g.name ?? '';
         description.value = g.description ?? '';
         const tasks = g.tasks ?? [];
+
+        // Build a delegatee name lookup
+        const delegateeMap = new Map();
+        delegateeProfiles.value.forEach((p) => delegateeMap.set(p.id, p.name));
+
         nodes.value = tasks.map((t, i) => ({
             id: String(t.id),
             type: 'delegationTask',
@@ -64,6 +80,8 @@ const loadGraph = async () => {
                 capability: t.contract_json?.required_capability,
                 contract_json: t.contract_json,
                 assigned_delegatee_profile_id: t.assigned_profile_id,
+                delegateeProfileName: delegateeMap.get(t.assigned_profile_id) ?? null,
+                onDeleteNode: deleteTask,
                 ...t,
             },
         }));
@@ -86,7 +104,7 @@ const loadGraph = async () => {
 };
 
 onMounted(async () => {
-    await loadDelegatees();
+    await Promise.all([loadDelegatees(), loadCapabilities()]);
     if (props.graphId) await loadGraph();
 });
 
@@ -107,10 +125,19 @@ const addTask = () => {
             data: {
                 label: `Task ${nodes.value.length + 1}`,
                 status: 'pending',
-                capability: 'code_generation',
+                capability: '',
+                onDeleteNode: deleteTask,
             },
         },
     ];
+};
+
+const deleteTask = (nodeId) => {
+    nodes.value = nodes.value.filter((n) => n.id !== nodeId);
+    edges.value = edges.value.filter((e) => e.source !== nodeId && e.target !== nodeId);
+    if (selectedNodeId.value === nodeId) {
+        selectedNodeId.value = null;
+    }
 };
 
 const onNodesChange = ({ nodes: next }) => {
@@ -127,7 +154,6 @@ function wouldCreateCycle(sourceId, targetId, currentEdges) {
         if (!outgoers.has(e.source)) outgoers.set(e.source, []);
         outgoers.get(e.source).push(e.target);
     });
-    const nextEdges = [...currentEdges, { source: sourceId, target: targetId }];
     if (!outgoers.has(sourceId)) outgoers.set(sourceId, []);
     outgoers.get(sourceId).push(targetId);
     const visited = new Set();
@@ -167,8 +193,15 @@ const onNodeClick = (node) => {
 const onTaskConfigUpdate = (data) => {
     const id = selectedNodeId.value;
     if (!id) return;
+
+    // Resolve delegatee name for node info popover
+    const delegateeId = data.assigned_delegatee_profile_id;
+    const delegateeProfile = delegateeId
+        ? delegateeProfiles.value.find((p) => p.id === delegateeId)
+        : null;
+
     nodes.value = nodes.value.map((n) =>
-        n.id === id ? { ...n, data: { ...n.data, ...data } } : n
+        n.id === id ? { ...n, data: { ...n.data, ...data, delegateeProfileName: delegateeProfile?.name ?? null, onDeleteNode: deleteTask } } : n
     );
 };
 
@@ -249,6 +282,36 @@ const startGraph = () => {
         },
     });
 };
+
+const onProfileCreated = (profile) => {
+    showCreateProfileModal.value = false;
+    delegateeProfiles.value = [...delegateeProfiles.value, profile];
+};
+
+// --- Autosave: debounce save when graph changes (edit mode only) ---
+let autosaveTimer = null;
+const scheduleAutosave = () => {
+    if (!isEditing.value) return;
+    if (autosaveTimer) clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(() => saveDraft(), 800);
+};
+
+watch(
+    () => nodes.value.map((n) => {
+        const d = n.data ?? {};
+        return `${n.id}:${d.label}:${d.capability}:${d.assigned_delegatee_profile_id}`;
+    }).join('|'),
+    (newVal, oldVal) => {
+        if (oldVal && newVal !== oldVal) scheduleAutosave();
+    },
+);
+
+watch(
+    () => edges.value.map((e) => `${e.source}->${e.target}`).sort().join('|'),
+    (newVal, oldVal) => {
+        if (oldVal && newVal !== oldVal) scheduleAutosave();
+    },
+);
 </script>
 
 <template>
@@ -292,7 +355,7 @@ const startGraph = () => {
                     <Plus class="mr-2 h-4 w-4" />
                     Add task
                 </Button>
-                <Button variant="outline" size="sm" :disabled="saving" @click="saveDraft">
+                <Button v-if="!isEditing" variant="outline" size="sm" :disabled="saving" @click="saveDraft">
                     <Save class="mr-2 h-4 w-4" />
                     Save draft
                 </Button>
@@ -315,13 +378,13 @@ const startGraph = () => {
                     <Play class="mr-2 h-4 w-4" />
                     Start
                 </Button>
+                <span v-if="saving && isEditing" class="text-xs text-muted-foreground">Saving...</span>
             </div>
 
             <p v-if="error" class="mb-2 text-sm text-destructive">{{ error }}</p>
             <p v-if="validationError" class="mb-2 text-sm text-amber-600 dark:text-amber-400">{{ validationError }}</p>
 
-            <div class="flex min-h-0 flex-1 gap-4">
-            <div class="min-h-0 flex-1 rounded-lg border border-border">
+            <div class="relative min-h-0 flex-1 rounded-lg border border-border">
                 <GraphCanvas
                     v-if="!loading"
                     v-model:nodes="nodes"
@@ -334,18 +397,39 @@ const startGraph = () => {
                     @node-click="onNodeClick"
                 />
                 <div v-else class="flex h-full items-center justify-center text-muted-foreground">
-                    Loading graph…
+                    Loading graph...
                 </div>
-            </div>
-            <aside v-if="selectedNode" class="flex shrink-0 flex-col gap-2">
-                <TaskConfigPanel
-                    :node="selectedNode"
-                    :delegatee-profiles="delegateeProfiles"
-                    @close="selectedNodeId = null"
-                    @update="onTaskConfigUpdate"
-                />
-            </aside>
+
+                <!-- Config panel slides over the graph -->
+                <Transition
+                    enter-active-class="transition-transform duration-200 ease-out"
+                    leave-active-class="transition-transform duration-150 ease-in"
+                    enter-from-class="translate-x-full"
+                    enter-to-class="translate-x-0"
+                    leave-from-class="translate-x-0"
+                    leave-to-class="translate-x-full"
+                >
+                    <aside
+                        v-if="selectedNode"
+                        class="absolute right-3 top-3 z-10 w-80 max-h-[calc(100%-1.5rem)] overflow-y-auto"
+                    >
+                        <TaskConfigPanel
+                            :node="selectedNode"
+                            :delegatee-profiles="delegateeProfiles"
+                            :capabilities="capabilities"
+                            @close="selectedNodeId = null"
+                            @update="onTaskConfigUpdate"
+                            @delete="deleteTask"
+                        />
+                    </aside>
+                </Transition>
             </div>
         </div>
+
+        <DelegateeProfileCreateModal
+            :show="showCreateProfileModal"
+            @close="showCreateProfileModal = false"
+            @created="onProfileCreated"
+        />
     </AppLayout>
 </template>

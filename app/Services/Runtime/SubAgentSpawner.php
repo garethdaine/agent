@@ -60,7 +60,7 @@ class SubAgentSpawner
             connectorAccountId: $connectorAccountId,
         )->onQueue($queue);
 
-        Log::info('SubAgentSpawner: spawned sub-agent', [
+        Log::channel('runtime')->info('SubAgentSpawner: spawned sub-agent', [
             'parent_session_id' => $parentSession->id,
             'child_session_id' => $child->id,
             'label' => $label,

@@ -159,11 +159,10 @@ onMounted(loadRitual);
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card class="overflow-hidden">
                         <CardHeader>
                             <CardTitle>Phase Graph</CardTitle>
                         </CardHeader>
-                        <CardContent>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -186,14 +185,12 @@ onMounted(loadRitual);
                                     </TableRow>
                                 </TableBody>
                             </Table>
-                        </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card class="overflow-hidden">
                         <CardHeader>
                             <CardTitle>Run History</CardTitle>
                         </CardHeader>
-                        <CardContent class="p-0">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -237,7 +234,6 @@ onMounted(loadRitual);
                                     </TableRow>
                                 </TableBody>
                             </Table>
-                        </CardContent>
                     </Card>
                 </template>
             </div>

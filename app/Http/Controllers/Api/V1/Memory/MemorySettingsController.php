@@ -31,7 +31,7 @@ class MemorySettingsController extends Controller
     /**
      * GET /memory/settings
      *
-     * Returns all settings with sensitive keys masked.
+     * Returns all settings (non-credential) plus credential status per provider.
      */
     public function index(Request $request): JsonResponse
     {
@@ -40,6 +40,10 @@ class MemorySettingsController extends Controller
 
         return response()->json([
             'data' => $settings,
+            'credentials' => [
+                'openai' => $this->settingsService->isProviderKeyConfigured($userId, 'openai'),
+                'anthropic' => $this->settingsService->isProviderKeyConfigured($userId, 'anthropic'),
+            ],
         ]);
     }
 
