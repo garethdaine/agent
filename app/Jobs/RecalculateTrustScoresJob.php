@@ -14,6 +14,11 @@ class RecalculateTrustScoresJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public function __construct()
+    {
+        $this->onQueue('delegation');
+    }
+
     public function handle(): void
     {
         $calculator = app(TrustScoreCalculator::class);

@@ -6096,7 +6096,8 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "active_definitions": {
-                                                            "type": "string"
+                                                            "type": "integer",
+                                                            "minimum": 0
                                                         },
                                                         "runs_24h": {
                                                             "type": "integer",

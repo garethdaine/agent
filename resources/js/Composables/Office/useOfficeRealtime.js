@@ -3,6 +3,20 @@ import axios from 'axios';
 
 const POLL_INTERVAL = 5000;
 
+function inferActivityFromName(name) {
+    if (!name) return 'working';
+    const lower = name.toLowerCase();
+    if (lower.includes('review')) return 'reviewing';
+    if (lower.includes('analysis') || lower.includes('analy')) return 'analyzing';
+    if (lower.includes('synthesis') || lower.includes('report')) return 'compiling_report';
+    if (lower.includes('test')) return 'testing';
+    if (lower.includes('refactor')) return 'refactoring';
+    if (lower.includes('fix') || lower.includes('debug')) return 'debugging';
+    if (lower.includes('plan') || lower.includes('design')) return 'planning';
+    if (lower.includes('write') || lower.includes('implement') || lower.includes('build')) return 'writing_code';
+    return 'working';
+}
+
 export function useOfficeRealtime() {
     const officeState = ref(null);
     const connected = ref(false);
@@ -85,7 +99,7 @@ export function useOfficeRealtime() {
                 const agent = officeState.value.agents?.find((a) => a.id === payload.agent_id);
                 if (agent) {
                     agent.status = 'running';
-                    agent.current_activity = 'writing_code';
+                    agent.current_activity = inferActivityFromName(payload.task_name ?? payload.phase_name);
                     agent.zone = 'workstation';
                 }
                 break;

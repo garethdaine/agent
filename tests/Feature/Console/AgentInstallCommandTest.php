@@ -24,27 +24,21 @@ class AgentInstallCommandTest extends TestCase
     #[Test]
     public function it_accepts_discord_connector(): void
     {
-        // Test that the command doesn't fail on validation for discord connector
-        // Use --non-interactive and --skip-migrations to avoid interactive prompts and DB operations
-        // The command will fail due to missing credentials, but that's expected - we're just verifying
-        // that 'discord' is accepted as a valid connector value
-        $this->artisan('agent:install --connector=discord --non-interactive --skip-migrations --skip-health-check')
-            ->assertFailed(); // Expected: fails due to missing credentials, not invalid connector
+        $this->artisan('agent:install --connector=discord --non-interactive --skip-migrations --skip-health-check --skip-license')
+            ->assertFailed();
     }
 
     #[Test]
     public function it_accepts_whatsapp_connector(): void
     {
-        // Test that the command doesn't fail on validation for whatsapp connector
-        $this->artisan('agent:install --connector=whatsapp --non-interactive --skip-migrations --skip-health-check')
-            ->assertFailed(); // Expected: fails due to missing credentials, not invalid connector
+        $this->artisan('agent:install --connector=whatsapp --non-interactive --skip-migrations --skip-health-check --skip-license')
+            ->assertFailed();
     }
 
     #[Test]
-    public function it_rejects_invalid_connector(): void
+    public function it_runs_successfully_without_connectors(): void
     {
-        // Verify invalid connector is filtered out and results in no connectors being configured
-        $this->artisan('agent:install --connector=invalid_provider --non-interactive --skip-migrations --skip-health-check')
-            ->expectsOutput('No connectors selected. Skipping connector configuration.');
+        $this->artisan('agent:install --non-interactive --skip-migrations --skip-health-check --skip-license')
+            ->assertSuccessful();
     }
 }

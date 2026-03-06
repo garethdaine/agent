@@ -31,3 +31,4 @@ Thumbs.db
 /tests/e2e/.auth/
 
 .firecrawl/
+/agent-website/

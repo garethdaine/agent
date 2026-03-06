@@ -17,6 +17,7 @@ use App\Messenger\SlashCommands\HelpCommandHandler;
 use App\Messenger\SlashCommands\JobsCommandHandler;
 use App\Messenger\SlashCommands\ModeCommandHandler;
 use App\Messenger\SlashCommands\NewCommandHandler;
+use App\Messenger\SlashCommands\ProgressCommandHandler;
 use App\Messenger\SlashCommands\RunsCommandHandler;
 use App\Messenger\SlashCommands\SessionsCommandHandler;
 use App\Messenger\SlashCommands\StatusCommandHandler;
@@ -65,6 +66,7 @@ final class CommandRouter
         'whoami' => WhoamiCommandHandler::class,
         'compact' => CompactCommandHandler::class,
         'subagents' => SubAgentsCommandHandler::class,
+        'progress' => ProgressCommandHandler::class,
     ];
 
     /**

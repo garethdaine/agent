@@ -58,10 +58,12 @@ class OfficeStateController extends Controller
             ->get()
             ->keyBy('assigned_delegatee_profile_id');
 
-        return $orgAgents->map(function (OrgAgentProfile $agent) use ($activeRuns, $activeDelegationTasks) {
+        $delegateeToRunMap = $this->buildDelegateeRunMap($activeRuns, $activeDelegationTasks);
+
+        return $orgAgents->map(function (OrgAgentProfile $agent) use ($activeDelegationTasks, $delegateeToRunMap) {
             $delegationTask = $activeDelegationTasks->get($agent->delegatee_profile_id);
 
-            $run = $activeRuns->first(fn (AgentJobRun $r) => $r->job?->runner_type === $agent->delegateeProfile?->runner_type);
+            $run = $delegateeToRunMap[$agent->delegatee_profile_id] ?? null;
 
             $status = 'idle';
             $activity = 'idle';
@@ -71,9 +73,9 @@ class OfficeStateController extends Controller
             if ($delegationTask) {
                 $status = $delegationTask->status;
                 $activity = match ($delegationTask->status) {
-                    'running' => 'writing_code',
+                    'running' => $this->inferActivityFromTaskName($delegationTask->name),
                     'assigned' => 'waiting',
-                    'verifying' => 'reading',
+                    'verifying' => 'reviewing',
                     default => 'idle',
                 };
                 $zone = match ($agent->role_slug) {
@@ -84,7 +86,7 @@ class OfficeStateController extends Controller
             } elseif ($run) {
                 $status = $run->status;
                 $activity = match ($run->status) {
-                    'running' => 'writing_code',
+                    'running' => $this->inferActivityFromJobName($run->job?->name),
                     'starting', 'queued' => 'waiting',
                     'stopping' => 'finishing',
                     default => 'idle',
@@ -116,6 +118,78 @@ class OfficeStateController extends Controller
                 'needs_attention' => $needsAttention,
             ];
         })->values()->toArray();
+    }
+
+    private function buildDelegateeRunMap($activeRuns, $activeDelegationTasks): array
+    {
+        if ($activeRuns->isEmpty()) {
+            return [];
+        }
+
+        $runJobIds = $activeRuns->pluck('agent_job_id')->filter()->all();
+        if (empty($runJobIds)) {
+            return [];
+        }
+
+        $attempts = \App\Models\DelegationAttempt::query()
+            ->whereIn('agent_job_id', $runJobIds)
+            ->whereIn('status', ['running', 'pending'])
+            ->get(['id', 'delegation_task_id', 'agent_job_id']);
+
+        $taskIds = $attempts->pluck('delegation_task_id')->unique()->all();
+        $tasks = DelegationTask::whereIn('id', $taskIds)->get(['id', 'assigned_delegatee_profile_id']);
+
+        $jobToTask = [];
+        foreach ($attempts as $attempt) {
+            $jobToTask[$attempt->agent_job_id] = $tasks->firstWhere('id', $attempt->delegation_task_id);
+        }
+
+        $map = [];
+        foreach ($activeRuns as $run) {
+            $task = $jobToTask[$run->agent_job_id] ?? null;
+            $profileId = $task?->assigned_delegatee_profile_id;
+            if ($profileId && ! isset($map[$profileId])) {
+                $map[$profileId] = $run;
+            }
+        }
+
+        return $map;
+    }
+
+    private function inferActivityFromTaskName(?string $name): string
+    {
+        if ($name === null) {
+            return 'working';
+        }
+
+        $lower = strtolower($name);
+
+        return match (true) {
+            str_contains($lower, 'review') => 'reviewing',
+            str_contains($lower, 'analysis') || str_contains($lower, 'analy') => 'analyzing',
+            str_contains($lower, 'synthesis') || str_contains($lower, 'report') => 'compiling_report',
+            str_contains($lower, 'test') => 'testing',
+            str_contains($lower, 'refactor') => 'refactoring',
+            str_contains($lower, 'fix') || str_contains($lower, 'debug') => 'debugging',
+            str_contains($lower, 'plan') || str_contains($lower, 'design') => 'planning',
+            str_contains($lower, 'write') || str_contains($lower, 'implement') || str_contains($lower, 'build') => 'writing_code',
+            default => 'working',
+        };
+    }
+
+    private function inferActivityFromJobName(?string $name): string
+    {
+        if ($name === null) {
+            return 'working';
+        }
+
+        if (str_starts_with($name, 'Delegation: ')) {
+            return $this->inferActivityFromTaskName(
+                preg_replace('/^Delegation:\s*|\s*\[g\d+]\s*#\d+$/', '', $name)
+            );
+        }
+
+        return 'executing_job';
     }
 
     private function buildSystemState(): array
@@ -316,10 +390,54 @@ class OfficeStateController extends Controller
             }
         }
 
+        $runEscalations = AgentJobRun::query()
+            ->where('user_id', $user->id)
+            ->whereIn('status', [AgentJobRun::STATUS_RUNNING, AgentJobRun::STATUS_FAILED])
+            ->with('job:id,name')
+            ->latest()
+            ->limit(20)
+            ->get()
+            ->filter(function (AgentJobRun $run) {
+                $meta = is_array($run->metadata_json) ? $run->metadata_json : [];
+
+                return ($meta['rate_limit_detected'] ?? false) === true
+                    || ($meta['approval_required'] ?? false) === true
+                    || ($meta['permission_blocker_detected'] ?? false) === true
+                    || ($meta['clarification_required'] ?? false) === true;
+            })
+            ->take(5)
+            ->map(function (AgentJobRun $run) {
+                $meta = is_array($run->metadata_json) ? $run->metadata_json : [];
+                $type = match (true) {
+                    ($meta['rate_limit_detected'] ?? false) === true => 'rate_limit',
+                    ($meta['approval_required'] ?? false) === true => 'approval_required',
+                    ($meta['permission_blocker_detected'] ?? false) === true => 'permission_blocked',
+                    ($meta['clarification_required'] ?? false) === true => 'clarification_required',
+                    default => 'unknown',
+                };
+
+                return [
+                    'id' => 'run-'.$run->id,
+                    'type' => $type,
+                    'state' => $run->status === AgentJobRun::STATUS_RUNNING ? 'active' : 'resolved',
+                    'agent' => $run->job?->name,
+                    'timestamp' => $run->updated_at?->toIso8601String(),
+                    'run_id' => $run->id,
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        $allItems = array_merge($recentItems, $runEscalations);
+        usort($allItems, fn ($a, $b) => ($b['timestamp'] ?? '') <=> ($a['timestamp'] ?? ''));
+        $allItems = array_slice($allItems, 0, 10);
+
+        $runIncidents = count(array_filter($runEscalations, fn ($e) => $e['state'] === 'active'));
+
         return [
-            'open_incidents' => $openIncidents,
+            'open_incidents' => $openIncidents + $runIncidents,
             'pending_org_escalations' => $pendingOrg,
-            'recent_items' => $recentItems,
+            'recent_items' => $allItems,
         ];
     }
 

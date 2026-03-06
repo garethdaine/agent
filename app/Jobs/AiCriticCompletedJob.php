@@ -35,7 +35,9 @@ class AiCriticCompletedJob implements ShouldQueue
      */
     public function __construct(
         public readonly int $verificationResultId
-    ) {}
+    ) {
+        $this->onQueue('delegation');
+    }
 
     /**
      * Execute the job.

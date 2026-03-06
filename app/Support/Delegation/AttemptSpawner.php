@@ -76,7 +76,7 @@ class AttemptSpawner
 
         $job = AgentJob::create([
             'user_id' => $task->graph->user_id,
-            'name' => sprintf('Delegation: %s #%d', $task->name, $attemptNumber),
+            'name' => sprintf('Delegation: %s [g%d] #%d', $task->name, $task->graph->id, $attemptNumber),
             'runner_type' => $runnerType,
             'command_template' => $commandTemplate,
             'working_directory' => $profile->working_directory,

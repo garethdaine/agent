@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'delegation' => \App\Http\Middleware\DelegationFeatureGate::class,
             'delegation.ui' => \App\Http\Middleware\DelegationUiFeatureGate::class,
+            'license' => \App\Http\Middleware\EnsureLicenseValid::class,
             'onboarding' => \App\Http\Middleware\EnsureOnboardingCompleted::class,
             'org' => \App\Http\Middleware\OrgFeatureGate::class,
             'org.ui' => \App\Http\Middleware\OrgUiFeatureGate::class,

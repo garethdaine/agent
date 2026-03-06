@@ -371,7 +371,7 @@ return new class extends Migration
 
         $nonAdminRoles = env('AGENT_DB_NON_ADMIN_ROLES', '');
         if (is_string($nonAdminRoles) && trim($nonAdminRoles) !== '') {
-            foreach (str_getcsv($nonAdminRoles) as $role) {
+            foreach (str_getcsv($nonAdminRoles, ',', '"', '') as $role) {
                 $role = trim((string) $role);
                 if ($role !== '') {
                     $roles[] = $role;

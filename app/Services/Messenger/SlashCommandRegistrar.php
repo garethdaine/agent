@@ -18,7 +18,7 @@ use Throwable;
  */
 final class SlashCommandRegistrar
 {
-    private const COMMAND_VERSION = '2.2.0';
+    private const COMMAND_VERSION = '2.3.0';
 
     private const DISCORD_API_BASE = 'https://discord.com/api/v10';
 
@@ -176,6 +176,10 @@ final class SlashCommandRegistrar
                         ['name' => 'id', 'description' => 'Sub-agent session ID', 'type' => 3, 'required' => true],
                     ]],
                 ],
+            ],
+            [
+                'name' => 'progress',
+                'description' => 'Show live progress for the current running turn',
             ],
         ];
     }

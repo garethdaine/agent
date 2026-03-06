@@ -223,9 +223,26 @@ onMounted(async () => {
             if (!state?.agents) return;
             state.agents.forEach((a) => {
                 const prev = oldState?.agents?.find((o) => o.id === a.id);
+                const activityLabels = {
+                    idle: 'Idle',
+                    waiting: 'Waiting',
+                    writing_code: 'Writing Code',
+                    analyzing: 'Analyzing Code',
+                    reviewing: 'Reviewing Code',
+                    compiling_report: 'Compiling Report',
+                    testing: 'Running Tests',
+                    refactoring: 'Refactoring',
+                    debugging: 'Debugging',
+                    planning: 'Planning',
+                    working: 'Working',
+                    executing_job: 'Running Job',
+                    finishing: 'Finishing Up',
+                    chatting: 'Discussing',
+                };
+                const label = activityLabels[a.current_activity] ?? a.current_activity?.replace(/_/g, ' ') ?? 'Idle';
                 agentThoughts.value[a.id] = {
                     status: a.status,
-                    text: `${a.name} — ${a.current_activity === 'idle' ? 'Idle' : a.current_activity.replace(/_/g, ' ')}`,
+                    text: `${a.name} — ${label}`,
                 };
 
                 if (!prev || !avatarApi || !particles) return;
@@ -328,10 +345,24 @@ onMounted(async () => {
 
             if (!agent) return;
 
+            let displayText = latest.text ?? '';
+            if (displayText.startsWith('{') || displayText.startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(displayText);
+                    displayText = parsed?.delta?.text
+                        ?? parsed?.text
+                        ?? parsed?.message
+                        ?? parsed?.content
+                        ?? '';
+                    if (typeof displayText !== 'string') displayText = '';
+                } catch { displayText = ''; }
+            }
+            if (!displayText || displayText.length < 3) return;
+
             const group = avatarApi.getAvatarGroup(agent.id);
             if (!group) return;
 
-            speechBubbles.show(agent.id, latest.text, group, {
+            speechBubbles.show(agent.id, displayText, group, {
                 duration: 5,
                 color: '#c4d5ff',
                 bgColor: 'rgba(20,30,60,0.92)',
@@ -340,7 +371,7 @@ onMounted(async () => {
 
             agentThoughts.value[agent.id] = {
                 status: agent.status,
-                text: `${agent.name} — ${latest.text}`,
+                text: `${agent.name} — ${displayText}`,
             };
         }, { deep: true });
 

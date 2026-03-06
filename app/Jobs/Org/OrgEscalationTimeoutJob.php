@@ -20,6 +20,11 @@ class OrgEscalationTimeoutJob implements ShouldQueue
 {
     use Queueable;
 
+    public function __construct()
+    {
+        $this->onQueue('org-rituals');
+    }
+
     public function handle(OrgEscalationService $escalationService): void
     {
         // Skip if org layer is disabled

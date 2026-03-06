@@ -37,7 +37,7 @@ class RunEventWriter
 
     private const CLARIFICATION_PATTERN = '/\b(?:could|can)\s+you\s+clarify\b|\b(?:i|we)\s+need\s+(?:your\s+)?clarification\b|\bneed\s+clarification\s+from\s+you\b|\bplease\s+clarify\b|\bquestion\s+for\s+you\b|\bcan\s+you\s+confirm\b|\bshould\s+i\s+(?:proceed|continue|use|do)\b/i';
 
-    private const RATE_LIMIT_PATTERN = '/\bhit(?:ting)?\s+(?:your\s+)?limit\b|\brate[-\s]?limited\b|\btoo many requests\b|\bquota exceeded\b|\b429\b|\bretry[-\s]?after\b/i';
+    private const RATE_LIMIT_PATTERN = '/\bhit(?:ting)?\s+(?:your\s+)?limit\b|\brate[-\s]?limited\b|\btoo many requests\b|\bquota exceeded\b|\b(?:status|code|error|http)\s*[:=]?\s*429\b|\bretry[-\s]?after\b/i';
 
     private const RATE_LIMIT_FALSE_POSITIVE_PATTERN = '/\brate limit handling\b|\brate limits? handling\b|\berror handling\s*\([^)]*rate limits?[^)]*\)/i';
 
@@ -355,7 +355,46 @@ class RunEventWriter
             }
         }
 
-        return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+        // Claude stream-json: {"type":"content_block_delta","delta":{"type":"text_delta","text":"..."}}
+        $delta = $decoded['delta'] ?? null;
+        if (is_array($delta) && is_string($delta['text'] ?? null) && trim($delta['text']) !== '') {
+            return trim($delta['text']);
+        }
+
+        // Claude stream-json: {"type":"stream_event","event":{...nested...}}
+        $event = $decoded['event'] ?? null;
+        if (is_array($event)) {
+            $nested = $this->extractReadableText($event);
+            if ($nested !== '' && ! str_starts_with($nested, '{')) {
+                return $nested;
+            }
+        }
+
+        // Claude stream-json: {"type":"message_start","message":{"content":[...]}}
+        $msg = $decoded['message'] ?? null;
+        if (is_array($msg)) {
+            $nested = $this->extractReadableText($msg);
+            if ($nested !== '' && ! str_starts_with($nested, '{')) {
+                return $nested;
+            }
+        }
+
+        // Claude stream-json: {"result":{"text":"..."}} or {"result":{...content...}}
+        $result = $decoded['result'] ?? null;
+        if (is_array($result)) {
+            $nested = $this->extractReadableText($result);
+            if ($nested !== '' && ! str_starts_with($nested, '{')) {
+                return $nested;
+            }
+        }
+
+        // If the structure has a 'type' key but no extractable text, it's a
+        // machine event (message_start, ping, etc.) -- suppress it entirely.
+        if (isset($decoded['type'])) {
+            return '';
+        }
+
+        return '';
     }
 
     private function redact(string $payload, int &$redactionCount): string
@@ -606,6 +645,8 @@ class RunEventWriter
         }
 
         $this->appendLifecycle($payload);
+
+        $this->broadcastEscalation('rate_limit_detected', 'Agent hit an upstream rate limit');
     }
 
     private function markMcpServerUnavailable(string $endpoint, string $excerpt): void
@@ -649,16 +690,46 @@ class RunEventWriter
             return true;
         }
 
+        if ($this->isStructuredStreamEvent($chunk)) {
+            return false;
+        }
+
         if (preg_match(self::RATE_LIMIT_PATTERN, $chunk) !== 1) {
             return false;
         }
 
-        // Ignore descriptive implementation language that is not an actual runtime limit event.
         if (preg_match(self::RATE_LIMIT_FALSE_POSITIVE_PATTERN, $chunk) === 1) {
             return false;
         }
 
         return true;
+    }
+
+    private function isStructuredStreamEvent(string $chunk): bool
+    {
+        $decoded = $this->decodeStructuredEvent($chunk);
+        if (! is_array($decoded)) {
+            return false;
+        }
+
+        $type = strtolower((string) ($decoded['type'] ?? ''));
+
+        $nonErrorStreamTypes = [
+            'stream_event', 'content_block_delta', 'content_block_start',
+            'content_block_stop', 'message_start', 'message_delta',
+            'message_stop', 'ping', 'input_json_delta',
+        ];
+
+        if (in_array($type, $nonErrorStreamTypes, true)) {
+            return true;
+        }
+
+        $nestedType = strtolower((string) ($decoded['event']['type'] ?? ''));
+        if ($nestedType !== '' && in_array($nestedType, $nonErrorStreamTypes, true)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

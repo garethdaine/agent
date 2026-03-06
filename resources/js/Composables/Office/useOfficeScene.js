@@ -181,7 +181,11 @@ export function useOfficeScene(containerRef, options = {}) {
         const lights = ceilingLights.get(zoneId);
         if (!lights) return;
         lights.forEach((entry) => {
-            entry.targetIntensity = (_ceilingLightsEnabled && occupied) ? entry.maxIntensity : 0;
+            if (!_ceilingLightsEnabled) {
+                entry.targetIntensity = 0;
+            } else {
+                entry.targetIntensity = occupied ? entry.maxIntensity : entry.maxIntensity * 0.3;
+            }
         });
     }
 

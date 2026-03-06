@@ -85,12 +85,24 @@ function updateMonitorScreen(workstation, activity, time) {
         if (child.isMesh && child.material?.emissive) {
             const geom = child.geometry?.parameters;
             if (geom && geom.depth < 0.01 && geom.width > 0.3) {
-                if (activity === 'writing_code' && wsIndex !== undefined) {
+                const screenActiveActivities = [
+                    'writing_code', 'analyzing', 'reviewing', 'compiling_report',
+                    'testing', 'refactoring', 'debugging', 'planning',
+                    'working', 'executing_job',
+                ];
+                if (screenActiveActivities.includes(activity) && wsIndex !== undefined) {
                     const mc = getOrCreateMonitorCanvas(wsIndex);
                     animateCodeCanvas(mc.ctx, mc.canvas);
                     mc.texture.needsUpdate = true;
                     child.material.map = mc.texture;
-                    child.material.emissive.copy(new Color(0x00ff44));
+                    const screenColor = activity === 'reviewing' || activity === 'analyzing'
+                        ? new Color(0x0088ff)
+                        : activity === 'compiling_report'
+                            ? new Color(0xff8800)
+                            : activity === 'debugging'
+                                ? new Color(0xff4444)
+                                : new Color(0x00ff44);
+                    child.material.emissive.copy(screenColor);
                     child.material.emissiveIntensity = 0.3;
                 } else {
                     child.material.map = null;
@@ -342,6 +354,15 @@ export function useOfficeZones(scene, officeState, avatarApi) {
                 if (isBusy) {
                     const stateMap = {
                         writing_code: 'typing',
+                        analyzing: 'reading',
+                        reviewing: 'reading',
+                        compiling_report: 'typing',
+                        testing: 'typing',
+                        refactoring: 'typing',
+                        debugging: 'reading',
+                        planning: 'reading',
+                        working: 'typing',
+                        executing_job: 'typing',
                         reading: 'reading',
                         waiting: 'waiting',
                         finishing: 'typing',

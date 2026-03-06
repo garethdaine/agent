@@ -7,7 +7,7 @@ $parseEnvCsvList = static function (string $key): array {
         return [];
     }
 
-    $values = str_getcsv($raw);
+    $values = str_getcsv($raw, ',', '"', '');
 
     return array_values(array_filter(array_map(
         static fn ($value): string => trim((string) $value),
@@ -15,29 +15,41 @@ $parseEnvCsvList = static function (string $key): array {
     ), static fn (string $value): bool => $value !== ''));
 };
 
-$claudeExecutable = env('AGENT_RUNNER_CLAUDE_PATH', '/Users/garethdaine/.local/bin/claude');
-$codexExecutable = env('AGENT_RUNNER_CODEX_PATH', '/opt/homebrew/bin/codex');
+$claudeExecutable = env('AGENT_RUNNER_CLAUDE_PATH', '');
+$codexExecutable = env('AGENT_RUNNER_CODEX_PATH', '');
 $codexModel = trim((string) env('AGENT_RUNNER_CODEX_MODEL', 'gpt-5.3-codex'));
 $codexModelArgs = $codexModel !== '' ? ' -m '.$codexModel : '';
 
 return [
-    'allowed_working_directory_bases' => array_values(array_unique(array_merge([
-        '/Users/garethdaine/Code',
-        '/Users/garethdaine/Code/agent',
-        '/Users/garethdaine/Documents',
-    ], $parseEnvCsvList('AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES')))),
+    'version' => '1.0.0',
 
-    'allowed_task_markdown_bases' => array_values(array_unique(array_merge([
-        '/Users/garethdaine/Code/agent/tasks',
-        '/Users/garethdaine/Code/agent/prompts',
-        storage_path('app/memory/context'),
-        storage_path('app/delegation'),
-    ], $parseEnvCsvList('AGENT_ADDITIONAL_TASK_MARKDOWN_BASES')))),
+    'license' => [
+        'key' => env('AGENT_LICENSE_KEY', ''),
+        'validation_url' => env('AGENT_LICENSE_VALIDATION_URL', 'https://agent-ops.com/api/license/validate'),
+        'cache_ttl_seconds' => (int) env('AGENT_LICENSE_CACHE_TTL', 3600),
+        'bypass_domains' => [
+            '.test', '.local', '.localhost', '.example', '.invalid',
+            'localhost', '127.0.0.1', '::1',
+        ],
+        'bypass_subdomains' => [
+            'staging.', 'stage.', 'test.', 'testing.', 'dev.', 'development.',
+        ],
+    ],
+
+    'allowed_working_directory_bases' => array_values(array_unique(array_filter(array_merge(
+        $parseEnvCsvList('AGENT_WORKING_DIRECTORY_BASES'),
+        $parseEnvCsvList('AGENT_ADDITIONAL_WORKING_DIRECTORY_BASES'),
+    )))),
+
+    'allowed_task_markdown_bases' => array_values(array_unique(array_filter(array_merge(
+        $parseEnvCsvList('AGENT_TASK_MARKDOWN_BASES'),
+        $parseEnvCsvList('AGENT_ADDITIONAL_TASK_MARKDOWN_BASES'),
+    )))),
 
     'runner_executables' => [
         'claude' => $claudeExecutable,
         'codex' => $codexExecutable,
-        'custom' => env('AGENT_RUNNER_CUSTOM_PATH', '/Users/garethdaine/Code/agent/bin/agent-runner'),
+        'custom' => env('AGENT_RUNNER_CUSTOM_PATH', ''),
     ],
     'runner_models' => [
         'codex' => $codexModel,

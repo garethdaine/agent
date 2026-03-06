@@ -6,6 +6,8 @@ use App\Messenger\Validation\DiscordCredentialValidator;
 use App\Messenger\Validation\IngressProbe;
 use App\Messenger\Validation\WhatsAppCredentialValidator;
 use App\Models\ConnectorAccount;
+use App\Models\User;
+use App\Services\Agent\LicenseService;
 use App\Services\Messenger\SlashCommandRegistrar;
 use App\Support\Messenger\ConnectorManager;
 use Illuminate\Console\Command;
@@ -30,9 +32,11 @@ class AgentInstallCommand extends Command
         {--non-interactive : Fail on missing required values}
         {--skip-migrations : Skip running migrations}
         {--skip-health-check : Skip final health check}
-        {--setup-env : Interactive .env setup wizard for DB and Redis}';
+        {--skip-license : Skip license validation}
+        {--setup-env : Interactive .env setup wizard for DB and Redis}
+        {--license-key= : License key to set during install}';
 
-    protected $description = 'Install and configure agent messenger integrations for Slack, Telegram, Discord, or WhatsApp';
+    protected $description = 'Install and configure the Agent Ops platform';
 
     private const REQUIRED_PHP_VERSION = '8.2.0';
 
@@ -74,22 +78,40 @@ class AgentInstallCommand extends Command
         ],
     ];
 
-    public function handle(ConnectorManager $connectorManager): int
+    public function handle(ConnectorManager $connectorManager, LicenseService $license): int
     {
-        $this->info('=== Agent Messenger Control Plane Installation ===');
+        $version = (string) config('agent.version', '1.0.0');
+        $this->newLine();
+        $this->info("=== Agent Ops Platform v{$version} — Installation ===");
         $this->newLine();
 
+        $totalSteps = $this->calculateTotalSteps();
+        $step = 0;
+
+        // Step: Environment setup wizard (optional)
         if ($this->option('setup-env')) {
-            $this->info('[0/7] Environment setup wizard...');
+            $step++;
+            $this->info("[{$step}/{$totalSteps}] Environment setup wizard...");
             if (! $this->runEnvWizard()) {
                 return self::FAILURE;
             }
             $this->newLine();
         }
 
-        // Step 1: Preflight Checks
-        $stepNum = $this->option('setup-env') ? '1/7' : '1/6';
-        $this->info("[{$stepNum}] Running preflight checks...");
+        // Step: License validation
+        if (! $this->option('skip-license')) {
+            $step++;
+            $this->info("[{$step}/{$totalSteps}] Validating license...");
+
+            if (! $this->runLicenseStep($license)) {
+                return self::FAILURE;
+            }
+            $this->newLine();
+        }
+
+        // Step: Preflight checks
+        $step++;
+        $this->info("[{$step}/{$totalSteps}] Running preflight checks...");
 
         if (! $this->runPreflightChecks()) {
             $this->error('Preflight checks failed. Please fix the issues above and try again.');
@@ -100,73 +122,9 @@ class AgentInstallCommand extends Command
         $this->info('All preflight checks passed.');
         $this->newLine();
 
-        // Step 2: Configure Connectors
-        $this->info('[2/6] Configuring connectors...');
-        $connectors = $this->option('connector');
-
-        if (empty($connectors)) {
-            if ($this->option('non-interactive')) {
-                $this->error('No connectors specified. Use --connector=slack,telegram');
-
-                return self::FAILURE;
-            }
-
-            $connectors = $this->selectConnectors();
-        }
-
-        $connectors = $this->normalizeConnectors($connectors);
-
-        $mode = $this->option('mode');
-        if (! empty($connectors) && ! $this->option('non-interactive')) {
-            $mode = select(
-                label: 'Ingress mode',
-                options: [
-                    'local' => 'Local (Socket Mode / Long Polling)',
-                    'webhook' => 'Webhook (public endpoints)',
-                ],
-                default: $mode,
-            );
-        }
-
-        $mode = in_array($mode, [ConnectorAccount::MODE_LOCAL, ConnectorAccount::MODE_WEBHOOK], true)
-            ? $mode
-            : ConnectorAccount::MODE_LOCAL;
-
-        if (! empty($connectors)) {
-            $this->info(sprintf('Using ingress mode: %s', $mode));
-        }
-
-        if (empty($connectors)) {
-            $this->warn('No connectors selected. Skipping connector configuration.');
-        } else {
-            foreach ($connectors as $connector) {
-                if (! $this->configureConnector($connector, $connectorManager, $mode)) {
-                    $this->error(sprintf('Failed to configure %s connector.', ucfirst($connector)));
-
-                    return self::FAILURE;
-                }
-            }
-        }
-
-        $this->newLine();
-
-        // Step 3: Configure Ingress Mode
-        $this->info('[3/6] Configuring ingress mode...');
-
-        if ($this->configureIngressMode($mode)) {
-            $this->info(sprintf('Ingress mode set to: %s', $mode));
-        }
-
-        $this->newLine();
-
-        // Step 4: Create Runtime Config
-        $this->info('[4/6] Creating runtime configuration...');
-        $this->createRuntimeConfig($mode);
-        $this->info('Runtime configuration updated.');
-        $this->newLine();
-
-        // Step 5: Run Migrations
-        $this->info('[5/6] Running migrations...');
+        // Step: Run migrations
+        $step++;
+        $this->info("[{$step}/{$totalSteps}] Running migrations...");
 
         if ($this->option('skip-migrations')) {
             $this->warn('Skipping migrations (--skip-migrations).');
@@ -184,13 +142,78 @@ class AgentInstallCommand extends Command
 
         $this->newLine();
 
-        // Step 6: Health Check
-        $this->info('[6/6] Running health check...');
+        // Step: Create initial admin user (if none exist)
+        $step++;
+        $this->info("[{$step}/{$totalSteps}] Admin user setup...");
+
+        if (User::count() === 0 && ! $this->option('non-interactive')) {
+            $this->info('No users found. Creating initial admin user...');
+            $userResult = $this->call('agent:user');
+
+            if ($userResult !== 0) {
+                $this->error('Failed to create admin user.');
+
+                return self::FAILURE;
+            }
+        } elseif (User::count() === 0) {
+            $this->warn('No users found. Run "php artisan agent:user" to create an admin user.');
+        } else {
+            $this->info(sprintf('Users exist (%d found). Skipping admin user creation.', User::count()));
+        }
+
+        $this->newLine();
+
+        // Step: Connector configuration (if --connector flags provided)
+        $connectors = $this->option('connector');
+        $mode = $this->option('mode');
+
+        if (! empty($connectors)) {
+            $step++;
+            $this->info("[{$step}/{$totalSteps}] Configuring messenger connectors...");
+
+            $connectors = $this->normalizeConnectors($connectors);
+
+            if (! empty($connectors) && ! $this->option('non-interactive')) {
+                $mode = select(
+                    label: 'Ingress mode',
+                    options: [
+                        'local' => 'Local (Socket Mode / Long Polling)',
+                        'webhook' => 'Webhook (public endpoints)',
+                    ],
+                    default: $mode,
+                );
+            }
+
+            $mode = in_array($mode, [ConnectorAccount::MODE_LOCAL, ConnectorAccount::MODE_WEBHOOK], true)
+                ? $mode
+                : ConnectorAccount::MODE_LOCAL;
+
+            $this->info(sprintf('Using ingress mode: %s', $mode));
+
+            foreach ($connectors as $connector) {
+                if (! $this->configureConnector($connector, $connectorManager, $mode)) {
+                    $this->error(sprintf('Failed to configure %s connector.', ucfirst($connector)));
+
+                    return self::FAILURE;
+                }
+            }
+
+            if ($this->configureIngressMode($mode)) {
+                $this->info(sprintf('Ingress mode set to: %s', $mode));
+            }
+
+            $this->createRuntimeConfig($mode);
+            $this->newLine();
+        }
+
+        // Step: Health check
+        $step++;
+        $this->info("[{$step}/{$totalSteps}] Running health check...");
 
         if ($this->option('skip-health-check')) {
             $this->warn('Skipping health check (--skip-health-check).');
         } else {
-            $healthResults = $this->runHealthCheck($connectors);
+            $healthResults = $this->runHealthCheck($connectors ?: []);
             $this->displayHealthCheckResults($healthResults);
         }
 
@@ -198,9 +221,69 @@ class AgentInstallCommand extends Command
         $this->info('=== Installation Complete ===');
         $this->newLine();
 
-        $this->printNextSteps($mode);
+        $this->printNextSteps($mode ?? 'local');
 
         return self::SUCCESS;
+    }
+
+    private function calculateTotalSteps(): int
+    {
+        $steps = 4; // preflight, migrations, admin user, health check
+
+        if ($this->option('setup-env')) {
+            $steps++;
+        }
+
+        if (! $this->option('skip-license')) {
+            $steps++;
+        }
+
+        if (! empty($this->option('connector'))) {
+            $steps++;
+        }
+
+        return $steps;
+    }
+
+    private function runLicenseStep(LicenseService $license): bool
+    {
+        if ($license->shouldBypass()) {
+            $this->info('  Development environment detected — license check bypassed.');
+
+            return true;
+        }
+
+        $licenseKey = $this->option('license-key') ?? (string) config('agent.license.key', '');
+
+        if ($licenseKey === '' && ! $this->option('non-interactive')) {
+            $licenseKey = text(
+                label: 'Enter your license key',
+                required: true,
+                validate: fn (string $value) => strlen(trim($value)) < 8 ? 'License key is too short.' : null,
+            );
+
+            $this->setEnvInFile(base_path('.env'), 'AGENT_LICENSE_KEY', $licenseKey);
+            config(['agent.license.key' => $licenseKey]);
+        }
+
+        if ($licenseKey === '') {
+            $this->error('No license key provided. Use --license-key= or set AGENT_LICENSE_KEY in .env');
+
+            return false;
+        }
+
+        $license->clearCache();
+        $status = $license->validate();
+
+        if ($status->valid) {
+            $this->info(sprintf('  License valid (%s).', $status->plan));
+
+            return true;
+        }
+
+        $this->error(sprintf('  License validation failed: %s', $status->error ?? 'Unknown error'));
+
+        return false;
     }
 
     private function runPreflightChecks(): bool
@@ -1071,21 +1154,18 @@ class AgentInstallCommand extends Command
     {
         $this->info('Next steps:');
         $this->line('');
-        $this->line('  1. Start the runtime services:');
-        $this->line('     php artisan agent:restart');
-        $this->line('');
-        if ($mode === ConnectorAccount::MODE_LOCAL) {
-            $this->line('     For local mode, agent:restart starts the messenger gateway (Discord/Slack/Telegram).');
-            $this->line('     If you run Horizon only, start the gateway in a separate terminal:');
-            $this->line('     php artisan agent:messenger-gateway');
-            $this->line('');
-        }
-        $this->line('  2. Monitor the services:');
+        $this->line('  1. Start the application:');
+        $this->line('     php artisan serve');
         $this->line('     php artisan horizon');
         $this->line('');
-        $this->line('  3. Test your connectors:');
-        $this->line('     - Send a message to your bot');
-        $this->line('     - Check the logs: tail -f storage/logs/laravel.log');
+        $this->line('  2. Configure messenger connectors (optional):');
+        $this->line('     php artisan agent:install --connector=slack');
+        $this->line('');
+        $this->line('  3. Check your license status:');
+        $this->line('     php artisan agent:check-license');
+        $this->line('');
+        $this->line('  4. After pulling updates:');
+        $this->line('     php artisan agent:update');
         $this->line('');
     }
 }

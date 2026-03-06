@@ -39,11 +39,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
         ->name('messenger.link.store');
 });
 
+Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(function () {
+    Route::get('/license/required', fn () => Inertia::render('License/Unlicensed'))
+        ->name('license.required');
+});
+
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
     'verified',
     'onboarding',
+    'license',
 ])->group(function () {
     Route::get('/integrations/oauth/{provider}/callback', [TaskProviderOAuthController::class, 'callback'])
         ->name('integrations.oauth.callback');

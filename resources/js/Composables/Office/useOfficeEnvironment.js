@@ -260,7 +260,7 @@ export function useOfficeEnvironment(sceneApi, options = {}) {
         if (scene.fog) {
             scene.fog.color.lerp(dayFactor > 0.5 ? DAY_FOG : NIGHT_FOG, delta * 2);
             scene.fog.near = MathUtils.lerp(scene.fog.near, dayFactor > 0.5 ? 40 : 35, delta);
-            scene.fog.far = MathUtils.lerp(scene.fog.far, (dayFactor > 0.5 ? 140 : 60) * (1 - fogDim * 0.5), delta);
+            scene.fog.far = MathUtils.lerp(scene.fog.far, (dayFactor > 0.5 ? 140 : 100) * (1 - fogDim * 0.5), delta);
         }
 
         if (sunRef) {
@@ -269,13 +269,16 @@ export function useOfficeEnvironment(sceneApi, options = {}) {
             sunRef.position.y = MathUtils.lerp(sunRef.position.y, sunHeight, delta);
         }
         if (ambientRef) {
-            ambientRef.intensity = MathUtils.lerp(ambientRef.intensity, 0.15 + dayFactor * 0.45, delta * 2);
+            const indoorAmbient = ceilingLightsEnabled ? 0.35 : 0.15;
+            ambientRef.intensity = MathUtils.lerp(ambientRef.intensity, indoorAmbient + dayFactor * 0.25, delta * 2);
         }
         if (hemiRef) {
-            hemiRef.intensity = MathUtils.lerp(hemiRef.intensity, 0.2 + dayFactor * 0.5, delta * 2);
+            const indoorHemi = ceilingLightsEnabled ? 0.35 : 0.2;
+            hemiRef.intensity = MathUtils.lerp(hemiRef.intensity, indoorHemi + dayFactor * 0.35, delta * 2);
         }
         if (fillRef) {
-            fillRef.intensity = MathUtils.lerp(fillRef.intensity, dayFactor * 0.3, delta * 2);
+            const indoorFill = ceilingLightsEnabled ? 0.15 : 0;
+            fillRef.intensity = MathUtils.lerp(fillRef.intensity, indoorFill + dayFactor * 0.15, delta * 2);
         }
 
         if (grassPlane) {

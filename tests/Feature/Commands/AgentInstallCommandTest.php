@@ -31,28 +31,16 @@ class AgentInstallCommandTest extends TestCase
         }
     }
 
-    public function test_preflight_checks_detect_missing_php_extensions(): void
-    {
-        // This test verifies that the preflight check system works
-        // We can't actually unload extensions, so we test that the command runs
-        $this->artisan('agent:install', [
-            '--non-interactive' => true,
-            '--skip-migrations' => true,
-            '--skip-health-check' => true,
-        ])
-            ->assertExitCode(1)
-            ->expectsOutputToContain('No connectors specified');
-    }
-
-    public function test_command_requires_connectors_in_non_interactive_mode(): void
+    public function test_runs_without_connectors_in_non_interactive_mode(): void
     {
         $this->artisan('agent:install', [
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
-            ->assertExitCode(1)
-            ->expectsOutputToContain('No connectors specified');
+            ->assertSuccessful()
+            ->expectsOutputToContain('Installation Complete');
     }
 
     public function test_preflight_checks_verify_redis_connectivity(): void
@@ -64,18 +52,19 @@ class AgentInstallCommandTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Redis Connectivity');
     }
 
     public function test_preflight_checks_verify_database_connectivity(): void
     {
-        // The preflight check should test database connectivity
         $this->artisan('agent:install', [
             '--connector' => 'slack',
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Database Connectivity');
     }
@@ -87,6 +76,7 @@ class AgentInstallCommandTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Writable:');
     }
@@ -111,10 +101,10 @@ class AgentInstallCommandTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Credentials validated');
 
-        // Cleanup
         putenv('MESSENGER_SLACK_BOT_TOKEN');
         putenv('MESSENGER_SLACK_SIGNING_SECRET');
     }
@@ -141,6 +131,7 @@ class AgentInstallCommandTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Credentials validated');
 
@@ -164,6 +155,7 @@ class AgentInstallCommandTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->assertExitCode(1)
             ->expectsOutputToContain('Credential validation failed');
@@ -190,6 +182,7 @@ class AgentInstallCommandTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Skipping migrations');
 
@@ -214,6 +207,7 @@ class AgentInstallCommandTest extends TestCase
             '--connector' => 'slack',
             '--non-interactive' => true,
             '--skip-migrations' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Running health check')
             ->expectsOutputToContain('Database')
@@ -244,6 +238,7 @@ class AgentInstallCommandTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $this->assertDatabaseHas('connector_accounts', [
@@ -293,6 +288,7 @@ class AgentInstallCommandTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Updating existing')
             ->assertSuccessful();
@@ -338,6 +334,7 @@ class AgentInstallCommandTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $this->assertDatabaseHas('connector_accounts', ['provider' => 'slack']);
@@ -367,6 +364,7 @@ class AgentInstallCommandTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $account = ConnectorAccount::where('provider', 'slack')->first();
@@ -390,23 +388,23 @@ class AgentInstallCommandTest extends TestCase
         putenv('MESSENGER_SLACK_BOT_TOKEN=xoxb-test-token');
         putenv('MESSENGER_SLACK_SIGNING_SECRET=test-secret');
 
-        // First install
         $this->artisan('agent:install', [
             '--connector' => 'slack',
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $firstAccount = ConnectorAccount::where('provider', 'slack')->first();
         $firstId = $firstAccount->id;
 
-        // Second install (should update, not create new)
         $this->artisan('agent:install', [
             '--connector' => 'slack',
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         // Should still have only one account

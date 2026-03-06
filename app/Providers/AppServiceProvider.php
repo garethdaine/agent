@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Listeners\DelegationBroadcastSubscriber;
-use App\Observers\DatabaseNotificationObserver;
 use App\Listeners\DelegationCoordinator;
 use App\Listeners\DelegationRecoveryHandler;
 use App\Listeners\Documentation\DocumentationTelemetrySubscriber;
@@ -17,6 +16,7 @@ use App\Models\OrgAgentProfile;
 use App\Models\OrgRitualRun;
 use App\Models\OrgRitualTemplate;
 use App\Models\RepoAnalysisSession;
+use App\Observers\DatabaseNotificationObserver;
 use App\Policies\AgentAuditLogPolicy;
 use App\Policies\AgentJobPolicy;
 use App\Policies\AgentJobRunPolicy;
@@ -27,8 +27,20 @@ use App\Policies\OrgRitualRunPolicy;
 use App\Policies\OrgRitualTemplatePolicy;
 use App\Policies\RepoAnalysisSessionPolicy;
 use App\Policies\WorkflowGovernancePolicy;
+use App\Services\Agent\LicenseService;
+use App\Services\Credentials\CredentialsManager;
+use App\Services\Credentials\OAuthTokenService;
+use App\Services\Runtime\Adapters\AgentApiToolAdapter;
+use App\Services\Runtime\Adapters\BrowserToolAdapter;
+use App\Services\Runtime\Adapters\DiscoveryToolAdapter;
+use App\Services\Runtime\Adapters\FsToolAdapter;
+use App\Services\Runtime\Adapters\McpToolAdapter;
+use App\Services\Runtime\Adapters\RuntimeToolAdapter;
+use App\Services\Runtime\Adapters\WebToolAdapter;
+use App\Services\Runtime\ToolGateway;
 use App\Support\Agent\DatabaseDestructionGuard;
 use App\Support\Agent\ErrorEnvelope;
+use App\Support\Agent\InstanceFingerprint;
 use App\Support\Agent\WorkflowKey;
 use App\Support\Compliance\ComplexityClassifier;
 use App\Support\Compliance\ComplianceFlagResolver;
@@ -49,23 +61,13 @@ use App\Support\Interrogation\InterrogationBuildCommandGuard;
 use App\Support\Interrogation\ReviewerContextBuilder;
 use App\Support\Interrogation\ReviewerPayloadGuard;
 use App\Support\Interrogation\ReviewerPayloadNormalizer;
-use App\Services\Runtime\Adapters\AgentApiToolAdapter;
-use App\Services\Runtime\Adapters\BrowserToolAdapter;
-use App\Services\Runtime\Adapters\DiscoveryToolAdapter;
-use App\Services\Runtime\Adapters\FsToolAdapter;
-use App\Services\Runtime\Adapters\McpToolAdapter;
-use App\Services\Runtime\Adapters\RuntimeToolAdapter;
-use App\Services\Credentials\CredentialsManager;
-use App\Services\Credentials\OAuthTokenService;
-use App\Services\Runtime\Adapters\WebToolAdapter;
-use App\Services\Runtime\ToolGateway;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Events\Dispatcher;
-use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -105,6 +107,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(CredentialsManager::class);
         $this->app->singleton(OAuthTokenService::class);
         $this->app->singleton(ToolGateway::class);
+
+        $this->app->singleton(InstanceFingerprint::class);
+        $this->app->singleton(LicenseService::class);
     }
 
     /**
@@ -157,6 +162,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-docs-diagnostics', function ($user) {
             return $user->hasRole(['admin', 'analytics']);
         });
+
+        Gate::define('viewAgent', fn ($user) => true);
 
         Gate::define('workflow.pause', [WorkflowGovernancePolicy::class, 'pause']);
         Gate::define('workflow.resume', [WorkflowGovernancePolicy::class, 'resume']);

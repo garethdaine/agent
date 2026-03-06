@@ -1384,6 +1384,78 @@ SH;
         $this->assertNull($state);
     }
 
+    public function test_stream_json_content_block_delta_with_numeric_partial_json_does_not_trigger_rate_limit(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/stream-json-numeric-partial-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"429"}},"session_id":"9bcb9603-9260-46a2-8f83-01cd29ccfaad","parent_tool_use_id":null,"uuid":"871c6532-fcd0-4301-907f-aae4fdcd0a70"}
+{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"ffer"}},"session_id":"9bcb9603-9260-46a2-8f83-01cd29ccfaad","partial_json":"ffer"}
+OUT
+exit 0
+SH;
+        file_put_contents($snippetExec, $script);
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/stream-json-numeric-partial.md';
+        file_put_contents($taskFile, "# Stream JSON Numeric Partial\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Stream JSON Numeric Partial',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+        $state = AgentSystemState::query()->find(sprintf('job_rate_limit_hold_until:%d', $job->id));
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
+        $this->assertNull($metadata['rate_limit_hold_until'] ?? null);
+        $this->assertNull($state);
+    }
+
     public function test_structured_rate_limit_error_event_sets_rate_limit_metadata(): void
     {
         $errorExec = $this->sandboxBase.'/bin/structured-rate-limit-error-runner';

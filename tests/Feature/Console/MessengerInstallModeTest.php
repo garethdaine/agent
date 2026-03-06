@@ -105,6 +105,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $account = ConnectorAccount::where('provider', 'slack')->first();
@@ -136,6 +137,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $account = ConnectorAccount::where('provider', 'telegram')->first();
@@ -168,6 +170,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $account = ConnectorAccount::where('provider', 'discord')->first();
@@ -203,6 +206,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $account = ConnectorAccount::where('provider', 'whatsapp')->first();
@@ -229,13 +233,13 @@ class MessengerInstallModeTest extends TestCase
         putenv('MESSENGER_SLACK_BOT_TOKEN=xoxb-test-token');
         putenv('MESSENGER_SLACK_SIGNING_SECRET=test-secret');
 
-        // Local mode should not require webhook URL
         $this->artisan('agent:install', [
             '--connector' => 'slack',
             '--mode' => 'local',
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->assertSuccessful()
             ->doesntExpectOutputToContain('webhook URL');
@@ -265,6 +269,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
     }
 
@@ -302,6 +307,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $account = ConnectorAccount::where('provider', 'slack')->first();
@@ -342,6 +348,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Validating webhook endpoint')
             ->assertSuccessful();
@@ -372,6 +379,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
     }
 
@@ -401,6 +409,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $account = ConnectorAccount::where('provider', 'discord')->first();
@@ -439,6 +448,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Validating webhook endpoint')
             ->assertSuccessful();
@@ -476,6 +486,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Webhook validation failed')
             ->expectsOutputToContain('firewall')
@@ -518,6 +529,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('expiring')
             ->assertSuccessful();
@@ -556,6 +568,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Webhook endpoint validated')
             ->assertSuccessful();
@@ -590,6 +603,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Webhook endpoint validated')
             ->assertSuccessful();
@@ -634,6 +648,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Webhook endpoint validated')
             ->assertSuccessful();
@@ -665,6 +680,7 @@ class MessengerInstallModeTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('WhatsApp Webhook Configuration')
             ->expectsOutputToContain('my-verify-token')

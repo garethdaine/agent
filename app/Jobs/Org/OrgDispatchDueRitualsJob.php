@@ -8,16 +8,14 @@ use DateTimeZone;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
-/**
- * Job that dispatches OrgExecuteRitualJob for all rituals that are due.
- *
- * This job runs on the scheduler (every minute) and checks each active,
- * non-paused ritual template to see if its cron expression indicates
- * it should run now. For each due ritual, it dispatches an OrgExecuteRitualJob.
- */
 class OrgDispatchDueRitualsJob implements ShouldQueue
 {
     use Queueable;
+
+    public function __construct()
+    {
+        $this->onQueue('org-rituals');
+    }
 
     public function handle(): void
     {

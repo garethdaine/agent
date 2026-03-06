@@ -289,7 +289,7 @@ class CodeReviewOrgSeeder extends Seeder
             [
                 'description' => 'Automated hourly code review of /Users/garethdaine/Code/agent. Runs 6 parallel specialist reviewers, followed by adversarial challenge, council deliberation, and report generation.',
                 'cron_expression' => '0 * * * *',
-                'timezone' => 'Pacific/Auckland',
+                'timezone' => config('app.timezone', 'UTC'),
                 'phase_graph' => [
                     [
                         'id' => 'analyze_solid',

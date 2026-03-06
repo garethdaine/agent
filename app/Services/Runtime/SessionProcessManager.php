@@ -22,6 +22,8 @@ class SessionProcessManager
 
     private const TURN_BUFFER_PREFIX = 'runtime:turn_buffer:';
 
+    private const LIVE_FRAGMENTS_PREFIX = 'runtime:live_fragments:';
+
     private const TTL_SECONDS = 86400;
 
     /** @var array<string, array{resource: resource, pipes: array, pid: int}> */
@@ -256,6 +258,8 @@ class SessionProcessManager
                         $this->setRunnerSessionId($runtimeSessionId, $runnerSessionId);
                     }
 
+                    $this->clearLiveFragments($runtimeSessionId);
+
                     if ($exitCode !== 0 && $fragments === []) {
                         return [
                             'status' => 'failed',
@@ -301,12 +305,17 @@ class SessionProcessManager
                 $elapsed = time() - $startTime;
                 $fragmentCount = count($fragments);
 
+                $recentActivity = $this->summarizeRecentFragments($fragments);
+
                 Log::debug('SessionProcessManager: turn activity', [
                     'session_id' => $runtimeSessionId,
                     'elapsed_seconds' => $elapsed,
                     'fragment_count' => $fragmentCount,
                     'runner_session_id' => $runnerSessionId,
+                    'recent_activity' => $recentActivity,
                 ]);
+
+                $this->persistLiveFragments($runtimeSessionId, $fragments, $runnerSessionId, $startTime);
 
                 if ($onProgress !== null) {
                     try {
@@ -332,6 +341,7 @@ class SessionProcessManager
                 $resource = $entry['resource'];
                 $status = proc_get_status($resource);
                 if (! $status['running']) {
+                    $this->clearLiveFragments($runtimeSessionId);
                     $text = $this->extractTextFromFragments($fragments);
 
                     return [
@@ -346,6 +356,7 @@ class SessionProcessManager
             }
         }
 
+        $this->clearLiveFragments($runtimeSessionId);
         $text = $this->extractTextFromFragments($fragments);
 
         return [
@@ -412,6 +423,109 @@ class SessionProcessManager
         }
 
         return $decoded;
+    }
+
+    /**
+     * Extract a human-readable summary of what the runner is doing from recent fragments.
+     * Looks at the last ~20 fragments for tool use, text output, and system events.
+     *
+     * @param  array<int, string>  $fragments
+     */
+    private function summarizeRecentFragments(array $fragments): string
+    {
+        $recent = array_slice($fragments, -20);
+        $activities = [];
+
+        foreach ($recent as $raw) {
+            $decoded = json_decode($raw, true);
+            if (! is_array($decoded)) {
+                continue;
+            }
+
+            $event = $this->unwrapStreamEvent($decoded);
+            $type = $event['type'] ?? '';
+
+            if ($type === 'content_block_start') {
+                $blockType = $event['content_block']['type'] ?? '';
+                if ($blockType === 'tool_use') {
+                    $toolName = $event['content_block']['name'] ?? 'unknown';
+                    $activities[] = "tool_call:{$toolName}";
+                }
+            }
+
+            if ($type === 'content_block_delta') {
+                $delta = $event['delta'] ?? [];
+                $deltaType = is_array($delta) ? ($delta['type'] ?? '') : '';
+                if ($deltaType === 'text_delta') {
+                    $text = $delta['text'] ?? '';
+                    if ($text !== '') {
+                        $activities[] = 'text:'.mb_substr(trim($text), 0, 80);
+                    }
+                }
+                if ($deltaType === 'input_json_delta') {
+                    $partial = $delta['partial_json'] ?? '';
+                    if ($partial !== '') {
+                        $activities[] = 'tool_input:'.mb_substr(trim($partial), 0, 80);
+                    }
+                }
+            }
+
+            if ($type === 'result') {
+                $activities[] = 'result:'.mb_substr((string) ($event['result'] ?? ''), 0, 120);
+            }
+        }
+
+        if ($activities === []) {
+            return 'waiting';
+        }
+
+        return implode(' | ', array_slice($activities, -5));
+    }
+
+    /**
+     * Persist current fragment state to Redis for live progress queries.
+     *
+     * @param  array<int, string>  $fragments
+     */
+    private function persistLiveFragments(string $runtimeSessionId, array $fragments, ?string $runnerSessionId, int $startTime): void
+    {
+        try {
+            $textSoFar = $this->extractTextFromFragments($fragments);
+            $recentActivity = $this->summarizeRecentFragments($fragments);
+
+            Cache::put(self::LIVE_FRAGMENTS_PREFIX.$runtimeSessionId, [
+                'fragment_count' => count($fragments),
+                'elapsed_seconds' => time() - $startTime,
+                'runner_session_id' => $runnerSessionId,
+                'text_length' => mb_strlen($textSoFar),
+                'text_preview' => mb_substr($textSoFar, -500),
+                'recent_activity' => $recentActivity,
+                'updated_at' => now()->toIso8601String(),
+            ], 3600);
+        } catch (\Throwable $e) {
+            Log::debug('SessionProcessManager: failed to persist live fragments', [
+                'session_id' => $runtimeSessionId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Read live progress for a running turn. Returns null if no live data.
+     *
+     * @return array{fragment_count: int, elapsed_seconds: int, runner_session_id: ?string, text_length: int, text_preview: string, recent_activity: string, updated_at: string}|null
+     */
+    public static function getLiveProgress(string $runtimeSessionId): ?array
+    {
+        return Cache::get(self::LIVE_FRAGMENTS_PREFIX.$runtimeSessionId);
+    }
+
+    /**
+     * Clear live progress data when a turn finishes.
+     */
+    private function clearLiveFragments(string $runtimeSessionId): void
+    {
+        Cache::forget(self::LIVE_FRAGMENTS_PREFIX.$runtimeSessionId);
     }
 
     private function shouldYield(int $elapsedSeconds): bool
@@ -503,6 +617,8 @@ class SessionProcessManager
                         $this->setRunnerSessionId($runtimeSessionId, $runnerSessionId);
                     }
 
+                    $this->clearLiveFragments($runtimeSessionId);
+
                     if ($exitCode !== 0 && $fragments === []) {
                         return [
                             'status' => 'failed',
@@ -547,12 +663,17 @@ class SessionProcessManager
                 $lastHeartbeat = time();
                 $totalElapsed = time() - $originalStartTime;
 
+                $recentActivity = $this->summarizeRecentFragments($fragments);
+
                 Log::debug('SessionProcessManager: resume turn activity', [
                     'session_id' => $runtimeSessionId,
                     'total_elapsed_seconds' => $totalElapsed,
                     'fragment_count' => count($fragments),
                     'runner_session_id' => $runnerSessionId,
+                    'recent_activity' => $recentActivity,
                 ]);
+
+                $this->persistLiveFragments($runtimeSessionId, $fragments, $runnerSessionId, $originalStartTime);
 
                 if ($onProgress !== null) {
                     try {
@@ -578,6 +699,7 @@ class SessionProcessManager
                 $resource = $entry['resource'];
                 $status = proc_get_status($resource);
                 if (! $status['running']) {
+                    $this->clearLiveFragments($runtimeSessionId);
                     $text = $this->extractTextFromFragments($fragments);
 
                     return [
@@ -592,6 +714,7 @@ class SessionProcessManager
             }
         }
 
+        $this->clearLiveFragments($runtimeSessionId);
         $text = $this->extractTextFromFragments($fragments);
 
         return [

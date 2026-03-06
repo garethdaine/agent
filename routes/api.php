@@ -4,20 +4,18 @@ use App\Http\Controllers\Api\V1\AgentBackupSettingsController;
 use App\Http\Controllers\Api\V1\AgentFeatureSettingsController;
 use App\Http\Controllers\Api\V1\AgentJobController;
 use App\Http\Controllers\Api\V1\AgentRunController;
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\ChatActionController;
 use App\Http\Controllers\Api\V1\ChatSessionController;
 use App\Http\Controllers\Api\V1\ComplianceController;
 use App\Http\Controllers\Api\V1\ConfigurationController;
-use App\Http\Controllers\Api\V1\DebugPanelController;
-use App\Http\Controllers\Api\V1\LogTailController;
 use App\Http\Controllers\Api\V1\ConnectorPolicyController;
-use App\Http\Controllers\Api\V1\PairingController;
 use App\Http\Controllers\Api\V1\CredentialsController;
+use App\Http\Controllers\Api\V1\DebugPanelController;
 use App\Http\Controllers\Api\V1\DelegateeProfileController;
 use App\Http\Controllers\Api\V1\DelegationGraphController;
 use App\Http\Controllers\Api\V1\DelegationTaskController;
 use App\Http\Controllers\Api\V1\DeploymentCountingController;
-use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\DiagnosticsController;
 use App\Http\Controllers\Api\V1\Docs\DocsCoverageController;
 use App\Http\Controllers\Api\V1\Docs\DocsFragmentController;
@@ -26,6 +24,7 @@ use App\Http\Controllers\Api\V1\InterrogationSessionController;
 use App\Http\Controllers\Api\V1\InterrogationSettingsController;
 use App\Http\Controllers\Api\V1\InterrogationTaskProviderController;
 use App\Http\Controllers\Api\V1\InterrogationTechStackController;
+use App\Http\Controllers\Api\V1\LogTailController;
 use App\Http\Controllers\Api\V1\Memory\MemoryCoreBlockController;
 use App\Http\Controllers\Api\V1\Memory\MemoryDiagnosticsController;
 use App\Http\Controllers\Api\V1\Memory\MemoryRetrievalController;
@@ -37,6 +36,7 @@ use App\Http\Controllers\Api\V1\Messenger\WebhookController;
 use App\Http\Controllers\Api\V1\MessengerConnectorController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\Org;
+use App\Http\Controllers\Api\V1\PairingController;
 use App\Http\Controllers\Api\V1\ProjectionReplayBuildController;
 use App\Http\Controllers\Api\V1\RepoAnalysisSessionController;
 use App\Http\Controllers\Api\V1\Runtime\RuntimePolicyController;
@@ -72,7 +72,7 @@ Route::middleware([AgentApiVersionHeader::class])
 
         Route::post('/n8n/webhook', \App\Http\Controllers\Api\V1\N8nWebhookController::class);
 
-        Route::middleware('auth:sanctum')->group(function (): void {
+        Route::middleware(['auth:sanctum', 'license'])->group(function (): void {
             Route::get('/jobs', [AgentJobController::class, 'index']);
             Route::get('/jobs/{id}', [AgentJobController::class, 'show']);
             Route::get('/jobs/by-workflow/{workflowKey}', [AgentJobController::class, 'showByWorkflowKey']);

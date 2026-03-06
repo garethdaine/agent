@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
-use App\Services\Messenger\SlashCommandRegistrar;
 use App\Models\ConnectorAccount;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -90,6 +89,7 @@ class MessengerInstallDiscordTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Registering slash commands')
             ->assertSuccessful();
@@ -127,6 +127,7 @@ class MessengerInstallDiscordTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Slash commands registered:')
             ->assertSuccessful();
@@ -155,6 +156,7 @@ class MessengerInstallDiscordTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Failed to register slash commands')
             ->assertSuccessful(); // Installation should still succeed
@@ -186,6 +188,7 @@ class MessengerInstallDiscordTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $account = ConnectorAccount::where('provider', 'discord')->first();
@@ -219,6 +222,7 @@ class MessengerInstallDiscordTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Credentials validated: Bot: TestAgentBot')
             ->assertSuccessful();
@@ -270,6 +274,7 @@ class MessengerInstallDiscordTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $account = ConnectorAccount::where('provider', 'discord')->first();
@@ -301,6 +306,7 @@ class MessengerInstallDiscordTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $this->assertDatabaseHas('connector_accounts', [
@@ -354,6 +360,7 @@ class MessengerInstallDiscordTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])
             ->expectsOutputToContain('Updating existing')
             ->assertSuccessful();
@@ -399,6 +406,7 @@ class MessengerInstallDiscordTest extends TestCase
             '--non-interactive' => true,
             '--skip-migrations' => true,
             '--skip-health-check' => true,
+            '--skip-license' => true,
         ])->assertSuccessful();
 
         $this->assertDatabaseHas('connector_accounts', ['provider' => 'discord']);

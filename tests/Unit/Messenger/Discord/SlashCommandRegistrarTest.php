@@ -91,7 +91,8 @@ final class SlashCommandRegistrarTest extends TestCase
         $this->assertContains('whoami', $names);
         $this->assertContains('compact', $names);
         $this->assertContains('subagents', $names);
-        $this->assertCount(16, $schema);
+        $this->assertContains('progress', $names);
+        $this->assertCount(17, $schema);
     }
 
     #[Test]

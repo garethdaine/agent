@@ -43,11 +43,11 @@
 ---
 
 ## THE WORKFLOW (1:20–1:50)
-**Show:** Your `CLAUDE.md` rules briefly, or the gap analysis document
+**Show:** `tasks/todo.md` — scroll to show "Add tests first" checklist and "Mandatory Failure Modes to Cover Before Coding" block, then briefly show `CLAUDE.md`
 
-> "My development workflow mirrors what I build. Plan mode for anything non-trivial — STAR before writing code. Subagents to keep context clean. Every correction logged to a lessons file that prevents repeats. Nothing ships without verification."
+> "My development workflow mirrors what I build. Every task starts test-first — write the tests, run them, confirm they fail, *then* implement minimum code to pass. Classic red-green-refactor, enforced structurally. Before coding starts, mandatory failure modes are defined — 'malicious caller' and 'tired maintainer' scenarios that *must* have coverage."
 
-> "Result: a solo-built platform, 42 feature areas at 86% completion, 96% run success rate, production-grade governance."
+> "On top of that: plan mode for anything non-trivial, subagents to keep context clean, every correction logged to a lessons file that prevents repeats. Result: 42 feature areas at 86% completion, 81,000 lines of tests, production-grade governance — built solo."
 
 ---
 
@@ -60,15 +60,16 @@
 
 ## DELIVERY NOTES
 
-**Pacing:** ~325 spoken words. At natural pace (150 wpm) that's ~2:10. The screen transitions eat a few seconds so you'll land right at 2 minutes. Don't rush — the code on screen does half the work.
+**Pacing:** ~340 spoken words. At natural pace (150 wpm) that's ~2:16. Screen transitions absorb the excess — you'll land right at 2 minutes. Don't rush.
 
 **Screen-share flow:**
-1. Dashboard (5 sec) → 2. StarPreambleGenerator (10 sec) → 3. AdversarialReviewerService (10 sec) → 4. ApprovalGate (15 sec) → 5. PolicyEngine (10 sec) → 6. CLAUDE.md or gap analysis (10 sec) → 7. Dashboard/stats (5 sec)
+1. Dashboard (5 sec) → 2. StarPreambleGenerator (10 sec) → 3. AdversarialReviewerService (10 sec) → 4. ApprovalGate (15 sec) → 5. PolicyEngine (10 sec) → 6. `tasks/todo.md` TDD block + `CLAUDE.md` (10 sec) → 7. Dashboard/stats (5 sec)
 
 **Key soundbites to nail:**
 - "AI agents make confident but wrong decisions"
 - "AI checking AI, with hard validation gates"
 - "You can't prompt your way to AI safety — you have to architect it"
+- "Write the tests, run them, confirm they fail, then implement minimum code to pass"
 - "Not just using AI to write code faster, but building systems that make AI accountable"
 
 **What David is evaluating:**
