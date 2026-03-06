@@ -126,27 +126,27 @@ class OfficeStateController extends Controller
             return [];
         }
 
-        $runJobIds = $activeRuns->pluck('agent_job_id')->filter()->all();
-        if (empty($runJobIds)) {
+        $runIds = $activeRuns->pluck('id')->filter()->all();
+        if (empty($runIds)) {
             return [];
         }
 
         $attempts = \App\Models\DelegationAttempt::query()
-            ->whereIn('agent_job_id', $runJobIds)
+            ->whereIn('agent_job_run_id', $runIds)
             ->whereIn('status', ['running', 'pending'])
-            ->get(['id', 'delegation_task_id', 'agent_job_id']);
+            ->get(['id', 'delegation_task_id', 'agent_job_run_id']);
 
         $taskIds = $attempts->pluck('delegation_task_id')->unique()->all();
         $tasks = DelegationTask::whereIn('id', $taskIds)->get(['id', 'assigned_delegatee_profile_id']);
 
-        $jobToTask = [];
+        $runToTask = [];
         foreach ($attempts as $attempt) {
-            $jobToTask[$attempt->agent_job_id] = $tasks->firstWhere('id', $attempt->delegation_task_id);
+            $runToTask[$attempt->agent_job_run_id] = $tasks->firstWhere('id', $attempt->delegation_task_id);
         }
 
         $map = [];
         foreach ($activeRuns as $run) {
-            $task = $jobToTask[$run->agent_job_id] ?? null;
+            $task = $runToTask[$run->id] ?? null;
             $profileId = $task?->assigned_delegatee_profile_id;
             if ($profileId && ! isset($map[$profileId])) {
                 $map[$profileId] = $run;

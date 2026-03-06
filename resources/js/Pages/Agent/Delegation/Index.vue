@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import HelpHint from '@/Components/HelpHint.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import Card from '@/Components/ui/Card.vue';
 import CardHeader from '@/Components/ui/CardHeader.vue';
@@ -17,12 +17,13 @@ import TableCell from '@/Components/ui/TableCell.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Button from '@/Components/ui/Button.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
-import { GitBranch, Plus, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { GitBranch, Plus, ChevronLeft, ChevronRight, Pencil, Copy, Trash2, RotateCcw } from 'lucide-vue-next';
 
 const graphs = ref([]);
 const loading = ref(true);
 const error = ref('');
 const meta = ref({ current_page: 1, last_page: 1, total: 0, per_page: 25 });
+const confirmingDeleteId = ref(null);
 
 const filters = reactive({
     status: '',
@@ -61,6 +62,43 @@ const statusBadgeVariant = (status) => {
         cancelled: 'outline',
     };
     return variants[status] || 'secondary';
+};
+
+const canEdit = (graph) => graph.status === 'draft';
+const canDelete = (graph) => ['succeeded', 'failed', 'partial', 'cancelled'].includes(graph.status) && !graph.deleted_at;
+const isDeleted = (graph) => !!graph.deleted_at;
+
+const editGraph = (graph) => {
+    router.visit(route('agent.delegation.graphs.builder.edit', { graphId: graph.id }));
+};
+
+const cloneGraph = async (graph) => {
+    try {
+        const { data } = await axios.post(`/agent/api/v1/delegation/graphs/${graph.id}/clone`);
+        router.visit(route('agent.delegation.show', data.data.id));
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to clone graph.';
+    }
+};
+
+const deleteGraph = async (graph) => {
+    try {
+        await axios.delete(`/agent/api/v1/delegation/graphs/${graph.id}`);
+        confirmingDeleteId.value = null;
+        await load();
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to delete graph.';
+        confirmingDeleteId.value = null;
+    }
+};
+
+const restoreGraph = async (graph) => {
+    try {
+        await axios.post(`/agent/api/v1/delegation/graphs/${graph.id}/restore`);
+        await load();
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to restore graph.';
+    }
 };
 
 onMounted(load);
@@ -193,15 +231,72 @@ onMounted(load);
                                     </TableCell>
                                     <TableCell>
                                         <Badge :variant="statusBadgeVariant(graph.status)">{{ graph.status }}</Badge>
+                                        <Badge v-if="isDeleted(graph)" variant="outline" class="ml-1">deleted</Badge>
                                     </TableCell>
                                     <TableCell class="text-muted-foreground">
-                                        {{ graph.tasks_completed ?? 0 }}/{{ graph.tasks_total ?? 0 }}
+                                        {{ graph.task_counts?.completed ?? 0 }}/{{ graph.task_counts?.total ?? 0 }}
                                     </TableCell>
                                     <TableCell class="text-muted-foreground text-xs">{{ graph.created_at }}</TableCell>
-                                    <TableCell class="text-right">
-                                        <Link :href="route('agent.delegation.show', graph.id)" @click.stop>
-                                            <Button variant="outline" size="sm">View</Button>
-                                        </Link>
+                                    <TableCell class="text-right" @click.stop>
+                                        <div class="flex items-center justify-end gap-1">
+                                            <Button
+                                                v-if="canEdit(graph)"
+                                                variant="ghost"
+                                                size="sm"
+                                                title="Edit"
+                                                @click="editGraph(graph)"
+                                            >
+                                                <Pencil class="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                title="Clone"
+                                                @click="cloneGraph(graph)"
+                                            >
+                                                <Copy class="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button
+                                                v-if="isDeleted(graph)"
+                                                variant="ghost"
+                                                size="sm"
+                                                title="Restore"
+                                                @click="restoreGraph(graph)"
+                                            >
+                                                <RotateCcw class="h-3.5 w-3.5" />
+                                            </Button>
+                                            <template v-if="canDelete(graph)">
+                                                <Button
+                                                    v-if="confirmingDeleteId !== graph.id"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    class="text-destructive hover:text-destructive"
+                                                    title="Delete"
+                                                    @click="confirmingDeleteId = graph.id"
+                                                >
+                                                    <Trash2 class="h-3.5 w-3.5" />
+                                                </Button>
+                                                <template v-else>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        @click="deleteGraph(graph)"
+                                                    >
+                                                        Confirm
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        @click="confirmingDeleteId = null"
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                </template>
+                                            </template>
+                                            <Link :href="route('agent.delegation.show', graph.id)">
+                                                <Button variant="outline" size="sm">View</Button>
+                                            </Link>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                                 <TableRow v-if="!loading && graphs.length === 0">

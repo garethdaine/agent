@@ -57,8 +57,8 @@ export function useOfficeScene(containerRef, options = {}) {
         const sun = new DirectionalLight(0xffeedd, 0.8);
         sun.position.set(15, 25, 10);
         sun.castShadow = true;
-        sun.shadow.mapSize.width = 2048;
-        sun.shadow.mapSize.height = 2048;
+        sun.shadow.mapSize.width = 1024;
+        sun.shadow.mapSize.height = 1024;
         sun.shadow.camera.near = 0.5;
         sun.shadow.camera.far = 60;
         sun.shadow.camera.left = -20;
@@ -120,10 +120,10 @@ export function useOfficeScene(containerRef, options = {}) {
         let speed = WASD_SPEED * delta;
         if (keysDown.has('shift')) speed *= SHIFT_MULTIPLIER;
 
-        if (keysDown.has('w')) _move.add(_forward.clone().multiplyScalar(speed));
-        if (keysDown.has('s')) _move.add(_forward.clone().multiplyScalar(-speed));
-        if (keysDown.has('a')) _move.add(_right.clone().multiplyScalar(-speed));
-        if (keysDown.has('d')) _move.add(_right.clone().multiplyScalar(speed));
+        if (keysDown.has('w')) { _move.x += _forward.x * speed; _move.z += _forward.z * speed; }
+        if (keysDown.has('s')) { _move.x -= _forward.x * speed; _move.z -= _forward.z * speed; }
+        if (keysDown.has('a')) { _move.x -= _right.x * speed; _move.z -= _right.z * speed; }
+        if (keysDown.has('d')) { _move.x += _right.x * speed; _move.z += _right.z * speed; }
 
         if (keysDown.has('q')) camera.position.y = Math.max(4, camera.position.y - speed * 0.5);
         if (keysDown.has('e')) camera.position.y = Math.min(40, camera.position.y + speed * 0.5);
@@ -174,23 +174,30 @@ export function useOfficeScene(containerRef, options = {}) {
     }
 
     function setCeilingLightsEnabled(enabled) {
-        _ceilingLightsEnabled = enabled;
+        if (_ceilingLightsEnabled !== enabled) {
+            _ceilingLightsEnabled = enabled;
+            _ceilingLightsSettled = false;
+        }
     }
 
     function setZoneOccupied(zoneId, occupied) {
         const lights = ceilingLights.get(zoneId);
         if (!lights) return;
         lights.forEach((entry) => {
-            if (!_ceilingLightsEnabled) {
-                entry.targetIntensity = 0;
-            } else {
-                entry.targetIntensity = occupied ? entry.maxIntensity : entry.maxIntensity * 0.3;
+            const newTarget = !_ceilingLightsEnabled ? 0 : (occupied ? entry.maxIntensity : entry.maxIntensity * 0.3);
+            if (entry.targetIntensity !== newTarget) {
+                entry.targetIntensity = newTarget;
+                _ceilingLightsSettled = false;
             }
         });
     }
 
+    let _ceilingLightsSettled = false;
+
     function updateCeilingLights(delta) {
+        if (_ceilingLightsSettled) return;
         const lerpSpeed = 3.0;
+        let allSettled = true;
         ceilingLights.forEach((lights) => {
             lights.forEach((entry) => {
                 const diff = entry.targetIntensity - entry.currentIntensity;
@@ -198,12 +205,14 @@ export function useOfficeScene(containerRef, options = {}) {
                     entry.currentIntensity = entry.targetIntensity;
                 } else {
                     entry.currentIntensity += diff * Math.min(lerpSpeed * delta, 1);
+                    allSettled = false;
                 }
                 entry.spot.intensity = entry.currentIntensity;
                 const t = entry.maxIntensity > 0 ? entry.currentIntensity / entry.maxIntensity : 0;
                 entry.bulbMat.emissiveIntensity = t * 2.5;
             });
         });
+        _ceilingLightsSettled = allSettled;
     }
 
     function resize() {

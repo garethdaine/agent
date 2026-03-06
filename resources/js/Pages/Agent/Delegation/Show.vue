@@ -16,7 +16,7 @@ import TableCell from '@/Components/ui/TableCell.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Button from '@/Components/ui/Button.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
-import { Play, XCircle, Copy, ChevronDown, ChevronUp, ArrowLeft, GitBranch } from 'lucide-vue-next';
+import { Play, XCircle, Copy, ChevronDown, ChevronUp, ArrowLeft, GitBranch, Pencil, Trash2, RotateCcw } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
@@ -107,6 +107,35 @@ const statusBadgeVariant = (status) => {
 
 const canStart = computed(() => graph.value?.status === 'ready');
 const canCancel = computed(() => graph.value?.status === 'running');
+const canEdit = computed(() => graph.value?.status === 'draft');
+const canDelete = computed(() => ['succeeded', 'failed', 'partial', 'cancelled'].includes(graph.value?.status));
+const isDeleted = computed(() => !!graph.value?.deleted_at);
+
+const confirmingDelete = ref(false);
+
+const editGraph = () => {
+    router.visit(route('agent.delegation.graphs.builder.edit', { graphId: props.graphId }));
+};
+
+const deleteGraph = async () => {
+    try {
+        await axios.delete(`/agent/api/v1/delegation/graphs/${props.graphId}`);
+        await load();
+        confirmingDelete.value = false;
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to delete graph.';
+        confirmingDelete.value = false;
+    }
+};
+
+const restoreGraph = async () => {
+    try {
+        await axios.post(`/agent/api/v1/delegation/graphs/${props.graphId}/restore`);
+        await load();
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to restore graph.';
+    }
+};
 
 onMounted(() => {
     load();
@@ -142,6 +171,14 @@ onMounted(() => {
                 </div>
                 <div class="flex items-center gap-2">
                     <Button
+                        v-if="canEdit"
+                        variant="outline"
+                        @click="editGraph"
+                    >
+                        <Pencil class="mr-2 h-4 w-4" />
+                        Edit
+                    </Button>
+                    <Button
                         v-if="canStart"
                         @click="startGraph"
                     >
@@ -163,6 +200,40 @@ onMounted(() => {
                         <Copy class="mr-2 h-4 w-4" />
                         Clone
                     </Button>
+                    <Button
+                        v-if="isDeleted"
+                        variant="outline"
+                        @click="restoreGraph"
+                    >
+                        <RotateCcw class="mr-2 h-4 w-4" />
+                        Restore
+                    </Button>
+                    <Button
+                        v-if="canDelete && !isDeleted && !confirmingDelete"
+                        variant="ghost"
+                        class="text-destructive hover:text-destructive"
+                        @click="confirmingDelete = true"
+                    >
+                        <Trash2 class="mr-2 h-4 w-4" />
+                        Delete
+                    </Button>
+                    <template v-if="confirmingDelete">
+                        <span class="text-sm text-muted-foreground">Are you sure?</span>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            @click="deleteGraph"
+                        >
+                            Confirm
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            @click="confirmingDelete = false"
+                        >
+                            Cancel
+                        </Button>
+                    </template>
                 </div>
             </div>
         </template>

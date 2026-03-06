@@ -332,6 +332,11 @@ class RunEventWriter
 
         $raw = trim(preg_replace('/\s+/', ' ', $raw) ?? $raw);
 
+        // If extraction still yielded JSON-like text, suppress it
+        if (str_starts_with($raw, '{') || str_starts_with($raw, '[') || str_starts_with($raw, '"type"')) {
+            return null;
+        }
+
         if (strlen($raw) < 5 || $this->isLikelyNonRuntimeSnippet($raw)) {
             return null;
         }

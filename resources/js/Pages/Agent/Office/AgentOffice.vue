@@ -137,11 +137,16 @@ onMounted(async () => {
 
     try {
         let weatherSyncAccum = 0;
+        let occupancyAccum = 0;
+        let lastCeilingEnabled = null;
         sceneApi = useOfficeScene(containerRef, {
             onFrame(delta, time) {
                 if (envApi) {
                     envApi.update(delta);
-                    sceneApi.setCeilingLightsEnabled(envApi.ceilingLightsEnabled);
+                    if (envApi.ceilingLightsEnabled !== lastCeilingEnabled) {
+                        lastCeilingEnabled = envApi.ceilingLightsEnabled;
+                        sceneApi.setCeilingLightsEnabled(lastCeilingEnabled);
+                    }
                     weatherSyncAccum += delta;
                     if (weatherSyncAccum > 1) {
                         weatherSyncAccum = 0;
@@ -156,7 +161,11 @@ onMounted(async () => {
                 if (particles) particles.update(delta);
                 if (speechBubbles) speechBubbles.update(delta);
                 if (ambientAnims) ambientAnims.update(delta);
-                updateZoneOccupancy();
+                occupancyAccum += delta;
+                if (occupancyAccum > 0.25) {
+                    occupancyAccum = 0;
+                    updateZoneOccupancy();
+                }
             },
         });
 
@@ -331,10 +340,6 @@ onMounted(async () => {
                         });
                     }
                 }
-                agentThoughts.value[latest.run_id] = {
-                    status: 'escalation',
-                    text: `${latest.job_name} — ${latest.summary}`,
-                };
                 return;
             }
 
@@ -350,12 +355,19 @@ onMounted(async () => {
                 try {
                     const parsed = JSON.parse(displayText);
                     displayText = parsed?.delta?.text
+                        ?? parsed?.event?.delta?.text
+                        ?? parsed?.result?.text
+                        ?? parsed?.message?.content?.[0]?.text
                         ?? parsed?.text
                         ?? parsed?.message
                         ?? parsed?.content
                         ?? '';
                     if (typeof displayText !== 'string') displayText = '';
                 } catch { displayText = ''; }
+            }
+            // Still looks like JSON/machine data after extraction — suppress it
+            if (displayText.startsWith('{') || displayText.startsWith('[') || displayText.startsWith('"type"')) {
+                return;
             }
             if (!displayText || displayText.length < 3) return;
 

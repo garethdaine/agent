@@ -5,8 +5,14 @@ namespace App\Providers;
 use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Listeners\DelegationBroadcastSubscriber;
 use App\Listeners\DelegationCoordinator;
+use App\Listeners\DelegationEventPersistenceSubscriber;
 use App\Listeners\DelegationRecoveryHandler;
 use App\Listeners\Documentation\DocumentationTelemetrySubscriber;
+use App\Listeners\Org\RitualCouncilDeliberationListener;
+use App\Listeners\Org\RitualPhaseOutputCaptureListener;
+use App\Listeners\Org\RitualRunCompletionListener;
+use App\Events\DelegationGraphCompleted;
+use App\Events\DelegationTaskVerified;
 use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
@@ -139,7 +145,12 @@ class AppServiceProvider extends ServiceProvider
         $events->subscribe(DelegationCoordinator::class);
         $events->subscribe(DelegationRecoveryHandler::class);
         $events->subscribe(DelegationBroadcastSubscriber::class);
+        $events->subscribe(DelegationEventPersistenceSubscriber::class);
         $events->subscribe(DocumentationTelemetrySubscriber::class);
+
+        $events->listen(DelegationGraphCompleted::class, RitualRunCompletionListener::class);
+        $events->listen(DelegationTaskVerified::class, RitualCouncilDeliberationListener::class);
+        $events->listen(DelegationTaskVerified::class, RitualPhaseOutputCaptureListener::class);
 
         Gate::policy(AgentJob::class, AgentJobPolicy::class);
         Gate::policy(AgentJobRun::class, AgentJobRunPolicy::class);

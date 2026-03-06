@@ -137,7 +137,8 @@ class MemoryFormationPipeline
             ]);
         }
 
-        // Step 5 & 6: Generate embeddings with dedup
+        // Step 5 & 6: Generate embeddings with dedup (non-fatal — degrade gracefully)
+        $embeddingFailed = false;
         try {
             $embeddingsCreated = $this->generateAndStoreEmbeddings(
                 $userId,
@@ -147,23 +148,14 @@ class MemoryFormationPipeline
                 null
             );
         } catch (\Throwable $e) {
-            Log::error('MemoryFormationPipeline: Embedding generation failed', [
+            $embeddingFailed = true;
+            Log::warning('MemoryFormationPipeline: Embedding generation failed, continuing in degraded mode', [
                 'run_id' => $run->id,
                 'error' => $e->getMessage(),
             ]);
-
-            return MemoryFormationResult::failure(
-                MemoryFormationFailure::TYPE_EMBEDDING,
-                $e->getMessage(),
-                [
-                    'conversation_logs_created' => $conversationLogsCreated,
-                    'entities_extracted' => $this->summarizeEntities($entities),
-                ],
-                $conversationLogsCreated
-            );
         }
 
-        // Step 7: Store in Neo4j graph
+        // Step 7: Store in Neo4j graph (runs even if embeddings failed)
         if ($this->graphStore !== null && ! empty($entities)) {
             if (! $this->graphStore->healthCheck()) {
                 $graphSkipped = true;
@@ -200,6 +192,14 @@ class MemoryFormationPipeline
                     );
                 }
             }
+        }
+
+        if ($embeddingFailed) {
+            Log::info('MemoryFormationPipeline: Completed in degraded mode (no embeddings)', [
+                'run_id' => $run->id,
+                'conversation_logs' => $conversationLogsCreated,
+                'entities_stored' => $entitiesStored,
+            ]);
         }
 
         return MemoryFormationResult::success(
@@ -300,6 +300,7 @@ class MemoryFormationPipeline
             ]);
         }
 
+        $embeddingFailed = false;
         try {
             $embeddingsCreated = $this->generateAndStoreEmbeddings(
                 $userId,
@@ -309,20 +310,11 @@ class MemoryFormationPipeline
                 (string) $session->id
             );
         } catch (\Throwable $e) {
-            Log::error('MemoryFormationPipeline: Runtime embedding failed', [
+            $embeddingFailed = true;
+            Log::warning('MemoryFormationPipeline: Runtime embedding failed, continuing in degraded mode', [
                 'session_id' => $session->id,
                 'error' => $e->getMessage(),
             ]);
-
-            return MemoryFormationResult::failure(
-                MemoryFormationFailure::TYPE_EMBEDDING,
-                $e->getMessage(),
-                [
-                    'conversation_logs_created' => $conversationLogsCreated,
-                    'entities_extracted' => $this->summarizeEntities($entities),
-                ],
-                $conversationLogsCreated
-            );
         }
 
         if ($this->graphStore !== null && ! empty($entities)) {

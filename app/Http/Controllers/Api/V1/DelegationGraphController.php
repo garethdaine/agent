@@ -67,7 +67,14 @@ class DelegationGraphController extends Controller
         $query->orderBy($sort, $dir);
 
         $perPage = min(100, max(1, (int) $request->integer('per_page', 25)));
-        $graphs = $query->paginate($perPage)->withQueryString();
+        $graphs = $query->withCount([
+            'tasks',
+            'tasks as tasks_completed_count' => fn ($q) => $q->whereIn('status', [
+                DelegationTask::STATUS_SUCCEEDED,
+                DelegationTask::STATUS_FAILED,
+                DelegationTask::STATUS_CANCELLED,
+            ]),
+        ])->paginate($perPage)->withQueryString();
 
         $data = collect($graphs->items())->map(fn (DelegationGraph $graph): array => $this->transformGraph($graph, false))->values();
 
@@ -518,6 +525,12 @@ class DelegationGraphController extends Controller
                     DelegationTask::STATUS_CANCELLED,
                 ])->count(),
                 'running' => $tasks->where('status', DelegationTask::STATUS_RUNNING)->count(),
+            ];
+        } elseif ($graph->getAttribute('tasks_count') !== null) {
+            $taskCounts = [
+                'total' => (int) $graph->getAttribute('tasks_count'),
+                'completed' => (int) $graph->getAttribute('tasks_completed_count'),
+                'running' => 0,
             ];
         }
 

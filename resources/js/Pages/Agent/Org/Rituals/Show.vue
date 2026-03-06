@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import Card from '@/Components/ui/Card.vue';
 import CardHeader from '@/Components/ui/CardHeader.vue';
@@ -201,10 +201,16 @@ onMounted(loadRitual);
                                         <TableHead>State</TableHead>
                                         <TableHead>Started</TableHead>
                                         <TableHead>Completed</TableHead>
+                                        <TableHead class="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    <TableRow v-for="run in (ritual.runs ?? [])" :key="run.id">
+                                    <TableRow
+                                        v-for="run in (ritual.runs ?? [])"
+                                        :key="run.id"
+                                        class="cursor-pointer"
+                                        @click="router.visit(route('org.rituals.runs.show', { ritualId: ritualId, runId: run.id }))"
+                                    >
                                         <TableCell class="font-mono text-xs">{{ run.id }}</TableCell>
                                         <TableCell>
                                             <Badge variant="outline">{{ run.state }}</Badge>
@@ -215,9 +221,17 @@ onMounted(loadRitual);
                                         <TableCell class="text-muted-foreground">
                                             {{ run.completed_at ? new Date(run.completed_at).toLocaleString() : '-' }}
                                         </TableCell>
+                                        <TableCell class="text-right">
+                                            <Link
+                                                :href="route('org.rituals.runs.show', { ritualId: ritualId, runId: run.id })"
+                                                @click.stop
+                                            >
+                                                <Button variant="outline" size="sm">View</Button>
+                                            </Link>
+                                        </TableCell>
                                     </TableRow>
                                     <TableRow v-if="!ritual.runs || ritual.runs.length === 0">
-                                        <TableCell colspan="4" class="pt-16 pb-12 text-center text-muted-foreground">
+                                        <TableCell colspan="5" class="pt-16 pb-12 text-center text-muted-foreground">
                                             No ritual runs yet.
                                         </TableCell>
                                     </TableRow>

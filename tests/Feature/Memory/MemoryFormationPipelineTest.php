@@ -361,9 +361,12 @@ class MemoryFormationPipelineTest extends TestCase
     }
 
     /**
-     * Test that pipeline records failure on embedding error.
+     * Test that pipeline degrades gracefully on embedding error.
+     *
+     * Embedding failure is no longer fatal — the pipeline continues
+     * to graph storage and returns success with 0 embeddings.
      */
-    public function test_records_failure_on_embedding_error(): void
+    public function test_degrades_gracefully_on_embedding_error(): void
     {
         $buffer = app(WorkingMemoryBuffer::class);
         $buffer->append($this->run->id, 'user', 'Test content');
@@ -392,8 +395,8 @@ class MemoryFormationPipelineTest extends TestCase
 
         $result = $pipeline->process($this->run);
 
-        $this->assertFalse($result->success);
-        $this->assertEquals(MemoryFormationFailure::TYPE_EMBEDDING, $result->failureType);
+        $this->assertTrue($result->success);
+        $this->assertEquals(0, $result->embeddingsCreated);
 
         // Conversation logs should still be persisted
         $logs = MemoryConversationLog::forRun($this->run->id)->get();

@@ -1,395 +1,365 @@
-# Adversarial Code Review
+# Adversarial Review of SOLID Analysis (Task 97)
 
+**Project:** Agent Scheduler (Laravel 12 / PHP 8.3)
 **Date:** 2026-03-06
-**Graph:** SOLID Analysis | Task ID: 89 | Attempt: 1
-**Scope:** Challenge findings from Tasks 79 (SOLID), 80 (Laravel BP), 81 (Design Patterns), 82 (Code Quality), 83 (Prior Adversarial), 84 (Gap Analysis) + independent source code verification and new bug discovery
-**Method:** Full source code verification of all P0/P1 findings via 3 parallel exploration agents reading 60+ files. Independent security audit of middleware, listeners, observers, routes, seeders, and all untracked files. Cohesion analysis of all suggested refactoring targets.
+**Scope:** Challenge findings from SOLID Analysis (Task 97, 66 violations) and independently identify bugs, security vulnerabilities, and edge cases
+**Graph:** SOLID Analysis | Task ID: 95 | Attempt: 1
 
 ---
 
-## SITUATION
+## STAR Pre-Execution
 
-Seven specialist review passes and one prior adversarial review (Task 83) produced ~500+ raw findings consolidated into 42 actionable issues in the gap analysis. The prior adversarial review (Task 83) confirmed 4 P0s, dismissed 10 false positives, challenged 1 severity rating, identified 4 new findings, and rejected 12 over-engineering suggestions. This review re-examines all conclusions with independent source code verification, challenges the prior adversarial reviewer's own conclusions, and independently audits under-examined areas.
+### SITUATION
+Task 97 produced a SOLID analysis report claiming 66 violations (4 critical, 9 high, 41 medium, 12 low) across controllers, services, support classes, and models. This is more restrained than the prior Task 94 analysis (113 violations), but still contains systemic biases: treating match statements as OCP violations, flagging model constants as needing enums, and recommending extractions for small classes without cost-benefit analysis. Prior adversarial reviews (Tasks 83, 89) established patterns of SRP inflation and YAGNI over-engineering in the SOLID analysis stream. Meanwhile, critical security vulnerabilities in the codebase remain unaddressed by any SOLID analysis.
 
-## TASK
+### TASK
+Challenge false positives, over-engineering suggestions, and premature abstractions in the Task 97 SOLID analysis. Independently identify actual bugs, security vulnerabilities, and edge cases the analysis missed.
 
-1. Re-verify all P0/P1 findings against actual source code
-2. Challenge prior adversarial review's conclusions -- find errors in its analysis
-3. Independently discover bugs, security issues, and edge cases missed by all prior reviews
-4. Assess over-engineering suggestions with cohesion analysis
-5. Produce a final calibrated priority list
+### ACTION
+1. Read the full 66-finding SOLID report (Task 97)
+2. Dispatched 4 parallel investigation agents targeting controllers, services/support, models/jobs, and security
+3. Read and verified key files for the most contested findings against actual source code
+4. Cross-referenced security findings to confirm exploitability
+5. Compiled verdicts with evidence-based reasoning
 
-## RESULT
-
-Of the 42 consolidated findings: **4 P0 confirmed**, **1 major false positive discovered in prior adversarial's P1 list** (config/agent.php closure is NOT a config:cache blocker), **1 prior "bug" finding challenged as intentional behavior** (RecalculateTrustScoresJob), **3 new findings** discovered (DelegationRecoveryHandler SQL, cache poisoning, resource leak), **all 12 over-engineering rejections upheld** via cohesion analysis. Prior adversarial review (Task 83) quality: **A-** (one significant false positive propagated, one severity miscalibration).
+### RESULT
+Of the 66 findings, approximately 25-30 are legitimate and actionable, ~20 are false positives or over-engineered, and ~15 are directionally correct but overstated in severity. Three critical security vulnerabilities were independently discovered that the SOLID analysis completely missed. Estimated actionable count: ~35 (down from 66).
 
 ---
 
 ## Executive Summary
 
-| Verdict | Count |
-|---------|-------|
-| Confirmed P0 (Fix Now) | 4 |
-| Confirmed P1 (Fix Soon) | 14 (down from 16) |
-| Confirmed P2 (Fix When Touched) | 14 |
-| False Positives Identified (NEW this review) | 3 |
-| Prior FP Dismissals Upheld | 10 |
-| Prior Severity Ratings Challenged | 2 |
-| Over-Engineering Rejections Upheld | 12 |
-| New Findings (this review) | 5 |
+| Category | Count |
+|----------|-------|
+| Total Findings in Report | 66 |
+| **AGREE** (legitimate, actionable) | ~25-30 |
+| **DOWNGRADE** (severity too high or overstated) | ~15 |
+| **DISMISS** (false positive / over-engineered) | ~20 |
+| Independent Security Vulnerabilities Found | 3 critical, 3 high, 1 medium |
 
-**Key takeaway:** The prior adversarial review (Task 83) was well-calibrated overall but propagated one false positive from the Laravel BP review (config/agent.php closure) and accepted one dubious bug claim without verification (RecalculateTrustScoresJob). This review's independent source code verification caught both errors. The specialist reviews continue to exhibit SRP/OCP inflation bias -- the SOLID analysis (Task 79) accounts for 78 noise findings out of 103.
+The Task 97 report is significantly better calibrated than the prior Task 94 analysis (66 vs 113 findings), but still exhibits the same systemic biases: OCP dogmatism toward match statements, treating model constants as violations, and recommending extractions without cost-benefit analysis.
 
----
-
-## Part 1: P0 Findings -- Re-Verified
-
-### P0-1. ConfigurationController Missing Role Gate -- CONFIRMED
-
-**Prior rating:** P0 | **This review:** P0
-
-Read `app/Http/Controllers/Api/V1/ConfigurationController.php` in full. The `update()` method (lines 54-96) has NO authorization check -- no `$this->authorize()`, no `Gate::allows()`, no `can()`. The route sits inside `auth:sanctum` + `license` middleware only. Any authenticated user can write system configuration including `.env` values.
-
-**Fix:** Add `can:manage-system` gate. **Effort:** S
+**The report's biggest blind spot:** 66 findings on pattern purity, 0 on security. The codebase has 3 critical security vulnerabilities that are more urgent than any SOLID violation.
 
 ---
 
-### P0-2. OfficeStateController Cross-User Data Exposure -- CONFIRMED
+## Part 1: Critical Findings Review
 
-**Prior rating:** P0 | **This review:** P0
+### Finding 1: InterrogationSessionController (4,124 lines) -- AGREE
 
-Read the full controller. Six queries are properly user-scoped (lines 43-47, 50, 55-56, 225-240, 268-275, 285-289). Three query groups are NOT scoped:
-
-- `buildSystemState()` (lines 197-212): `SchedulerHeartbeat`, `AgentJobRun` counts -- global queries with no user filter
-- `buildEscalationsState()` (lines 364-387): `OrgEscalation::query()`, `EscalationIncident::query()` -- expose all users' escalation data
-- Connector queries return ALL `ConnectorAccount` records across all users
-
-**Note:** The `buildSystemState()` heartbeat and global run counts are arguably system-level metrics acceptable without scoping. The escalation and connector queries are the true cross-user exposure.
-
-**Fix:** Add user scoping to escalation and connector queries. **Effort:** S
+**Report:** Critical SRP
+**Verdict:** **AGREE** -- Unquestionably the #1 priority. 4,124 lines and 40+ methods in a single controller is unsustainable by any standard. The suggested split into domain-specific controllers is sound.
 
 ---
 
-### P0-3. CliRuntimeExecutor Env Inheritance -- CONFIRMED
+### Finding 2: OfficeStateController (467 lines) -- DISMISS
 
-**Prior rating:** P0 | **This review:** P0
+**Report:** Critical SRP -- "Eight private methods build different state sections... each contains complex queries."
+**Verdict:** **DISMISS** -- This is a single-responsibility read-only aggregation endpoint. Its one job is "assemble current office state snapshot." The 8 private methods are modular helpers implementing a coherent algorithm, not separate responsibilities.
 
-Lines 73-80: Filter removes only `ANTHROPIC_*` keys. `DB_PASSWORD`, `APP_KEY`, `REDIS_PASSWORD`, `AGENT_LICENSE_KEY`, all `MESSENGER_*` secrets are inherited by child processes.
+**Evidence:**
+- Prior adversarial review (Task 89) performed cohesion analysis and rated this HIGH cohesion
+- The controller has a single `__invoke` method -- it IS a single-action controller
+- No method mutates state; all are pure query + transform
+- The suggested remediation (8 `StateBuilder` services) creates ~300+ lines of boilerplate for zero reuse -- no other endpoint consumes these builders
+- "50-100 lines max" for controllers is aspirational dogma, not a practical rule for aggregation endpoints
 
-Contrast with `SessionProcessManager::startWrapper()` (lines 103-114) which uses a clean explicit allowlist: only `WRAPPER_*`, `ANTHROPIC_API_KEY`, `HOME`, `PATH`. The inconsistency between the two approaches makes this gap more concerning.
-
-`config/agent.php` defines `forbidden_env_keys` (lines 159-185) but these are NOT applied in `CliRuntimeExecutor`.
-
-**Fix:** Switch to explicit allowlist matching `SessionProcessManager`'s pattern. **Effort:** S
-
----
-
-### P0-4. /user Endpoint Returns Raw Model -- CONFIRMED (Minor P0)
-
-**Prior rating:** P0 | **This review:** P0
-
-`routes/api.php:62-64` returns `$request->user()` directly. No `UserResource` exists. Laravel's `$hidden` covers `password` and `remember_token`, but all other columns are exposed.
-
-**Fix:** Create and return `UserResource`. **Effort:** S
+**Note:** The two Medium findings on this same controller (OCP for match expressions at lines 159-193, DIP for `Schema::hasTable()` at lines 311-341) are more reasonable concerns than the Critical rating on the overall class.
 
 ---
 
-## Part 2: Challenging Prior Reviews -- False Positives Found
+### Finding 3: ConfigurationController -- AGREE (but for wrong reasons)
 
-### NEW FP-1: config/agent.php Closure Breaks config:cache -- FALSE POSITIVE
-
-**Source:** Laravel BP Review (Task 80), promoted to P1 in Gap Analysis (Task 84), confirmed as P1 by Prior Adversarial (Task 83)
-**Claim:** "The `$parseEnvCsvList` closure in `config/agent.php` breaks `config:cache` because `var_export()` cannot serialize closures."
-
-**Verdict: FALSE POSITIVE.** I read `config/agent.php` lines 1-20 in full. The closure is defined as a **local variable** (`$parseEnvCsvList`) on line 3, used to compute values BEFORE the `return` statement. It is NOT stored in the returned config array. `php artisan config:cache` serializes the RETURNED array, not local variables used during its construction. The closure executes at config load time, produces scalar values, and those scalars are what gets returned.
-
-This is standard PHP -- a local helper function used during array construction. Every review that flagged this (Tasks 80, 83, 84) failed to distinguish between "closure defined in config file" and "closure stored in config array."
-
-**Corrected severity:** Remove from all priority lists. Not an issue.
+**Report:** Critical SRP+DIP -- "Controller directly manipulates `.env` file."
+**Verdict:** **AGREE, but the real issue is security, not SOLID.** The report correctly identifies the `.env` manipulation as problematic but frames it as an SRP/DIP concern. The actual critical issue is a **security vulnerability** -- see Part 3, SEC-1. Extracting to `EnvironmentConfigurationManager` is sound, but the fix must include input sanitization, not just architectural separation.
 
 ---
 
-### NEW FP-2: RecalculateTrustScoresJob "Identical Scores Per Runner Type" -- INTENTIONAL BEHAVIOR
+### Finding 4: SessionProcessManager static state -- DOWNGRADE
 
-**Source:** Code Quality Review (Task 82) H-20, promoted to P1 in Gap Analysis
-**Claim:** "All profiles with the same runner_type get identical scores. This is either a logic bug or massive inefficiency."
-
-**Verdict: INTENTIONAL BEHAVIOR, NOT A BUG.** I read `RecalculateTrustScoresJob` (38 lines) and traced into `TrustScoreCalculator::calculate()`. The calculator computes aggregate STAR metrics across the 50 most recent runs for a given runner type -- success rates, recovery rates, component correctness. This is a **baseline trust score** for the runner type, not per-profile scoring.
-
-The job exists to periodically recalculate aggregate reliability baselines. Individual profiles can receive job-specific overrides via the `$jobId` parameter path in the calculator. The "identical scores per runner type" IS the feature -- it ensures delegation routing uses up-to-date aggregate reliability data for each runner.
-
-**However:** The individual `$profile->update()` per row IS inefficient. A batch `DB::table()->upsert()` grouped by runner_type would be better. Downgrade from P1 "bug" to P2 "performance improvement."
+**Report:** Critical DIP -- "Static `$activeProcesses` is a hidden dependency."
+**Verdict:** **DOWNGRADE to High.** The static state IS a design concern, but the report mischaracterizes the severity. The code's own documentation (lines 11-15) explicitly explains this is intentional for session affinity -- all turns for a session MUST run on the same worker. A `RedisProcessStateStore` would break this fundamental requirement since the pipes are in-memory OS resources. The real fix is either distributed locking or formalized session affinity verification, not abstracting the state store.
 
 ---
 
-### NEW FP-3: Prior Adversarial's Characterization of useOfficeRealtime Watcher -- NUANCE
+## Part 2: High and Medium Findings -- Challenged
 
-**Source:** Prior Adversarial (Task 83) Part 3, severity rating challenge
-**Claim:** "The watcher fires but never enters any conditional branch... ~30 lines of visual effect logic never execute."
+### Legitimate High Findings
 
-**Verdict: CORRECT CONCLUSION, IMPRECISE MECHANISM.** Vue 3's `watch()` with `{ deep: true }` on reactive objects that are mutated in-place does NOT provide meaningful old/new comparison -- both parameters point to the same proxy. The prior review's line-level analysis of the conditionals (lines 250-281 all evaluating FALSE) is correct. However, the phrasing "watcher fires" could be misleading -- Vue 3's deep watcher on a `ref({})` with in-place mutation does fire the callback, but `oldValue === newValue` reference-wise, so all comparisons against the "previous" state fail.
+| # | Finding | Verdict | Notes |
+|---|---------|---------|-------|
+| 5 | RepoAnalysisSessionController (1,118 lines) | **AGREE** | Genuinely too large. Split justified. |
+| 11 | SessionProcessManager (727 lines, 6 concerns) | **AGREE** | The duplicated read loops between `readTurnResponse` and `resumeReadTurnResponse` are a real DRY violation and bug risk. |
+| 13 | CliRuntimeExecutor OCP (runner type conditionals) | **AGREE** | Only 2 runner types currently, but the pattern is clear and the fix is clean. |
 
-**Severity: P1 -- confirmed.** Just clarifying mechanism, not changing priority.
+### Challenged High Findings
+
+| # | Finding | Verdict | Notes |
+|---|---------|---------|-------|
+| 6 | AgentRunController `dashboardMetrics` | **DOWNGRADE to Medium** | The method is complex (82 lines), but it's a single query-heavy read operation. `dashboardMetrics` should move to a separate controller (not a service -- it's still HTTP-facing), but the core resource controller is cohesive. |
+| 7 | MessengerConnectorController `store` | **DOWNGRADE to Medium** | Validation + normalization in a `store` method is standard Laravel. The method is long but not mixing unrelated concerns. |
+| 8 | AgentJobController magic strings | **DISMISS** | A single `LIKE` clause (`'Interrogation Build S%'`) is not an SRP violation requiring a "filter factory pattern." It's a query filter. |
+| 9 | LogTailController log parsing | **DISMISS** | Log parsing in a log-tailing controller is the controller's responsibility. A `LogParserInterface` with strategy pattern for < 50 lines of parsing logic is over-engineering. |
+| 10 | SystemPromptResolver (134 lines) | **DISMISS** | 134 lines for resolving system prompts is compact. Phase resolution, context building, and runner-type rules are all facets of "resolve the system prompt." This IS its single responsibility. |
+| 12 | MessengerRuntimeOrchestrator (314 lines) | **DOWNGRADE to Medium** | CLI delegation and LLM orchestration are two modes of the same operation ("execute a runtime turn"). They share context, error handling, and response processing. Splitting into two classes would duplicate shared setup. |
+| 14 | MemoryCoreBlock (SRP+OCP) | **PARTIAL AGREE** | Static type arrays could be enums (fair OCP point). But classification validation in the model is attribute integrity, not misplaced business logic. |
+| 15 | MemoryProviderUsage pricing | **AGREE** | Pricing calculation in a model is legitimately misplaced. Extract to service. |
+| 16 | MemoryEmbedding (4 concerns) | **PARTIAL AGREE** | Decay score calculation and deduplication logic are service concerns. But content hashing (3 lines) and access tracking (1 method) are fine as model helpers. |
+
+### Medium Findings -- Systemic Challenges
+
+#### OCP Match Statement Bias (7+ findings)
+
+The report flags match/if-else statements in these classes as OCP violations:
+- `AdapterFactory.php` (12-19) -- 7 lines
+- `VerificationPipeline.php` (127-142) -- 15 lines
+- `MemoryAdapterFactory.php` (258-271) -- 13 lines
+- `ConnectorManager.php` (11-40) -- 30 lines
+- `TaskManagementProviderManager.php` (11-16) -- 5 lines
+- `RuleBasedScheduleParser.php` (50-88) -- 38 lines
+- `OrgCouncilService.php` (30-40) -- 10 lines
+
+**Verdict on all:** These are collectively **DOWNGRADE to Low or DISMISS.** A match statement with 2-5 cases is idiomatic PHP 8.1+. Converting each to a config-driven registry adds:
+- A config file entry per factory
+- Container binding registration
+- Class discovery/resolution overhead
+- Loss of IDE jump-to-definition
+
+This is justified at ~10+ cases or when the cases change frequently. For 2-5 static cases, match statements are the correct solution. Prior adversarial review (Task 89) upheld this position: "Add Strategy pattern to every match statement with <5 cases -- idiomatic PHP 8.1."
+
+**Exception:** `RuleBasedScheduleParser` with its 10+ `tryXxx()` methods is borderline legitimate for chain-of-responsibility, but even there, the current code works and the patterns are stable.
+
+#### Model Constants as OCP Violations (8+ findings)
+
+The report flags string constants in these models:
+- `ChatAction.php` -- status and action type constants
+- `DelegationGraph.php`, `DelegationTask.php`, `DelegationAttempt.php`, `DelegationVerificationResult.php` -- status constants
+- `AgentJobRun.php` -- status and trigger type constants
+- `InterrogationSession.php` -- 8 status + 3 group constants
+- `OrgRitualRun.php`, `OrgEscalation.php` -- state/type constants
+- `ChatSession.php`, `ChatMessage.php` -- direction constants
+- `OrgRitualTemplate.php` -- notification level constants
+
+**Verdict:** **DOWNGRADE all to Low.** Converting to PHP 8.1 backed enums is a reasonable modernization suggestion, but it's not an OCP *violation*. Adding a new status to a `const` requires the same single-file change as adding a case to an enum. The benefit of enums is IDE support and type safety, not OCP compliance. This should be framed as "modernization opportunity," not "violation."
+
+#### Small-Class SRP Claims
+
+| Finding | Verdict | Notes |
+|---------|---------|-------|
+| ChatSessionController `send` (57-97) | **DISMISS** | 40-line method with validation + adapter call + DB write is standard controller flow. Prior review confirmed. |
+| NlScheduleParserService (51-133) | **DISMISS** | Orchestration of validate -> parse -> respond is one lifecycle. Prior review confirmed. |
+| CoreMemoryManager `set()` (72-99) | **DISMISS** | Validation before persistence is the method's job, not a separate concern. |
+| RuntimeSession tool approval (58-79) | **DISMISS** | Array attribute accessors on a model. Prior review confirmed these are not business logic. |
+| OrgCouncilTemplate member finding (66-89) | **DISMISS** | Array search on a model's own data is an accessor. |
+| ContractValidator (40-56) | The report itself says "acceptable if treated as cohesive." So why list it? |
+
+#### Legitimate Medium Findings
+
+| Finding | Verdict | Notes |
+|---------|---------|-------|
+| AdversarialReviewerService `$testMode` flag | **AGREE** | Embedding test harness in production code is a real concern. Use dependency injection or test doubles. |
+| TrustScoreCalculator (13-184) mixed concerns | **AGREE** | Score calculation + metrics aggregation + database querying is genuinely 3 things. |
+| ToolGateway (12-307) 6 concerns | **AGREE** | Registration + policy + approval + execution + timing + recording. Legitimate SRP issue at 307 lines. |
+| MessengerHttpClient (27-133) resilience | **AGREE** | Circuit breaker + retry + rate limit + error categorization. Decorator pattern would be cleaner. |
+| CredentialVault encryption in model | **AGREE** | Encryption/decryption service extraction is justified. |
+| User role logic (121-172) | **AGREE** | Role authorization logic should use Laravel's Policy/Gate system. |
+| MemoryProviderUsage pricing | **AGREE** | Pricing calculations belong in a service. |
+
+### Low Findings -- Largely Reasonable
+
+Most low findings are correctly calibrated. Two exceptions:
+
+| Finding | Verdict | Notes |
+|---------|---------|-------|
+| ApprovalGate constants (OCP) | **DISMISS** | Security taxonomy constants are not OCP violations. Prior review confirmed. |
+| ToolGateway depends on concrete ApprovalGate (DIP) | **DISMISS** | Single implementation, single consumer. Interface adds zero value. |
 
 ---
 
-## Part 3: New Findings (Independent Analysis)
+## Part 3: Independent Security Vulnerabilities Found
 
-### NEW-1. DelegationRecoveryHandler distinct()/count() SQL Issue -- HIGH
+**The SOLID analysis completely missed these.** These are more urgent than any pattern violation.
 
-**File:** `app/Listeners/DelegationRecoveryHandler.php:95-97`
+### SEC-1: .ENV File Injection via ConfigurationController -- CRITICAL
 
+**File:** `app/Http/Controllers/Api/V1/ConfigurationController.php:114-138`
+**Verified:** Source code read and confirmed at line 124.
+
+The `writeEnvValues()` method writes user-controlled values to `.env` with insufficient escaping:
 ```php
-->distinct('delegatee_profile_id')->count('delegatee_profile_id')
+$escaped = str_contains($value, ' ') ? '"'.$value.'"' : $value;
 ```
 
-Laravel's `distinct()` on a query builder modifies the SELECT to add DISTINCT, but `count()` generates `SELECT COUNT(column)`. The combination `distinct('col')->count('col')` does NOT produce `COUNT(DISTINCT col)` -- it produces `SELECT DISTINCT COUNT(col)` which is semantically different (DISTINCT on a scalar count is a no-op). The re-delegation limit check based on this count may allow more retries than intended.
+Only spaces trigger quoting. Newlines (`\n`, `\r`) are not stripped. An authenticated user can inject arbitrary environment variables:
+```
+Input:  "https://example.com\nDATABASE_PASSWORD=exposed\nAPP_DEBUG=true"
+Result: AGENT_WEBHOOK_URL=https://example.com
+        DATABASE_PASSWORD=exposed
+        APP_DEBUG=true
+```
 
-**Fix:** Use `->distinct()->count('delegatee_profile_id')` (no argument to `distinct()`, column in `count()`) or `DB::raw('COUNT(DISTINCT delegatee_profile_id)')`.
-**Effort:** S
-**Priority:** P1
+**Impact:** Configuration tampering, credential exposure, code execution via debug mode.
+**Severity:** Critical (9.5/10). Exploitable by any authenticated user with configuration access.
+**Note:** The SOLID report (Finding 3) flagged this controller for SRP/DIP but missed the actual security vulnerability in the same code.
 
----
-
-### NEW-2. LicenseService Cache Poisoning via Malformed API Response -- MEDIUM
-
-**File:** `app/Services/Agent/LicenseService.php:106`
-
-When remote license validation returns a response, `dehydrate()` caches the `LicenseStatus` object without validating the response structure. If the license server returns malformed JSON or unexpected fields, corrupted state gets cached for the full TTL (default 3600s). During this window, `isValid()` reads the corrupted cache and may return incorrect license status.
-
-**Fix:** Validate response structure before caching. Return `LicenseStatus::invalid()` for malformed responses.
-**Effort:** S
-**Priority:** P2
-
----
-
-### NEW-3. RitualRunCompletionListener Missing Transaction Safety -- HIGH
-
-**File:** `app/Listeners/Org/RitualRunCompletionListener.php:16-35`
-
-Listener performs direct model updates on `OrgRitualRun` without transaction wrapping or pessimistic locking. Multiple listeners could fire concurrently for the same ritual run (e.g., if multiple delegation graphs complete simultaneously), causing race conditions on state transitions.
-
-**Fix:** Wrap in `DB::transaction()` with `$run->lockForUpdate()`.
-**Effort:** S
-**Priority:** P1
+**Fix:**
+```php
+$sanitized = str_replace(["\n", "\r", "\0"], '', $value);
+$escaped = str_contains($sanitized, ' ') ? '"' . addcslashes($sanitized, '"\\') . '"' : $sanitized;
+```
 
 ---
 
-### NEW-4. DelegationRecoveryHandler Null Safety in findAlternativeProfile -- MEDIUM
+### SEC-2: Server-Side Request Forgery (SSRF) via Webhook URL -- CRITICAL
 
-**File:** `app/Listeners/DelegationRecoveryHandler.php:237-254`
+**File:** `app/Services/Agent/WebhookDeliveryService.php:27-31`
+**Verified:** Source code read and confirmed.
 
-`findAlternativeProfile()` returns `->first()` without null guarantee. Calling code at lines 209, 212 accesses properties on the result without null-checking. If no alternative profile matches the query criteria, a null pointer exception occurs.
+Webhook delivery POSTs to any user-configured URL without SSRF protections:
+```php
+$response = Http::withHeaders($headers)
+    ->timeout(10)->retry(2, 1000)
+    ->withBody($body, 'application/json')
+    ->post($url);  // No IP/scheme validation
+```
 
-**Fix:** Add null guard before property access.
-**Effort:** S
-**Priority:** P2
-
----
-
-### NEW-5. Silent Failure in DocumentationTelemetrySubscriber Cache Fallback -- LOW
-
-**File:** `app/Listeners/Documentation/DocumentationTelemetrySubscriber.php:84-98`
-
-When cache is unavailable, the subscriber logs a warning but returns `true` (dispatch). This means telemetry events dispatch even when deduplication failed, potentially creating duplicates. The intended behavior of deduplication is silently bypassed.
-
-**Fix:** Return `false` when deduplication cannot be performed, or implement a fallback.
-**Effort:** S
-**Priority:** P2
+**Missing:** Private IP blocking (127.0.0.1, 10.x, 172.16.x, 192.168.x), cloud metadata blocking (169.254.169.254), scheme restriction.
+**Impact:** Cloud credential theft, internal service enumeration, local file reading.
+**Severity:** Critical (9.8/10). Exploitable by any user who can configure webhook URLs.
 
 ---
 
-## Part 4: Over-Engineering Analysis -- All 12 Rejections Upheld
+### SEC-3: Unescaped Command in ProcessManager.start() -- HIGH
 
-I performed cohesion analysis on the primary refactoring targets by reading the full source of each file:
+**File:** `app/Support/Agent/ProcessManager.php:104-109`
+**Verified:** Source code read and confirmed.
 
-### RunEventWriter (1,000 LOC, 38 methods) -- DO NOT SPLIT
+```php
+$result = Process::run(sprintf(
+    'nohup %s > /dev/null 2>&1 & echo $!',
+    $command  // No escaping -- direct shell interpolation
+));
+```
 
-**Cohesion:** HIGH. All 38 methods operate on 6 shared mutable properties (`nextSequence`, `consecutiveWriteFailures`, `recentWriteFailures`, `failureWindowStartedAtMs`, `captureHalted`, `redactionNoticeEmitted`). Splitting into 5 services would require threading transactional state between them -- increasing coupling, not reducing it. The file has clear internal method naming conventions (`mark*`, `broadcast*`, `extract*`) that serve as implicit grouping. Extract only `RedactionService` IF redaction patterns need independent modification.
+Other methods in the same class (`findByCommand` line 28, `stop` line 77) correctly use `escapeshellarg()` or `%d` formatting. This inconsistency is dangerous -- developers may assume all methods are safe.
 
-### OfficeStateController (467 LOC, 13 methods) -- DO NOT EXTRACT
-
-**Cohesion:** HIGH (read-only). Single `__invoke` method calls 7 stateless builder methods. Each method is a pure query that returns an array. No business logic, no mutations, no side effects. Extracting to `OfficeStateAggregator` moves code to a different file with zero behavioral improvement.
-
-### CommandRouter (138 LOC, 4 methods) -- DO NOT REFACTOR
-
-**Cohesion:** PERFECT. 17-item handler array is the core data structure; all 4 methods exist to serve it. Centralized visibility is a feature, not a bug -- developers see all commands in one place. Service provider auto-discovery would scatter registrations across multiple files for 17 items. Premature until the number exceeds ~30.
-
-### ChatActionExecutor (264 LOC, 10 methods) -- ALREADY HAS REGISTRY PATTERN
-
-**Cohesion:** GOOD. Already provides `registerHandler()` for dynamic registration. The review suggesting "implement registry pattern" was incorrect -- it's already implemented. No changes needed.
-
-### Full Rejection List (Upheld from Task 83):
-
-1. Split `RunEventWriter` into 5 services -- high cohesion, shared mutable state
-2. Extract `OfficeStateController` to `OfficeStateAggregator` -- moves code, zero benefit
-3. Decompose `MemoryFormationPipeline` into 4 services -- orchestration is the value
-4. Create interfaces for all 60+ single-implementation services -- YAGNI
-5. Split install command into 3-4 Artisan commands -- bad UX for install wizard
-6. Split `FeatureFlagManager` into domain-specific flag classes -- fragments discoverability
-7. Create `TokenBudgetStrategy` interface -- single algorithm, no variants
-8. Create `PreambleTemplateRepository` -- single template
-9. Replace `app()` in serialized jobs with constructor injection -- standard Laravel pattern for serialized jobs
-10. Create `DiagnosticsService` -> `HealthCheck` interface -- 11 files for 278 lines
-11. Introduce "registry pattern" for `ChatActionExecutor` -- already implements it
-12. Add Strategy pattern to every `match` statement with <5 cases -- idiomatic PHP 8.1
+**Severity:** High (7.5/10). Currently mitigated by hardcoded callers but architecturally unsafe.
 
 ---
 
-## Part 5: Prior Adversarial False Positive Dismissals -- UPHELD
+### SEC-4: ClamAV Command Injection Pattern -- HIGH
 
-All 10 false positive dismissals from prior adversarial review (Task 83) are confirmed correct:
+**File:** `app/Services/Messenger/AttachmentHandler.php:131`
+**Verified:** `$result = Process::run("clamdscan --no-summary {$path}");`
 
-| # | Finding | Verdict |
-|---|---------|---------|
-| 1 | LicenseService nested array NPE | **UPHELD** -- PHP `??` handles nested null |
-| 2 | IncidentLifecycleService TOCTOU | **UPHELD** -- correct optimistic+pessimistic |
-| 3 | CommandPolicy template injection | **UPHELD** -- 5-6 protection layers |
-| 4 | ProcessRuntimeTurnJob uninitialized `$timeout` | **UPHELD** -- always set in constructor |
-| 5 | BillingUsageService empty string vs null | **UPHELD** -- config default |
-| 6 | ProcessInboundMessage idempotency race | **UPHELD** -- optimistic + catch |
-| 7 | RunEventWriter missing import | **UPHELD** -- same namespace |
-| 8 | Module-level shared state in Vue composables (M-23) | **UPHELD** -- reactive state inside composable function |
-| 9 | ChatIntentParser "Command Injection" (C-01) | **UPHELD** -- array-form execution, not shell injection |
-| 10 | ~78 SOLID findings under 300 LOC | **UPHELD** -- style preferences, not actionable |
+String interpolation instead of array syntax. Mitigated by UUID path sanitization upstream but violates defense-in-depth.
+**Fix:** `Process::run(['clamdscan', '--no-summary', $path])`
 
 ---
 
-## Part 6: Cross-Report Quality Assessment
+### SEC-5: Race Condition in SessionProcessManager -- HIGH
 
-| Review | Quality | False Positive Rate | Key Bias |
-|--------|---------|---------------------|----------|
-| Prior Adversarial (Task 83) | **A-** | ~8% (1 propagated FP, 1 severity miscalibration) | Slight trust of upstream findings without full verification |
-| Gap Analysis (Task 84) | **A-** | ~5% (inherited from upstream) | Good deduplication, weak at catching upstream FPs |
-| Code Quality (Task 82) | **B-** | ~15% (3 Critical FPs, 1 High FP) | Security severity inflation |
-| Design Pattern (Task 81) | **B** | ~10% | Structural bias |
-| Laravel BP (Task 80) | **B** | ~10% (config/agent.php closure FP) | Convention purity, config:cache misunderstanding |
-| SOLID Analysis (Task 79) | **C+** | ~25% (78 of 103 are noise) | Extreme theoretical purity bias |
+**File:** `app/Services/Runtime/SessionProcessManager.php:11-15`
 
-### Bias Patterns Persisting Across Reviews:
-
-1. **SRP inflation:** Classes at 200-400 LOC with clear internal structure still flagged as "God Objects"
-2. **OCP dogmatism:** Every `match`/`switch` with <5 cases treated as a violation
-3. **DIP overreach:** `app()` in serialized jobs is standard Laravel, not a violation
-4. **Config:cache misunderstanding:** Local variables in config files confused with closures stored in the returned array (NEW finding this review)
-5. **Bug claim without trace verification:** RecalculateTrustScoresJob flagged as "logic bug" without reading the calculator implementation
+Documented TOCTOU risk. Without session affinity, concurrent workers can corrupt in-memory pipe state with silent data loss via `@` error suppression.
+**Severity:** High (7.5/10). Configuration-dependent.
 
 ---
 
-## Part 7: Revised Priority Matrix
+### SEC-6: Mass Assignment via $guarded = [] -- MEDIUM
 
-### P0 -- Fix Now (4 items, all S-effort)
+**Files:** `CredentialVault.php:17`, `AgentJob.php:24`, and 18+ other models.
 
-| # | Action | Source |
-|---|--------|--------|
-| 1 | Add `can:manage-system` gate to `ConfigurationController` write endpoint | Confirmed |
-| 2 | Add user scoping to `OfficeStateController` (escalations, connectors, incidents) | Confirmed |
-| 3 | Switch `CliRuntimeExecutor` to explicit env var allowlist | Confirmed |
-| 4 | Add `UserResource` transformation to `/user` endpoint | Confirmed |
-
-### P1 -- Fix Soon (14 items)
-
-| # | Action | Notes |
-|---|--------|-------|
-| 5 | Remove `--password` CLI option from `AgentUserCommand` | Confirmed |
-| 6 | Fix `LicenseService` cache coherency: `isValid()` should call `validate()` when cache empty | Confirmed |
-| 7 | Fix `AgentUpdateCommand`: check migration exit code, return `$status->valid` | Confirmed |
-| 8 | Fix `SessionProcessManager` unbounded `$fragments` memory growth | Confirmed |
-| 9 | Add read authorization gates to 5 admin controllers | Confirmed |
-| 10 | Fix `InstanceFingerprint` race condition: use `firstOrCreate()` | Confirmed |
-| 11 | Add `failed()` handlers to `ExecuteAgentRunJob`, `ProcessRuntimeTurnJob`, `ProcessChatIntent` | Confirmed |
-| 12 | Fix frontend reactivity: replace in-place mutation in `useOfficeRealtime.js` | Confirmed |
-| 13 | Fix `ProcessChatIntent` idempotency keys: derive from deterministic inputs | Confirmed |
-| 14 | **Fix `DelegationRecoveryHandler` distinct/count SQL** | NEW |
-| 15 | **Add pessimistic locking to `RitualRunCompletionListener`** | NEW |
-| 16 | Secure N8n webhook endpoint with auth/signature verification | Confirmed |
-| 17 | Fix `HorizonServiceProvider` `viewHorizon` gate (always returns false) | Confirmed |
-| 18 | Add `ShouldBeUnique` to `RecalculateTrustScoresJob` and `OrgDispatchDueRitualsJob` | Confirmed |
-
-**Removed from P1 (vs prior adversarial):**
-- ~~Move closure out of `config/agent.php`~~ -- FALSE POSITIVE (local variable, not in returned array)
-- ~~Fix `RecalculateTrustScoresJob` "identical scores" bug~~ -- INTENTIONAL BEHAVIOR (downgraded to P2 performance)
-
-### P2 -- Fix When Touched (14 items)
-
-| # | Action | Notes |
-|---|--------|-------|
-| 19 | Fix `AttemptSpawner` template string replacement precision | Confirmed |
-| 20 | Fix `SessionProcessManager` resource leak on unexpected process exit | Confirmed |
-| 21 | Add duplicate dispatch guard to `OrgDispatchDueRitualsJob` | Confirmed |
-| 22 | Add status guard to `DelegationAttemptCompletedJob` | Confirmed |
-| 23 | Fix `AiCriticCompletedJob` `file_get_contents` false handling | Confirmed |
-| 24 | Fix `RunEventWriter` Bearer token regex to cover JWT characters | Confirmed |
-| 25 | Fix `DeliverWebhookJob` scalar backoff to array | Confirmed |
-| 26 | Fix `agentThoughts` keyed by `run_id` in `AgentOffice.vue:334` | Confirmed |
-| 27 | Dispose Three.js geometries/materials in `useOfficeScene.js` cleanup | Confirmed |
-| 28 | Batch `RecalculateTrustScoresJob` updates by runner_type (performance) | Reclassified from P1 |
-| 29 | **Validate LicenseService API response before caching** | NEW |
-| 30 | **Add null guard in `DelegationRecoveryHandler.findAlternativeProfile()`** | NEW |
-| 31 | Add logging for invalid cron expressions in `OrgDispatchDueRitualsJob` | Confirmed |
-| 32 | Add explicit `$tries`/`$timeout` to 11 jobs missing them | Confirmed |
-
-### Do NOT Do (Over-Engineering) -- 12 items UPHELD
-
-All 12 over-engineering rejections from the prior adversarial review are upheld. See Part 4 for cohesion analysis evidence.
+Models using `$guarded = []` rely entirely on controllers using `$request->validated()`. Any slip to `$request->all()` exposes all attributes including `user_id` and sensitive fields.
+**Fix:** Define explicit `$fillable` arrays.
 
 ---
 
-## Part 8: False Positive Summary (Cumulative)
+## Part 4: Analysis Quality Assessment
 
-All findings confirmed as false positives or significantly overstated across all review rounds:
+### Improvement Over Prior Analyses
 
-| Finding | Source | Why False/Overstated |
-|---------|--------|----------------------|
-| config/agent.php closure breaks config:cache | Laravel BP (Task 80) | **NEW:** Closure is a local variable, not in the returned array |
-| RecalculateTrustScoresJob "identical scores" bug | Code Quality (Task 82) | **NEW:** Intentional aggregate behavior per runner_type |
-| Module-level shared state in Vue composables (M-23) | Code Quality (Task 82) | All reactive state inside composable function |
-| Command injection via ChatIntentParser (C-01) | Code Quality (Task 82) | Array-form execution; conflates prompt injection with command injection |
-| LicenseService nested array NPE | Code Quality (Task 82) | PHP `??` handles nested null |
-| IncidentLifecycleService TOCTOU | Code Quality (Task 82) | Correct optimistic+pessimistic with `lockForUpdate()` |
-| CommandPolicy template injection | Code Quality (Task 82) | 5-6 protection layers verified |
-| ProcessRuntimeTurnJob uninitialized `$timeout` | Code Quality (Task 82) | Always set in constructor |
-| BillingUsageService empty string vs null | Code Quality (Task 82) | Config default provides fallback |
-| ProcessInboundMessage idempotency race | Code Quality (Task 82) | Optimistic check + QueryException catch |
-| RunEventWriter missing import causing crash | Code Quality (Task 82) | Same namespace resolves correctly |
-| ~78 SOLID findings under 300 LOC | SOLID Analysis (Task 79) | Style preferences, not actionable violations |
-| ChatActionExecutor "needs registry pattern" | SOLID Analysis (Task 79) | Already implements it |
+| Metric | Task 94 (prior) | Task 97 (current) |
+|--------|----------------|-------------------|
+| Total findings | 113 | 66 |
+| False positive rate | ~45% | ~30% |
+| Critical accuracy | ~80% | ~50% (OfficeStateController is false positive) |
+| Enum suggestion calibration | Not present | Present but over-applied |
+| Security awareness | 0% | 0% |
 
----
+### Persistent Biases
 
-## Positive Patterns to Preserve
-
-The codebase demonstrates strong foundations:
-
-- **Domain organization** -- clear boundaries across 9 feature domains
-- **32 FormRequest classes** and **14 Policies** -- well-established validation and authorization
-- **DTO/Result pattern** -- `LicenseStatus`, `CommandResult`, `MemoryFormationResult` with readonly classes
-- **Strategy/Adapter patterns** -- `AbstractConnectorAdapter` with rate limiting and circuit breaker; `AbstractToolAdapter` + 8 implementations
-- **Process safety** -- `SessionProcessManager::startWrapper()` uses clean explicit env allowlist
-- **CommandPolicy protections** -- 5-6 layers of defense verified by 6 adversarial reviews
-- **IncidentLifecycleService locking** -- textbook optimistic+pessimistic pattern
-- **Atomic state transitions** -- WHERE-guarded UPDATEs across delegation coordination
-- **ErrorEnvelope** -- consistent API error responses (185 usages across 29 files)
-- **Focused utility services** -- `CanonicalCostCalculator`, `GateEvaluator`, `FailureTaxonomyMapper`
-- **Modern PHP** -- constructor property promotion, enums, match expressions, readonly classes
-- **SlashCommandRegistrar** -- well-structured with version tracking
+| Bias | Evidence in Task 97 |
+|------|---------------------|
+| **Match statement = OCP violation** | 7+ findings for match/if-else with 2-5 cases |
+| **Model constants = OCP violation** | 8+ findings for string constants that should be "enums" |
+| **Aggregation = SRP violation** | OfficeStateController rated Critical for being an aggregation endpoint |
+| **Missing cost-benefit analysis** | All extractions suggested without weighing boilerplate vs value |
+| **No security awareness** | 66 pattern findings, 0 security findings. The .env injection in Finding 3's exact code was missed. |
 
 ---
 
-## Methodology
+## Part 5: Prioritized Remediation
 
-1. Read all 6 prior review documents (~8,000+ lines of review content)
-2. Launched 3 parallel exploration agents:
-   - **Agent 1:** Verified all P0 findings against source code with line-level evidence (read ConfigurationController, OfficeStateController, CliRuntimeExecutor, SessionProcessManager, routes/api.php, config/agent.php)
-   - **Agent 2:** Independent security audit of middleware (10 files), observers (2 files), listeners (7 files), routes, seeders, and all untracked files (9 files)
-   - **Agent 3:** Cohesion analysis of all refactoring targets (RunEventWriter, OfficeStateController, CommandRouter, ChatActionExecutor, RecalculateTrustScoresJob, ProcessChatIntent)
-3. Cross-referenced all findings, deduplicated, and calibrated severity
-4. Verified 2 findings from prior reviews were false positives by reading actual source code
+### Tier 0: Fix Immediately (Security)
+1. **SEC-1:** Sanitize .env writes -- strip newlines, escape quotes in `ConfigurationController::writeEnvValues()`
+2. **SEC-2:** Add SSRF protection to `WebhookDeliveryService` -- block private IPs, metadata endpoints, non-HTTPS
+3. **SEC-3:** Fix `ProcessManager::start()` -- use array syntax or escapeshellarg()
+4. **SEC-4:** Fix `AttachmentHandler` ClamAV call -- use array syntax
 
-**Severity criteria (consistent with prior reviews):**
-- **P0:** Data exposure, data corruption, security bypass, or money loss in production
-- **P1:** Silent failures, data inconsistency, reliability degradation under load, blocks standard deployment
-- **P2:** Code quality, maintainability, minor edge cases
-- **Over-engineering:** Pattern purity that adds complexity without behavioral improvement
+### Tier 1: Refactor (Legitimate Critical/High)
+1. Decompose `InterrogationSessionController` (4,124 lines) -- undisputed #1
+2. Decompose `RepoAnalysisSessionController` (1,118 lines)
+3. Deduplicate `SessionProcessManager` read loops
+4. Extract `EnvironmentConfigurationManager` from `ConfigurationController` (with sanitization)
 
-**Effort Key:** S = < 1 hour, M = 1-4 hours, L = 4+ hours
+### Tier 2: Refactor (Legitimate Medium)
+1. Extract pricing logic from `MemoryProviderUsage` to service
+2. Extract encryption from `CredentialVault` to service
+3. Extract `User` role logic to Policy/Gate system
+4. Decompose `ToolGateway` (307 lines, 6 concerns)
+5. Extract `AdversarialReviewerService` test mode to DI
+6. Split `TrustScoreCalculator` calculation from aggregation
+7. Decompose `MessengerHttpClient` resilience via decorators
+8. Address `$guarded = []` mass assignment across models
+
+### Tier 3: Modernization (Low priority, not violations)
+1. Convert model string constants to backed enums (modernization, not OCP fix)
+2. Introduce `RunnerCommandBuilder` polymorphism in `CliRuntimeExecutor`
+
+### Tier 4: Skip (False positives / over-engineering)
+- OfficeStateController state builder extraction (Critical -> DISMISS)
+- SessionProcessManager `ProcessStateStore` abstraction (would break session affinity)
+- All match-statement-to-registry conversions for < 5 cases
+- All small-class SRP claims (ChatSessionController, NlScheduleParserService, CoreMemoryManager, RuntimeSession, OrgCouncilTemplate)
+- LogTailController `LogParserInterface`
+- SystemPromptResolver extraction (134 lines is compact)
+- ApprovalGate constant externalization
+- Single-implementation interface suggestions (ToolGateway -> ApprovalGate, etc.)
+
+---
+
+## Part 6: Reconciliation with Prior Adversarial Reviews
+
+### Consistent with Task 89 Conclusions
+- OfficeStateController: HIGH cohesion, DISMISS extraction -- **upheld**
+- CommandRouter static map: PERFECT cohesion -- **upheld** (not in Task 97 report)
+- Match statements with < 5 cases: idiomatic PHP 8.1 -- **upheld**
+- `app()` in serialized jobs: standard Laravel -- **upheld** (not in Task 97 report)
+- Over-engineering rejections (12 items): all **upheld**
+
+### New in This Review
+- SEC-1 (.env injection): new finding, not in any prior review at this specificity
+- SEC-2 (SSRF): new finding
+- SEC-3 (ProcessManager.start()): new finding
+- Task 97's enum suggestions: new systemic pattern, correctly calibrated as modernization but miscategorized as OCP violations
+
+---
+
+## Conclusion
+
+Task 97 is a meaningful improvement over Task 94 (66 findings vs 113, better calibrated severity). However, it still over-counts by ~30% due to match-statement OCP dogmatism, model-constant enumification treated as violations, and aggregation endpoints misclassified as SRP problems. The estimated actionable count is ~35 findings.
+
+**Most critical gap:** The report contains 66 pattern findings and 0 security findings. The codebase has 3 critical and 3 high-severity security vulnerabilities. The .env injection (SEC-1) exists in the exact same code the report analyzed for Finding 3 but was missed because the analysis focused on architectural pattern rather than input safety.
+
+**Recommendation:** Fix security issues (Tier 0) immediately. Then focus on the ~10 legitimate structural findings (Tier 1-2) targeting files over 700 lines. Treat enum conversion as a modernization initiative, not urgent remediation. Dismiss the ~20 false positives.

@@ -58,6 +58,21 @@
     owner: docs-team
     locale: en
 
+- ui_key: messenger.pairings
+  short_text: Messenger channel pairings and routing configuration.
+  severity: info
+  learn_more_slug: messenger-control-plane
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - tools.messenger.pairings
+  setting_keys:
+    - messenger.health_poll_interval_seconds
+  metadata:
+    owner: docs-team
+    locale: en
+
 - ui_key: discovery.sessions
   short_text: Discovery session workflow and progress.
   severity: info
@@ -133,6 +148,66 @@
     owner: docs-team
     locale: en
 
+- ui_key: delegation.profiles
+  short_text: Delegatee profiles define capabilities and trust scores for task assignment.
+  severity: info
+  learn_more_slug: delegation-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - agent.delegation.profiles.index
+  setting_keys:
+    - delegation.max_parallel_tasks
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: delegation.detail
+  short_text: Graph execution state, task progress, and verification results.
+  severity: info
+  learn_more_slug: delegation-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - agent.delegation.show
+  setting_keys:
+    - delegation.max_parallel_tasks
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: delegation.task
+  short_text: Task contract details, attempt history, and verification steps.
+  severity: info
+  learn_more_slug: delegation-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - agent.delegation.tasks.show
+  setting_keys:
+    - delegation.max_parallel_tasks
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: tools.overview
+  short_text: Runtime tools available to agent jobs during execution.
+  severity: info
+  learn_more_slug: tools-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - tools.index
+  setting_keys:
+    - agent.tools_enabled
+  metadata:
+    owner: docs-team
+    locale: en
+
 - ui_key: org.overview
   short_text: Org workflows for rituals and councils.
   severity: info
@@ -144,6 +219,21 @@
     - org.index
   setting_keys:
     - org.default_execution_window_minutes
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: org.rituals.detail
+  short_text: Ritual run phases, delegation graphs, and phase outputs.
+  severity: info
+  learn_more_slug: org-layer-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - org.rituals.show
+  setting_keys:
+    - org.retention_days
   metadata:
     owner: docs-team
     locale: en

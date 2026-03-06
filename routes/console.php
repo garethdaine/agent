@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\Org\OrgDispatchDueRitualsJob;
+use App\Jobs\RecalculateTrustScoresJob;
 use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -73,6 +74,11 @@ Schedule::call(fn () => app(\App\Support\Messenger\MetricsCollector::class)->per
 Schedule::call(fn () => app(\App\Services\Runtime\ApprovalGate::class)->expireStaleApprovals())
     ->everyFiveMinutes()
     ->name('runtime:expire-stale-approvals')
+    ->withoutOverlapping();
+
+// Recalculate delegatee trust scores (hourly)
+Schedule::job(new RecalculateTrustScoresJob)
+    ->hourly()
     ->withoutOverlapping();
 
 // Org ritual scheduling (every minute when org layer enabled)
