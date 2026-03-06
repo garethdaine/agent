@@ -17,7 +17,7 @@ class ChatMessageReceived implements ShouldBroadcastNow
 
     public function __construct(
         public readonly int $userId,
-        public readonly int $sessionId,
+        public readonly string $sessionId,
         public readonly string $direction,
         public readonly string $preview,
     ) {}
@@ -26,7 +26,7 @@ class ChatMessageReceived implements ShouldBroadcastNow
     {
         return new self(
             userId: $userId,
-            sessionId: (int) $message->chat_session_id,
+            sessionId: (string) $message->chat_session_id,
             direction: $message->direction,
             preview: str($message->content)->limit(120)->toString(),
         );

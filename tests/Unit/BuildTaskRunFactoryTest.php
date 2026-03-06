@@ -54,18 +54,33 @@ class BuildTaskRunFactoryTest extends TestCase
 
         $job = AgentJob::query()->firstOrFail();
         $this->assertSame(sprintf('Interrogation Build S%d T01', (int) $session->id), (string) $job->name);
+
+        // Interrogation-specific metadata keys stored in env_json
         $this->assertSame('interrogation_build', data_get($job->env_json, 'AGENT_JOB_SOURCE'));
         $this->assertSame((string) $session->id, data_get($job->env_json, 'INTERROGATION_SESSION_ID'));
         $this->assertSame((string) $task->id, data_get($job->env_json, 'INTERROGATION_BUILD_TASK_ID'));
         $this->assertSame('1', data_get($job->env_json, 'INTERROGATION_DB_ISOLATED'));
-        $this->assertSame('pgsql_testing', data_get($job->env_json, 'DB_CONNECTION'));
-        $this->assertStringContainsString('/storage/framework/interrogation-build/session-'.$session->id.'.sqlite', (string) data_get($job->env_json, 'DB_DATABASE'));
-        $this->assertFileExists((string) data_get($job->env_json, 'DB_DATABASE'));
-        $this->assertNotSame(
-            (string) data_get($job->env_json, 'DB_DATABASE'),
-            (string) data_get($job->env_json, 'TEST_DB_DATABASE'),
+        $this->assertStringContainsString(
+            '/storage/framework/interrogation-build/session-'.$session->id.'.sqlite',
+            (string) data_get($job->env_json, 'INTERROGATION_BUILD_DB_PATH')
         );
-        $this->assertStringContainsString('test', strtolower((string) data_get($job->env_json, 'TEST_DB_DATABASE')));
+        $this->assertFileExists((string) data_get($job->env_json, 'INTERROGATION_BUILD_DB_PATH'));
+        $this->assertSame('array', data_get($job->env_json, 'CACHE_STORE'));
+        $this->assertSame('array', data_get($job->env_json, 'SESSION_DRIVER'));
+
+        // Database isolation keys must NOT be in env_json (they are forbidden by
+        // EnvPolicy and instead injected at execution time by
+        // DatabaseIsolationEnvironment::safeTestingDatabaseVars())
+        $this->assertNull(data_get($job->env_json, 'DB_CONNECTION'));
+        $this->assertNull(data_get($job->env_json, 'DB_DATABASE'));
+        $this->assertNull(data_get($job->env_json, 'TEST_DB_HOST'));
+        $this->assertNull(data_get($job->env_json, 'TEST_DB_PORT'));
+        $this->assertNull(data_get($job->env_json, 'TEST_DB_DATABASE'));
+        $this->assertNull(data_get($job->env_json, 'TEST_DB_USERNAME'));
+        $this->assertNull(data_get($job->env_json, 'TEST_DB_PASSWORD'));
+        $this->assertNull(data_get($job->env_json, 'TEST_DB_CHARSET'));
+        $this->assertNull(data_get($job->env_json, 'TEST_DB_SEARCH_PATH'));
+        $this->assertNull(data_get($job->env_json, 'TEST_DB_SSLMODE'));
 
         $markdown = @file_get_contents((string) $job->task_markdown_path);
         $this->assertIsString($markdown);

@@ -26,6 +26,7 @@ import {
     UserCheck,
     Settings,
     FileText,
+    Globe,
 } from 'lucide-vue-next';
 
 defineProps({
@@ -285,6 +286,17 @@ const page = usePage();
                         <Brain class="h-4 w-4 shrink-0" />
                     </template>
                     Memory
+                </SidebarNavLink>
+                <SidebarNavLink
+                    v-if="page.props.tunnelEnabled"
+                    :href="route('settings.tunnel.index')"
+                    :active="route().current('settings.tunnel.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <Globe class="h-4 w-4 shrink-0" />
+                    </template>
+                    Tunnel
                 </SidebarNavLink>
                 <SidebarNavLink
                     :href="route('settings.configuration.index')"

@@ -903,17 +903,28 @@ const handleStructuredEnvelopeFragments = (context, normalizedPayload, formatted
     let handled = false;
 
     parsedValues.forEach((parsedValue, index) => {
-        if (!isStructuredEnvelopeObject(parsedValue)) {
-            return;
-        }
-
         const fragmentContext = {
             ...context,
             key: `${context.key}:fragment:${index}`,
         };
 
-        const handledEnvelope = handleStructuredEnvelope(fragmentContext, parsedValue, formattedEntries, state);
-        handled = handled || handledEnvelope;
+        if (isStructuredEnvelopeObject(parsedValue)) {
+            const handledEnvelope = handleStructuredEnvelope(fragmentContext, parsedValue, formattedEntries, state);
+            handled = handled || handledEnvelope;
+            return;
+        }
+
+        const contentSnapshot = extractContentSnapshotFromPayload(parsedValue);
+        if (contentSnapshot !== null) {
+            formattedEntries.push(makeFormattedEntry({
+                key: fragmentContext.key,
+                prefix: fragmentContext.prefix,
+                payload: contentSnapshot,
+                tone: 'plain',
+                format: 'pre',
+            }));
+            handled = true;
+        }
     });
 
     if (hasIncompleteJson) {
@@ -1001,14 +1012,18 @@ export const formatAgentRunEventEntry = (entry) => {
         }
 
         if (lifecyclePayload !== null) {
-            return makeFormattedEntry({
-                key: context.key,
-                prefix: context.prefix,
-                payload: JSON.stringify(lifecyclePayload, null, 2),
-                tone: 'structured',
-                format: 'pre',
-                reasoningStep: context.reasoningStep,
-            });
+            const summary = summarizeUnknownJsonPayload(lifecyclePayload);
+            if (summary !== null) {
+                return makeFormattedEntry({
+                    key: context.key,
+                    prefix: context.prefix,
+                    payload: summary,
+                    tone: 'lifecycle',
+                    format: 'pre',
+                    reasoningStep: context.reasoningStep,
+                });
+            }
+            return null;
         }
     }
 
@@ -1016,14 +1031,40 @@ export const formatAgentRunEventEntry = (entry) => {
     const parsedPayload = parseJson(normalizedPayload);
 
     if (parsedPayload !== null) {
-        return makeFormattedEntry({
-            key: context.key,
-            prefix: context.prefix,
-            payload: JSON.stringify(parsedPayload, null, 2),
-            tone: context.eventType === 'stderr' ? 'stderr' : 'structured',
-            format: 'pre',
-            reasoningStep: context.reasoningStep,
-        });
+        const contentSnapshot = extractContentSnapshotFromPayload(parsedPayload);
+        if (contentSnapshot !== null) {
+            return makeFormattedEntry({
+                key: context.key,
+                prefix: context.prefix,
+                payload: contentSnapshot,
+                tone: context.eventType === 'stderr' ? 'stderr' : 'plain',
+                format: 'pre',
+                reasoningStep: context.reasoningStep,
+            });
+        }
+        const envelopeSummary = formatStructuredEnvelopeSummary(parsedPayload);
+        if (envelopeSummary !== null) {
+            return makeFormattedEntry({
+                key: context.key,
+                prefix: context.prefix,
+                payload: envelopeSummary,
+                tone: 'structured',
+                format: 'pre',
+                reasoningStep: context.reasoningStep,
+            });
+        }
+        const summary = summarizeUnknownJsonPayload(parsedPayload);
+        if (summary !== null) {
+            return makeFormattedEntry({
+                key: context.key,
+                prefix: context.prefix,
+                payload: summary,
+                tone: context.eventType === 'stderr' ? 'stderr' : 'structured',
+                format: 'pre',
+                reasoningStep: context.reasoningStep,
+            });
+        }
+        return null;
     }
 
     const readExcerptSummary = summarizeReadExcerptPayload(normalizedPayload, context.eventType);
@@ -1049,6 +1090,10 @@ export const formatAgentRunEventEntry = (entry) => {
             format: 'markdown',
             reasoningStep: context.reasoningStep,
         });
+    }
+
+    if (NOISE_PAYLOAD_MARKERS.test(normalizedPayload)) {
+        return null;
     }
 
     return makeFormattedEntry({
@@ -1086,8 +1131,48 @@ export const formatAgentRunEventEntries = (entries) => {
         }
 
         const normalizedPayload = normalizeOutputPayload(context.eventType, context.payloadRaw);
-        const parsedPayload = parseJson(normalizedPayload);
+        const { parsedValues } = extractJsonObjects(normalizedPayload);
 
+        if (parsedValues.length > 1) {
+            let added = false;
+            parsedValues.forEach((parsedValue, fragIndex) => {
+                const fragContext = { ...context, key: `${context.key}:frag:${fragIndex}` };
+                if (isStructuredEnvelopeObject(parsedValue)) {
+                    if (handleStructuredEnvelope(fragContext, parsedValue, formattedEntries, state)) {
+                        added = true;
+                    }
+                } else {
+                    const contentSnapshot = extractContentSnapshotFromPayload(parsedValue);
+                    if (contentSnapshot !== null) {
+                        formattedEntries.push(makeFormattedEntry({
+                            key: fragContext.key,
+                            prefix: fragContext.prefix,
+                            payload: contentSnapshot,
+                            tone: 'plain',
+                            format: 'pre',
+                        }));
+                        added = true;
+                    } else {
+                        const envelopeSummary = formatStructuredEnvelopeSummary(parsedValue);
+                        if (envelopeSummary !== null) {
+                            formattedEntries.push(makeFormattedEntry({
+                                key: fragContext.key,
+                                prefix: fragContext.prefix,
+                                payload: envelopeSummary,
+                                tone: 'structured',
+                                format: 'pre',
+                            }));
+                            added = true;
+                        }
+                    }
+                }
+            });
+            if (added || parsedValues.some((p) => isStructuredEnvelopeObject(p))) {
+                return;
+            }
+        }
+
+        const parsedPayload = parseJson(normalizedPayload);
         if (isRecord(parsedPayload)) {
             const handled = handleStructuredEnvelope(context, parsedPayload, formattedEntries, state);
             if (handled) {
@@ -1187,15 +1272,18 @@ const extractEnvelopeText = (payloadObject) => {
         return '';
     }
 
-    const direct = String(payloadObject.message ?? payloadObject.text ?? payloadObject.content ?? '').trim();
-    if (direct !== '') {
-        return direct;
+    const content = payloadObject.message ?? payloadObject.text ?? payloadObject.content;
+    if (typeof content === 'string' && content.trim() !== '') {
+        return content.trim();
+    }
+    if (Array.isArray(content)) {
+        return '';
     }
 
     if (isRecord(payloadObject.item)) {
-        const fromItem = String(payloadObject.item.message ?? payloadObject.item.text ?? payloadObject.item.content ?? '').trim();
-        if (fromItem !== '') {
-            return fromItem;
+        const fromItem = payloadObject.item.message ?? payloadObject.item.text ?? payloadObject.item.content;
+        if (typeof fromItem === 'string' && fromItem.trim() !== '') {
+            return fromItem.trim();
         }
     }
 
@@ -1207,6 +1295,209 @@ const extractEnvelopeText = (payloadObject) => {
     }
 
     return '';
+};
+
+const extractContentSnapshotFromPayload = (payload) => {
+    if (payload === null || payload === undefined) {
+        return null;
+    }
+
+    if (Array.isArray(payload)) {
+        const lines = [];
+        for (const item of payload) {
+            if (!item || typeof item !== 'object') continue;
+            const content = String(item.content ?? item.text ?? item.title ?? '').trim();
+            const status = String(item.status ?? '').trim().toLowerCase();
+            const activeForm = String(item.activeForm ?? item.active_form ?? '').trim();
+            if (content !== '') {
+                const statusLabel = status && status !== 'pending' ? ` [${status}]` : '';
+                lines.push(`• ${content}${statusLabel}`);
+            } else if (activeForm !== '') {
+                lines.push(`• ${activeForm}${status ? ` [${status}]` : ''}`);
+            }
+        }
+        return lines.length > 0 ? lines.join('\n') : null;
+    }
+
+    if (typeof payload === 'object') {
+        const content = payload.content ?? payload.text ?? payload.message;
+        if (Array.isArray(content)) {
+            return extractContentSnapshotFromPayload(content);
+        }
+        if (typeof content === 'string' && content.trim() !== '') {
+            return content.trim();
+        }
+        const todos = payload.todos ?? payload.items ?? payload.tasks;
+        if (Array.isArray(todos)) {
+            return extractContentSnapshotFromPayload(todos);
+        }
+        const event = payload.event;
+        if (event && typeof event === 'object') {
+            const delta = event.delta;
+            if (delta && typeof delta === 'object' && delta.partial_json) {
+                return null;
+            }
+        }
+    }
+
+    return null;
+};
+
+const NOISE_JSON_TYPES = new Set([
+    'message_start', 'message_delta', 'content_block_start', 'content_block_delta', 'content_block_stop',
+    'message_stop', 'input_json_delta', 'signature_delta', 'ping', 'pong',
+]);
+
+const NOISE_PAYLOAD_MARKERS = /"type"\s*:\s*"(?:stream_event|input_json_delta|content_block_delta|signature_delta)"/;
+
+const inferKindFromSummaryText = (text) => {
+    const t = String(text ?? '').trim();
+    if (t.startsWith('Tool call:')) return 'tool_call';
+    if (t.startsWith('Todo list updated')) return 'tool_result';
+    return 'structured';
+};
+
+const formatStructuredEnvelopeSummary = (obj) => {
+    if (!isRecord(obj)) {
+        return null;
+    }
+
+    const type = String(obj.type ?? '').trim();
+    if (type === 'stream_event') {
+        const event = isRecord(obj.event) ? obj.event : null;
+        const eventType = event ? String(event.type ?? '').trim() : '';
+        if (NOISE_JSON_TYPES.has(eventType)) {
+            return null;
+        }
+        const delta = isRecord(event?.delta) ? event.delta : null;
+        const deltaType = delta ? String(delta.type ?? '').trim() : '';
+        if (deltaType === 'input_json_delta' || deltaType === 'signature_delta') {
+            return null;
+        }
+        if (eventType === 'content_block_start') {
+            const block = event.content_block;
+            const blockType = String(block?.type ?? '').trim();
+            if (blockType === 'tool_use') {
+                const name = String(block?.name ?? '').trim();
+                return name ? `Tool call: ${name}` : null;
+            }
+        }
+        if (eventType === 'message_delta' && isRecord(event.usage)) {
+            const out = Number(event.usage.output_tokens ?? NaN);
+            return Number.isFinite(out) && out > 0 ? `Output: ${out} tokens` : null;
+        }
+        return null;
+    }
+
+    if (type === 'assistant') {
+        const message = isRecord(obj.message) ? obj.message : null;
+        const blocks = Array.isArray(message?.content) ? message.content : [];
+        const usage = isRecord(message?.usage) ? message.usage : obj.usage;
+        const outTokens = Number(usage?.output_tokens ?? NaN);
+        const tokenStr = Number.isFinite(outTokens) && outTokens > 0 ? ` (${outTokens} output tokens)` : '';
+
+        for (const block of blocks) {
+            if (!isRecord(block)) continue;
+            const blockType = String(block.type ?? '').trim();
+            if (blockType === 'tool_use') {
+                const name = String(block.name ?? '').trim();
+                return name ? `Tool call: ${name}${tokenStr}` : null;
+            }
+            if (blockType === 'text') {
+                const text = String(block.text ?? '').trim();
+                if (text.length > 0 && text.length <= 200) return text;
+                if (text.length > 200) return `${text.slice(0, 200).trimEnd()}…`;
+            }
+            if (blockType === 'thinking') {
+                const thinking = String(block.thinking ?? '').trim();
+                if (thinking.length > 0) return `Thinking…${tokenStr}`;
+            }
+        }
+        return tokenStr ? `Assistant response${tokenStr}` : null;
+    }
+
+    if (type === 'user') {
+        const toolResult = obj.tool_use_result;
+        if (isRecord(toolResult)) {
+            const msgs = summarizeToolUseResult(toolResult);
+            return msgs.length > 0 ? msgs[0] : null;
+        }
+        return null;
+    }
+
+    if (type === 'result') {
+        const result = isRecord(obj.result) ? obj.result : null;
+        if (!result) return null;
+        const status = String(result.status ?? '').trim();
+        const duration = Number(result.duration_ms ?? NaN);
+        const parts = [];
+        if (status) parts.push(status);
+        if (Number.isFinite(duration)) parts.push(`${duration}ms`);
+        return parts.length > 0 ? `Result: ${parts.join(', ')}` : null;
+    }
+
+    return null;
+};
+
+const safeDisplayText = (value) => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') {
+        const extracted = extractContentSnapshotFromPayload(value) ?? formatStructuredEnvelopeSummary(value);
+        if (extracted) return extracted;
+        return '';
+    }
+    return String(value);
+};
+
+const summarizeUnknownJsonPayload = (payloadObject) => {
+    if (!isRecord(payloadObject)) {
+        return null;
+    }
+
+    const type = String(payloadObject.type ?? '').trim();
+    if (NOISE_JSON_TYPES.has(type)) {
+        return null;
+    }
+
+    const event = isRecord(payloadObject.event) ? payloadObject.event : null;
+    const eventType = event ? String(event.type ?? '').trim() : '';
+    if (NOISE_JSON_TYPES.has(eventType)) {
+        return null;
+    }
+
+    const msg = String(payloadObject.message ?? payloadObject.text ?? payloadObject.content ?? '').trim();
+    if (msg !== '' && msg.length <= 200) {
+        return msg;
+    }
+
+    const item = isRecord(payloadObject.item) ? payloadObject.item : null;
+    const itemType = item ? String(item.type ?? '').trim() : '';
+    const itemText = item ? String(item.text ?? item.message ?? '').trim() : '';
+    if (itemText !== '' && itemText.length <= 200) {
+        return itemText;
+    }
+
+    if (type === 'message_start' || type === 'message_delta') {
+        return null;
+    }
+
+    if (type !== '') {
+        const human = type.replace(/_/g, ' ');
+        if (eventType === 'text_delta' || (event?.delta && String(event.delta?.type ?? '').trim() === 'text_delta')) {
+            return null;
+        }
+        if (itemType === 'command_execution') {
+            return null;
+        }
+        return human.charAt(0).toUpperCase() + human.slice(1);
+    }
+
+    if (payloadObject.status && payloadObject.duration_ms != null) {
+        return `Completed (${payloadObject.status}, ${payloadObject.duration_ms}ms)`;
+    }
+
+    return null;
 };
 
 const summarizeCodexMachineEvent = (payloadObject) => {
@@ -1429,6 +1720,57 @@ export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
         }
 
         const parsedPayload = parseJson(normalizedPayload);
+        const contentSnapshot = extractContentSnapshotFromPayload(parsedPayload);
+        if (contentSnapshot !== null) {
+            timeline.push({
+                key: `${context.key}:content:${index}`,
+                sequence: context.sequence,
+                eventType: context.eventType,
+                kind: 'stdout',
+                displayFormat: 'text',
+                text: contentSnapshot,
+                timestamp,
+                timestampLabel,
+            });
+            return;
+        }
+
+        const envelopeSummary = formatStructuredEnvelopeSummary(parsedPayload);
+        if (envelopeSummary !== null) {
+            timeline.push({
+                key: `${context.key}:envelope-summary:${index}`,
+                sequence: context.sequence,
+                eventType: context.eventType,
+                kind: inferKindFromSummaryText(envelopeSummary),
+                displayFormat: 'text',
+                text: envelopeSummary,
+                timestamp,
+                timestampLabel,
+            });
+            return;
+        }
+
+        const { parsedValues } = extractJsonObjects(normalizedPayload);
+        if (parsedValues.length > 1) {
+            const summaries = parsedValues
+                .map((p) => formatStructuredEnvelopeSummary(p) ?? extractContentSnapshotFromPayload(p))
+                .filter((s) => s !== null && s !== '');
+            if (summaries.length > 0) {
+                const joined = summaries.join('\n');
+                timeline.push({
+                    key: `${context.key}:multi:${index}`,
+                    sequence: context.sequence,
+                    eventType: context.eventType,
+                    kind: inferKindFromSummaryText(summaries[0]),
+                    displayFormat: 'text',
+                    text: joined,
+                    timestamp,
+                    timestampLabel,
+                });
+            }
+            return;
+        }
+
         const commandExecution = extractCommandExecutionFromEnvelope(parsedPayload);
         if (commandExecution) {
             const issueFromCommandOutput = extractMcpConnectionIssue(commandExecution.output);
@@ -1485,17 +1827,19 @@ export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
         }
 
         if (parsedPayload !== null) {
-            timeline.push({
-                key: `${context.key}:json:${index}`,
-                sequence: context.sequence,
-                eventType: context.eventType,
-                kind: context.eventType === 'stderr' ? 'stderr' : 'structured',
-                displayFormat: 'json',
-                text: JSON.stringify(parsedPayload, null, 2),
-                timestamp,
-                timestampLabel,
-            });
-
+            const summary = summarizeUnknownJsonPayload(parsedPayload);
+            if (summary !== null) {
+                timeline.push({
+                    key: `${context.key}:json:${index}`,
+                    sequence: context.sequence,
+                    eventType: context.eventType,
+                    kind: context.eventType === 'stderr' ? 'stderr' : 'structured',
+                    displayFormat: 'text',
+                    text: summary,
+                    timestamp,
+                    timestampLabel,
+                });
+            }
             return;
         }
 
@@ -1517,22 +1861,54 @@ export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
 
         const sequentialJson = parseSequentialJsonPayload(normalizedPayload);
         if (sequentialJson !== null) {
-            timeline.push({
-                key: `${context.key}:json-sequence:${index}`,
-                sequence: context.sequence,
-                eventType: context.eventType,
-                kind: context.eventType === 'stderr' ? 'stderr' : 'structured',
-                displayFormat: 'json',
-                text: sequentialJson,
-                timestamp,
-                timestampLabel,
-            });
-
+            const { parsedValues } = extractJsonObjects(normalizedPayload);
+            const summaries = parsedValues
+                .map((p) => formatStructuredEnvelopeSummary(p) ?? extractContentSnapshotFromPayload(p) ?? summarizeUnknownJsonPayload(p))
+                .filter((s) => s !== null);
+            if (summaries.length > 0) {
+                const text = summaries.length === 1
+                    ? summaries[0]
+                    : `${summaries.length} events: ${summaries.slice(0, 3).join('; ')}${summaries.length > 3 ? '…' : ''}`;
+                timeline.push({
+                    key: `${context.key}:json-sequence:${index}`,
+                    sequence: context.sequence,
+                    eventType: context.eventType,
+                    kind: context.eventType === 'stderr' ? 'stderr' : inferKindFromSummaryText(summaries[0]),
+                    displayFormat: 'text',
+                    text,
+                    timestamp,
+                    timestampLabel,
+                });
+            }
             return;
         }
 
         const text = String(stripLineNumberPrefixes(normalizedPayload) ?? '').trim();
         if (text === '') {
+            return;
+        }
+
+        if (NOISE_PAYLOAD_MARKERS.test(text)) {
+            return;
+        }
+
+        if (text.startsWith('{') || text.startsWith('[')) {
+            const { parsedValues } = extractJsonObjects(text);
+            const summaries = parsedValues
+                .map((p) => formatStructuredEnvelopeSummary(p) ?? extractContentSnapshotFromPayload(p) ?? summarizeUnknownJsonPayload(p))
+                .filter((s) => s !== null && s !== '');
+            if (summaries.length > 0) {
+                timeline.push({
+                    key: `${context.key}:json-extract:${index}`,
+                    sequence: context.sequence,
+                    eventType: context.eventType,
+                    kind: inferKindFromSummaryText(summaries[0]),
+                    displayFormat: 'text',
+                    text: summaries.join('\n'),
+                    timestamp,
+                    timestampLabel,
+                });
+            }
             return;
         }
 

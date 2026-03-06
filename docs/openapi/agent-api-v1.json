@@ -698,10 +698,14 @@
                                                         "type": "string",
                                                         "enum": [
                                                             "build",
+                                                            "delegation",
                                                             "user"
                                                         ]
                                                     },
                                                     "is_build_job": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "is_delegation_job": {
                                                         "type": "boolean"
                                                     },
                                                     "task_markdown_content": {
@@ -741,6 +745,7 @@
                                                     "rate_limit_hold_active",
                                                     "job_scope",
                                                     "is_build_job",
+                                                    "is_delegation_job",
                                                     "task_markdown_content"
                                                 ]
                                             }
@@ -989,10 +994,14 @@
                                                     "type": "string",
                                                     "enum": [
                                                         "build",
+                                                        "delegation",
                                                         "user"
                                                     ]
                                                 },
                                                 "is_build_job": {
+                                                    "type": "boolean"
+                                                },
+                                                "is_delegation_job": {
                                                     "type": "boolean"
                                                 },
                                                 "task_markdown_content": {
@@ -1032,6 +1041,7 @@
                                                 "rate_limit_hold_active",
                                                 "job_scope",
                                                 "is_build_job",
+                                                "is_delegation_job",
                                                 "task_markdown_content"
                                             ]
                                         }
@@ -1198,10 +1208,14 @@
                                                     "type": "string",
                                                     "enum": [
                                                         "build",
+                                                        "delegation",
                                                         "user"
                                                     ]
                                                 },
                                                 "is_build_job": {
+                                                    "type": "boolean"
+                                                },
+                                                "is_delegation_job": {
                                                     "type": "boolean"
                                                 },
                                                 "task_markdown_content": {
@@ -1241,6 +1255,7 @@
                                                 "rate_limit_hold_active",
                                                 "job_scope",
                                                 "is_build_job",
+                                                "is_delegation_job",
                                                 "task_markdown_content"
                                             ]
                                         }
@@ -1404,10 +1419,14 @@
                                                     "type": "string",
                                                     "enum": [
                                                         "build",
+                                                        "delegation",
                                                         "user"
                                                     ]
                                                 },
                                                 "is_build_job": {
+                                                    "type": "boolean"
+                                                },
+                                                "is_delegation_job": {
                                                     "type": "boolean"
                                                 },
                                                 "task_markdown_content": {
@@ -1447,6 +1466,7 @@
                                                 "rate_limit_hold_active",
                                                 "job_scope",
                                                 "is_build_job",
+                                                "is_delegation_job",
                                                 "task_markdown_content"
                                             ]
                                         }
@@ -1659,10 +1679,14 @@
                                                     "type": "string",
                                                     "enum": [
                                                         "build",
+                                                        "delegation",
                                                         "user"
                                                     ]
                                                 },
                                                 "is_build_job": {
+                                                    "type": "boolean"
+                                                },
+                                                "is_delegation_job": {
                                                     "type": "boolean"
                                                 },
                                                 "task_markdown_content": {
@@ -1702,6 +1726,7 @@
                                                 "rate_limit_hold_active",
                                                 "job_scope",
                                                 "is_build_job",
+                                                "is_delegation_job",
                                                 "task_markdown_content"
                                             ]
                                         }
@@ -1857,10 +1882,14 @@
                                                     "type": "string",
                                                     "enum": [
                                                         "build",
+                                                        "delegation",
                                                         "user"
                                                     ]
                                                 },
                                                 "is_build_job": {
+                                                    "type": "boolean"
+                                                },
+                                                "is_delegation_job": {
                                                     "type": "boolean"
                                                 },
                                                 "task_markdown_content": {
@@ -1900,6 +1929,7 @@
                                                 "rate_limit_hold_active",
                                                 "job_scope",
                                                 "is_build_job",
+                                                "is_delegation_job",
                                                 "task_markdown_content"
                                             ]
                                         }
@@ -2055,10 +2085,14 @@
                                                     "type": "string",
                                                     "enum": [
                                                         "build",
+                                                        "delegation",
                                                         "user"
                                                     ]
                                                 },
                                                 "is_build_job": {
+                                                    "type": "boolean"
+                                                },
+                                                "is_delegation_job": {
                                                     "type": "boolean"
                                                 },
                                                 "task_markdown_content": {
@@ -2098,6 +2132,7 @@
                                                 "rate_limit_hold_active",
                                                 "job_scope",
                                                 "is_build_job",
+                                                "is_delegation_job",
                                                 "task_markdown_content"
                                             ]
                                         }
@@ -4339,6 +4374,93 @@
                 }
             }
         },
+        "\/agent\/api\/v1\/chat\/commands": {
+            "get": {
+                "operationId": "chatSession.commands",
+                "tags": [
+                    "ChatSession"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "description": {
+                                                        "anyOf": [
+                                                            {
+                                                                "type": "string"
+                                                            },
+                                                            {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    ""
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "name",
+                                                    "description"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/chat\/connectors": {
+            "get": {
+                "operationId": "chatSession.connectors",
+                "tags": [
+                    "ChatSession"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
         "\/agent\/api\/v1\/chat\/sessions": {
             "get": {
                 "operationId": "chatSession.index",
@@ -4413,6 +4535,64 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "chatSession.store",
+                "tags": [
+                    "ChatSession"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "connector_account_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "channel_id": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 255
+                                    }
+                                },
+                                "required": [
+                                    "connector_account_id"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#\/components\/responses\/ValidationException"
                     },
                     "401": {
                         "$ref": "#\/components\/responses\/AuthenticationException"
@@ -4856,6 +5036,10 @@
                                                                                     "type": "string",
                                                                                     "const": "runtime.default_mode"
                                                                                 },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "RUNTIME_DEFAULT_MODE"
+                                                                                },
                                                                                 "label": {
                                                                                     "type": "string",
                                                                                     "const": "Default mode"
@@ -4869,15 +5053,15 @@
                                                                                     "prefixItems": [
                                                                                         {
                                                                                             "type": "string",
-                                                                                            "const": "autonomous"
+                                                                                            "const": "safe"
                                                                                         },
                                                                                         {
                                                                                             "type": "string",
-                                                                                            "const": "supervised"
+                                                                                            "const": "standard"
                                                                                         },
                                                                                         {
                                                                                             "type": "string",
-                                                                                            "const": "locked"
+                                                                                            "const": "full"
                                                                                         }
                                                                                     ],
                                                                                     "minItems": 3,
@@ -4891,6 +5075,7 @@
                                                                             },
                                                                             "required": [
                                                                                 "key",
+                                                                                "envKey",
                                                                                 "label",
                                                                                 "type",
                                                                                 "options",
@@ -4903,6 +5088,10 @@
                                                                                 "key": {
                                                                                     "type": "string",
                                                                                     "const": "runtime.approval_model"
+                                                                                },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "RUNTIME_APPROVAL_MODEL"
                                                                                 },
                                                                                 "label": {
                                                                                     "type": "string",
@@ -4917,11 +5106,11 @@
                                                                                     "prefixItems": [
                                                                                         {
                                                                                             "type": "string",
-                                                                                            "const": "auto"
+                                                                                            "const": "strict"
                                                                                         },
                                                                                         {
                                                                                             "type": "string",
-                                                                                            "const": "manual"
+                                                                                            "const": "auto"
                                                                                         },
                                                                                         {
                                                                                             "type": "string",
@@ -4939,6 +5128,7 @@
                                                                             },
                                                                             "required": [
                                                                                 "key",
+                                                                                "envKey",
                                                                                 "label",
                                                                                 "type",
                                                                                 "options",
@@ -4950,31 +5140,35 @@
                                                                             "properties": {
                                                                                 "key": {
                                                                                     "type": "string",
-                                                                                    "const": "runtime.session_timeout_minutes"
+                                                                                    "const": "runtime.session_timeout"
+                                                                                },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "RUNTIME_SESSION_TIMEOUT"
                                                                                 },
                                                                                 "label": {
                                                                                     "type": "string",
-                                                                                    "const": "Session timeout (minutes)"
+                                                                                    "const": "Session timeout (seconds)"
                                                                                 },
                                                                                 "type": {
                                                                                     "type": "string",
                                                                                     "const": "number"
                                                                                 },
                                                                                 "min": {
-                                                                                    "type": "integer",
-                                                                                    "const": 5
+                                                                                    "type": "integer"
                                                                                 },
                                                                                 "max": {
                                                                                     "type": "integer",
-                                                                                    "const": 1440
+                                                                                    "const": 86400
                                                                                 },
                                                                                 "description": {
                                                                                     "type": "string",
-                                                                                    "const": "Idle timeout before sessions are auto-archived."
+                                                                                    "const": "Idle timeout in seconds before sessions are auto-archived. 0 or empty for no timeout."
                                                                                 }
                                                                             },
                                                                             "required": [
                                                                                 "key",
+                                                                                "envKey",
                                                                                 "label",
                                                                                 "type",
                                                                                 "min",
@@ -4987,7 +5181,11 @@
                                                                             "properties": {
                                                                                 "key": {
                                                                                     "type": "string",
-                                                                                    "const": "runtime.concurrent_session_limit"
+                                                                                    "const": "runtime.concurrent_session_limit_default"
+                                                                                },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "RUNTIME_CONCURRENT_SESSION_LIMIT"
                                                                                 },
                                                                                 "label": {
                                                                                     "type": "string",
@@ -5012,6 +5210,7 @@
                                                                             },
                                                                             "required": [
                                                                                 "key",
+                                                                                "envKey",
                                                                                 "label",
                                                                                 "type",
                                                                                 "min",
@@ -5025,6 +5224,10 @@
                                                                                 "key": {
                                                                                     "type": "string",
                                                                                     "const": "runtime.tool_deny"
+                                                                                },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "RUNTIME_TOOL_DENY"
                                                                                 },
                                                                                 "label": {
                                                                                     "type": "string",
@@ -5041,6 +5244,7 @@
                                                                             },
                                                                             "required": [
                                                                                 "key",
+                                                                                "envKey",
                                                                                 "label",
                                                                                 "type",
                                                                                 "description"
@@ -5052,6 +5256,10 @@
                                                                                 "key": {
                                                                                     "type": "string",
                                                                                     "const": "runtime.tool_allow"
+                                                                                },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "RUNTIME_TOOL_ALLOW"
                                                                                 },
                                                                                 "label": {
                                                                                     "type": "string",
@@ -5068,6 +5276,7 @@
                                                                             },
                                                                             "required": [
                                                                                 "key",
+                                                                                "envKey",
                                                                                 "label",
                                                                                 "type",
                                                                                 "description"
@@ -5100,6 +5309,10 @@
                                                                                 "key": {
                                                                                     "type": "string",
                                                                                     "const": "agent.default_runner_type"
+                                                                                },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "AGENT_DEFAULT_RUNNER_TYPE"
                                                                                 },
                                                                                 "label": {
                                                                                     "type": "string",
@@ -5136,6 +5349,7 @@
                                                                             },
                                                                             "required": [
                                                                                 "key",
+                                                                                "envKey",
                                                                                 "label",
                                                                                 "type",
                                                                                 "options",
@@ -5148,6 +5362,10 @@
                                                                                 "key": {
                                                                                     "type": "string",
                                                                                     "const": "agent.streaming.enabled"
+                                                                                },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "AGENT_STREAMING_ENABLED"
                                                                                 },
                                                                                 "label": {
                                                                                     "type": "string",
@@ -5164,6 +5382,7 @@
                                                                             },
                                                                             "required": [
                                                                                 "key",
+                                                                                "envKey",
                                                                                 "label",
                                                                                 "type",
                                                                                 "description"
@@ -5175,6 +5394,10 @@
                                                                                 "key": {
                                                                                     "type": "string",
                                                                                     "const": "agent.streaming.chunk_size"
+                                                                                },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "AGENT_STREAMING_CHUNK_SIZE"
                                                                                 },
                                                                                 "label": {
                                                                                     "type": "string",
@@ -5199,10 +5422,241 @@
                                                                             },
                                                                             "required": [
                                                                                 "key",
+                                                                                "envKey",
                                                                                 "label",
                                                                                 "type",
                                                                                 "min",
                                                                                 "max",
+                                                                                "description"
+                                                                            ]
+                                                                        }
+                                                                    ],
+                                                                    "minItems": 3,
+                                                                    "maxItems": 3,
+                                                                    "additionalItems": false
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "label",
+                                                                "fields"
+                                                            ]
+                                                        },
+                                                        "security": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "label": {
+                                                                    "type": "string",
+                                                                    "const": "Security"
+                                                                },
+                                                                "fields": {
+                                                                    "type": "array",
+                                                                    "prefixItems": [
+                                                                        {
+                                                                            "type": "object",
+                                                                            "properties": {
+                                                                                "key": {
+                                                                                    "type": "string",
+                                                                                    "const": "logging.redact_sensitive"
+                                                                                },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "LOG_REDACT_SENSITIVE"
+                                                                                },
+                                                                                "label": {
+                                                                                    "type": "string",
+                                                                                    "const": "Log redaction"
+                                                                                },
+                                                                                "type": {
+                                                                                    "type": "string",
+                                                                                    "const": "boolean"
+                                                                                },
+                                                                                "description": {
+                                                                                    "type": "string",
+                                                                                    "const": "Redact sensitive data from log output."
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "key",
+                                                                                "envKey",
+                                                                                "label",
+                                                                                "type",
+                                                                                "description"
+                                                                            ]
+                                                                        },
+                                                                        {
+                                                                            "type": "object",
+                                                                            "properties": {
+                                                                                "key": {
+                                                                                    "type": "string",
+                                                                                    "const": "security.two_factor_available"
+                                                                                },
+                                                                                "label": {
+                                                                                    "type": "string",
+                                                                                    "const": "Two-Factor Auth"
+                                                                                },
+                                                                                "type": {
+                                                                                    "type": "string",
+                                                                                    "const": "boolean"
+                                                                                },
+                                                                                "readOnly": {
+                                                                                    "type": "boolean"
+                                                                                },
+                                                                                "description": {
+                                                                                    "type": "string",
+                                                                                    "const": "Whether two-factor authentication is available (requires Laravel Fortify)."
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "key",
+                                                                                "label",
+                                                                                "type",
+                                                                                "readOnly",
+                                                                                "description"
+                                                                            ]
+                                                                        },
+                                                                        {
+                                                                            "type": "object",
+                                                                            "properties": {
+                                                                                "key": {
+                                                                                    "type": "string",
+                                                                                    "const": "security.api_tokens_enabled"
+                                                                                },
+                                                                                "label": {
+                                                                                    "type": "string",
+                                                                                    "const": "API Tokens"
+                                                                                },
+                                                                                "type": {
+                                                                                    "type": "string",
+                                                                                    "const": "boolean"
+                                                                                },
+                                                                                "readOnly": {
+                                                                                    "type": "boolean"
+                                                                                },
+                                                                                "description": {
+                                                                                    "type": "string",
+                                                                                    "const": "Whether API token management is enabled (requires Jetstream API feature)."
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "key",
+                                                                                "label",
+                                                                                "type",
+                                                                                "readOnly",
+                                                                                "description"
+                                                                            ]
+                                                                        }
+                                                                    ],
+                                                                    "minItems": 3,
+                                                                    "maxItems": 3,
+                                                                    "additionalItems": false
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "label",
+                                                                "fields"
+                                                            ]
+                                                        },
+                                                        "agent": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "label": {
+                                                                    "type": "string",
+                                                                    "const": "Agent"
+                                                                },
+                                                                "fields": {
+                                                                    "type": "array",
+                                                                    "prefixItems": [
+                                                                        {
+                                                                            "type": "object",
+                                                                            "properties": {
+                                                                                "key": {
+                                                                                    "type": "string",
+                                                                                    "const": "agent.allowed_working_directory_bases"
+                                                                                },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "AGENT_WORKING_DIRECTORY_BASES"
+                                                                                },
+                                                                                "label": {
+                                                                                    "type": "string",
+                                                                                    "const": "Allowed working directories"
+                                                                                },
+                                                                                "type": {
+                                                                                    "type": "string",
+                                                                                    "const": "tags"
+                                                                                },
+                                                                                "description": {
+                                                                                    "type": "string",
+                                                                                    "const": "Filesystem paths the agent is allowed to work within."
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "key",
+                                                                                "envKey",
+                                                                                "label",
+                                                                                "type",
+                                                                                "description"
+                                                                            ]
+                                                                        },
+                                                                        {
+                                                                            "type": "object",
+                                                                            "properties": {
+                                                                                "key": {
+                                                                                    "type": "string",
+                                                                                    "const": "agent.runner_executables"
+                                                                                },
+                                                                                "label": {
+                                                                                    "type": "string",
+                                                                                    "const": "Runner executables"
+                                                                                },
+                                                                                "type": {
+                                                                                    "type": "string",
+                                                                                    "const": "tags"
+                                                                                },
+                                                                                "readOnly": {
+                                                                                    "type": "boolean"
+                                                                                },
+                                                                                "description": {
+                                                                                    "type": "string",
+                                                                                    "const": "Available runner executable names (configured via environment)."
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "key",
+                                                                                "label",
+                                                                                "type",
+                                                                                "readOnly",
+                                                                                "description"
+                                                                            ]
+                                                                        },
+                                                                        {
+                                                                            "type": "object",
+                                                                            "properties": {
+                                                                                "key": {
+                                                                                    "type": "string",
+                                                                                    "const": "agent.forbidden_env_keys"
+                                                                                },
+                                                                                "label": {
+                                                                                    "type": "string",
+                                                                                    "const": "Forbidden env keys"
+                                                                                },
+                                                                                "type": {
+                                                                                    "type": "string",
+                                                                                    "const": "tags"
+                                                                                },
+                                                                                "readOnly": {
+                                                                                    "type": "boolean"
+                                                                                },
+                                                                                "description": {
+                                                                                    "type": "string",
+                                                                                    "const": "Environment variable keys that are never passed to agent processes."
+                                                                                }
+                                                                            },
+                                                                            "required": [
+                                                                                "key",
+                                                                                "label",
+                                                                                "type",
+                                                                                "readOnly",
                                                                                 "description"
                                                                             ]
                                                                         }
@@ -5234,6 +5688,10 @@
                                                                                     "type": "string",
                                                                                     "const": "agent.webhooks.enabled"
                                                                                 },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "AGENT_WEBHOOKS_ENABLED"
+                                                                                },
                                                                                 "label": {
                                                                                     "type": "string",
                                                                                     "const": "Webhooks enabled"
@@ -5249,6 +5707,7 @@
                                                                             },
                                                                             "required": [
                                                                                 "key",
+                                                                                "envKey",
                                                                                 "label",
                                                                                 "type",
                                                                                 "description"
@@ -5260,6 +5719,10 @@
                                                                                 "key": {
                                                                                     "type": "string",
                                                                                     "const": "agent.webhooks.url"
+                                                                                },
+                                                                                "envKey": {
+                                                                                    "type": "string",
+                                                                                    "const": "AGENT_WEBHOOK_URL"
                                                                                 },
                                                                                 "label": {
                                                                                     "type": "string",
@@ -5276,6 +5739,7 @@
                                                                             },
                                                                             "required": [
                                                                                 "key",
+                                                                                "envKey",
                                                                                 "label",
                                                                                 "type",
                                                                                 "description"
@@ -5296,6 +5760,8 @@
                                                     "required": [
                                                         "runtime",
                                                         "messenger",
+                                                        "security",
+                                                        "agent",
                                                         "webhooks"
                                                     ]
                                                 },
@@ -5319,7 +5785,10 @@
                                                             "type": "string"
                                                         },
                                                         "session_timeout_minutes": {
-                                                            "type": "string"
+                                                            "type": [
+                                                                "integer",
+                                                                "null"
+                                                            ]
                                                         },
                                                         "concurrent_session_limit": {
                                                             "type": "string"
@@ -5449,23 +5918,23 @@
                                     "runtime_default_mode": {
                                         "type": "string",
                                         "enum": [
-                                            "autonomous",
-                                            "supervised",
-                                            "locked"
+                                            "safe",
+                                            "standard",
+                                            "full"
                                         ]
                                     },
                                     "runtime_approval_model": {
                                         "type": "string",
                                         "enum": [
+                                            "strict",
                                             "auto",
-                                            "manual",
                                             "policy"
                                         ]
                                     },
-                                    "runtime_session_timeout_minutes": {
+                                    "runtime_session_timeout": {
                                         "type": "string"
                                     },
-                                    "runtime_concurrent_session_limit": {
+                                    "runtime_concurrent_session_limit_default": {
                                         "type": "string"
                                     },
                                     "runtime_tool_deny": {
@@ -5493,6 +5962,15 @@
                                     },
                                     "agent_streaming_chunk_size": {
                                         "type": "string"
+                                    },
+                                    "logging_redact_sensitive": {
+                                        "type": "boolean"
+                                    },
+                                    "agent_allowed_working_directory_bases": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
                                     },
                                     "agent_webhooks_enabled": {
                                         "type": "boolean"
@@ -6352,6 +6830,34 @@
                                                     "is_active": {
                                                         "type": "boolean"
                                                     },
+                                                    "soul": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "personality": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "system_prompt": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "user_context": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "personality",
+                                                            "system_prompt",
+                                                            "user_context"
+                                                        ]
+                                                    },
                                                     "trust_score": {
                                                         "type": [
                                                             "number",
@@ -6425,6 +6931,7 @@
                                                     "command_template",
                                                     "working_directory",
                                                     "is_active",
+                                                    "soul",
                                                     "trust_score",
                                                     "trust_updated_at",
                                                     "deleted_at",
@@ -6595,6 +7102,32 @@
                                         "items": {
                                             "type": "integer"
                                         }
+                                    },
+                                    "soul": {
+                                        "type": "object",
+                                        "properties": {
+                                            "personality": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 2000
+                                            },
+                                            "system_prompt": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 5000
+                                            },
+                                            "user_context": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 2000
+                                            }
+                                        }
                                     }
                                 },
                                 "required": [
@@ -6635,6 +7168,34 @@
                                                 },
                                                 "is_active": {
                                                     "type": "boolean"
+                                                },
+                                                "soul": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "personality": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "system_prompt": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "user_context": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "personality",
+                                                        "system_prompt",
+                                                        "user_context"
+                                                    ]
                                                 },
                                                 "trust_score": {
                                                     "type": [
@@ -6709,6 +7270,7 @@
                                                 "command_template",
                                                 "working_directory",
                                                 "is_active",
+                                                "soul",
                                                 "trust_score",
                                                 "trust_updated_at",
                                                 "deleted_at",
@@ -6782,6 +7344,34 @@
                                                 "is_active": {
                                                     "type": "boolean"
                                                 },
+                                                "soul": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "personality": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "system_prompt": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "user_context": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "personality",
+                                                        "system_prompt",
+                                                        "user_context"
+                                                    ]
+                                                },
                                                 "trust_score": {
                                                     "type": [
                                                         "number",
@@ -6855,6 +7445,7 @@
                                                 "command_template",
                                                 "working_directory",
                                                 "is_active",
+                                                "soul",
                                                 "trust_score",
                                                 "trust_updated_at",
                                                 "deleted_at",
@@ -6978,6 +7569,32 @@
                                         "items": {
                                             "type": "integer"
                                         }
+                                    },
+                                    "soul": {
+                                        "type": "object",
+                                        "properties": {
+                                            "personality": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 2000
+                                            },
+                                            "system_prompt": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 5000
+                                            },
+                                            "user_context": {
+                                                "type": [
+                                                    "string",
+                                                    "null"
+                                                ],
+                                                "maxLength": 2000
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -7012,6 +7629,34 @@
                                                 },
                                                 "is_active": {
                                                     "type": "boolean"
+                                                },
+                                                "soul": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "personality": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "system_prompt": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "user_context": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "personality",
+                                                        "system_prompt",
+                                                        "user_context"
+                                                    ]
                                                 },
                                                 "trust_score": {
                                                     "type": [
@@ -7086,6 +7731,7 @@
                                                 "command_template",
                                                 "working_directory",
                                                 "is_active",
+                                                "soul",
                                                 "trust_score",
                                                 "trust_updated_at",
                                                 "deleted_at",
@@ -7282,6 +7928,34 @@
                                                 "is_active": {
                                                     "type": "boolean"
                                                 },
+                                                "soul": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "personality": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "system_prompt": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "user_context": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "personality",
+                                                        "system_prompt",
+                                                        "user_context"
+                                                    ]
+                                                },
                                                 "trust_score": {
                                                     "type": [
                                                         "number",
@@ -7355,6 +8029,7 @@
                                                 "command_template",
                                                 "working_directory",
                                                 "is_active",
+                                                "soul",
                                                 "trust_score",
                                                 "trust_updated_at",
                                                 "deleted_at",
@@ -21264,6 +21939,39 @@
                 }
             }
         },
+        "\/agent\/api\/v1\/memory\/models": {
+            "get": {
+                "operationId": "memory.memoryModels",
+                "description": "Returns available models grouped by provider and capability.",
+                "summary": "GET \/memory\/models",
+                "tags": [
+                    "MemoryModels"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
         "\/agent\/api\/v1\/memory\/retrieve": {
             "post": {
                 "operationId": "memoryRetrieval.retrieve",
@@ -21332,7 +22040,7 @@
         "\/agent\/api\/v1\/memory\/settings": {
             "get": {
                 "operationId": "memorySettings.index",
-                "description": "Returns all settings with sensitive keys masked.",
+                "description": "Returns all settings (non-credential) plus credential status per provider.",
                 "summary": "GET \/memory\/settings",
                 "tags": [
                     "MemorySettings"
@@ -21360,10 +22068,26 @@
                                                     "value"
                                                 ]
                                             }
+                                        },
+                                        "credentials": {
+                                            "type": "object",
+                                            "properties": {
+                                                "openai": {
+                                                    "type": "boolean"
+                                                },
+                                                "anthropic": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "openai",
+                                                "anthropic"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "credentials"
                                     ]
                                 }
                             }
@@ -29409,6 +30133,12 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "soul_json": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     }
                 },
                 "required": [
@@ -29424,7 +30154,8 @@
                     "parent_agent_id",
                     "archived_at",
                     "created_at",
-                    "updated_at"
+                    "updated_at",
+                    "soul_json"
                 ],
                 "title": "OrgAgentProfile"
             },

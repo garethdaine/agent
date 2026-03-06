@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\Agent\OperatorPageController;
+use App\Http\Controllers\Api\TunnelStatusController;
 use App\Http\Controllers\Docs\DocsPageController;
 use App\Http\Controllers\Messenger\AccountLinkController;
 use App\Http\Controllers\Messenger\DeadLetterController;
 use App\Http\Controllers\Messenger\MessengerHealthController;
 use App\Http\Controllers\RuntimeWebController;
+use App\Http\Controllers\Settings\TunnelController;
 use App\Http\Controllers\TaskProviderOAuthController;
 use App\Models\RepoAnalysisSession;
 use App\Support\Agent\FeatureFlagManager;
@@ -457,5 +459,39 @@ Route::middleware([
     Route::middleware(['office.ui'])->group(function () {
         Route::get('/agent/office', fn () => Inertia::render('Agent/Office/AgentOffice'))
             ->name('agent.office');
+    });
+
+    // Tunnel routes
+    Route::middleware(['tunnel.feature'])->group(function () {
+        Route::get('/settings/tunnel', [TunnelController::class, 'index'])
+            ->name('settings.tunnel.index');
+        Route::get('/settings/tunnel/wizard', [TunnelController::class, 'wizard'])
+            ->name('settings.tunnel.wizard');
+        Route::post('/settings/tunnel', [TunnelController::class, 'update'])
+            ->name('settings.tunnel.update');
+        Route::post('/settings/tunnel/start', [TunnelController::class, 'start'])
+            ->name('settings.tunnel.start');
+        Route::post('/settings/tunnel/stop', [TunnelController::class, 'stop'])
+            ->name('settings.tunnel.stop');
+        Route::post('/settings/tunnel/delete', [TunnelController::class, 'delete'])
+            ->name('settings.tunnel.delete');
+        Route::post('/settings/tunnel/install-check', [TunnelController::class, 'installCheck'])
+            ->name('settings.tunnel.install-check');
+        Route::post('/settings/tunnel/install', [TunnelController::class, 'install'])
+            ->name('settings.tunnel.install');
+        Route::post('/settings/tunnel/auth-start', [TunnelController::class, 'authStart'])
+            ->name('settings.tunnel.auth-start');
+        Route::post('/settings/tunnel/auth-poll', [TunnelController::class, 'authPoll'])
+            ->name('settings.tunnel.auth-poll');
+        Route::post('/settings/tunnel/create', [TunnelController::class, 'createTunnel'])
+            ->name('settings.tunnel.create');
+        Route::post('/settings/tunnel/use-existing', [TunnelController::class, 'useExistingTunnel'])
+            ->name('settings.tunnel.use-existing');
+        Route::post('/settings/tunnel/route-dns', [TunnelController::class, 'routeDns'])
+            ->name('settings.tunnel.route-dns');
+        Route::post('/settings/tunnel/access-token', [TunnelController::class, 'generateAccessToken'])
+            ->name('settings.tunnel.access-token');
+        Route::get('/api/tunnel/status', TunnelStatusController::class)
+            ->name('api.tunnel.status');
     });
 });

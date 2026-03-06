@@ -110,6 +110,7 @@ return [
         'redis:memory-formation' => 60,
         'redis:org-rituals' => 60,
         'redis:code-analysis' => 60,
+        'redis:tunnel' => 30,
         'redis:default' => 30,
     ],
 
@@ -336,6 +337,19 @@ return [
             'timeout' => (int) env('HORIZON_SUBAGENT_TIMEOUT', 3600),
             'nice' => 0,
         ],
+        'supervisor-tunnel' => [
+            'connection' => 'redis',
+            'queue' => ['tunnel'],
+            'balance' => 'false',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 5,
+            'backoff' => [10, 30, 60, 120, 300],
+            'timeout' => 0,
+            'nice' => 0,
+        ],
         'supervisor-default' => [
             'connection' => 'redis',
             'queue' => ['default'],
@@ -399,6 +413,9 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-tunnel' => [
+                'maxProcesses' => 1,
+            ],
             'supervisor-default' => [
                 'maxProcesses' => max(1, min(2, (int) env('HORIZON_DEFAULT_MAX_PROCESSES', 1))),
                 'balanceMaxShift' => 1,
@@ -434,6 +451,9 @@ return [
                 //
             ],
             'supervisor-subagent' => [
+                //
+            ],
+            'supervisor-tunnel' => [
                 //
             ],
             'supervisor-default' => [

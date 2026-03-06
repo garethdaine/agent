@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Contracts\Messenger\ConnectorAdapterInterface;
+use App\DTOs\Messenger\OutboundPayload;
 use App\Http\Controllers\Controller;
+use App\Jobs\Messenger\ProcessChatIntent;
 use App\Models\ChatAction;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\ConnectorAccount;
 use App\Services\Messenger\CommandRouter;
+use App\Support\Messenger\ConnectorManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -90,7 +92,7 @@ class ChatSessionController extends Controller
         return response()->json(['data' => $session]);
     }
 
-    public function send(Request $request, string $id): JsonResponse
+    public function send(Request $request, string $id, ConnectorManager $connectorManager): JsonResponse
     {
         $session = ChatSession::with('connectorAccount')
             ->where('user_id', $request->user()->id)
@@ -105,28 +107,40 @@ class ChatSessionController extends Controller
             return response()->json(['error' => 'No connector account for this session.'], 422);
         }
 
-        $adapter = app(ConnectorAdapterInterface::class, ['provider' => $connector->provider]);
-
-        $providerResponse = $adapter->sendMessage($session, $validated['content']);
-
-        if (! $providerResponse->success) {
-            return response()->json([
-                'error' => $providerResponse->error ?? 'Failed to send message.',
-            ], 500);
-        }
-
         $message = ChatMessage::create([
             'chat_session_id' => $session->id,
             'connector_account_id' => $connector->id,
-            'direction' => ChatMessage::DIRECTION_OUTBOUND,
+            'direction' => ChatMessage::DIRECTION_INBOUND,
             'content' => $validated['content'],
-            'provider_message_id' => $providerResponse->messageId,
+            'idempotency_key' => hash('sha256', Str::uuid()->toString()),
         ]);
+
+        $user = $request->user();
+        $displayName = $user->name ?? 'User';
+        $payload = new OutboundPayload(
+            content: 'Message Received from User ('.$displayName.'): '.$validated['content'],
+            channelId: $session->channel_id ?? '',
+            threadId: $session->thread_id,
+            senderUsername: $user->name ?? 'User',
+            senderAvatarUrl: $user->profile_photo_url ?? null,
+        );
+        $adapter = $connectorManager->resolve($connector->provider);
+        $providerResponse = $adapter->sendMessage($session, $payload);
+
+        if ($providerResponse->success && $providerResponse->providerMessageId) {
+            $message->update(['provider_message_id' => $providerResponse->providerMessageId]);
+        }
+
+        ProcessChatIntent::dispatch(
+            messageId: $message->id,
+            sessionId: $session->id,
+            userId: $request->user()->id
+        );
 
         return response()->json([
             'data' => [
                 'message_id' => $message->id,
-                'provider_message_id' => $providerResponse->messageId,
+                'provider_message_id' => $providerResponse->providerMessageId,
                 'sent' => true,
             ],
         ]);

@@ -70,6 +70,8 @@ class FeatureFlagManager
 
     public const COMPACTION_ENABLED = 'messenger.compaction.enabled';
 
+    public const TUNNEL_ENABLED = 'tunnel.enabled';
+
     /**
      * @var array<string, array{label: string, description: string}>
      */
@@ -192,6 +194,10 @@ class FeatureFlagManager
         self::COMPACTION_ENABLED => [
             'label' => 'Messenger Compaction',
             'description' => 'Enable automatic compaction of long messenger conversation threads.',
+        ],
+        self::TUNNEL_ENABLED => [
+            'label' => 'Cloudflare Tunnel',
+            'description' => 'Enable Cloudflare Tunnel integration for secure remote access via a custom hostname.',
         ],
     ];
 

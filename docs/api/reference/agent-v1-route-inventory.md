@@ -48,12 +48,15 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/chat/actions/{id}/cancel` | `-` | `ChatActionController@cancel` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | POST | `agent/api/v1/chat/actions/{id}/confirm` | `-` | `ChatActionController@confirm` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | GET | `agent/api/v1/chat/actions/{id}/status` | `-` | `ChatActionController@status` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| GET | `agent/api/v1/chat/commands` | `-` | `ChatSessionController@commands` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| GET | `agent/api/v1/chat/connectors` | `-` | `ChatSessionController@connectors` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/chat/runtime/sessions` | `-` | `RuntimeSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/chat/runtime/sessions/{id}` | `-` | `RuntimeSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | POST | `agent/api/v1/chat/runtime/sessions/{id}/stop` | `-` | `RuntimeSessionController@stop` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | POST | `agent/api/v1/chat/runtime/tool-calls/{id}/approve` | `-` | `RuntimeToolCallController@approve` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | POST | `agent/api/v1/chat/runtime/tool-calls/{id}/deny` | `-` | `RuntimeToolCallController@deny` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | GET | `agent/api/v1/chat/sessions` | `-` | `ChatSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| POST | `agent/api/v1/chat/sessions` | `-` | `ChatSessionController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | GET | `agent/api/v1/chat/sessions/{id}` | `-` | `ChatSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/chat/sessions/{id}/actions` | `-` | `ChatSessionController@actions` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | POST | `agent/api/v1/chat/sessions/{id}/archive` | `-` | `ChatSessionController@archive` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
@@ -188,6 +191,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/memory/core-blocks/{key}` | `-` | `MemoryCoreBlockController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, App\Http\Middleware\Memory\MemoryEnabled, throttle:memory-reads` |
 | PUT | `agent/api/v1/memory/core-blocks/{key}` | `-` | `MemoryCoreBlockController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, App\Http\Middleware\Memory\MemoryEnabled, throttle:memory-writes` |
 | DELETE | `agent/api/v1/memory/core-blocks/{key}` | `-` | `MemoryCoreBlockController@destroy` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, App\Http\Middleware\Memory\MemoryEnabled, throttle:memory-writes` |
+| GET | `agent/api/v1/memory/models` | `-` | `MemoryModelsController` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:memory-reads` |
 | POST | `agent/api/v1/memory/retrieve` | `-` | `MemoryRetrievalController@retrieve` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, App\Http\Middleware\Memory\MemoryEnabled, throttle:memory-reads` |
 | GET | `agent/api/v1/memory/settings` | `-` | `MemorySettingsController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:memory-reads` |
 | PUT | `agent/api/v1/memory/settings` | `-` | `MemorySettingsController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:memory-writes` |

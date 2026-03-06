@@ -43,6 +43,7 @@ const {
     messagesError,
     loadMessages,
     sendMessage,
+    stopMessagePolling,
 } = useChatMessages();
 
 const {
@@ -74,6 +75,7 @@ const handleCreateSession = async (connectorAccountId, channelId) => {
 // When active session changes, load its messages and actions
 watch(activeSessionId, async (newId) => {
     stopAllPolling();
+    stopMessagePolling();
     if (newId) {
         mobileSessionList.value = false;
         await Promise.all([loadMessages(newId), loadActions(newId)]);

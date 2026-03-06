@@ -64,7 +64,7 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ### Chat
 
-**15 endpoint(s)** registered under `/agent/api/v1/chat`.
+**18 endpoint(s)** registered under `/agent/api/v1/chat`.
 
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
@@ -72,12 +72,15 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | POST | `agent/api/v1/chat/actions/{id}/cancel` | `-` | `ChatActionController@cancel` | `auth:sanctum` |
 | POST | `agent/api/v1/chat/actions/{id}/confirm` | `-` | `ChatActionController@confirm` | `auth:sanctum` |
 | GET | `agent/api/v1/chat/actions/{id}/status` | `-` | `ChatActionController@status` | `auth:sanctum` |
+| GET | `agent/api/v1/chat/commands` | `-` | `ChatSessionController@commands` | `auth:sanctum` |
+| GET | `agent/api/v1/chat/connectors` | `-` | `ChatSessionController@connectors` | `auth:sanctum` |
 | GET | `agent/api/v1/chat/runtime/sessions` | `-` | `RuntimeSessionController@index` | `auth:sanctum` |
 | GET | `agent/api/v1/chat/runtime/sessions/{id}` | `-` | `RuntimeSessionController@show` | `auth:sanctum` |
 | POST | `agent/api/v1/chat/runtime/sessions/{id}/stop` | `-` | `RuntimeSessionController@stop` | `auth:sanctum` |
 | POST | `agent/api/v1/chat/runtime/tool-calls/{id}/approve` | `-` | `RuntimeToolCallController@approve` | `auth:sanctum` |
 | POST | `agent/api/v1/chat/runtime/tool-calls/{id}/deny` | `-` | `RuntimeToolCallController@deny` | `auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions` | `-` | `ChatSessionController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/chat/sessions` | `-` | `ChatSessionController@store` | `auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}` | `-` | `ChatSessionController@show` | `auth:sanctum` |
 | GET | `agent/api/v1/chat/sessions/{id}/actions` | `-` | `ChatSessionController@actions` | `auth:sanctum` |
 | POST | `agent/api/v1/chat/sessions/{id}/archive` | `-` | `ChatSessionController@archive` | `auth:sanctum` |
@@ -323,7 +326,7 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ### Memory
 
-**12 endpoint(s)** registered under `/agent/api/v1/memory`.
+**13 endpoint(s)** registered under `/agent/api/v1/memory`.
 
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
@@ -331,6 +334,7 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | GET | `agent/api/v1/memory/core-blocks/{key}` | `-` | `MemoryCoreBlockController@show` | `auth:sanctum` |
 | PUT | `agent/api/v1/memory/core-blocks/{key}` | `-` | `MemoryCoreBlockController@update` | `auth:sanctum` |
 | DELETE | `agent/api/v1/memory/core-blocks/{key}` | `-` | `MemoryCoreBlockController@destroy` | `auth:sanctum` |
+| GET | `agent/api/v1/memory/models` | `-` | `MemoryModelsController` | `auth:sanctum` |
 | POST | `agent/api/v1/memory/retrieve` | `-` | `MemoryRetrievalController@retrieve` | `auth:sanctum` |
 | GET | `agent/api/v1/memory/settings` | `-` | `MemorySettingsController@index` | `auth:sanctum` |
 | PUT | `agent/api/v1/memory/settings` | `-` | `MemorySettingsController@update` | `auth:sanctum` |

@@ -106,6 +106,11 @@ const displayMessage = computed(() => {
 });
 
 const statusLabel = computed(() => humanizeDisplayValue(props.session?.status ?? '', 'Unknown'));
+
+const showRecentActivity = computed(() => {
+    const phase = String(props.phaseLabel ?? '').toLowerCase();
+    return !['discovery', 'interrogation'].includes(phase);
+});
 </script>
 
 <template>
@@ -122,7 +127,7 @@ const statusLabel = computed(() => humanizeDisplayValue(props.session?.status ??
             class="prose prose-sm mt-2 max-w-none text-foreground dark:prose-invert prose-p:my-2 prose-headings:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-strong:text-foreground prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5"
         />
 
-        <div v-if="normalizedActivity.length > 0" class="mt-3 border-t border-primary/20 pt-3">
+        <div v-if="showRecentActivity && normalizedActivity.length > 0" class="mt-3 border-t border-primary/20 pt-3">
             <p class="text-[11px] font-semibold uppercase tracking-wide text-primary/80">Recent Activity</p>
             <ul class="mt-2 space-y-2">
                 <li

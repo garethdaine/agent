@@ -84,6 +84,10 @@ The following API endpoints are available for this feature:
   - Controller: `MemoryCoreBlockController@destroy`
   - Auth: `auth:sanctum`
   - Rate limit: `throttle:memory-writes`
+- **`GET agent/api/v1/memory/models`**
+  - Controller: `MemoryModelsController`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:memory-reads`
 - **`POST agent/api/v1/memory/retrieve`**
   - Controller: `MemoryRetrievalController@retrieve`
   - Auth: `auth:sanctum`

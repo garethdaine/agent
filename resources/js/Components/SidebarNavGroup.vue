@@ -2,13 +2,32 @@
 import { ref, watch } from 'vue';
 import { ChevronRight } from 'lucide-vue-next';
 
+const STORAGE_KEY = 'agent-ops-sidebar-groups';
+
 const props = defineProps({
     label: String,
     collapsed: Boolean,
     defaultOpen: { type: Boolean, default: true },
 });
 
-const open = ref(props.defaultOpen);
+const readStored = () => {
+    try {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        return props.label in stored ? stored[props.label] : props.defaultOpen;
+    } catch {
+        return props.defaultOpen;
+    }
+};
+
+const persist = (value) => {
+    try {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        stored[props.label] = value;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+    } catch { /* silent */ }
+};
+
+const open = ref(readStored());
 
 watch(() => props.collapsed, (isCollapsed) => {
     if (isCollapsed) {
@@ -19,6 +38,7 @@ watch(() => props.collapsed, (isCollapsed) => {
 const toggle = () => {
     if (!props.collapsed) {
         open.value = !open.value;
+        persist(open.value);
     }
 };
 </script>

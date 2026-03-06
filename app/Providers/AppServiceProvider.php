@@ -3,6 +3,13 @@
 namespace App\Providers;
 
 use App\Contracts\OrchestrationPolicyServiceContract;
+use App\Events\AgentJobRunFinished;
+use App\Events\DelegationGraphCompleted;
+use App\Events\DelegationTaskVerified;
+use App\Events\InterrogationPhaseChanged;
+use App\Events\Org\OrgRitualEscalationTimedOut;
+use App\Events\RepoAnalysisSessionUpdated;
+use App\Events\RuntimeApprovalRequested;
 use App\Listeners\DelegationBroadcastSubscriber;
 use App\Listeners\DelegationCoordinator;
 use App\Listeners\DelegationEventPersistenceSubscriber;
@@ -18,13 +25,6 @@ use App\Listeners\Messenger\SendRitualRunCompletedNotification;
 use App\Listeners\Org\RitualCouncilDeliberationListener;
 use App\Listeners\Org\RitualPhaseOutputCaptureListener;
 use App\Listeners\Org\RitualRunCompletionListener;
-use App\Events\AgentJobRunFinished;
-use App\Events\DelegationGraphCompleted;
-use App\Events\DelegationTaskVerified;
-use App\Events\InterrogationPhaseChanged;
-use App\Events\Org\OrgRitualEscalationTimedOut;
-use App\Events\RepoAnalysisSessionUpdated;
-use App\Events\RuntimeApprovalRequested;
 use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
@@ -45,6 +45,7 @@ use App\Policies\OrgRitualRunPolicy;
 use App\Policies\OrgRitualTemplatePolicy;
 use App\Policies\RepoAnalysisSessionPolicy;
 use App\Policies\WorkflowGovernancePolicy;
+use App\Repositories\TunnelSettingsRepository;
 use App\Services\Agent\LicenseService;
 use App\Services\Credentials\CredentialsManager;
 use App\Services\Credentials\OAuthTokenService;
@@ -259,5 +260,37 @@ class AppServiceProvider extends ServiceProvider
                     );
                 });
         });
+
+        $this->mergeTunnelHostnameIntoConfig();
+    }
+
+    private function mergeTunnelHostnameIntoConfig(): void
+    {
+        if (! config('tunnel.enabled', false)) {
+            return;
+        }
+
+        try {
+            $settings = $this->app->make(TunnelSettingsRepository::class)->getSettings();
+            $hostname = trim((string) ($settings['hostname'] ?? ''));
+            if ($hostname === '') {
+                return;
+            }
+
+            $origin = str_starts_with($hostname, 'http') ? $hostname : 'https://'.$hostname;
+            $origin = rtrim($origin, '/');
+
+            $allowed = config('cors.allowed_origins', []);
+            if (! in_array($origin, $allowed, true)) {
+                config(['cors.allowed_origins' => array_merge($allowed, [$origin])]);
+            }
+
+            $host = parse_url($origin, PHP_URL_HOST) ?: $hostname;
+            $stateful = config('sanctum.stateful', []);
+            if (! in_array($host, $stateful, true)) {
+                config(['sanctum.stateful' => array_merge($stateful, [$host])]);
+            }
+        } catch (\Throwable) {
+        }
     }
 }

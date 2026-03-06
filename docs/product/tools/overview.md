@@ -59,3 +59,26 @@ The Tools page provides visibility into the runtime tools available to agent job
 
 - [Jobs Overview](/docs/jobs-overview)
 - [Dashboard Overview](/docs/dashboard-overview)
+
+<!-- AUTO-GENERATED:START -->
+## Runtime Contract Snapshot
+
+> This section is auto-generated from code and front-matter metadata. Do not edit manually.
+
+### Verified Route Bindings
+
+| Route Name | Status | URI | Methods |
+| --- | --- | --- | --- |
+| `tools.index` | ok | `tools` | `GET` |
+
+### Configuration Reference
+
+| Setting Key | Current Value | Source |
+| --- | --- | --- |
+| `agent.tools_enabled` | _not set_ | _default_ |
+
+### Feature Flags
+
+- `docs_center_enabled`
+
+<!-- AUTO-GENERATED:END -->

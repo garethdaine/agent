@@ -9,6 +9,7 @@ import CardContent from '@/Components/ui/CardContent.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
+import TunnelStatusCard from '@/Components/Dashboard/TunnelStatusCard.vue';
 import { LayoutDashboard, RefreshCw } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
@@ -306,6 +307,14 @@ onMounted(loadMetrics);
                                 <li v-if="system.signals.unobservable.length === 0" class="text-muted-foreground">No unobservable incidents in active build scope.</li>
                             </ul>
                         </div>
+                    </div>
+                </section>
+
+                <!-- Tunnel status card -->
+                <section v-if="$page.props.tunnelEnabled">
+                    <h3 class="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Tunnel</h3>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <TunnelStatusCard />
                     </div>
                 </section>
             </div>

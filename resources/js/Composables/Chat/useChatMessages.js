@@ -1,5 +1,8 @@
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, onBeforeUnmount } from 'vue';
 import axios from 'axios';
+
+const POLL_INTERVAL_MS = 2000;
+const POLL_MAX_DURATION_MS = 30000;
 
 export function useChatMessages() {
     const messages = ref([]);
@@ -8,6 +11,7 @@ export function useChatMessages() {
     const messagesError = ref('');
     const isAtBottom = ref(true);
     const feedRef = ref(null);
+    let messagePollTimer = null;
 
     const loadMessages = async (sessionId) => {
         if (!sessionId) {
@@ -35,15 +39,36 @@ export function useChatMessages() {
         }
     };
 
+    const stopMessagePolling = () => {
+        if (messagePollTimer) {
+            clearInterval(messagePollTimer);
+            messagePollTimer = null;
+        }
+    };
+
     const sendMessage = async (sessionId, content) => {
         if (!content?.trim() || !sessionId) return;
 
         sendLoading.value = true;
         messagesError.value = '';
+        stopMessagePolling();
 
         try {
             await axios.post(`/agent/api/v1/chat/sessions/${sessionId}/send`, { content });
             await loadMessages(sessionId);
+
+            const pollStart = Date.now();
+            messagePollTimer = setInterval(async () => {
+                if (Date.now() - pollStart > POLL_MAX_DURATION_MS) {
+                    stopMessagePolling();
+                    return;
+                }
+                await loadMessages(sessionId);
+                const last = messages.value[messages.value.length - 1];
+                if (last?.direction === 'outbound') {
+                    stopMessagePolling();
+                }
+            }, POLL_INTERVAL_MS);
         } catch (e) {
             messagesError.value = e?.response?.data?.error ?? 'Failed to send message.';
         } finally {
@@ -86,6 +111,10 @@ export function useChatMessages() {
         return groups;
     };
 
+    onBeforeUnmount(() => {
+        stopMessagePolling();
+    });
+
     return {
         messages,
         messagesLoading,
@@ -95,6 +124,7 @@ export function useChatMessages() {
         feedRef,
         loadMessages,
         sendMessage,
+        stopMessagePolling,
         scrollToBottom,
         handleScroll,
         groupMessagesByDate,

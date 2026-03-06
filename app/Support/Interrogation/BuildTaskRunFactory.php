@@ -332,7 +332,15 @@ class BuildTaskRunFactory
     }
 
     /**
-     * @return array<string, string|bool>
+     * Build interrogation-specific environment overrides for env_json.
+     *
+     * Database isolation vars (DB_CONNECTION, TEST_DB_*, APP_ENV, QUEUE_CONNECTION)
+     * are NOT set here — they are injected by DatabaseIsolationEnvironment::build()
+     * at execution time in ExecuteAgentRunJob::mergedEnvironment(). Setting them
+     * here would trigger EnvPolicy violations since those keys are forbidden in
+     * user-facing env_json to prevent database credential tampering.
+     *
+     * @return array<string, string>
      */
     private function buildIsolatedRunEnvironment(InterrogationSession $session, InterrogationBuildTask $task): array
     {
@@ -346,36 +354,14 @@ class BuildTaskRunFactory
             @touch($sandboxDatabasePath);
         }
 
-        $testingConnection = (array) config('database.connections.pgsql_testing', []);
-        $testHost = trim((string) ($testingConnection['host'] ?? '127.0.0.1'));
-        $testPort = trim((string) ($testingConnection['port'] ?? '5432'));
-        $testDatabase = trim((string) ($testingConnection['database'] ?? 'agent_test'));
-        $testUsername = trim((string) ($testingConnection['username'] ?? 'root'));
-        $testPassword = (string) ($testingConnection['password'] ?? '');
-        $testCharset = trim((string) ($testingConnection['charset'] ?? 'utf8'));
-        $testSearchPath = trim((string) ($testingConnection['search_path'] ?? 'public'));
-        $testSslMode = trim((string) ($testingConnection['sslmode'] ?? 'prefer'));
-
         return [
             'AGENT_JOB_SOURCE' => 'interrogation_build',
             'INTERROGATION_SESSION_ID' => (string) $session->id,
             'INTERROGATION_BUILD_TASK_ID' => (string) $task->id,
             'INTERROGATION_DB_ISOLATED' => '1',
             'INTERROGATION_BUILD_DB_PATH' => $sandboxDatabasePath,
-            'APP_ENV' => 'testing',
-            'DB_CONNECTION' => 'pgsql_testing',
-            'DB_DATABASE' => $sandboxDatabasePath,
-            'TEST_DB_HOST' => $testHost,
-            'TEST_DB_PORT' => $testPort,
-            'TEST_DB_DATABASE' => $testDatabase,
-            'TEST_DB_USERNAME' => $testUsername,
-            'TEST_DB_PASSWORD' => $testPassword,
-            'TEST_DB_CHARSET' => $testCharset,
-            'TEST_DB_SEARCH_PATH' => $testSearchPath,
-            'TEST_DB_SSLMODE' => $testSslMode,
             'CACHE_STORE' => 'array',
             'SESSION_DRIVER' => 'array',
-            'QUEUE_CONNECTION' => 'sync',
         ];
     }
 }

@@ -610,6 +610,10 @@ const timelineEntryKindClass = (entry) => {
         return 'border-warning/30 bg-warning/10';
     }
 
+    if (kind === 'tool_call' || kind === 'tool_result') {
+        return 'border-primary/30 bg-primary/5';
+    }
+
     return 'border-border bg-muted/10';
 };
 const timelineEntryText = (entry) => String(entry?.text ?? '').trim();
@@ -705,6 +709,14 @@ const timelineEntryHeaderLabel = (entry) => {
 
     if (kind === 'lifecycle') {
         return 'Lifecycle';
+    }
+
+    if (kind === 'tool_call') {
+        return 'Tool call';
+    }
+
+    if (kind === 'tool_result') {
+        return 'Tool result';
     }
 
     if (kind === 'structured') {

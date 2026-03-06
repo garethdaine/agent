@@ -143,6 +143,8 @@ class DiscordAdapter extends AbstractConnectorAdapter
         return $this->parseMessageData($data);
     }
 
+    private const CHANNEL_WEBHOOK_CACHE_TTL_SECONDS = 604800;
+
     /**
      * Send a message to a Discord channel.
      */
@@ -162,6 +164,13 @@ class DiscordAdapter extends AbstractConnectorAdapter
             ]);
 
             return ProviderResponse::failure('Missing bot token');
+        }
+
+        if ($payload->senderUsername !== null && $payload->senderUsername !== '') {
+            $webhookResult = $this->sendViaWebhookAsUser($session, $account, $payload, $botToken);
+            if ($webhookResult !== null) {
+                return $webhookResult;
+            }
         }
 
         // Normalize content to handle escaped newlines and formatting issues
@@ -872,6 +881,126 @@ class DiscordAdapter extends AbstractConnectorAdapter
     private function getLastBotMessageCacheKey(ChatSession $session): string
     {
         return sprintf('discord:last_bot_message:%s:%s', $session->connector_account_id, $session->channel_id);
+    }
+
+    /**
+     * Send message via channel webhook with user attribution (username/avatar).
+     * Returns ProviderResponse on success/failure, or null to fall through to bot send.
+     */
+    private function sendViaWebhookAsUser(
+        ChatSession $session,
+        ConnectorAccount $account,
+        OutboundPayload $payload,
+        string $botToken
+    ): ?ProviderResponse {
+        $channelId = $session->channel_id ?? $payload->channelId;
+        if (! $channelId) {
+            return ProviderResponse::failure('No channel for webhook send');
+        }
+
+        $webhook = $this->getOrCreateChannelWebhook($account, $channelId, $botToken);
+        if ($webhook === null) {
+            $this->logInfo('Webhook unavailable (e.g. DM channel), falling back to bot send', [
+                'account_id' => $account->id,
+                'channel_id' => $channelId,
+            ]);
+
+            return null;
+        }
+
+        $normalizedContent = $this->normalizeContent($payload->content);
+        $chunks = $this->chunkContent($normalizedContent);
+        $url = sprintf('%s/webhooks/%s/%s', self::API_BASE_URL, $webhook['id'], $webhook['token']);
+        $query = ['wait' => 'true'];
+        if ($payload->threadId !== null) {
+            $query['thread_id'] = $payload->threadId;
+        }
+        $url .= '?'.http_build_query($query);
+
+        $lastMessageId = null;
+        $lastResponseData = [];
+
+        foreach ($chunks as $chunk) {
+            $body = [
+                'content' => $chunk,
+                'username' => substr($payload->senderUsername ?? 'User', 0, 80),
+            ];
+            if ($payload->senderAvatarUrl !== null && $payload->senderAvatarUrl !== '') {
+                $body['avatar_url'] = $payload->senderAvatarUrl;
+            }
+
+            $response = Http::timeout(15)
+                ->post($url, $body);
+
+            if (! $response->successful()) {
+                $this->logError('Discord webhook send failed', [
+                    'account_id' => $account->id,
+                    'channel_id' => $channelId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                $errorMessage = $response->json('message') ?? 'Webhook send failed';
+
+                return ProviderResponse::failure($errorMessage, $response->json() ?? []);
+            }
+
+            $lastResponseData = $response->json();
+            $lastMessageId = $lastResponseData['id'] ?? null;
+        }
+
+        if (! $lastMessageId) {
+            return ProviderResponse::failure('No message ID from webhook', $lastResponseData);
+        }
+
+        $this->logInfo('User-attributed message sent via webhook', [
+            'account_id' => $account->id,
+            'channel_id' => $channelId,
+            'message_id' => $lastMessageId,
+        ]);
+
+        return ProviderResponse::success($lastMessageId, $lastResponseData);
+    }
+
+    /**
+     * Get or create a channel webhook. Caches webhook id/token per account+channel.
+     *
+     * @return array{id: string, token: string}|null
+     */
+    private function getOrCreateChannelWebhook(
+        ConnectorAccount $account,
+        string $channelId,
+        string $botToken
+    ): ?array {
+        $cacheKey = sprintf('discord:channel_webhook:%s:%s', $account->id, $channelId);
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached) && isset($cached['id'], $cached['token'])) {
+            return ['id' => $cached['id'], 'token' => $cached['token']];
+        }
+
+        $response = Http::timeout(10)
+            ->withHeaders([
+                'Authorization' => 'Bot '.$botToken,
+                'Content-Type' => 'application/json',
+            ])
+            ->post(
+                self::API_BASE_URL.'/channels/'.$channelId.'/webhooks',
+                ['name' => 'Agent Ops Chat']
+            );
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $data = $response->json();
+        $id = $data['id'] ?? null;
+        $token = $data['token'] ?? null;
+        if (! $id || ! $token) {
+            return null;
+        }
+
+        Cache::put($cacheKey, ['id' => $id, 'token' => $token], self::CHANNEL_WEBHOOK_CACHE_TTL_SECONDS);
+
+        return ['id' => $id, 'token' => $token];
     }
 
     /**
