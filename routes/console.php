@@ -96,6 +96,12 @@ Schedule::job(new OrgEscalationTimeoutJob)
     ->withoutOverlapping()
     ->when(fn () => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::ORG_ENABLED));
 
+// Skill drift detection (daily when skills enabled)
+Schedule::command('skill:drift-check')
+    ->daily()
+    ->withoutOverlapping()
+    ->when(fn () => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::SKILLS_ENABLED));
+
 // Projection auto-maintenance: activate parity-passed builds and trigger rebuilds when stale
 Schedule::call(fn () => app(\App\Services\Telemetry\ProjectionBuildManager::class)->autoMaintain(
     app(\App\Services\Telemetry\ActiveBuildFreshnessService::class),

@@ -836,6 +836,79 @@ SH;
         $this->assertNull($metadata['approval_resolution'] ?? null);
     }
 
+    public function test_approval_detection_ignores_skill_docs_and_ui_banner_false_positives(): void
+    {
+        $skillDocsExec = $this->sandboxBase.'/bin/skill-docs-runner';
+        $output = <<<'OUT'
+Skill Access by Risk Level
+| Risk Level | Trust Score Required | Approval Required |
+| low | Any | No |
+| standard | >= 0.5 | No |
+| elevated | >= 0.7 | Configurable |
+| critical | >= 0.9 | Always (human-in-loop) |
+
+Approval likely required in active run output.
+OUT;
+        file_put_contents($skillDocsExec, "#!/bin/sh\necho ".escapeshellarg($output)."\nexit 0\n");
+        chmod($skillDocsExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $skillDocsExec,
+            'codex' => $skillDocsExec,
+            'custom' => $skillDocsExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $skillDocsExec.' -p {{task_markdown_path}}',
+            'codex' => $skillDocsExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/skill-docs.md';
+        file_put_contents($taskFile, "# Skill Docs\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Skill Docs False Positive',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'codex',
+            'command_template' => config('agent.default_templates.codex'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+                'approval_required' => false,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['approval_required'] ?? true), 'Skill docs and UI banner text must not trigger approval detection');
+        $this->assertNull($metadata['approval_detected_at'] ?? null);
+    }
+
     public function test_run_times_out_when_exceeding_max_runtime(): void
     {
         $slowExec = $this->sandboxBase.'/bin/slow-runner';

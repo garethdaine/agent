@@ -139,6 +139,19 @@ class LessonsManager
         $taskTitle = $context['task_title'] ?? 'Unknown Task';
         $runnerType = $context['runner_type'] ?? 'unknown';
 
+        $skillContext = '';
+        if (isset($context['skill_id'])) {
+            $skillId = $context['skill_id'];
+            $skillName = $context['skill_name'] ?? 'unknown';
+            $skillVersion = $context['skill_version'] ?? 'unknown';
+            $skillContext = <<<SKILL
+
+- skill_id: {$skillId}
+- skill_name: {$skillName}
+- skill_version: {$skillVersion}
+SKILL;
+        }
+
         return <<<MD
 ### [{$timestamp}] [{$source}]
 {$content}
@@ -146,7 +159,7 @@ class LessonsManager
 **Context:**
 - Task: {$taskTitle}
 - Category: {$category}
-- Runner: {$runnerType}
+- Runner: {$runnerType}{$skillContext}
 MD;
     }
 

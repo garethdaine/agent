@@ -22,6 +22,8 @@ use App\Support\Agent\RuntimeValidation;
 use App\Support\Agent\StarPreambleGenerator;
 use App\Support\Agent\TargetedRetryService;
 use App\Support\Agent\UsageLimitState;
+use App\Services\Skills\SkillContextInjector;
+use App\Services\Skills\SkillResolver;
 use App\Support\Compliance\DTOs\PolicyEvaluationResult;
 use App\Support\Memory\MemoryContextBuilder;
 use Carbon\CarbonImmutable;
@@ -197,6 +199,34 @@ class ExecuteAgentRunJob implements ShouldQueue
 
             // Store STAR metadata
             $this->updateMetadata($run, ['star_preamble_applied' => $starApplied]);
+
+            // Skill Context Injection
+            $skillsApplied = false;
+            if (app(FeatureFlagManager::class)->enabled(FeatureFlagManager::SKILLS_ENABLED)) {
+                try {
+                    $skillResolver = app(SkillResolver::class);
+                    $skillInjector = app(SkillContextInjector::class);
+
+                    $resolvedSkills = $skillResolver->resolve(
+                        $run->job->task_markdown_path ? File::get($run->job->task_markdown_path) : '',
+                        (int) $run->job->team_id,
+                    );
+
+                    if (! empty($resolvedSkills)) {
+                        $currentPath = $this->enhancedTaskPath ?? $run->job->task_markdown_path;
+                        $currentContent = File::get($currentPath);
+                        $enhancedContent = $skillInjector->injectMetadata($resolvedSkills, $currentContent);
+                        $this->prepareEnhancedTaskMarkdownFromContent($run, $enhancedContent);
+                        $skillsApplied = true;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Skill context injection failed', [
+                        'run_id' => $run->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            $this->updateMetadata($run, ['skills_applied' => $skillsApplied]);
 
             // Validate env overrides at execution time (defense-in-depth)
             $envOverrides = (array) ($run->job->env_json ?? []);
@@ -961,6 +991,17 @@ class ExecuteAgentRunJob implements ShouldQueue
 
         $tempPath = sys_get_temp_dir().'/star_task_'.$run->id.'.md';
         File::put($tempPath, $enhancedContent);
+
+        $this->enhancedTaskPath = $tempPath;
+    }
+
+    /**
+     * Prepare enhanced task markdown from content string (for skill injection).
+     */
+    private function prepareEnhancedTaskMarkdownFromContent(AgentJobRun $run, string $content): void
+    {
+        $tempPath = sys_get_temp_dir().'/star_task_'.$run->id.'.md';
+        File::put($tempPath, $content);
 
         $this->enhancedTaskPath = $tempPath;
     }

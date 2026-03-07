@@ -145,8 +145,9 @@ Route::middleware([
 
     Route::get('/tools', function () {
         $user = request()->user();
+        $flags = app(FeatureFlagManager::class);
         $codeAnalysisAvailable = $user !== null
-            && app(FeatureFlagManager::class)->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)
+            && $flags->enabled(FeatureFlagManager::REPO_ANALYSIS_ENABLED)
             && Gate::forUser($user)->allows('create', RepoAnalysisSession::class);
 
         return Inertia::render('Tools/Index', [
@@ -156,6 +157,10 @@ Route::middleware([
                 'blockedMessage' => $codeAnalysisAvailable
                     ? null
                     : 'Code Analysis is unavailable. Enable the feature or request access from an administrator.',
+            ],
+            'skills' => [
+                'available' => $flags->enabled(FeatureFlagManager::SKILLS_ENABLED)
+                    && $flags->enabled(FeatureFlagManager::SKILLS_UI_ENABLED),
             ],
         ]);
     })->name('tools.index');
@@ -239,6 +244,25 @@ Route::middleware([
     Route::get('/tools/memory/settings', function () {
         return Inertia::render('Tools/Memory/Settings');
     })->name('tools.memory.settings');
+
+    // Skills routes (guarded by skills UI feature flag)
+    Route::middleware(['skills.ui'])->group(function () {
+        Route::get('/tools/skills', function () {
+            return Inertia::render('Tools/Skills/Index');
+        })->name('tools.skills.index');
+
+        Route::get('/tools/skills/install', function () {
+            return Inertia::render('Tools/Skills/Install');
+        })->name('tools.skills.install');
+
+        Route::get('/tools/skills/library', function () {
+            return Inertia::render('Tools/Skills/Library');
+        })->name('tools.skills.library');
+
+        Route::get('/tools/skills/{id}', function (string $id) {
+            return Inertia::render('Tools/Skills/Show', ['skillId' => $id]);
+        })->name('tools.skills.show');
+    });
 
     // Messenger health dashboard (authenticated)
     Route::get('/messenger/health/dashboard', [MessengerHealthController::class, 'dashboard'])

@@ -10,6 +10,8 @@ import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import TunnelStatusCard from '@/Components/Dashboard/TunnelStatusCard.vue';
+import SkillUsageCard from '@/Components/Dashboard/SkillUsageCard.vue';
+import SkillHealthCard from '@/Components/Dashboard/SkillHealthCard.vue';
 import { LayoutDashboard, RefreshCw } from 'lucide-vue-next';
 import axios from 'axios';
 import { computed, onMounted, ref } from 'vue';
@@ -307,6 +309,15 @@ onMounted(loadMetrics);
                                 <li v-if="system.signals.unobservable.length === 0" class="text-muted-foreground">No unobservable incidents in active build scope.</li>
                             </ul>
                         </div>
+                    </div>
+                </section>
+
+                <!-- Skills section -->
+                <section v-if="$page.props.skillsEnabled">
+                    <h3 class="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Skills</h3>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <SkillUsageCard />
+                        <SkillHealthCard />
                     </div>
                 </section>
 

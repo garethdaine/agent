@@ -66,6 +66,19 @@ class OrchestrationPolicyService implements OrchestrationPolicyServiceContract
         $verificationRequired = $verificationGateEnabled;
         $eleganceRequired = $complexityResult->isNonTrivial() && $eleganceGateEnabled;
 
+        $gates = [];
+
+        // Skill chain complexity gate
+        if ($planGateEnabled && $this->skillChainRequiresPlanning($context)) {
+            $planRequired = true;
+            $gates[] = new GateResult(
+                gate: 'skill_chain_complexity',
+                status: 'requires_plan',
+                reasonCode: 'complex_skill_chain',
+                remediation: 'Skill chain with >3 ordered dependencies requires planning step.',
+            );
+        }
+
         return new PolicyEvaluationResult(
             status: 'pass',
             complexity: $complexityResult->classification,
@@ -73,7 +86,7 @@ class OrchestrationPolicyService implements OrchestrationPolicyServiceContract
             planRequired: $planRequired,
             verificationRequired: $verificationRequired,
             eleganceRequired: $eleganceRequired,
-            gates: [],
+            gates: $gates,
             metadataPatch: [
                 'workflow_policy_version' => '1.0',
                 'complexity_classification' => $complexityResult->classification,
@@ -189,6 +202,19 @@ class OrchestrationPolicyService implements OrchestrationPolicyServiceContract
             gates: [],
             metadataPatch: []
         );
+    }
+
+    /**
+     * Check if the resolved skill chain has >3 skills with run_after dependencies.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function skillChainRequiresPlanning(array $context): bool
+    {
+        $resolvedSkills = $context['resolved_skills'] ?? [];
+        $skillsWithDeps = array_filter($resolvedSkills, fn ($s) => ! empty($s['run_after']));
+
+        return count($skillsWithDeps) > 3;
     }
 
     /**

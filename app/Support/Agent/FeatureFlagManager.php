@@ -72,6 +72,19 @@ class FeatureFlagManager
 
     public const TUNNEL_ENABLED = 'tunnel.enabled';
 
+    // Skills flag constants
+    public const SKILLS_ENABLED = 'skills.enabled';
+
+    public const SKILLS_UI_ENABLED = 'skills.ui_enabled';
+
+    public const SKILLS_LIBRARY_ENABLED = 'skills.library_enabled';
+
+    public const SKILLS_AUTO_RESOLVE = 'skills.auto_resolve';
+
+    public const SKILLS_VALIDATION_LLM_REVIEW = 'skills.validation.llm_review';
+
+    public const SKILLS_VALIDATION_STRICT_MODE = 'skills.validation.strict_mode';
+
     /**
      * @var array<string, array{label: string, description: string}>
      */
@@ -199,6 +212,32 @@ class FeatureFlagManager
             'label' => 'Cloudflare Tunnel',
             'description' => 'Enable Cloudflare Tunnel integration for secure remote access via a custom hostname.',
         ],
+
+        // Skills
+        self::SKILLS_ENABLED => [
+            'label' => 'Agent Skills',
+            'description' => 'Enable the pluggable skill system for extending agent capabilities with domain-specific skill bundles.',
+        ],
+        self::SKILLS_UI_ENABLED => [
+            'label' => 'Skills UI',
+            'description' => 'Enable skills management pages in the web interface. Requires Agent Skills to be enabled.',
+        ],
+        self::SKILLS_LIBRARY_ENABLED => [
+            'label' => 'Skills Library',
+            'description' => 'Enable browsing and installing skills from the built-in skill library. Requires Agent Skills to be enabled.',
+        ],
+        self::SKILLS_AUTO_RESOLVE => [
+            'label' => 'Skills Auto-Resolve',
+            'description' => 'Enable automatic skill matching and LLM ranking during delegation. Requires Agent Skills to be enabled.',
+        ],
+        self::SKILLS_VALIDATION_LLM_REVIEW => [
+            'label' => 'Skills LLM Review',
+            'description' => 'Enable LLM-assisted content analysis during skill validation via AdversarialReviewerService.',
+        ],
+        self::SKILLS_VALIDATION_STRICT_MODE => [
+            'label' => 'Skills Strict Validation',
+            'description' => 'Block skill installation on any validation warning, not just errors.',
+        ],
     ];
 
     private ?bool $storeAvailable = null;
@@ -224,6 +263,23 @@ class FeatureFlagManager
             self::COMPLIANCE_VERIFICATION_GATE,
             self::COMPLIANCE_ELEGANCE_GATE,
             self::COMPLIANCE_LESSONS,
+        ];
+    }
+
+    /**
+     * Returns all skills-related flag keys.
+     *
+     * @return array<int, string>
+     */
+    public static function getSkillsFlags(): array
+    {
+        return [
+            self::SKILLS_ENABLED,
+            self::SKILLS_UI_ENABLED,
+            self::SKILLS_LIBRARY_ENABLED,
+            self::SKILLS_AUTO_RESOLVE,
+            self::SKILLS_VALIDATION_LLM_REVIEW,
+            self::SKILLS_VALIDATION_STRICT_MODE,
         ];
     }
 

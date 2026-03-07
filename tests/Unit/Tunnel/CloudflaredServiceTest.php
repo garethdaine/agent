@@ -313,6 +313,24 @@ class CloudflaredServiceTest extends TestCase
         @unlink($result['config_path']);
     }
 
+    public function test_build_run_command_normalizes_url_hostname_to_plain_host(): void
+    {
+        $result = $this->service->buildRunCommand(
+            uuid: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+            originUrl: 'https://agent.test',
+            protocol: 'http2',
+            ipAllowlist: ['10.0.0.0/8'],
+            metricsPort: 20241,
+            hostname: 'https://agent.garethdaine.com',
+        );
+
+        $this->assertNotNull($result['config_path']);
+        $configContent = file_get_contents($result['config_path']);
+        $this->assertStringContainsString('hostname: agent.garethdaine.com', $configContent);
+
+        @unlink($result['config_path']);
+    }
+
     public function test_build_run_command_without_ip_allowlist(): void
     {
         $result = $this->service->buildRunCommand(

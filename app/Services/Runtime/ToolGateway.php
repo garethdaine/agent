@@ -59,9 +59,13 @@ class ToolGateway
             $raw = $adapter->schema();
             $operations = $raw['operations'] ?? [];
             $params = $raw['parameters'] ?? [];
-            $description = 'Tool: '.$adapter->name();
-            if ($operations !== []) {
-                $description .= '. Operations: '.implode(', ', $operations);
+            if (isset($raw['description']) && $raw['description'] !== '') {
+                $description = $raw['description'];
+            } else {
+                $description = 'Tool: '.$adapter->name();
+                if ($operations !== []) {
+                    $description .= '. Operations: '.implode(', ', $operations);
+                }
             }
             $properties = [];
             $required = [];

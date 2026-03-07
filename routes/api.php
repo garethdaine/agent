@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\V1\AgentBackupSettingsController;
 use App\Http\Controllers\Api\V1\AgentFeatureSettingsController;
 use App\Http\Controllers\Api\V1\AgentJobController;
 use App\Http\Controllers\Api\V1\AgentRunController;
+use App\Http\Controllers\Api\V1\Skills\SkillController;
+use App\Http\Controllers\Api\V1\Skills\SkillDashboardController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\ChatActionController;
 use App\Http\Controllers\Api\V1\ChatSessionController;
@@ -321,6 +323,26 @@ Route::middleware([AgentApiVersionHeader::class])
                 // Diagnostics
                 Route::get('/stats', [MemoryDiagnosticsController::class, 'stats'])
                     ->middleware('throttle:memory-reads');
+            });
+
+            // Skills routes
+            Route::prefix('skills')->group(function (): void {
+                Route::post('/install', [SkillController::class, 'install'])
+                    ->middleware('throttle:agent-mutations');
+                Route::get('/', [SkillController::class, 'index']);
+                Route::get('/library', [SkillController::class, 'library']);
+                Route::post('/library/{slug}/install', [SkillController::class, 'installFromLibrary'])
+                    ->middleware('throttle:agent-mutations');
+                Route::get('/{id}', [SkillController::class, 'show']);
+                Route::patch('/{id}', [SkillController::class, 'update'])
+                    ->middleware('throttle:agent-mutations');
+                Route::delete('/{id}', [SkillController::class, 'destroy'])
+                    ->middleware('throttle:agent-mutations');
+                Route::post('/{id}/validate', [SkillController::class, 'revalidate'])
+                    ->middleware('throttle:agent-mutations');
+
+                Route::get('/dashboard/usage', [SkillDashboardController::class, 'usage']);
+                Route::get('/dashboard/health', [SkillDashboardController::class, 'health']);
             });
 
             // Org layer routes (gated by feature flag)

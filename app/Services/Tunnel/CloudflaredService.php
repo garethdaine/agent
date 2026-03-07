@@ -346,7 +346,7 @@ class CloudflaredService
             'service' => $originUrl,
         ];
         if (! empty($hostname)) {
-            $rule['hostname'] = $hostname;
+            $rule['hostname'] = $this->normalizeHostnameForIngress($hostname);
         }
 
         $originRequest = [];
@@ -385,6 +385,18 @@ class CloudflaredService
         file_put_contents($configPath, $yaml);
 
         return $configPath;
+    }
+
+    private function normalizeHostnameForIngress(string $hostname): string
+    {
+        $hostname = trim($hostname);
+        if ($hostname === '') {
+            return $hostname;
+        }
+        $url = str_starts_with($hostname, 'http') ? $hostname : 'https://'.$hostname;
+        $host = parse_url($url, PHP_URL_HOST);
+
+        return $host ?? $hostname;
     }
 
     private function parseVersion(string $output): ?string

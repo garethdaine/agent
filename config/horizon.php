@@ -110,6 +110,7 @@ return [
         'redis:memory-formation' => 60,
         'redis:org-rituals' => 60,
         'redis:code-analysis' => 60,
+        'redis:skill-validation' => 30,
         'redis:tunnel' => 30,
         'redis:default' => 30,
     ],
@@ -337,6 +338,20 @@ return [
             'timeout' => (int) env('HORIZON_SUBAGENT_TIMEOUT', 3600),
             'nice' => 0,
         ],
+        'supervisor-skill-validation' => [
+            'connection' => 'redis',
+            'queue' => ['skill-validation'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(4, (int) env('HORIZON_SKILL_VALIDATION_MAX_PROCESSES', 2))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'backoff' => [10, 30, 60],
+            'timeout' => 120,
+            'nice' => 0,
+        ],
         'supervisor-tunnel' => [
             'connection' => 'redis',
             'queue' => ['tunnel'],
@@ -413,6 +428,11 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-skill-validation' => [
+                'maxProcesses' => max(1, min(4, (int) env('HORIZON_SKILL_VALIDATION_MAX_PROCESSES', 2))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
             'supervisor-tunnel' => [
                 'maxProcesses' => 1,
             ],
@@ -451,6 +471,9 @@ return [
                 //
             ],
             'supervisor-subagent' => [
+                //
+            ],
+            'supervisor-skill-validation' => [
                 //
             ],
             'supervisor-tunnel' => [

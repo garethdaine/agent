@@ -129,6 +129,10 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(InstanceFingerprint::class);
         $this->app->singleton(LicenseService::class);
+
+        $this->app->singleton(\App\Services\Skills\SkillLibrary::class, fn ($app) => new \App\Services\Skills\SkillLibrary(
+            config('agent.skills.library_manifest_path'),
+        ));
     }
 
     /**
@@ -169,6 +173,7 @@ class AppServiceProvider extends ServiceProvider
         $events->listen(DelegationGraphCompleted::class, SendRitualRunCompletedNotification::class);
         $events->listen(DelegationTaskVerified::class, SendDelegationTaskFailedNotification::class);
         $events->listen(AgentJobRunFinished::class, SendAgentJobFinishedNotification::class);
+        $events->listen(AgentJobRunFinished::class, \App\Listeners\Compliance\LessonExtractionListener::class);
         $events->listen(OrgRitualEscalationTimedOut::class, SendEscalationTimedOutNotification::class);
         $events->listen(RuntimeApprovalRequested::class, SendApprovalRequestedNotification::class);
         $events->listen(RepoAnalysisSessionUpdated::class, SendRepoAnalysisCompletedNotification::class);

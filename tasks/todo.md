@@ -4,6 +4,16 @@
 
 ---
 
+## Tunnel Auth 401 — STAR Preamble (2026-03-06)
+
+- **SITUATION:** App loads via Cloudflare Tunnel (agent.garethdaine.com), user can log in, but API requests return 401 Unauthorized. Tunnel uses `httpHostHeader` so Laravel receives `Host: agent.test` (for Herd routing). Sanctum stateful domains and CORS already merge tunnel hostname at runtime.
+- **ROOT CAUSE (research):** Session cookie domain mismatch. Laravel sets the session cookie using the request Host (agent.test). Browser stores cookie for agent.test. When user requests agent.garethdaine.com, browser does NOT send the agent.test cookie (different domain). Sanctum sees no session → 401.
+- **TASK:** Set `session.domain` to the tunnel hostname when the request originates from the tunnel (detected via Origin/Referer headers), so the session cookie is scoped to agent.garethdaine.com and the browser sends it.
+- **ACTION:** Minimal middleware that runs early (before StartSession), detects tunnel via Origin/Referer containing tunnel hostname, sets `config('session.domain', $host)`. Must run for both web (login) and api (XHR) requests. No response modification, no extra cookies. Defensive try-catch.
+- **RESULT:** Session cookie set for agent.garethdaine.com when accessing via tunnel; API requests include cookie; 401 resolved.
+
+---
+
 ## Current — Open Items
 
 ### Session 17 Build Task 13 — Implement Canonical Cost Governance (Completed)

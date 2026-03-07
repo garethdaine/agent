@@ -53,10 +53,25 @@ class MessengerRuntimeOrchestrator
                 $result = $this->executeViaWrapper($session, $userMessage, $runnerTypeOverride, $systemPrompt, $approvalMode, $onProgress);
             } else {
                 $runnerSessionId = $this->sessionProcessManager->getRunnerSessionId($session->id);
+
+                Log::channel('runtime')->info('MessengerRuntimeOrchestrator: CLI turn', [
+                    'session_id' => $session->id,
+                    'has_runner_session_id' => $runnerSessionId !== null,
+                    'runner_session_id' => $runnerSessionId ? mb_substr($runnerSessionId, 0, 12).'…' : null,
+                ]);
+
                 $result = $this->cliExecutor->executeTurn($session, $userMessage, $runnerTypeOverride, $runnerSessionId, $systemPrompt, $approvalMode);
 
                 if ($result['status'] === 'completed' && isset($result['runner_session_id'])) {
                     $this->sessionProcessManager->setRunnerSessionId($session->id, $result['runner_session_id']);
+                    Log::channel('runtime')->info('MessengerRuntimeOrchestrator: Runner session ID stored', [
+                        'session_id' => $session->id,
+                        'runner_session_id' => mb_substr($result['runner_session_id'], 0, 12).'…',
+                    ]);
+                } elseif ($result['status'] === 'completed') {
+                    Log::channel('runtime')->warning('MessengerRuntimeOrchestrator: No runner_session_id in CLI result', [
+                        'session_id' => $session->id,
+                    ]);
                 }
             }
 
@@ -241,7 +256,7 @@ class MessengerRuntimeOrchestrator
         $parts = [
             'You are an assistant with access to tools. Use them when needed to fulfill the user request.',
             'Current mode: '.$context->mode->value.'.',
-            'You have a "browser" tool: use it to navigate to URLs, click, type, take screenshots, or extract content when the user asks you to check a website, open a page, or use the browser. Prefer the browser tool over WebFetch when the user explicitly asks to use the browser or to visit a site in a browser.',
+            self::browserInstructions(),
         ];
 
         if ($context->workspaceRoot !== null && $context->workspaceRoot !== '') {
@@ -249,6 +264,36 @@ class MessengerRuntimeOrchestrator
         }
 
         return implode("\n", $parts);
+    }
+
+    /**
+     * Browser tool instructions shared between in-app LLM and CLI system prompts.
+     */
+    public static function browserInstructions(): string
+    {
+        return implode("\n", [
+            'You have a "browser" tool powered by agent-browser. Use it when the user asks to visit a website, interact with a page, or use the browser. Prefer the browser tool over WebFetch for interactive tasks.',
+            '',
+            'Browser workflow: Use the browser tool with a command string.',
+            '1. open <url> — navigate to a URL',
+            '2. snapshot -i — get interactive elements with @ref IDs (e.g. @e1, @e2)',
+            '3. Interact using @refs: click @e2, fill @e3 "text", press Enter',
+            '4. screenshot — verify the result visually',
+            '',
+            'Key commands:',
+            '- open <url>, back, forward, reload — navigation',
+            '- click <sel>, fill <sel> <text>, type <sel> <text>, press <key> — interaction',
+            '- check <sel>, uncheck <sel>, select <sel> <value>, hover <sel> — forms',
+            '- snapshot [-i] [-c], screenshot [path] [--full] [--annotate] — inspection',
+            '- get text|url|title [sel], is visible|enabled <sel> — page info',
+            '- wait <sel|ms>, wait --load networkidle — wait for content',
+            '- scroll up|down [px], scrollintoview <sel> — scrolling',
+            '- eval <js> — run JavaScript',
+            '- auth save <name> --url <url> --username <u> --password <p>, auth login <name> — credential vault',
+            '- tab new|list|close|<n> — tab management',
+            '',
+            'Selectors: Use CSS selectors or @ref IDs from snapshot output.',
+        ]);
     }
 
     /**

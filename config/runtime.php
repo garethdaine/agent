@@ -63,7 +63,7 @@ return [
             'approvals_required' => [],
         ],
         'standard' => [
-            'capabilities' => ['read', 'write', 'query', 'browser_action', 'runtime_command'],
+            'capabilities' => ['read', 'write', 'query', 'browser_snapshot', 'browser_action', 'runtime_command'],
             'approvals_required' => ['mutations'],
         ],
         'full' => [
@@ -121,8 +121,10 @@ return [
     'browser' => [
         'sidecar_binary' => env('AGENT_BROWSER_PATH', '/usr/local/bin/agent-browser'),
         'default_persistence' => 'ephemeral',
-        'allowed_commands' => ['navigate', 'click', 'type', 'screenshot', 'extract'],
+        'denied_commands' => ['install', 'connect', 'record', 'trace', 'profiler'],
         'headed' => (bool) env('AGENT_BROWSER_HEADED', false),
+        'timeout' => (int) env('AGENT_BROWSER_TIMEOUT', 60),
+        'session_name' => env('AGENT_BROWSER_SESSION'),
     ],
 
     /*

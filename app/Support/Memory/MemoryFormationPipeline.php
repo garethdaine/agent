@@ -40,7 +40,33 @@ class MemoryFormationPipeline
         private ?ExtractionProvider $extractionProvider = null,
         private ?EmbeddingProvider $embeddingProvider = null,
         private ?Neo4jGraphStore $graphStore = null,
+        private ?MemoryAdapterFactory $adapterFactory = null,
     ) {}
+
+    /**
+     * Resolve user-specific providers via the adapter factory.
+     *
+     * When providers were not injected directly (e.g. via container resolution),
+     * uses the MemoryAdapterFactory to create user-specific adapters based on
+     * their configured API keys and provider preferences.
+     */
+    private function resolveProvidersForUser(int $userId): void
+    {
+        if ($this->adapterFactory === null) {
+            return;
+        }
+
+        if ($this->extractionProvider === null) {
+            $this->extractionProvider = $this->adapterFactory->makeExtractionProvider($userId);
+        }
+
+        if ($this->embeddingProvider === null || ! $this->embeddingProvider->supportsEmbeddings()) {
+            $resolved = $this->adapterFactory->makeEmbeddingProvider($userId);
+            if ($resolved !== null) {
+                $this->embeddingProvider = $resolved;
+            }
+        }
+    }
 
     /**
      * Process a completed run through the formation pipeline.
@@ -99,6 +125,9 @@ class MemoryFormationPipeline
                 conversationLogsCreated: $conversationLogsCreated
             );
         }
+
+        // Resolve user-specific providers via factory when not directly injected
+        $this->resolveProvidersForUser($userId);
 
         // Combine content for extraction
         $combinedContent = $this->combineContentForExtraction($workingMemoryEntries);
@@ -266,6 +295,9 @@ class MemoryFormationPipeline
         if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_API_ENABLED)) {
             return MemoryFormationResult::success(conversationLogsCreated: $conversationLogsCreated);
         }
+
+        // Resolve user-specific providers via factory when not directly injected
+        $this->resolveProvidersForUser($userId);
 
         $combinedContent = $this->combineContentForExtraction($entries);
 

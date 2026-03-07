@@ -2,12 +2,15 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Compliance\LessonExtractionJob;
 use App\Models\InterrogationSession;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Interrogation\AdapterFactory;
 use App\Support\Interrogation\InterrogationEventWriter;
 use App\Support\Interrogation\SessionStateTransitionService;
 use App\Support\Interrogation\SystemPromptResolver;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Symfony\Component\Process\Process;
@@ -100,6 +103,8 @@ class ExecuteInterrogationDiscoveryJob implements ShouldQueue
                     'message' => trim($process->getErrorOutput()) ?: 'Discovery command failed.',
                 ]);
 
+                $this->dispatchLessonIfEnabled($session, 'DISCOVERY_COMMAND_FAILED', trim($process->getErrorOutput()) ?: 'Discovery command failed.');
+
                 return;
             }
 
@@ -181,6 +186,8 @@ class ExecuteInterrogationDiscoveryJob implements ShouldQueue
                 'code' => 'DISCOVERY_RUNTIME_EXCEPTION',
                 'message' => $throwable->getMessage(),
             ]);
+
+            $this->dispatchLessonIfEnabled($session, 'DISCOVERY_RUNTIME_EXCEPTION', $throwable->getMessage());
         }
     }
 
@@ -240,5 +247,32 @@ class ExecuteInterrogationDiscoveryJob implements ShouldQueue
         }
 
         return $buffer;
+    }
+
+    private function dispatchLessonIfEnabled(InterrogationSession $session, string $errorCode, string $errorMessage): void
+    {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::COMPLIANCE_LESSONS)) {
+            return;
+        }
+
+        try {
+            LessonExtractionJob::dispatch(
+                lessonContent: sprintf('Interrogation discovery failed (%s): %s', $errorCode, substr($errorMessage, 0, 300)),
+                source: 'interrogation_discovery_failure',
+                projectDirectory: base_path(),
+                context: [
+                    'task_title' => 'Interrogation Discovery',
+                    'task_category' => 'interrogation',
+                    'runner_type' => (string) $session->runner_type,
+                    'session_id' => $session->id,
+                    'error_code' => $errorCode,
+                ],
+            );
+        } catch (\Throwable $e) {
+            Log::warning('ExecuteInterrogationDiscoveryJob: Failed to dispatch lesson', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

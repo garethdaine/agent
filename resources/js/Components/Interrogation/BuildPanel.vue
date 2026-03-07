@@ -395,6 +395,7 @@ const normalizeRunEventList = (entries) => {
                 event_type: String(entry?.event_type ?? '').trim(),
                 payload: entry?.payload ?? '',
                 event_ts: entry?.event_ts ?? entry?.created_at ?? null,
+                reasoning_step: entry?.reasoning_step ?? null,
             };
         })
         .filter((entry) => entry !== null)
@@ -1037,6 +1038,8 @@ const handleTaskDragEnd = (event) => {
         task_ids: nextOrder,
     });
 };
+
+defineExpose({ activeRunEvents });
 </script>
 
 <template>

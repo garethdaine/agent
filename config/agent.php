@@ -51,6 +51,7 @@ return [
     'allowed_task_markdown_bases' => array_values(array_unique(array_filter(array_merge(
         $parseEnvCsvList('AGENT_TASK_MARKDOWN_BASES'),
         $parseEnvCsvList('AGENT_ADDITIONAL_TASK_MARKDOWN_BASES'),
+        [storage_path('app/skills')],
     )))),
 
     'runner_executables' => [
@@ -201,6 +202,10 @@ return [
 
     'run_output_heartbeat_seconds' => (int) env('AGENT_RUN_OUTPUT_HEARTBEAT_SECONDS', 5),
 
+    'log_filtering' => [
+        'suppress_machine_noise' => (bool) env('AGENT_SUPPRESS_MACHINE_NOISE', true),
+    ],
+
     'compliance' => [
         'enabled' => (bool) env('AGENT_COMPLIANCE_ENABLED', false),
         'enforcement_mode' => env('AGENT_COMPLIANCE_ENFORCEMENT_MODE', 'advisory'),
@@ -275,5 +280,51 @@ return [
         'url' => env('AGENT_WEBHOOK_URL'),
         'secret' => env('AGENT_WEBHOOK_SECRET'),
         'events' => $parseEnvCsvList('AGENT_WEBHOOK_EVENTS'),
+    ],
+
+    'skills' => [
+        'storage_path' => storage_path('app/skills'),
+        'global_storage_path' => storage_path('app/skills/global'),
+        'library_manifest_path' => base_path('skill-library/manifest.json'),
+        'max_skills_per_invocation' => (int) env('AGENT_SKILLS_MAX_PER_INVOCATION', 5),
+        'max_skills_per_team' => (int) env('AGENT_SKILLS_MAX_PER_TEAM', 50),
+        'max_skill_archive_size_bytes' => 10 * 1024 * 1024,
+        'max_skill_file_count' => 50,
+        'max_skill_body_lines_warning' => 500,
+        'risk_level_trust_thresholds' => [
+            'low' => 0.0,
+            'standard' => 0.5,
+            'elevated' => 0.7,
+            'critical' => 0.9,
+        ],
+        'validation' => [
+            'weights_without_llm' => [
+                'pattern_match' => 0.35,
+                'boundary_analysis' => 0.25,
+                'authority_escalation' => 0.25,
+                'exfiltration' => 0.15,
+            ],
+            'weights_with_llm' => [
+                'pattern_match' => 0.25,
+                'boundary_analysis' => 0.20,
+                'authority_escalation' => 0.20,
+                'exfiltration' => 0.10,
+                'llm_review' => 0.25,
+            ],
+            'thresholds' => [
+                'clean' => 0.2,
+                'warn' => 0.5,
+                'admin_confirm' => 0.8,
+            ],
+            'script_language_allowlist' => ['python', 'bash', 'javascript', 'php'],
+            'dangerous_functions' => ['eval', 'exec', 'system', 'shell_exec', 'passthru'],
+        ],
+        'drift_check' => [
+            'enabled' => (bool) env('AGENT_SKILLS_DRIFT_CHECK_ENABLED', true),
+        ],
+        'trigger_keyword_extraction' => [
+            'max_keywords' => 20,
+            'min_keyword_length' => 3,
+        ],
     ],
 ];

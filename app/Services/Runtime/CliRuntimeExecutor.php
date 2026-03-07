@@ -103,7 +103,24 @@ class CliRuntimeExecutor
             $text = $this->extractFinalText($stdout, $runnerType);
             $parsedRunnerSessionId = $this->extractRunnerSessionId($stdout, $runnerType);
 
+            Log::channel('runtime')->info('CliRuntimeExecutor: Output parsed', [
+                'session_id' => $session->id,
+                'runner_session_id' => $parsedRunnerSessionId,
+                'text_length' => strlen($text),
+                'text_preview' => $text !== '' ? mb_substr($text, 0, 120) : '(empty)',
+                'stdout_length' => strlen($stdout),
+                'stderr_length' => strlen($stderr),
+                'had_resume' => $useResume,
+            ]);
+
             if ($process->isSuccessful()) {
+                if ($text === '' && $stdout !== '') {
+                    Log::channel('runtime')->warning('CliRuntimeExecutor: Successful process but no text extracted', [
+                        'session_id' => $session->id,
+                        'stdout_tail' => mb_substr($stdout, -500),
+                    ]);
+                }
+
                 $result = [
                     'status' => 'completed',
                     'text' => $text !== '' ? $text : 'Done.',
@@ -155,7 +172,7 @@ class CliRuntimeExecutor
 
             match ($approvalMode) {
                 ApprovalMode::Autonomous => $command[] = '--dangerously-skip-permissions',
-                ApprovalMode::Supervised => array_push($command, '--allowedTools', 'Read,Write,Edit,Grep,Glob,LS,WebSearch,WebFetch'),
+                ApprovalMode::Supervised => array_push($command, '--allowedTools', 'Read,Write,Edit,Grep,Glob,LS,WebSearch,WebFetch,Bash'),
                 ApprovalMode::Restricted => array_push($command, '--allowedTools', 'Read,Grep,Glob,LS,WebSearch,WebFetch'),
             };
 

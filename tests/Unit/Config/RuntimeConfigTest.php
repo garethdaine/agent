@@ -74,19 +74,18 @@ class RuntimeConfigTest extends TestCase
 
         $this->assertArrayHasKey('sidecar_binary', $browser);
         $this->assertArrayHasKey('default_persistence', $browser);
-        $this->assertArrayHasKey('allowed_commands', $browser);
+        $this->assertArrayHasKey('denied_commands', $browser);
+        $this->assertArrayHasKey('timeout', $browser);
         $this->assertEquals('ephemeral', $browser['default_persistence']);
     }
 
-    public function test_browser_allowed_commands(): void
+    public function test_browser_denied_commands(): void
     {
-        $commands = config('runtime.browser.allowed_commands');
+        $denied = config('runtime.browser.denied_commands');
 
-        $this->assertContains('navigate', $commands);
-        $this->assertContains('click', $commands);
-        $this->assertContains('type', $commands);
-        $this->assertContains('screenshot', $commands);
-        $this->assertContains('extract', $commands);
+        $this->assertIsArray($denied);
+        $this->assertContains('install', $denied);
+        $this->assertContains('connect', $denied);
     }
 
     public function test_mcp_config_has_required_keys(): void

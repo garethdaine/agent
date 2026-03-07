@@ -20,7 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
 
-        $middleware->web(append: [
+        $middleware->api(prepend: [\App\Http\Middleware\TunnelSessionDomainMiddleware::class]);
+        $middleware->web(prepend: [\App\Http\Middleware\TunnelSessionDomainMiddleware::class], append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
@@ -34,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'org.ui' => \App\Http\Middleware\OrgUiFeatureGate::class,
             'office.ui' => \App\Http\Middleware\OfficeUiFeatureGate::class,
             'outage.protect' => \App\Http\Middleware\OutageAutoProtect::class,
+            'skills.ui' => \App\Http\Middleware\EnsureSkillsUiEnabled::class,
             'tunnel.feature' => \App\Http\Middleware\TunnelFeatureGate::class,
             'tunnel.ip' => \App\Http\Middleware\TunnelIpAllowlistMiddleware::class,
         ]);

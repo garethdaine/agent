@@ -25,6 +25,7 @@ class OrgAgentProfile extends Model
         'delegatee_profile_id',
         'capability_bindings',
         'authority_overrides',
+        'skill_access_profile',
         'default_output_schema',
         'parent_agent_id',
         'archived_at',
@@ -35,6 +36,7 @@ class OrgAgentProfile extends Model
         return [
             'capability_bindings' => 'array',
             'authority_overrides' => 'array',
+            'skill_access_profile' => 'array',
             'default_output_schema' => 'array',
             'archived_at' => 'datetime',
         ];

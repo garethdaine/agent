@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Jobs\RepoAnalysis;
 
+use App\Jobs\Compliance\LessonExtractionJob;
 use App\Models\RepoAnalysisArtifact;
 use App\Models\RepoAnalysisSession;
 use App\Models\RepoAnalysisTask;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\RepoAnalysis\Analyzers\AnalyzerRegistry;
 use App\Support\RepoAnalysis\AiTaskRunner;
 use App\Support\RepoAnalysis\EventWriter;
@@ -17,6 +19,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\TimeoutExceededException;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Throwable;
 
@@ -310,6 +313,8 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
             'error_code' => $errorCode,
             'error_summary' => $errorSummary,
         ]);
+
+        $this->dispatchLessonIfEnabled($session, $task, $errorCode, $errorSummary);
     }
 
     private function pauseForDriftIfNeeded(
@@ -683,6 +688,8 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
             'error_code' => 'EXECUTE_TASK_NON_RETRYABLE',
             'error_summary' => 'Non-retryable task failure paused execution.',
         ]);
+
+        $this->dispatchLessonIfEnabled($session, $task, 'EXECUTE_TASK_NON_RETRYABLE', $message);
     }
 
     private function latestRunningTask(RepoAnalysisSession $session): ?RepoAnalysisTask
@@ -806,5 +813,38 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
             'error_code' => $errorCode,
             'error_summary' => $errorSummary,
         ]);
+
+        $this->dispatchLessonIfEnabled($session, $task, $errorCode, $errorSummary);
+    }
+
+    private function dispatchLessonIfEnabled(
+        RepoAnalysisSession $session,
+        ?RepoAnalysisTask $task,
+        string $errorCode,
+        string $errorMessage,
+    ): void {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::COMPLIANCE_LESSONS)) {
+            return;
+        }
+
+        try {
+            LessonExtractionJob::dispatch(
+                lessonContent: sprintf('Code analysis task failed (%s): %s', $errorCode, substr($errorMessage, 0, 300)),
+                source: 'code_analysis_task_failure',
+                projectDirectory: base_path(),
+                context: [
+                    'task_title' => $task instanceof RepoAnalysisTask ? (string) $task->task_key : 'Unknown Task',
+                    'task_category' => 'code_analysis',
+                    'runner_type' => 'code_analysis',
+                    'session_id' => $session->id,
+                    'error_code' => $errorCode,
+                ],
+            );
+        } catch (\Throwable $e) {
+            Log::warning('ExecuteRepoAnalysisTaskJob: Failed to dispatch lesson', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

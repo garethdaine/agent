@@ -19,6 +19,7 @@ use App\Messenger\SlashCommands\ModeCommandHandler;
 use App\Messenger\SlashCommands\NewCommandHandler;
 use App\Messenger\SlashCommands\ProgressCommandHandler;
 use App\Messenger\SlashCommands\RunsCommandHandler;
+use App\Messenger\SlashCommands\SkillsCommandHandler;
 use App\Messenger\SlashCommands\SessionsCommandHandler;
 use App\Messenger\SlashCommands\StatusCommandHandler;
 use App\Messenger\SlashCommands\SubAgentsCommandHandler;
@@ -67,6 +68,7 @@ final class CommandRouter
         'compact' => CompactCommandHandler::class,
         'subagents' => SubAgentsCommandHandler::class,
         'progress' => ProgressCommandHandler::class,
+        'skills' => SkillsCommandHandler::class,
     ];
 
     /**

@@ -7,6 +7,7 @@ import QaHistoryPanel from '@/Components/Interrogation/QaHistoryPanel.vue';
 import QuestionRenderer from '@/Components/Interrogation/QuestionRenderer.vue';
 import SessionStatusBadge from '@/Components/Interrogation/SessionStatusBadge.vue';
 import StatsPanel from '@/Components/Interrogation/StatsPanel.vue';
+import GuardrailsPanel from '@/Components/Interrogation/GuardrailsPanel.vue';
 import StatusCard from '@/Components/Interrogation/StatusCard.vue';
 import SummaryViewer from '@/Components/Interrogation/SummaryViewer.vue';
 import { formatInterrogationError } from '@/Components/Interrogation/errorFormatting';
@@ -54,6 +55,7 @@ const session = ref(null);
 const events = ref([]);
 const loading = ref(true);
 const error = ref('');
+const buildPanelRef = ref(null);
 const busy = ref(false);
 const notice = ref('');
 const pollingTimer = ref(null);
@@ -257,6 +259,10 @@ const isPlanEvent = (event) => {
     return notice.startsWith('plan_');
 };
 const build = computed(() => (session.value?.build && typeof session.value.build === 'object' ? session.value.build : {}));
+const buildTasks = computed(() => (Array.isArray(build.value?.tasks) ? build.value.tasks : []));
+const buildActiveTask = computed(() => build.value?.active_task ?? null);
+const buildActiveRunMetadata = computed(() => build.value?.active_run?.metadata_json ?? {});
+const buildPanelRunEvents = computed(() => buildPanelRef.value?.activeRunEvents ?? []);
 const taskProviders = computed(() => (Array.isArray(session.value?.task_providers) ? session.value.task_providers : []));
 const linearProvider = computed(() => taskProviders.value.find((provider) => String(provider?.driver ?? '').toLowerCase() === 'linear') ?? null);
 const showHistoryRail = computed(() => {
@@ -1836,6 +1842,7 @@ onBeforeUnmount(() => {
 
                             <template v-if="session.phase >= PHASE.BUILD_EXECUTION">
                                 <BuildPanel
+                                    ref="buildPanelRef"
                                     mode="execution"
                                     :build="build"
                                     :activity="buildActivity"
@@ -1850,8 +1857,15 @@ onBeforeUnmount(() => {
                             </template>
                         </div>
 
-                        <div v-if="showRightSidebar" class="xl:col-span-3">
+                        <div v-if="showRightSidebar" class="xl:col-span-3 space-y-3">
                             <StatsPanel :session="session" :events="events" />
+                            <GuardrailsPanel
+                                v-if="session?.phase >= PHASE.BUILD_EXECUTION"
+                                :tasks="buildTasks"
+                                :run-events="buildPanelRunEvents"
+                                :run-metadata="buildActiveRunMetadata"
+                                :active-task="buildActiveTask"
+                            />
                         </div>
                     </div>
                 </template>

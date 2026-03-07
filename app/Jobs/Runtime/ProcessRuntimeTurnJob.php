@@ -9,13 +9,16 @@ use App\Models\ChatMessage;
 use App\Models\ConnectorAccount;
 use App\Models\Runtime\RuntimeSession;
 use App\Services\Messenger\CompactionService;
+use App\Jobs\Compliance\LessonExtractionJob;
 use App\Services\Runtime\MessengerRuntimeOrchestrator;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Messenger\ConnectorManager;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -42,6 +45,40 @@ class ProcessRuntimeTurnJob implements ShouldQueue
     }
 
     public function handle(
+        MessengerRuntimeOrchestrator $orchestrator,
+        ConnectorManager $connectorManager,
+        CompactionService $compactionService,
+    ): void {
+        // Acquire a per-session lock so turns are processed sequentially.
+        // Without this, concurrent workers can start Turn N+1 before Turn N
+        // stores its runner_session_id, breaking --resume context continuity.
+        $lockKey = 'runtime:turn_lock:'.$this->runtimeSessionId;
+        $lockTimeout = $this->timeout + 30; // slightly longer than the turn timeout
+
+        $lock = Cache::lock($lockKey, $lockTimeout);
+
+        Log::info('ProcessRuntimeTurnJob: Waiting for session lock', [
+            'runtime_session_id' => $this->runtimeSessionId,
+        ]);
+
+        // Block up to lockTimeout seconds waiting for any prior turn to finish.
+        if (! $lock->block($lockTimeout)) {
+            Log::warning('ProcessRuntimeTurnJob: Could not acquire session lock', [
+                'runtime_session_id' => $this->runtimeSessionId,
+            ]);
+            $this->sendErrorToChat('Still processing a previous request. Please wait and try again.', $connectorManager);
+
+            return;
+        }
+
+        try {
+            $this->executeWithinLock($orchestrator, $connectorManager, $compactionService);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function executeWithinLock(
         MessengerRuntimeOrchestrator $orchestrator,
         ConnectorManager $connectorManager,
         CompactionService $compactionService,
@@ -86,6 +123,7 @@ class ProcessRuntimeTurnJob implements ShouldQueue
             Log::info('ProcessRuntimeTurnJob: Turn finished', [
                 'runtime_session_id' => $this->runtimeSessionId,
                 'status' => $result['status'] ?? 'unknown',
+                'has_runner_session_id' => isset($result['runner_session_id']),
             ]);
         } catch (\Throwable $e) {
             Log::error('ProcessRuntimeTurnJob: Turn execution failed', [
@@ -167,6 +205,8 @@ class ProcessRuntimeTurnJob implements ShouldQueue
             } catch (\Throwable $e) {
                 Log::error('ProcessRuntimeTurnJob: Failed to send error', ['error' => $e->getMessage()]);
             }
+
+            $this->dispatchLessonIfEnabled($session, $result);
         }
 
         if ($compactionService->isCompactionNeeded($chatSession)) {
@@ -288,6 +328,8 @@ class ProcessRuntimeTurnJob implements ShouldQueue
             $parts[] = "User context: {$userContext}";
         }
 
+        $parts[] = "You have access to agent-browser for browser automation. Run it via Bash.\n\n".MessengerRuntimeOrchestrator::browserInstructions();
+
         return $parts !== [] ? implode("\n\n", $parts) : null;
     }
 
@@ -347,6 +389,37 @@ class ProcessRuntimeTurnJob implements ShouldQueue
             }
         } catch (\Throwable $e) {
             Log::debug('ProcessRuntimeTurnJob: yield progress message failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     */
+    private function dispatchLessonIfEnabled(RuntimeSession $session, array $result): void
+    {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::COMPLIANCE_LESSONS)) {
+            return;
+        }
+
+        $errorText = $result['error'] ?? 'Unknown messenger turn failure';
+
+        try {
+            LessonExtractionJob::dispatch(
+                lessonContent: sprintf('Messenger turn failed: %s', substr($errorText, 0, 300)),
+                source: 'messenger_turn_failure',
+                projectDirectory: $session->workspace_root ?? base_path(),
+                context: [
+                    'task_title' => 'Messenger Turn',
+                    'task_category' => 'chat',
+                    'runner_type' => 'messenger',
+                    'session_id' => $session->id,
+                ],
+            );
+        } catch (\Throwable $e) {
+            Log::warning('ProcessRuntimeTurnJob: Failed to dispatch lesson extraction', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

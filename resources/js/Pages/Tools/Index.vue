@@ -6,7 +6,7 @@ import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { Search, MessageSquare, Brain, GitBranchPlus, Wrench } from 'lucide-vue-next';
+import { Search, MessageSquare, Brain, GitBranchPlus, Puzzle, Wrench } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
@@ -17,6 +17,10 @@ const props = defineProps({
             indexRoute: null,
             blockedMessage: '',
         }),
+    },
+    skills: {
+        type: Object,
+        default: () => ({ available: false }),
     },
 });
 
@@ -54,6 +58,16 @@ const tools = computed(() => {
             title: 'AI-driven code analysis',
             description: 'Run stepwise code analysis with live task feedback and full narrative reporting.',
             icon: GitBranchPlus,
+        });
+    }
+
+    if (props.skills?.available) {
+        items.push({
+            route: 'tools.skills.index',
+            category: 'Agent Skills',
+            title: 'Skill management & library',
+            description: 'Install, manage, and browse domain-specific skills that extend agent capabilities.',
+            icon: Puzzle,
         });
     }
 

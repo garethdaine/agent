@@ -33,6 +33,8 @@ class RunEventWriter
 
     private const APPROVAL_PATTERN = '/\b(?:need|needs|required|requires)\s+(?:your\s+)?permission\b|\bcould you approve\b|\bplease approve\b|\bapproval required\b/i';
 
+    private const APPROVAL_FALSE_POSITIVE_PATTERN = '/\bapproval likely required in active run output\b|\|\s*approval required\s*\||\bskill access by risk level\b/i';
+
     private const PERMISSION_BLOCKER_PATTERN = '/\b(?:need|needs|required|requires)\s+(?:your\s+)?(?:file\s+)?write\s+permissions?\b|\bgrant\s+(?:file\s+)?write\s+permissions?\b|\bwrite\s+permissions?\s+(?:have\s+not\s+been|haven\'t\s+been|were\s+not|are\s+not)\s+granted\b|\b(?:all\s+)?file\s+write\s+operations?\s+are\s+denied\b|\bcannot\s+(?:create|write)\s+(?:any\s+)?(?:new\s+)?files?\b|\bpermission\s+(?:loop|wall)\b/i';
 
     private const CLARIFICATION_PATTERN = '/\b(?:could|can)\s+you\s+clarify\b|\b(?:i|we)\s+need\s+(?:your\s+)?clarification\b|\bneed\s+clarification\s+from\s+you\b|\bplease\s+clarify\b|\bquestion\s+for\s+you\b|\bcan\s+you\s+confirm\b|\bshould\s+i\s+(?:proceed|continue|use|do)\b/i';
@@ -122,6 +124,12 @@ class RunEventWriter
 
         $this->run->metadata_json = $metadata;
 
+        if ($this->shouldSuppressAsNoise($chunk)) {
+            $this->trackNoiseSuppression($eventType, $postBytes);
+
+            return;
+        }
+
         $mcpEndpoints = $this->extractMcpUnavailableEndpoints($chunk);
         foreach ($mcpEndpoints as $mcpEndpoint) {
             $this->markMcpServerUnavailable($mcpEndpoint, $chunk);
@@ -131,7 +139,7 @@ class RunEventWriter
 
         if (! $isNonRuntimeSnippet
             && ($eventType === 'stdout' || $eventType === 'stderr')
-            && preg_match(self::APPROVAL_PATTERN, $chunk) === 1) {
+            && $this->shouldMarkApprovalRequired($chunk)) {
             $this->markApprovalRequired($chunk);
         }
 
@@ -689,6 +697,19 @@ class RunEventWriter
         }
     }
 
+    private function shouldMarkApprovalRequired(string $chunk): bool
+    {
+        if (preg_match(self::APPROVAL_PATTERN, $chunk) !== 1) {
+            return false;
+        }
+
+        if (preg_match(self::APPROVAL_FALSE_POSITIVE_PATTERN, $chunk) === 1) {
+            return false;
+        }
+
+        return true;
+    }
+
     private function shouldMarkRateLimitDetected(string $chunk): bool
     {
         if ($this->isStructuredRateLimitErrorEvent($chunk)) {
@@ -1001,5 +1022,103 @@ class RunEventWriter
         }
 
         return null;
+    }
+
+    // ── Noise suppression ────────────────────────────────────────────
+
+    private bool $noiseNoticeEmitted = false;
+
+    private function shouldSuppressAsNoise(string $chunk): bool
+    {
+        if (! config('agent.log_filtering.suppress_machine_noise', true)) {
+            return false;
+        }
+
+        return $this->isMcpToolListDump($chunk)
+            || $this->isConfigNameListDump($chunk)
+            || $this->isStreamJsonMetadataFragment($chunk)
+            || $this->isToolResultMetadataEcho($chunk);
+    }
+
+    /**
+     * Detects chunks containing ≥5 MCP tool name identifiers (mcp__server__tool pattern).
+     * These are tool definition list echoes from the system prompt.
+     */
+    private function isMcpToolListDump(string $chunk): bool
+    {
+        $count = preg_match_all('/\bmcp__[a-zA-Z0-9_-]+__[a-zA-Z0-9_]+/', $chunk);
+
+        return is_int($count) && $count >= 5;
+    }
+
+    /**
+     * Detects chunks containing ≥8 comma-separated quoted lowercase-hyphenated identifiers.
+     * These are skill/command name list echoes from system prompt configuration.
+     */
+    private function isConfigNameListDump(string $chunk): bool
+    {
+        $count = preg_match_all('/[",]\s*"[a-z][a-z0-9]*(?:-[a-z0-9]+)+"/', $chunk);
+
+        return is_int($count) && $count >= 8;
+    }
+
+    /**
+     * Detects stream-json metadata fragments containing session_id/uuid/parent_tool_use_id
+     * with no substantial human-readable content.
+     */
+    private function isStreamJsonMetadataFragment(string $chunk): bool
+    {
+        $hasSessionId = preg_match('/"session_id"\s*:\s*"[0-9a-f-]{36}"/', $chunk) === 1;
+        $hasUuid = preg_match('/"uuid"\s*:\s*"[0-9a-f-]{36}"/', $chunk) === 1;
+        $hasParentToolUse = preg_match('/"parent_tool_use_id"\s*:/', $chunk) === 1;
+
+        if (! $hasSessionId && ! $hasUuid && ! $hasParentToolUse) {
+            return false;
+        }
+
+        // Only suppress when the chunk has at least two metadata markers
+        // and lacks substantial readable text (prevents suppressing agent output
+        // that happens to mention a session ID).
+        $metadataMarkerCount = (int) $hasSessionId + (int) $hasUuid + (int) $hasParentToolUse;
+        if ($metadataMarkerCount < 2) {
+            return false;
+        }
+
+        // Strip JSON structural chars and hex sequences — what remains is "readable text".
+        $stripped = (string) preg_replace('/["{}\[\]:,\s]|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/', '', $chunk);
+
+        return strlen($stripped) < 120;
+    }
+
+    /**
+     * Detects tool result content echo fragments containing Read/Glob output metadata markers
+     * like "numLines", "startLine", "totalLines" from the Claude CLI stream-json format.
+     */
+    private function isToolResultMetadataEcho(string $chunk): bool
+    {
+        $hasNumLines = preg_match('/"numLines"\s*:\s*\d+/', $chunk) === 1;
+        $hasStartLine = preg_match('/"startLine"\s*:\s*\d+/', $chunk) === 1;
+        $hasTotalLines = preg_match('/"totalLines"\s*:\s*\d+/', $chunk) === 1;
+
+        // Require at least two of three markers to avoid false positives.
+        return ((int) $hasNumLines + (int) $hasStartLine + (int) $hasTotalLines) >= 2;
+    }
+
+    private function trackNoiseSuppression(string $eventType, int $bytes): void
+    {
+        $this->incrementByteCounters($eventType, $bytes, 0);
+
+        $metadata = (array) ($this->run->metadata_json ?? []);
+        $metadata['noise_suppressed_chunks'] = (int) ($metadata['noise_suppressed_chunks'] ?? 0) + 1;
+        $metadata['noise_suppressed_bytes'] = (int) ($metadata['noise_suppressed_bytes'] ?? 0) + $bytes;
+        $this->run->metadata_json = $metadata;
+
+        if (! $this->noiseNoticeEmitted) {
+            $this->noiseNoticeEmitted = true;
+            $this->appendLifecycle([
+                'type' => 'noise_filtering_active',
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ]);
+        }
     }
 }

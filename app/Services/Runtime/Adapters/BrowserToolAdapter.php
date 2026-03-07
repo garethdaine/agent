@@ -9,9 +9,27 @@ use Illuminate\Support\Facades\Process;
 
 class BrowserToolAdapter extends AbstractToolAdapter
 {
-    private const READ_ONLY_OPERATIONS = ['screenshot', 'extract'];
+    /**
+     * Commands that only read page state (require browser_snapshot capability).
+     */
+    private const READ_COMMANDS = [
+        'screenshot', 'snapshot', 'get', 'is', 'find',
+        'console', 'errors', 'diff', 'network',
+        'session', 'pdf',
+    ];
 
-    private const MUTATION_OPERATIONS = ['navigate', 'click', 'type'];
+    /**
+     * Commands that mutate page state (require browser_action capability).
+     */
+    private const MUTATION_COMMANDS = [
+        'open', 'click', 'dblclick', 'fill', 'type', 'press',
+        'hover', 'focus', 'check', 'uncheck', 'select',
+        'drag', 'upload', 'download', 'scroll', 'scrollintoview',
+        'eval', 'back', 'forward', 'reload', 'wait',
+        'set', 'keyboard', 'mouse', 'tab', 'close',
+        'cookies', 'storage', 'highlight',
+        'auth',
+    ];
 
     public function name(): string
     {
@@ -21,23 +39,44 @@ class BrowserToolAdapter extends AbstractToolAdapter
     public function schema(): array
     {
         return [
-            'operations' => ['navigate', 'click', 'type', 'screenshot', 'extract'],
+            'description' => implode("\n", [
+                'Browser automation via agent-browser CLI. Pass the command as a string.',
+                '',
+                'Workflow: open URL → snapshot -i (get interactive elements with @ref IDs) → interact via @refs → screenshot to verify.',
+                '',
+                'Navigation: open <url>, back, forward, reload',
+                'Interaction: click <sel>, fill <sel> <text>, type <sel> <text>, press <key>, hover <sel>, select <sel> <value>',
+                'Forms: check <sel>, uncheck <sel>, focus <sel>, upload <sel> <files...>',
+                'Inspection: snapshot [-i] [-c], screenshot [path] [--full] [--annotate], get text|html|value|url|title [sel]',
+                'State checks: is visible|enabled|checked <sel>, find role|text|label <value> [action]',
+                'Waiting: wait <sel|ms>, wait --load networkidle',
+                'Scrolling: scroll up|down|left|right [px], scrollintoview <sel>',
+                'JavaScript: eval <js>',
+                'Info: get text <sel>, get url, get title, console, errors, network requests',
+                'Auth vault: auth save <name> --url <url> --username <user> --password <pass>, auth login <name>',
+                'Tabs: tab new, tab list, tab close, tab <n>',
+                'Cookies: cookies get, cookies set --url <url> --domain <d> ..., cookies clear',
+                '',
+                'Selectors: CSS selectors or @ref IDs from snapshot output (e.g. @e1, @e2).',
+                'Use snapshot -i first to discover interactive elements, then use their @refs.',
+            ]),
             'parameters' => [
-                'operation' => ['type' => 'string', 'required' => true],
-                'url' => ['type' => 'string', 'required_for' => ['navigate']],
-                'selector' => ['type' => 'string', 'required_for' => ['click', 'type', 'extract']],
-                'text' => ['type' => 'string', 'required_for' => ['type']],
-                'path' => ['type' => 'string', 'optional' => true],
+                'command' => [
+                    'type' => 'string',
+                    'required' => true,
+                    'description' => 'The agent-browser command and arguments, e.g. "open https://example.com", "click @e2", "snapshot -i", "fill @e3 test@example.com"',
+                ],
             ],
         ];
     }
 
     public function authorize(RuntimeContext $context, array $args): bool
     {
-        $operation = $args['operation'] ?? '';
+        $command = $args['command'] ?? '';
+        $operation = $this->extractOperation($command);
 
         if ($context->mode === RuntimeMode::Safe) {
-            return in_array($operation, self::READ_ONLY_OPERATIONS, true);
+            return $this->isReadCommand($operation);
         }
 
         return parent::authorize($context, $args);
@@ -45,9 +84,10 @@ class BrowserToolAdapter extends AbstractToolAdapter
 
     protected function getRequiredCapability(array $args): string
     {
-        $operation = $args['operation'] ?? '';
+        $command = $args['command'] ?? '';
+        $operation = $this->extractOperation($command);
 
-        if (in_array($operation, self::READ_ONLY_OPERATIONS, true)) {
+        if ($this->isReadCommand($operation)) {
             return 'browser_snapshot';
         }
 
@@ -57,12 +97,22 @@ class BrowserToolAdapter extends AbstractToolAdapter
     public function execute(RuntimeContext $context, array $args): ToolResult
     {
         $startTime = hrtime(true);
-        $operation = $args['operation'] ?? '';
+        $command = trim($args['command'] ?? '');
 
-        $allowed = config('runtime.browser.allowed_commands', []);
-        if (! is_array($allowed) || ! in_array($operation, $allowed, true)) {
+        if ($command === '') {
             return ToolResult::failure(
-                "Browser operation not allowed: {$operation}",
+                'Browser command cannot be empty',
+                $this->duration($startTime)
+            );
+        }
+
+        $tokens = self::tokenizeCommand($command);
+        $operation = $tokens[0] ?? '';
+
+        $denied = config('runtime.browser.denied_commands', []);
+        if (is_array($denied) && in_array($operation, $denied, true)) {
+            return ToolResult::failure(
+                "Browser command denied: {$operation}",
                 $this->duration($startTime)
             );
         }
@@ -75,10 +125,11 @@ class BrowserToolAdapter extends AbstractToolAdapter
             );
         }
 
-        $cmd = $this->buildCommand($binary, $operation, $args);
+        $cmd = $this->buildCommand($binary, $tokens);
+        $timeout = (int) config('runtime.browser.timeout', 60);
 
         try {
-            $result = Process::timeout(60)->run($cmd);
+            $result = Process::timeout($timeout)->run($cmd);
 
             if (! $result->successful()) {
                 return ToolResult::failure(
@@ -90,7 +141,7 @@ class BrowserToolAdapter extends AbstractToolAdapter
             $output = trim($result->output());
 
             return ToolResult::success([
-                'operation' => $operation,
+                'command' => $operation,
                 'output' => $output,
                 'success' => true,
             ], $this->duration($startTime));
@@ -103,27 +154,99 @@ class BrowserToolAdapter extends AbstractToolAdapter
     }
 
     /**
-     * @param  array<string, mixed>  $args
+     * Extract the operation (first token) from a command string.
+     */
+    private function extractOperation(string $command): string
+    {
+        $trimmed = ltrim($command);
+        $spacePos = strpos($trimmed, ' ');
+
+        return $spacePos !== false ? substr($trimmed, 0, $spacePos) : $trimmed;
+    }
+
+    /**
+     * Check if an operation is read-only.
+     */
+    private function isReadCommand(string $operation): bool
+    {
+        return in_array($operation, self::READ_COMMANDS, true);
+    }
+
+    /**
+     * Build the full CLI command array for Process execution.
+     *
+     * @param  array<int, string>  $tokens  Tokenized command arguments
      * @return array<int, string>
      */
-    private function buildCommand(string $binary, string $operation, array $args): array
+    private function buildCommand(string $binary, array $tokens): array
     {
         $cmd = [$binary];
+
         if (config('runtime.browser.headed', false)) {
             $cmd[] = '--headed';
         }
-        $cmd[] = $operation;
 
-        foreach ($args as $key => $value) {
-            if ($key === 'operation' || $value === null || $value === '') {
-                continue;
-            }
-            if (is_scalar($value)) {
-                $cmd[] = '--'.$key.'='.$value;
+        $session = config('runtime.browser.session_name');
+        if ($session !== null && $session !== '') {
+            $cmd[] = '--session';
+            $cmd[] = $session;
+        }
+
+        return array_merge($cmd, $tokens);
+    }
+
+    /**
+     * Tokenize a command string into arguments, handling quoted strings.
+     *
+     * Supports double quotes ("hello world") and single quotes ('hello world').
+     * Backslash escapes within double-quoted strings are supported.
+     *
+     * @return array<int, string>
+     */
+    public static function tokenizeCommand(string $command): array
+    {
+        $tokens = [];
+        $current = '';
+        $inDouble = false;
+        $inSingle = false;
+        $length = strlen($command);
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $command[$i];
+
+            if ($inDouble) {
+                if ($char === '\\' && $i + 1 < $length) {
+                    $current .= $command[++$i];
+                } elseif ($char === '"') {
+                    $inDouble = false;
+                } else {
+                    $current .= $char;
+                }
+            } elseif ($inSingle) {
+                if ($char === "'") {
+                    $inSingle = false;
+                } else {
+                    $current .= $char;
+                }
+            } elseif ($char === '"') {
+                $inDouble = true;
+            } elseif ($char === "'") {
+                $inSingle = true;
+            } elseif ($char === ' ' || $char === "\t") {
+                if ($current !== '') {
+                    $tokens[] = $current;
+                    $current = '';
+                }
+            } else {
+                $current .= $char;
             }
         }
 
-        return $cmd;
+        if ($current !== '') {
+            $tokens[] = $current;
+        }
+
+        return $tokens;
     }
 
     private function duration(int $startTime): int

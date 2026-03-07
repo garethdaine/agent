@@ -17,6 +17,7 @@ use App\Support\Compliance\LessonsManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AgentRunController extends Controller
 {
@@ -90,7 +91,7 @@ class AgentRunController extends Controller
                         ['key' => '7d', 'label' => 'Last 7 days'],
                     ],
                 ],
-                'metrics' => [
+                'metrics' => array_merge([
                     'runs_today' => $runsToday,
                     'success_rate_percent' => $successRatePercent,
                     'average_duration_ms' => (int) round($windowAverageDurationMs),
@@ -98,7 +99,7 @@ class AgentRunController extends Controller
                     'oldest_queued_age_seconds' => $oldestQueuedAgeSeconds,
                     'window_terminal_total' => $windowTerminalTotal,
                     'window_succeeded_total' => $windowSucceeded,
-                ],
+                ], $this->skillMetrics($windowStart)),
                 'scheduler' => $this->schedulerHealthSnapshot(),
             ],
         ]);
@@ -535,6 +536,43 @@ class AgentRunController extends Controller
             'age_seconds' => $ageSeconds,
             'meta' => $heartbeat->meta_json,
             'projection' => $freshness,
+        ];
+    }
+
+    /**
+     * @return array{skill_failure_rate: float, skill_token_spend: int, skill_escalations: int}
+     */
+    private function skillMetrics(CarbonImmutable $windowStart): array
+    {
+        $skillEvents = DB::table('telemetry_event_ledger')
+            ->where('event_type', 'like', 'skill.%')
+            ->where('ingested_at', '>=', $windowStart)
+            ->get();
+
+        $totalSkillEvents = $skillEvents->count();
+        $failedSkillEvents = $skillEvents->where('event_type', 'skill.failed')->count();
+
+        $skillFailureRate = $totalSkillEvents > 0
+            ? round(($failedSkillEvents / $totalSkillEvents) * 100, 1)
+            : 0.0;
+
+        $skillTokenSpend = $skillEvents->sum(function ($event) {
+            $payload = json_decode($event->payload_json, true);
+
+            return $payload['token_usage'] ?? 0;
+        });
+
+        $skillEscalations = $skillEvents->filter(function ($event) {
+            $payload = json_decode($event->payload_json, true);
+
+            return ($payload['outcome'] ?? '') === 'failed'
+                && ! empty($payload['failure_reason']);
+        })->count();
+
+        return [
+            'skill_failure_rate' => $skillFailureRate,
+            'skill_token_spend' => (int) $skillTokenSpend,
+            'skill_escalations' => $skillEscalations,
         ];
     }
 

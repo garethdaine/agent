@@ -12,6 +12,7 @@ use App\Support\Memory\Contracts\EmbeddingProvider;
 use App\Support\Memory\CoreMemoryManager;
 use App\Support\Memory\ForgettingService;
 use App\Support\Memory\HybridRetriever;
+use App\Support\Memory\MemoryAdapterFactory;
 use App\Support\Memory\MemoryCapabilityResolver;
 use App\Support\Memory\MemoryFormationPipeline;
 use App\Support\Memory\MemorySettingsService;
@@ -101,8 +102,29 @@ class MemoryServiceProvider extends ServiceProvider
             );
         });
 
-        // EmbeddingProvider: Default to NullEmbeddingProvider when no keys configured.
-        // Real adapters can be substituted by MemoryAdapterFactory based on user settings.
+        // MemoryAdapterFactory: Resolves user-specific provider adapters based on
+        // configured API keys and preferences stored via MemorySettingsService.
+        $this->app->singleton(MemoryAdapterFactory::class, function ($app) {
+            return new MemoryAdapterFactory(
+                $app->make(MemorySettingsService::class),
+                $app->make(MemoryCapabilityResolver::class)
+            );
+        });
+
+        // MemoryFormationPipeline: Orchestrates long-term memory formation.
+        // Receives the MemoryAdapterFactory to resolve user-specific providers at runtime.
+        $this->app->singleton(MemoryFormationPipeline::class, function ($app) {
+            return new MemoryFormationPipeline(
+                $app->make(WorkingMemoryBuffer::class),
+                null, // ExtractionProvider resolved per-user via factory
+                null, // EmbeddingProvider resolved per-user via factory
+                $app->make(Neo4jGraphStore::class),
+                $app->make(MemoryAdapterFactory::class)
+            );
+        });
+
+        // EmbeddingProvider: Default to NullEmbeddingProvider for non-pipeline consumers.
+        // The MemoryFormationPipeline resolves real adapters per-user via MemoryAdapterFactory.
         $this->app->singleton(EmbeddingProvider::class, function () {
             return new NullEmbeddingProvider;
         });
