@@ -1,0 +1,31 @@
+{
+    "name": "list-boards",
+    "display_name": "List Boards",
+    "description": "Retrieve a list of boards for the authenticated Trello member.",
+    "method": "GET",
+    "path": "/members/me/boards",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "filter": {"type": "string", "description": "Filter boards: all, closed, members, open, organization, public, starred"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to include"},
+            "lists": {"type": "string", "description": "Include lists: all, closed, none, open"}
+        }
+    },
+    "response_schema": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "name": {"type": "string"},
+                "desc": {"type": "string"},
+                "url": {"type": "string"}
+            }
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

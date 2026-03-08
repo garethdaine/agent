@@ -1,0 +1,38 @@
+{
+    "name": "dropbox",
+    "display_name": "Dropbox",
+    "description": "Cloud file storage and sharing platform for managing files, folders, and shared links.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://www.dropbox.com/oauth2/authorize",
+        "token_url": "https://api.dropboxapi.com/oauth2/token",
+        "scopes": ["files.metadata.read", "files.content.read", "files.content.write", "sharing.read"],
+        "pkce_required": true,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 14400
+    },
+    "base_url": "https://api.dropboxapi.com/2",
+    "rate_limits": {
+        "requests_per_minute": 120,
+        "daily_limit": 100000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "file-storage",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "dropbox",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-folder"],
+    "data_regions": ["US", "EU", "GB", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-folder", "method": "POST", "path": "/files/list_folder"},
+        {"name": "get-metadata", "method": "POST", "path": "/files/get_metadata"},
+        {"name": "search-files", "method": "POST", "path": "/files/search_v2"},
+        {"name": "create-folder", "method": "POST", "path": "/files/create_folder_v2"},
+        {"name": "list-shared-links", "method": "POST", "path": "/sharing/list_shared_links"}
+    ]
+}

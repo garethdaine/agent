@@ -1,0 +1,24 @@
+{
+    "name": "list-landlords",
+    "display_name": "List Landlords",
+    "description": "Retrieve a list of landlords with contact and property ownership details.",
+    "method": "GET",
+    "path": "/landlords",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "landlords": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["name", "email", "phone"]
+}

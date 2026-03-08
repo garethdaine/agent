@@ -1,0 +1,36 @@
+{
+    "name": "connectwise-manage",
+    "display_name": "ConnectWise Manage",
+    "description": "IT service management and professional services automation platform for managed service providers, supporting ticketing, project management, and client lifecycle management.",
+    "version": "1.0.0",
+    "auth_type": "api_key_secret",
+    "auth_config": {
+        "key_field": "clientId",
+        "secret_field": "clientSecret",
+        "header_name": "Authorization",
+        "header_prefix": "Basic"
+    },
+    "base_url": "https://api-na.myconnectwise.net/v4_6_release/apis/3.0",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 50000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "it-service-management",
+    "industries": ["it-msp"],
+    "mcp_tool_prefix": "connectwise",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-ticket"],
+    "data_regions": ["US", "EU", "GB", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-tickets", "method": "GET", "path": "/service/tickets"},
+        {"name": "get-ticket", "method": "GET", "path": "/service/tickets/{ticketId}"},
+        {"name": "create-ticket", "method": "POST", "path": "/service/tickets"},
+        {"name": "list-companies", "method": "GET", "path": "/company/companies"},
+        {"name": "list-configurations", "method": "GET", "path": "/company/configurations"}
+    ]
+}

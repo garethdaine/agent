@@ -1,0 +1,31 @@
+{
+    "name": "search-issues",
+    "display_name": "Search Issues",
+    "description": "Search for Jira issues using JQL (Jira Query Language).",
+    "method": "POST",
+    "path": "/search",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "jql": {"type": "string", "description": "JQL query string"},
+            "startAt": {"type": "integer", "description": "Index of the first result to return"},
+            "maxResults": {"type": "integer", "description": "Maximum number of results to return (max 100)"},
+            "fields": {"type": "array", "items": {"type": "string"}, "description": "List of fields to return"},
+            "expand": {"type": "array", "items": {"type": "string"}, "description": "List of fields to expand"}
+        },
+        "required": ["jql"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "startAt": {"type": "integer"},
+            "maxResults": {"type": "integer"},
+            "total": {"type": "integer"},
+            "issues": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

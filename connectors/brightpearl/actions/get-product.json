@@ -1,0 +1,24 @@
+{
+    "name": "get-product",
+    "display_name": "Get Product",
+    "description": "Retrieve detailed information about a specific product by ID.",
+    "method": "GET",
+    "path": "/product-service/product/{productId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "productId": {"type": "integer", "description": "The ID of the product"}
+        },
+        "required": ["productId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "response": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

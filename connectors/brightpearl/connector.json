@@ -1,0 +1,38 @@
+{
+    "name": "brightpearl",
+    "display_name": "Brightpearl",
+    "description": "Retail operations platform for inventory management, order processing, warehousing, and fulfilment across multiple sales channels.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://oauth.brightpearl.com/authorize",
+        "token_url": "https://oauth.brightpearl.com/token",
+        "scopes": ["read", "write"],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://ws-eu1.brightpearl.com/{account}",
+    "rate_limits": {
+        "requests_per_minute": 200,
+        "daily_limit": 100000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "inventory-management",
+    "industries": ["logistics"],
+    "mcp_tool_prefix": "brightpearl",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": [],
+    "data_regions": ["GB", "EU", "US"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-orders", "method": "GET", "path": "/order-service/order-search"},
+        {"name": "get-order", "method": "GET", "path": "/order-service/order/{orderId}"},
+        {"name": "list-products", "method": "GET", "path": "/product-service/product-search"},
+        {"name": "get-product", "method": "GET", "path": "/product-service/product/{productId}"},
+        {"name": "list-warehouses", "method": "GET", "path": "/warehouse-service/warehouse"}
+    ]
+}

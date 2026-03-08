@@ -1,0 +1,27 @@
+{
+    "name": "list-matters",
+    "display_name": "List Matters",
+    "description": "Retrieve a list of legal matters (cases) with optional filtering by status and responsible attorney.",
+    "method": "GET",
+    "path": "/matters.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "description": "Filter by matter status (e.g. Open, Closed, Pending)"},
+            "responsible_attorney_id": {"type": "integer", "description": "Filter by responsible attorney ID"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to return"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "limit": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

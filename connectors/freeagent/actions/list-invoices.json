@@ -1,0 +1,29 @@
+{
+    "name": "list-invoices",
+    "display_name": "List Invoices",
+    "description": "Retrieve a list of invoices from FreeAgent.",
+    "method": "GET",
+    "path": "/invoices",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "contact": {"type": "string", "description": "Filter by contact URL"},
+            "project": {"type": "string", "description": "Filter by project URL"},
+            "view": {"type": "string", "description": "Filter by status: draft, scheduled, open, overdue, paid"},
+            "from_date": {"type": "string", "description": "Filter invoices from this date (YYYY-MM-DD)"},
+            "to_date": {"type": "string", "description": "Filter invoices to this date (YYYY-MM-DD)"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page (max 100)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "invoices": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

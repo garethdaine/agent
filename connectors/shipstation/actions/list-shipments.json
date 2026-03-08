@@ -1,0 +1,31 @@
+{
+    "name": "list-shipments",
+    "display_name": "List Shipments",
+    "description": "Retrieve a list of shipments from ShipStation.",
+    "method": "GET",
+    "path": "/shipments",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "shipDateStart": {"type": "string", "description": "Filter shipments on or after this date (ISO 8601)"},
+            "shipDateEnd": {"type": "string", "description": "Filter shipments on or before this date (ISO 8601)"},
+            "storeId": {"type": "integer", "description": "Filter by store ID"},
+            "trackingNumber": {"type": "string", "description": "Filter by tracking number"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "pageSize": {"type": "integer", "description": "Number of results per page (max 500)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "shipments": {"type": "array", "items": {"type": "object"}},
+            "total": {"type": "integer"},
+            "page": {"type": "integer"},
+            "pages": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,37 @@
+{
+    "name": "calendly",
+    "display_name": "Calendly",
+    "description": "Online scheduling and appointment booking platform. Manage event types, scheduled events, and invitee information for consulting, recruitment, legal, and accounting firms.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://auth.calendly.com/oauth/authorize",
+        "token_url": "https://auth.calendly.com/oauth/token",
+        "scopes": ["default"],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 7200
+    },
+    "base_url": "https://api.calendly.com",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 10000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "scheduling",
+    "industries": ["consulting", "recruitment", "legal", "accounting"],
+    "mcp_tool_prefix": "calendly",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": [],
+    "data_regions": ["US", "EU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-event-types", "method": "GET", "path": "/event_types"},
+        {"name": "list-scheduled-events", "method": "GET", "path": "/scheduled_events"},
+        {"name": "get-event", "method": "GET", "path": "/scheduled_events/{eventId}"},
+        {"name": "list-invitees", "method": "GET", "path": "/scheduled_events/{eventId}/invitees"}
+    ]
+}

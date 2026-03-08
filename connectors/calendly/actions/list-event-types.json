@@ -1,0 +1,28 @@
+{
+    "name": "list-event-types",
+    "display_name": "List Event Types",
+    "description": "Retrieve a list of available event types configured in the Calendly account.",
+    "method": "GET",
+    "path": "/event_types",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "user": {"type": "string", "description": "User URI to filter event types by owner"},
+            "organization": {"type": "string", "description": "Organization URI to filter event types"},
+            "count": {"type": "integer", "description": "Number of results to return"},
+            "page_token": {"type": "string", "description": "Token for pagination"},
+            "active": {"type": "boolean", "description": "Filter by active status"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "collection": {"type": "array", "items": {"type": "object"}},
+            "pagination": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

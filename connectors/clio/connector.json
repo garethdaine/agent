@@ -1,0 +1,38 @@
+{
+    "name": "clio",
+    "display_name": "Clio",
+    "description": "Cloud-based legal practice management software. Manage matters, contacts, time tracking, billing, and case activities for law firms.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://app.clio.com/oauth/authorize",
+        "token_url": "https://app.clio.com/oauth/token",
+        "scopes": [],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://app.clio.com/api/v4",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 50000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "elevated",
+    "category": "legal-practice-management",
+    "industries": ["legal"],
+    "mcp_tool_prefix": "clio",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": [],
+    "data_regions": ["US", "GB", "AU", "CA"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-matters", "method": "GET", "path": "/matters.json"},
+        {"name": "get-matter", "method": "GET", "path": "/matters/{matterId}.json"},
+        {"name": "list-contacts", "method": "GET", "path": "/contacts.json"},
+        {"name": "list-activities", "method": "GET", "path": "/activities.json"},
+        {"name": "list-bills", "method": "GET", "path": "/bills.json"}
+    ]
+}

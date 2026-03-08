@@ -1,0 +1,35 @@
+{
+    "name": "search-files",
+    "display_name": "Search Files",
+    "description": "Search for files and folders in Dropbox.",
+    "method": "POST",
+    "path": "/files/search_v2",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "The search query string"},
+            "options": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Scope the search to a specific path"},
+                    "max_results": {"type": "integer", "description": "Maximum number of results (max 1000)"},
+                    "file_status": {"type": "string", "description": "Filter by status: active, deleted"},
+                    "filename_only": {"type": "boolean", "description": "Search only filenames"}
+                }
+            }
+        },
+        "required": ["query"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "matches": {"type": "array", "items": {"type": "object"}},
+            "has_more": {"type": "boolean"},
+            "cursor": {"type": "string"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

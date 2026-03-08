@@ -1,0 +1,26 @@
+{
+    "name": "list-candidates",
+    "display_name": "List Candidates",
+    "description": "Retrieve a list of candidates from the Vincere recruitment system with optional filtering.",
+    "method": "GET",
+    "path": "/candidate",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "sort": {"type": "string", "description": "Sort field and direction"},
+            "offset": {"type": "integer", "description": "Offset for pagination"},
+            "limit": {"type": "integer", "description": "Number of results to return"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "result": {"type": "array", "items": {"type": "object"}},
+            "total": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "first_name", "last_name", "phone"]
+}

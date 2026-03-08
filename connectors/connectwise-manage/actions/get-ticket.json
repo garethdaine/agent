@@ -1,0 +1,27 @@
+{
+    "name": "get-ticket",
+    "display_name": "Get Ticket",
+    "description": "Retrieve detailed information about a specific service ticket by ID.",
+    "method": "GET",
+    "path": "/service/tickets/{ticketId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "ticketId": {"type": "integer", "description": "The ID of the service ticket"}
+        },
+        "required": ["ticketId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "integer"},
+            "summary": {"type": "string"},
+            "status": {"type": "object"},
+            "company": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

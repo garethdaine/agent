@@ -1,0 +1,26 @@
+{
+    "name": "list-time-entries",
+    "display_name": "List Time Entries",
+    "description": "Retrieve a list of time entries recorded against a specific legal matter.",
+    "method": "GET",
+    "path": "/matters/{matterId}/time-entries",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "matterId": {"type": "string", "description": "The unique identifier of the matter"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        },
+        "required": ["matterId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "time_entries": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

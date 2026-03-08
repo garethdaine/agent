@@ -1,0 +1,35 @@
+{
+    "name": "carelinelive",
+    "display_name": "CareLineLive",
+    "description": "Home care management platform for domiciliary care providers, supporting client management, visit scheduling, carer coordination, and compliance tracking.",
+    "version": "1.0.0",
+    "status": "partnership_pending",
+    "partnership_notes": "Requires formal partnership agreement with CareLineLive. Contact partnerships@carelinelive.com for API access.",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": "Bearer"
+    },
+    "base_url": "https://api.carelinelive.com/v1",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 10000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "elevated",
+    "category": "care-management",
+    "industries": ["healthcare"],
+    "mcp_tool_prefix": "carelinelive",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": [],
+    "data_regions": ["GB"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-clients", "method": "GET", "path": "/clients"},
+        {"name": "get-client", "method": "GET", "path": "/clients/{clientId}"},
+        {"name": "list-visits", "method": "GET", "path": "/visits"},
+        {"name": "list-carers", "method": "GET", "path": "/carers"}
+    ]
+}

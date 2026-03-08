@@ -1,0 +1,33 @@
+{
+    "name": "create-folder",
+    "display_name": "Create Folder",
+    "description": "Create a new folder in Dropbox.",
+    "method": "POST",
+    "path": "/files/create_folder_v2",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "path": {"type": "string", "description": "The path of the folder to create"},
+            "autorename": {"type": "boolean", "description": "Whether to auto-rename if a conflict exists"}
+        },
+        "required": ["path"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "metadata": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "path_lower": {"type": "string"},
+                    "path_display": {"type": "string"},
+                    "id": {"type": "string"}
+                }
+            }
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

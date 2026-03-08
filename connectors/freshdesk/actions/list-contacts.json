@@ -1,0 +1,26 @@
+{
+    "name": "list-contacts",
+    "display_name": "List Contacts",
+    "description": "Retrieve a paginated list of contacts in Freshdesk.",
+    "method": "GET",
+    "path": "/contacts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"},
+            "email": {"type": "string", "description": "Filter by email address"},
+            "phone": {"type": "string", "description": "Filter by phone number"},
+            "company_id": {"type": "integer", "description": "Filter by company ID"},
+            "updated_since": {"type": "string", "description": "Return contacts updated since this date (ISO 8601)"}
+        }
+    },
+    "response_schema": {
+        "type": "array",
+        "items": {"type": "object"}
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "name", "phone"]
+}

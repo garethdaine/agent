@@ -1,0 +1,28 @@
+{
+    "name": "list-users",
+    "display_name": "List Users",
+    "description": "Retrieve a paginated list of users in Zendesk, including agents, end-users, and admins.",
+    "method": "GET",
+    "path": "/users.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page (max 100)"},
+            "role": {"type": "string", "enum": ["end-user", "agent", "admin"], "description": "Filter by user role"},
+            "query": {"type": "string", "description": "Search query to filter users by name or email"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "users": {"type": "array", "items": {"type": "object"}},
+            "next_page": {"type": "string"},
+            "count": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "name", "phone"]
+}

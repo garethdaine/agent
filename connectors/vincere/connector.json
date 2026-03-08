@@ -1,0 +1,33 @@
+{
+    "name": "vincere",
+    "display_name": "Vincere",
+    "description": "Recruitment operating system for staffing and executive search firms. Manage candidates, jobs, companies, and contacts across the recruitment pipeline.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "x-api-key",
+        "header_prefix": ""
+    },
+    "base_url": "https://{domain}.vincere.io/api/v2",
+    "rate_limits": {
+        "requests_per_minute": 120,
+        "daily_limit": 50000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "recruitment",
+    "industries": ["recruitment"],
+    "mcp_tool_prefix": "vincere",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": [],
+    "data_regions": ["GB", "EU", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-candidates", "method": "GET", "path": "/candidate"},
+        {"name": "list-jobs", "method": "GET", "path": "/position/search"},
+        {"name": "list-companies", "method": "GET", "path": "/company"},
+        {"name": "list-contacts", "method": "GET", "path": "/contact"}
+    ]
+}

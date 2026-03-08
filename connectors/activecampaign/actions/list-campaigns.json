@@ -1,0 +1,26 @@
+{
+    "name": "list-campaigns",
+    "display_name": "List Campaigns",
+    "description": "Retrieve a list of email campaigns with optional filtering by status.",
+    "method": "GET",
+    "path": "/campaigns",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of results to return"},
+            "offset": {"type": "integer", "description": "Number of results to skip"},
+            "orders[sdate]": {"type": "string", "enum": ["ASC", "DESC"], "description": "Sort by send date"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "campaigns": {"type": "array", "items": {"type": "object"}},
+            "meta": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

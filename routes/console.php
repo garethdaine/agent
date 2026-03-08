@@ -115,6 +115,12 @@ Schedule::job(new \App\Jobs\Connectors\RefreshConnectorCredentialsJob)
     ->withoutOverlapping()
     ->when(fn () => config('connectors.credential_refresh'));
 
+// Prune old connector telemetry (daily at 03:00 when connectors enabled)
+Schedule::command('connector:prune-telemetry')
+    ->dailyAt('03:00')
+    ->withoutOverlapping()
+    ->when(fn () => config('connectors.enabled'));
+
 // Projection auto-maintenance: activate parity-passed builds and trigger rebuilds when stale
 Schedule::call(fn () => app(\App\Services\Telemetry\ProjectionBuildManager::class)->autoMaintain(
     app(\App\Services\Telemetry\ActiveBuildFreshnessService::class),

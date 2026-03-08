@@ -1,0 +1,29 @@
+{
+    "name": "list-members",
+    "display_name": "List Members",
+    "description": "Retrieve members of a specific audience list with optional filtering by status.",
+    "method": "GET",
+    "path": "/lists/{listId}/members",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "listId": {"type": "string", "description": "The unique identifier of the audience list"},
+            "count": {"type": "integer", "description": "Number of results to return (max 1000)"},
+            "offset": {"type": "integer", "description": "Number of results to skip"},
+            "status": {"type": "string", "enum": ["subscribed", "unsubscribed", "cleaned", "pending", "transactional"], "description": "Filter by subscription status"},
+            "since_last_changed": {"type": "string", "description": "Filter by last changed date (ISO 8601)"}
+        },
+        "required": ["listId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "members": {"type": "array", "items": {"type": "object"}},
+            "total_items": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email_address", "merge_fields.FNAME", "merge_fields.LNAME"]
+}

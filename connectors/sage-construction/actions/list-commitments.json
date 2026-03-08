@@ -1,0 +1,27 @@
+{
+    "name": "list-commitments",
+    "display_name": "List Commitments",
+    "description": "Retrieve commitments (subcontracts, purchase orders) associated with a specific construction project.",
+    "method": "GET",
+    "path": "/projects/{projectId}/commitments",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "projectId": {"type": "string", "description": "The unique identifier of the project"},
+            "type": {"type": "string", "description": "Filter by commitment type (e.g. subcontract, purchase_order)"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        },
+        "required": ["projectId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "commitments": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

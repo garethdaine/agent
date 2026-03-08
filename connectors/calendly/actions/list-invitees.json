@@ -1,0 +1,29 @@
+{
+    "name": "list-invitees",
+    "display_name": "List Invitees",
+    "description": "Retrieve a list of invitees for a specific scheduled event.",
+    "method": "GET",
+    "path": "/scheduled_events/{eventId}/invitees",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "eventId": {"type": "string", "description": "The unique identifier of the scheduled event"},
+            "count": {"type": "integer", "description": "Number of results to return"},
+            "page_token": {"type": "string", "description": "Token for pagination"},
+            "status": {"type": "string", "enum": ["active", "canceled"], "description": "Filter by invitee status"},
+            "sort": {"type": "string", "enum": ["created_at:asc", "created_at:desc"], "description": "Sort order"}
+        },
+        "required": ["eventId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "collection": {"type": "array", "items": {"type": "object"}},
+            "pagination": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "name"]
+}

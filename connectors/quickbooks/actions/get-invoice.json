@@ -1,0 +1,24 @@
+{
+    "name": "get-invoice",
+    "display_name": "Get Invoice",
+    "description": "Retrieve a specific invoice from QuickBooks by ID.",
+    "method": "GET",
+    "path": "/invoice/{invoiceId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "invoiceId": {"type": "string", "description": "The ID of the invoice to retrieve"}
+        },
+        "required": ["invoiceId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "Invoice": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

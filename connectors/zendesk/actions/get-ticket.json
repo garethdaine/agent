@@ -1,0 +1,24 @@
+{
+    "name": "get-ticket",
+    "display_name": "Get Ticket",
+    "description": "Retrieve detailed information about a specific support ticket by its ID.",
+    "method": "GET",
+    "path": "/tickets/{ticketId}.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "ticketId": {"type": "integer", "description": "The unique identifier of the ticket"}
+        },
+        "required": ["ticketId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "ticket": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

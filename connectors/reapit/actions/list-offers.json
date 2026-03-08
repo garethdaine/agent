@@ -1,0 +1,27 @@
+{
+    "name": "list-offers",
+    "display_name": "List Offers",
+    "description": "Retrieve a list of property offers with optional filtering by status and property.",
+    "method": "GET",
+    "path": "/offers",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "propertyId": {"type": "string", "description": "Filter offers by property identifier"},
+            "status": {"type": "string", "description": "Filter by offer status (e.g. pending, accepted, rejected)"},
+            "pageNumber": {"type": "integer", "description": "Page number for pagination"},
+            "pageSize": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "_embedded": {"type": "array", "items": {"type": "object"}},
+            "totalCount": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

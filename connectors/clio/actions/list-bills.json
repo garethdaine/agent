@@ -1,0 +1,27 @@
+{
+    "name": "list-bills",
+    "display_name": "List Bills",
+    "description": "Retrieve a list of bills (invoices) generated for legal matters.",
+    "method": "GET",
+    "path": "/bills.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "matter_id": {"type": "integer", "description": "Filter bills by matter ID"},
+            "status": {"type": "string", "description": "Filter by bill status (e.g. draft, awaiting_payment, paid)"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to return"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "limit": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

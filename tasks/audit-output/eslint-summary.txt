@@ -1,0 +1,10 @@
+  2:34  warning  'BoxGeometry' is defined but never used       no-unused-vars
+  3:44  warning  'AdditiveBlending' is defined but never used  no-unused-vars
+  4:5   warning  'Color' is defined but never used             no-unused-vars
+
+/Users/garethdaine/Code/agent/resources/js/Support/agentRunEventFormatting.js
+   289:60  error    Unnecessary escape character: \[                      no-useless-escape
+  1535:7   warning  'safeDisplayText' is assigned a value but never used  no-unused-vars
+
+✖ 19 problems (2 errors, 17 warnings)
+

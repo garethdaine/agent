@@ -1,0 +1,26 @@
+{
+    "name": "get-client",
+    "display_name": "Get Client",
+    "description": "Retrieve detailed information about a specific care client by ID.",
+    "method": "GET",
+    "path": "/clients/{clientId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "clientId": {"type": "string", "description": "The unique identifier of the client"}
+        },
+        "required": ["clientId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string"},
+            "status": {"type": "string"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["name", "email", "phone", "address"]
+}

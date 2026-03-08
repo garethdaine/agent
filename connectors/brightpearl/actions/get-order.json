@@ -1,0 +1,24 @@
+{
+    "name": "get-order",
+    "display_name": "Get Order",
+    "description": "Retrieve detailed information about a specific order by ID.",
+    "method": "GET",
+    "path": "/order-service/order/{orderId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "orderId": {"type": "integer", "description": "The ID of the order"}
+        },
+        "required": ["orderId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "response": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

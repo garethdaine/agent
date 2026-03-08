@@ -1,0 +1,27 @@
+{
+    "name": "list-jobs",
+    "display_name": "List Jobs",
+    "description": "Search and retrieve a list of job positions from the Vincere recruitment system.",
+    "method": "GET",
+    "path": "/position/search",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "keyword": {"type": "string", "description": "Keyword search query for filtering positions"},
+            "status": {"type": "string", "description": "Filter by position status"},
+            "offset": {"type": "integer", "description": "Offset for pagination"},
+            "limit": {"type": "integer", "description": "Number of results to return"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "result": {"type": "array", "items": {"type": "object"}},
+            "total": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

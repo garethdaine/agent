@@ -1,0 +1,26 @@
+{
+    "name": "list-cost-codes",
+    "display_name": "List Cost Codes",
+    "description": "Retrieve cost codes associated with a specific construction project for budget tracking and categorisation.",
+    "method": "GET",
+    "path": "/projects/{projectId}/cost-codes",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "projectId": {"type": "string", "description": "The unique identifier of the project"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        },
+        "required": ["projectId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "cost_codes": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

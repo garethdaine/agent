@@ -617,7 +617,14 @@ const timelineEntryKindClass = (entry) => {
 
     return 'border-border bg-muted/10';
 };
-const timelineEntryText = (entry) => String(entry?.text ?? '').trim();
+const timelineEntryText = (entry) => {
+    const raw = entry?.text ?? '';
+    if (typeof raw === 'string') return raw.trim();
+    if (raw && typeof raw === 'object') {
+        try { return JSON.stringify(raw); } catch { return '[unprintable]'; }
+    }
+    return String(raw).trim();
+};
 const timelineEntryDisplayFormat = (entry) => String(entry?.displayFormat ?? 'text').trim().toLowerCase() || 'text';
 const isTimelineEntryExpandable = (entry) => {
     if (timelineEntryDisplayFormat(entry) === 'markdown') {

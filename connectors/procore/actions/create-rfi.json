@@ -1,0 +1,41 @@
+{
+    "name": "create-rfi",
+    "display_name": "Create RFI",
+    "description": "Create a new Request for Information (RFI) in a Procore project.",
+    "method": "POST",
+    "path": "/projects/{projectId}/rfis",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "projectId": {"type": "integer", "description": "The ID of the project"},
+            "rfi": {
+                "type": "object",
+                "properties": {
+                    "subject": {"type": "string", "description": "Subject line of the RFI"},
+                    "question": {"type": "string", "description": "The question being asked"},
+                    "assignee_id": {"type": "integer", "description": "User ID of the person responsible for answering"},
+                    "rfi_manager_id": {"type": "integer", "description": "User ID of the RFI manager"},
+                    "due_date": {"type": "string", "description": "Due date for the response (ISO 8601)"},
+                    "priority": {"type": "string", "description": "Priority level (e.g. low, normal, high, urgent)"},
+                    "cost_impact": {"type": "string", "description": "Cost impact assessment"},
+                    "schedule_impact": {"type": "string", "description": "Schedule impact assessment"}
+                },
+                "required": ["subject", "assignee_id"]
+            }
+        },
+        "required": ["projectId", "rfi"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "integer"},
+            "number": {"type": "integer"},
+            "subject": {"type": "string"},
+            "status": {"type": "string"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

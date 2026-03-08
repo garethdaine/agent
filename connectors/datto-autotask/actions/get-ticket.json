@@ -1,0 +1,24 @@
+{
+    "name": "get-ticket",
+    "display_name": "Get Ticket",
+    "description": "Retrieve detailed information about a specific Autotask ticket by ID.",
+    "method": "GET",
+    "path": "/Tickets/{ticketId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "ticketId": {"type": "integer", "description": "The ID of the ticket"}
+        },
+        "required": ["ticketId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "item": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,24 @@
+{
+    "name": "get-policy",
+    "display_name": "Get Policy",
+    "description": "Retrieve detailed information about a specific insurance policy by its unique identifier.",
+    "method": "GET",
+    "path": "/policies/{policyId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "policyId": {"type": "string", "description": "The unique identifier of the policy"}
+        },
+        "required": ["policyId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "policy": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["policyholder.name", "policyholder.email", "policyholder.address"]
+}

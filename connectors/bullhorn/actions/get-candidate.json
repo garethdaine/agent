@@ -1,0 +1,25 @@
+{
+    "name": "get-candidate",
+    "display_name": "Get Candidate",
+    "description": "Retrieve detailed information about a specific candidate by their unique identifier.",
+    "method": "GET",
+    "path": "/entity/Candidate/{candidateId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "candidateId": {"type": "integer", "description": "The unique identifier of the candidate"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to return"}
+        },
+        "required": ["candidateId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "firstName", "lastName", "phone", "address"]
+}

@@ -1,0 +1,33 @@
+{
+    "name": "brighthr",
+    "display_name": "BrightHR",
+    "description": "Cloud-based HR software for managing employee records, absences, and scheduling. Designed for hospitality, retail, care, and facilities management businesses.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": "Bearer"
+    },
+    "base_url": "https://api.brighthr.com/v1",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 10000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "hr",
+    "industries": ["hospitality", "retail", "care", "facilities"],
+    "mcp_tool_prefix": "brighthr",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-absence"],
+    "data_regions": ["GB"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-employees", "method": "GET", "path": "/employees"},
+        {"name": "get-employee", "method": "GET", "path": "/employees/{employeeId}"},
+        {"name": "list-absences", "method": "GET", "path": "/absences"},
+        {"name": "create-absence", "method": "POST", "path": "/absences"}
+    ]
+}

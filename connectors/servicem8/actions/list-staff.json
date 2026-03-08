@@ -1,0 +1,23 @@
+{
+    "name": "list-staff",
+    "display_name": "List Staff",
+    "description": "Retrieve a list of staff members from ServiceM8.",
+    "method": "GET",
+    "path": "/staff.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "$filter": {"type": "string", "description": "OData filter expression"},
+            "$top": {"type": "integer", "description": "Maximum number of records to return"},
+            "$skip": {"type": "integer", "description": "Number of records to skip for pagination"}
+        }
+    },
+    "response_schema": {
+        "type": "array",
+        "items": {"type": "object"}
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "first", "last", "mobile"]
+}

@@ -1,0 +1,31 @@
+{
+    "name": "list-scheduled-events",
+    "display_name": "List Scheduled Events",
+    "description": "Retrieve a list of scheduled events with optional filtering by date range and status.",
+    "method": "GET",
+    "path": "/scheduled_events",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "user": {"type": "string", "description": "User URI to filter events by owner"},
+            "organization": {"type": "string", "description": "Organization URI to filter events"},
+            "count": {"type": "integer", "description": "Number of results to return"},
+            "page_token": {"type": "string", "description": "Token for pagination"},
+            "min_start_time": {"type": "string", "description": "Filter events starting after this time (ISO 8601)"},
+            "max_start_time": {"type": "string", "description": "Filter events starting before this time (ISO 8601)"},
+            "status": {"type": "string", "enum": ["active", "canceled"], "description": "Filter by event status"},
+            "sort": {"type": "string", "enum": ["start_time:asc", "start_time:desc"], "description": "Sort order"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "collection": {"type": "array", "items": {"type": "object"}},
+            "pagination": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

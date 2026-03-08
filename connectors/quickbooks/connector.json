@@ -1,0 +1,39 @@
+{
+    "name": "quickbooks",
+    "display_name": "QuickBooks",
+    "description": "Cloud accounting software for small and mid-sized businesses, managing invoices, expenses, customers, and financial accounts.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://appcenter.intuit.com/connect/oauth2",
+        "token_url": "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+        "scopes": ["com.intuit.quickbooks.accounting"],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://quickbooks.api.intuit.com/v3/company/{realmId}",
+    "rate_limits": {
+        "requests_per_minute": 500,
+        "daily_limit": 500000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "elevated",
+    "category": "accounting",
+    "industries": ["accounting", "consulting"],
+    "mcp_tool_prefix": "quickbooks",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["create-invoice", "create-customer"],
+    "data_regions": ["US", "GB", "AU", "CA"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-invoices", "method": "GET", "path": "/query?query=SELECT * FROM Invoice"},
+        {"name": "get-invoice", "method": "GET", "path": "/invoice/{invoiceId}"},
+        {"name": "create-invoice", "method": "POST", "path": "/invoice"},
+        {"name": "list-customers", "method": "GET", "path": "/query?query=SELECT * FROM Customer"},
+        {"name": "create-customer", "method": "POST", "path": "/customer"},
+        {"name": "list-accounts", "method": "GET", "path": "/query?query=SELECT * FROM Account"}
+    ]
+}

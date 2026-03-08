@@ -1,0 +1,31 @@
+{
+    "name": "create-ticket",
+    "display_name": "Create Ticket",
+    "description": "Create a new service ticket in ConnectWise Manage.",
+    "method": "POST",
+    "path": "/service/tickets",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string", "description": "Short summary of the ticket"},
+            "company": {"type": "object", "properties": {"id": {"type": "integer"}}, "required": ["id"], "description": "Company associated with the ticket"},
+            "board": {"type": "object", "properties": {"id": {"type": "integer"}}, "description": "Service board for the ticket"},
+            "status": {"type": "object", "properties": {"name": {"type": "string"}}, "description": "Initial status of the ticket"},
+            "priority": {"type": "object", "properties": {"id": {"type": "integer"}}, "description": "Priority level"},
+            "initialDescription": {"type": "string", "description": "Initial description or notes for the ticket"}
+        },
+        "required": ["summary", "company"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "integer"},
+            "summary": {"type": "string"},
+            "status": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

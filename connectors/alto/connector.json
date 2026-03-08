@@ -1,0 +1,35 @@
+{
+    "name": "alto",
+    "display_name": "Alto",
+    "description": "Property management and lettings software by Vebra Solutions. Manage properties, tenancies, and landlord relationships for estate agents and letting agencies.",
+    "version": "1.0.0",
+    "status": "partnership_pending",
+    "partnership_notes": "Requires approved partner status with Alto (Vebra Solutions). Contact partners@alto.co.uk for API access credentials.",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": "Bearer"
+    },
+    "base_url": "https://api.alto.co.uk/v1",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 10000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "property-management",
+    "industries": ["property"],
+    "mcp_tool_prefix": "alto",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": [],
+    "data_regions": ["GB"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-properties", "method": "GET", "path": "/properties"},
+        {"name": "get-property", "method": "GET", "path": "/properties/{propertyId}"},
+        {"name": "list-tenancies", "method": "GET", "path": "/tenancies"},
+        {"name": "list-landlords", "method": "GET", "path": "/landlords"}
+    ]
+}

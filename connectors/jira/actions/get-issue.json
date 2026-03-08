@@ -1,0 +1,28 @@
+{
+    "name": "get-issue",
+    "display_name": "Get Issue",
+    "description": "Retrieve detailed information about a specific Jira issue by ID or key.",
+    "method": "GET",
+    "path": "/issue/{issueIdOrKey}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "issueIdOrKey": {"type": "string", "description": "The ID or key of the issue (e.g. PROJ-123)"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to return"},
+            "expand": {"type": "string", "description": "Comma-separated list of fields to expand"}
+        },
+        "required": ["issueIdOrKey"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "key": {"type": "string"},
+            "fields": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,33 @@
+{
+    "name": "sage-construction",
+    "display_name": "Sage Construction",
+    "description": "Construction project management and accounting software. Manage projects, cost codes, and commitments for construction businesses.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": "Bearer"
+    },
+    "base_url": "https://api.sage.com/construction/v1",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 30000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "elevated",
+    "category": "construction-management",
+    "industries": ["construction"],
+    "mcp_tool_prefix": "sageconstruction",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": [],
+    "data_regions": ["US", "GB"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-projects", "method": "GET", "path": "/projects"},
+        {"name": "get-project", "method": "GET", "path": "/projects/{projectId}"},
+        {"name": "list-cost-codes", "method": "GET", "path": "/projects/{projectId}/cost-codes"},
+        {"name": "list-commitments", "method": "GET", "path": "/projects/{projectId}/commitments"}
+    ]
+}

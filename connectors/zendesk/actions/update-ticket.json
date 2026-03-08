@@ -1,0 +1,40 @@
+{
+    "name": "update-ticket",
+    "display_name": "Update Ticket",
+    "description": "Update an existing support ticket in Zendesk.",
+    "method": "PUT",
+    "path": "/tickets/{ticketId}.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "ticketId": {"type": "integer", "description": "The unique identifier of the ticket"},
+            "ticket": {
+                "type": "object",
+                "properties": {
+                    "status": {"type": "string", "enum": ["new", "open", "pending", "hold", "solved", "closed"], "description": "Ticket status"},
+                    "priority": {"type": "string", "enum": ["urgent", "high", "normal", "low"], "description": "Ticket priority level"},
+                    "assignee_id": {"type": "integer", "description": "ID of the agent to assign the ticket to"},
+                    "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags to apply to the ticket"},
+                    "comment": {
+                        "type": "object",
+                        "properties": {
+                            "body": {"type": "string", "description": "Comment body text"},
+                            "public": {"type": "boolean", "description": "Whether the comment is public"}
+                        }
+                    }
+                }
+            }
+        },
+        "required": ["ticketId", "ticket"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "ticket": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": true,
+    "pii_fields": []
+}

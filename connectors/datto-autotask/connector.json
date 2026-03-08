@@ -1,0 +1,33 @@
+{
+    "name": "datto-autotask",
+    "display_name": "Datto Autotask",
+    "description": "Professional services automation and IT service management platform for managed service providers, supporting ticketing, CRM, and resource management.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "ApiIntegrationCode",
+        "header_prefix": ""
+    },
+    "base_url": "https://webservices.autotask.net/atservicesrest/v1.0",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 30000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "it-service-management",
+    "industries": ["it-msp"],
+    "mcp_tool_prefix": "autotask",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-ticket"],
+    "data_regions": ["US", "EU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-tickets", "method": "GET", "path": "/Tickets/query"},
+        {"name": "get-ticket", "method": "GET", "path": "/Tickets/{ticketId}"},
+        {"name": "create-ticket", "method": "POST", "path": "/Tickets"},
+        {"name": "list-companies", "method": "GET", "path": "/Companies/query"}
+    ]
+}

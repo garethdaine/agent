@@ -46,6 +46,10 @@ class MemoryProviderUsage extends Model
 
     public const OPERATION_IMPORTANCE_SCORING = 'importance_scoring';
 
+    public const OPERATION_CLI_EXECUTION = 'cli_execution';
+
+    public const PROVIDER_UNKNOWN = 'unknown';
+
     protected function casts(): array
     {
         return [
@@ -181,16 +185,53 @@ class MemoryProviderUsage extends Model
     }
 
     /**
-     * Get aggregated usage statistics for a user.
+     * Resolve provider name from a model identifier.
+     */
+    public static function resolveProviderFromModel(string $model): string
+    {
+        $model = strtolower(trim($model));
+
+        if ($model === '' || $model === 'unknown') {
+            return self::PROVIDER_UNKNOWN;
+        }
+
+        // Anthropic models
+        if (str_starts_with($model, 'claude-') || str_starts_with($model, 'claude_')) {
+            return self::PROVIDER_ANTHROPIC;
+        }
+
+        // OpenAI models
+        if (str_starts_with($model, 'gpt-')
+            || str_starts_with($model, 'o1-')
+            || str_starts_with($model, 'o3-')
+            || str_starts_with($model, 'o4-')
+            || str_starts_with($model, 'text-embedding-')
+            || str_starts_with($model, 'chatgpt-')) {
+            return self::PROVIDER_OPENAI;
+        }
+
+        return self::PROVIDER_UNKNOWN;
+    }
+
+    /**
+     * Get aggregated usage statistics for a user, optionally filtering by operation type.
      *
      * @return array{total_tokens: int, total_cost: float, by_provider: array<string, array{tokens: int, cost: float}>}
      */
-    public static function getUsageStats(int $userId, ?\DateTimeInterface $since = null): array
+    public static function getUsageStats(int $userId, ?\DateTimeInterface $since = null, ?string $excludeOperation = null, ?string $onlyOperation = null): array
     {
         $query = static::query()->forUser($userId);
 
         if ($since) {
             $query->where('created_at', '>=', $since);
+        }
+
+        if ($excludeOperation !== null) {
+            $query->where('operation', '!=', $excludeOperation);
+        }
+
+        if ($onlyOperation !== null) {
+            $query->where('operation', $onlyOperation);
         }
 
         $records = $query->get();

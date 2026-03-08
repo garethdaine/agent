@@ -18488,7 +18488,7 @@
                                             "type": "string",
                                             "format": "binary",
                                             "contentMediaType": "application\/octet-stream",
-                                            "maxLength": 1024
+                                            "maxLength": 2048
                                         },
                                         "maxItems": 20
                                     }
@@ -29588,6 +29588,103 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/services": {
+            "get": {
+                "operationId": "serviceManager.index",
+                "tags": [
+                    "ServiceManager"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/services\/restart": {
+            "post": {
+                "operationId": "serviceManager.restart",
+                "tags": [
+                    "ServiceManager"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "service": {
+                                        "type": "string",
+                                        "maxLength": 50
+                                    }
+                                },
+                                "required": [
+                                    "service"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": "Only administrators can restart services."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#\/components\/responses\/ValidationException"
                     },
                     "401": {
                         "$ref": "#\/components\/responses\/AuthenticationException"

@@ -1,0 +1,31 @@
+{
+    "name": "create-candidate",
+    "display_name": "Create Candidate",
+    "description": "Create a new candidate record in the Bullhorn ATS with personal and professional details.",
+    "method": "POST",
+    "path": "/entity/Candidate",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "firstName": {"type": "string", "description": "Candidate first name"},
+            "lastName": {"type": "string", "description": "Candidate last name"},
+            "email": {"type": "string", "description": "Candidate email address"},
+            "phone": {"type": "string", "description": "Candidate phone number"},
+            "name": {"type": "string", "description": "Full name of the candidate"},
+            "status": {"type": "string", "description": "Candidate status"},
+            "source": {"type": "string", "description": "Source of the candidate record"}
+        },
+        "required": ["firstName", "lastName"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "changedEntityId": {"type": "integer"},
+            "changeType": {"type": "string"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["email", "firstName", "lastName", "phone"]
+}

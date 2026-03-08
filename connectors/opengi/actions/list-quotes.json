@@ -1,0 +1,26 @@
+{
+    "name": "list-quotes",
+    "display_name": "List Quotes",
+    "description": "Retrieve a list of insurance quotes with optional filtering by status and product type.",
+    "method": "GET",
+    "path": "/quotes",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "description": "Filter by quote status (e.g. open, accepted, expired)"},
+            "product": {"type": "string", "description": "Filter by product type"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "quotes": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

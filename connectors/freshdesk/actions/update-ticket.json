@@ -1,0 +1,27 @@
+{
+    "name": "update-ticket",
+    "display_name": "Update Ticket",
+    "description": "Update an existing support ticket in Freshdesk.",
+    "method": "PUT",
+    "path": "/tickets/{ticketId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "ticketId": {"type": "integer", "description": "The unique identifier of the ticket"},
+            "subject": {"type": "string", "description": "Updated ticket subject"},
+            "description": {"type": "string", "description": "Updated ticket description"},
+            "priority": {"type": "integer", "enum": [1, 2, 3, 4], "description": "Priority: 1=Low, 2=Medium, 3=High, 4=Urgent"},
+            "status": {"type": "integer", "enum": [2, 3, 4, 5], "description": "Status: 2=Open, 3=Pending, 4=Resolved, 5=Closed"},
+            "responder_id": {"type": "integer", "description": "ID of the agent to assign the ticket to"},
+            "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags to apply to the ticket"}
+        },
+        "required": ["ticketId"]
+    },
+    "response_schema": {
+        "type": "object"
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": true,
+    "pii_fields": []
+}

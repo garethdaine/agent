@@ -1,0 +1,29 @@
+{
+    "name": "create-ticket",
+    "display_name": "Create Ticket",
+    "description": "Create a new support ticket in Freshdesk.",
+    "method": "POST",
+    "path": "/tickets",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "subject": {"type": "string", "description": "Ticket subject line"},
+            "description": {"type": "string", "description": "HTML content of the ticket"},
+            "email": {"type": "string", "description": "Email address of the requester"},
+            "name": {"type": "string", "description": "Name of the requester"},
+            "phone": {"type": "string", "description": "Phone number of the requester"},
+            "priority": {"type": "integer", "enum": [1, 2, 3, 4], "description": "Priority: 1=Low, 2=Medium, 3=High, 4=Urgent"},
+            "status": {"type": "integer", "enum": [2, 3, 4, 5], "description": "Status: 2=Open, 3=Pending, 4=Resolved, 5=Closed"},
+            "type": {"type": "string", "description": "Ticket type (e.g. Question, Incident, Problem)"},
+            "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags to apply to the ticket"}
+        },
+        "required": ["subject", "description", "email", "priority", "status"]
+    },
+    "response_schema": {
+        "type": "object"
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["email", "name", "phone"]
+}

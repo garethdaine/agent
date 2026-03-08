@@ -82,6 +82,10 @@ Route::middleware([AgentApiVersionHeader::class])
         Route::get('/connectors/callback', Connectors\ConnectorOAuthCallbackController::class)
             ->name('connectors.oauth.callback');
 
+        // Connector webhook ingestion (no auth — signature verified in controller)
+        Route::post('/connectors/{connectorName}/webhooks/{event}', Connectors\ConnectorWebhookController::class)
+            ->name('connectors.webhook.ingest');
+
         Route::middleware(['auth:sanctum', 'license'])->group(function (): void {
             Route::get('/jobs', [AgentJobController::class, 'index']);
             Route::get('/jobs/{id}', [AgentJobController::class, 'show']);

@@ -1,0 +1,24 @@
+{
+    "name": "get-employee",
+    "display_name": "Get Employee",
+    "description": "Retrieve detailed information about a specific employee by their ID.",
+    "method": "GET",
+    "path": "/employees/{employeeId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "employeeId": {"type": "string", "description": "The unique identifier of the employee"}
+        },
+        "required": ["employeeId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "employee": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

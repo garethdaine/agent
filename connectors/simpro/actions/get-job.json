@@ -1,0 +1,28 @@
+{
+    "name": "get-job",
+    "display_name": "Get Job",
+    "description": "Retrieve detailed information about a specific job by ID.",
+    "method": "GET",
+    "path": "/companies/{companyId}/jobs/{jobId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "companyId": {"type": "integer", "description": "The ID of the company"},
+            "jobId": {"type": "integer", "description": "The ID of the job"}
+        },
+        "required": ["companyId", "jobId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "ID": {"type": "integer"},
+            "Name": {"type": "string"},
+            "Status": {"type": "string"},
+            "Site": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,25 @@
+{
+    "name": "list-projects",
+    "display_name": "List Projects",
+    "description": "Retrieve a list of construction projects from Procore.",
+    "method": "GET",
+    "path": "/projects",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "company_id": {"type": "integer", "description": "The ID of the company"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page (max 100)"},
+            "filters[by_status]": {"type": "string", "description": "Filter by project status (e.g. Active, Inactive)"}
+        },
+        "required": ["company_id"]
+    },
+    "response_schema": {
+        "type": "array",
+        "items": {"type": "object"}
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

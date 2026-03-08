@@ -1,0 +1,32 @@
+{
+    "name": "create-card",
+    "display_name": "Create Card",
+    "description": "Create a new card on a Trello list.",
+    "method": "POST",
+    "path": "/cards",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "idList": {"type": "string", "description": "The ID of the list to create the card in"},
+            "name": {"type": "string", "description": "The name of the card"},
+            "desc": {"type": "string", "description": "The description of the card"},
+            "pos": {"type": "string", "description": "Position of the card: top, bottom, or a positive float"},
+            "due": {"type": "string", "description": "Due date in ISO 8601 format"},
+            "idMembers": {"type": "string", "description": "Comma-separated list of member IDs to assign"},
+            "idLabels": {"type": "string", "description": "Comma-separated list of label IDs"}
+        },
+        "required": ["idList", "name"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string"},
+            "url": {"type": "string"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

@@ -1,0 +1,29 @@
+{
+    "name": "list-products",
+    "display_name": "List Products",
+    "description": "Retrieve a list of products from the Shopify store.",
+    "method": "GET",
+    "path": "/products.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of results to return (max 250)"},
+            "page_info": {"type": "string", "description": "Cursor for pagination"},
+            "status": {"type": "string", "description": "Filter by status: active, archived, draft"},
+            "product_type": {"type": "string", "description": "Filter by product type"},
+            "vendor": {"type": "string", "description": "Filter by vendor"},
+            "collection_id": {"type": "string", "description": "Filter by collection ID"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to include"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "products": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

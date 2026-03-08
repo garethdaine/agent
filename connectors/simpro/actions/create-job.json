@@ -1,0 +1,29 @@
+{
+    "name": "create-job",
+    "display_name": "Create Job",
+    "description": "Create a new job in simPRO for a specific company.",
+    "method": "POST",
+    "path": "/companies/{companyId}/jobs",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "companyId": {"type": "integer", "description": "The ID of the company"},
+            "Name": {"type": "string", "description": "Name or title of the job"},
+            "Type": {"type": "string", "description": "Job type (e.g. Service, Project)"},
+            "Customer": {"type": "object", "properties": {"ID": {"type": "integer"}}, "required": ["ID"], "description": "Customer associated with the job"},
+            "Site": {"type": "object", "properties": {"ID": {"type": "integer"}}, "description": "Site where the job will be performed"},
+            "Description": {"type": "string", "description": "Detailed description of the job"}
+        },
+        "required": ["companyId", "Name", "Type", "Customer"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "ID": {"type": "integer"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

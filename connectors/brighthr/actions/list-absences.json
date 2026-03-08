@@ -1,0 +1,27 @@
+{
+    "name": "list-absences",
+    "display_name": "List Absences",
+    "description": "Retrieve a list of employee absences with optional filtering by date range and type.",
+    "method": "GET",
+    "path": "/absences",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"},
+            "start_date": {"type": "string", "description": "Filter absences from this date (YYYY-MM-DD)"},
+            "end_date": {"type": "string", "description": "Filter absences until this date (YYYY-MM-DD)"},
+            "type": {"type": "string", "description": "Filter by absence type (e.g. holiday, sick)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "absences": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

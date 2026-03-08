@@ -1,0 +1,39 @@
+{
+    "name": "jira",
+    "display_name": "Jira",
+    "description": "Issue and project tracking platform for agile software development teams, supporting boards, sprints, and workflow management.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://auth.atlassian.com/authorize",
+        "token_url": "https://auth.atlassian.com/oauth/token",
+        "scopes": ["read:jira-work", "write:jira-work", "read:jira-user"],
+        "pkce_required": true,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://api.atlassian.com/ex/jira/{cloudId}/rest/api/3",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 50000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "issue-tracking",
+    "industries": ["it", "consulting", "manufacturing"],
+    "mcp_tool_prefix": "jira",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-issue", "update-issue"],
+    "data_regions": ["US", "EU", "GB", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-projects", "method": "GET", "path": "/project"},
+        {"name": "get-issue", "method": "GET", "path": "/issue/{issueIdOrKey}"},
+        {"name": "create-issue", "method": "POST", "path": "/issue"},
+        {"name": "update-issue", "method": "PUT", "path": "/issue/{issueIdOrKey}"},
+        {"name": "search-issues", "method": "POST", "path": "/search"},
+        {"name": "list-transitions", "method": "GET", "path": "/issue/{issueIdOrKey}/transitions"}
+    ]
+}

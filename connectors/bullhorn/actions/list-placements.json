@@ -1,0 +1,28 @@
+{
+    "name": "list-placements",
+    "display_name": "List Placements",
+    "description": "Search and retrieve a list of placements (successful candidate-to-job matches) from the Bullhorn ATS.",
+    "method": "GET",
+    "path": "/search/Placement",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "Lucene-style search query for filtering placements"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to return"},
+            "count": {"type": "integer", "description": "Number of results to return"},
+            "start": {"type": "integer", "description": "Starting index for pagination"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}},
+            "total": {"type": "integer"},
+            "count": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

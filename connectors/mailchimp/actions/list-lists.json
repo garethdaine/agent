@@ -1,0 +1,27 @@
+{
+    "name": "list-lists",
+    "display_name": "List Audiences",
+    "description": "Retrieve all audience lists in the Mailchimp account.",
+    "method": "GET",
+    "path": "/lists",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "count": {"type": "integer", "description": "Number of results to return (max 1000)"},
+            "offset": {"type": "integer", "description": "Number of results to skip"},
+            "sort_field": {"type": "string", "enum": ["date_created"], "description": "Field to sort by"},
+            "sort_dir": {"type": "string", "enum": ["ASC", "DESC"], "description": "Sort direction"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "lists": {"type": "array", "items": {"type": "object"}},
+            "total_items": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,29 @@
+{
+    "name": "list-projects",
+    "display_name": "List Projects",
+    "description": "Retrieve a list of projects in a workspace or team.",
+    "method": "GET",
+    "path": "/projects",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "workspace": {"type": "string", "description": "The workspace GID to filter projects by"},
+            "team": {"type": "string", "description": "The team GID to filter projects by"},
+            "archived": {"type": "boolean", "description": "Filter for archived projects"},
+            "limit": {"type": "integer", "description": "Number of results to return (max 100)"},
+            "offset": {"type": "string", "description": "Offset token for pagination"},
+            "opt_fields": {"type": "string", "description": "Comma-separated list of optional fields to include"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}},
+            "next_page": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

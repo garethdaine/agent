@@ -1,0 +1,26 @@
+{
+    "name": "list-contacts",
+    "display_name": "List Contacts",
+    "description": "Retrieve a list of contacts (clients, parties, professionals) from the LEAP practice management system.",
+    "method": "GET",
+    "path": "/contacts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "type": {"type": "string", "description": "Filter by contact type"},
+            "query": {"type": "string", "description": "Search query to filter contacts by name"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "contacts": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "firstName", "lastName", "phone"]
+}

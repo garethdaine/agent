@@ -1,0 +1,25 @@
+{
+    "name": "list-tenancies",
+    "display_name": "List Tenancies",
+    "description": "Retrieve a list of tenancy agreements with tenant and property details.",
+    "method": "GET",
+    "path": "/tenancies",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "description": "Filter by tenancy status (e.g. current, expired, pending)"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "tenancies": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["tenant.name", "tenant.email", "tenant.phone"]
+}

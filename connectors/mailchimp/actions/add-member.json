@@ -1,0 +1,32 @@
+{
+    "name": "add-member",
+    "display_name": "Add Member",
+    "description": "Add a new subscriber to a specific audience list in Mailchimp.",
+    "method": "POST",
+    "path": "/lists/{listId}/members",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "listId": {"type": "string", "description": "The unique identifier of the audience list"},
+            "email_address": {"type": "string", "description": "Email address of the new subscriber"},
+            "status": {"type": "string", "enum": ["subscribed", "unsubscribed", "cleaned", "pending", "transactional"], "description": "Subscription status"},
+            "merge_fields": {
+                "type": "object",
+                "properties": {
+                    "FNAME": {"type": "string", "description": "First name"},
+                    "LNAME": {"type": "string", "description": "Last name"}
+                },
+                "description": "Merge field values for the subscriber"
+            },
+            "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags to assign to the subscriber"}
+        },
+        "required": ["listId", "email_address", "status"]
+    },
+    "response_schema": {
+        "type": "object"
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["email_address"]
+}

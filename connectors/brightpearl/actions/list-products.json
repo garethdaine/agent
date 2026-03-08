@@ -1,0 +1,27 @@
+{
+    "name": "list-products",
+    "display_name": "List Products",
+    "description": "Search and retrieve products from Brightpearl.",
+    "method": "GET",
+    "path": "/product-service/product-search",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "SKU": {"type": "string", "description": "Filter by SKU"},
+            "productName": {"type": "string", "description": "Filter by product name"},
+            "brandId": {"type": "integer", "description": "Filter by brand ID"},
+            "pageSize": {"type": "integer", "description": "Number of results per page"},
+            "firstResult": {"type": "integer", "description": "Index of the first result to return"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "response": {"type": "object", "properties": {"results": {"type": "array", "items": {"type": "array"}}, "metaData": {"type": "object"}}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

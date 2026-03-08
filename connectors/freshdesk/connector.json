@@ -1,0 +1,34 @@
+{
+    "name": "freshdesk",
+    "display_name": "Freshdesk",
+    "description": "Cloud-based customer support software with ticketing, automation, and multi-channel support capabilities for IT, consulting, and manufacturing businesses.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": "Basic"
+    },
+    "base_url": "https://{domain}.freshdesk.com/api/v2",
+    "rate_limits": {
+        "requests_per_minute": 50,
+        "daily_limit": 50000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "customer-support",
+    "industries": ["it", "consulting", "manufacturing"],
+    "mcp_tool_prefix": "freshdesk",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-ticket", "update-ticket"],
+    "data_regions": ["US", "EU", "GB", "AU", "IN"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-tickets", "method": "GET", "path": "/tickets"},
+        {"name": "get-ticket", "method": "GET", "path": "/tickets/{ticketId}"},
+        {"name": "create-ticket", "method": "POST", "path": "/tickets"},
+        {"name": "update-ticket", "method": "PUT", "path": "/tickets/{ticketId}"},
+        {"name": "list-contacts", "method": "GET", "path": "/contacts"}
+    ]
+}

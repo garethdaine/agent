@@ -424,6 +424,40 @@ const formatLifecycleSummary = (payloadObject, fallbackTimestamp = null) => {
         return parts.join(' | ');
     }
 
+    if (type === 'rate_limit_detected') {
+        const resetAt = String(payloadObject.reset_at ?? '').trim();
+        const timezone = String(payloadObject.timezone ?? '').trim();
+        const at = String(payloadObject.at ?? fallbackTimestamp ?? '').trim();
+        const parts = ['Rate limit detected'];
+
+        if (resetAt !== '') {
+            try {
+                const resetDate = new Date(resetAt);
+                const timeStr = resetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const tzSuffix = timezone && timezone !== 'UTC' ? ` (${timezone})` : '';
+                parts.push(`resets ${timeStr}${tzSuffix}`);
+            } catch {
+                parts.push(`resets ${resetAt}`);
+            }
+        }
+
+        if (at !== '' && !resetAt) {
+            parts.push(`at ${at}`);
+        }
+
+        return parts.join(' | ');
+    }
+
+    if (type === 'redaction_notice') {
+        const segments = Number(payloadObject.replaced_segments ?? 0);
+        return segments > 0 ? `Redacted ${segments} sensitive segment${segments !== 1 ? 's' : ''}` : 'Redaction applied';
+    }
+
+    if (type === 'truncation_notice') {
+        const msg = String(payloadObject.message ?? '').trim();
+        return msg || 'Output truncated (5MB limit)';
+    }
+
     return null;
 };
 
@@ -1067,6 +1101,33 @@ export const formatAgentRunEventEntry = (entry) => {
         return null;
     }
 
+    // Multi-line JSON: payload may contain newline-separated JSON objects
+    // that fail single parseJson() but can be individually formatted.
+    if (normalizedPayload.includes('\n') && normalizedPayload.trimStart().startsWith('{')) {
+        const lines = normalizedPayload.split('\n').filter((l) => l.trim() !== '');
+        const summaries = [];
+        for (const line of lines) {
+            const lineJson = parseJson(line.trim());
+            if (lineJson === null) continue;
+            const snap = extractContentSnapshotFromPayload(lineJson);
+            if (snap !== null) { summaries.push(snap); continue; }
+            const env = formatStructuredEnvelopeSummary(lineJson);
+            if (env !== null) { summaries.push(env); continue; }
+            const unk = summarizeUnknownJsonPayload(lineJson);
+            if (unk !== null) summaries.push(unk);
+        }
+        if (summaries.length > 0) {
+            return makeFormattedEntry({
+                key: context.key,
+                prefix: context.prefix,
+                payload: summaries.join('\n'),
+                tone: 'structured',
+                format: 'pre',
+                reasoningStep: context.reasoningStep,
+            });
+        }
+    }
+
     const readExcerptSummary = summarizeReadExcerptPayload(normalizedPayload, context.eventType);
     if (readExcerptSummary !== null) {
         return makeFormattedEntry({
@@ -1306,7 +1367,8 @@ const extractContentSnapshotFromPayload = (payload) => {
         const lines = [];
         for (const item of payload) {
             if (!item || typeof item !== 'object') continue;
-            const content = String(item.content ?? item.text ?? item.title ?? '').trim();
+            const rawContent = item.content ?? item.text ?? item.title ?? '';
+            const content = (typeof rawContent === 'string' ? rawContent : stringifyPayload(rawContent)).trim();
             const status = String(item.status ?? '').trim().toLowerCase();
             const activeForm = String(item.activeForm ?? item.active_form ?? '').trim();
             if (content !== '') {
@@ -1391,10 +1453,13 @@ const formatStructuredEnvelopeSummary = (obj) => {
 
     if (type === 'assistant') {
         const message = isRecord(obj.message) ? obj.message : null;
+        const modelName = String(message?.model ?? obj.model ?? '').trim();
         const blocks = Array.isArray(message?.content) ? message.content : [];
         const usage = isRecord(message?.usage) ? message.usage : obj.usage;
+        const inTokens = Number(usage?.input_tokens ?? NaN);
         const outTokens = Number(usage?.output_tokens ?? NaN);
         const tokenStr = Number.isFinite(outTokens) && outTokens > 0 ? ` (${outTokens} output tokens)` : '';
+        const isSynthetic = modelName === '<synthetic>' || (Number.isFinite(inTokens) && inTokens === 0 && Number.isFinite(outTokens) && outTokens === 0);
 
         for (const block of blocks) {
             if (!isRecord(block)) continue;
@@ -1413,6 +1478,8 @@ const formatStructuredEnvelopeSummary = (obj) => {
                 if (thinking.length > 0) return `Thinking…${tokenStr}`;
             }
         }
+        // Suppress synthetic messages with no meaningful content
+        if (isSynthetic) return null;
         return tokenStr ? `Assistant response${tokenStr}` : null;
     }
 
@@ -1434,6 +1501,33 @@ const formatStructuredEnvelopeSummary = (obj) => {
         if (status) parts.push(status);
         if (Number.isFinite(duration)) parts.push(`${duration}ms`);
         return parts.length > 0 ? `Result: ${parts.join(', ')}` : null;
+    }
+
+    if (type === 'rate_limit_event') {
+        const info = isRecord(obj.rate_limit_info) ? obj.rate_limit_info : {};
+        const status = String(info.status ?? '').trim();
+        const limitType = String(info.rateLimitType ?? '').trim().replace(/_/g, ' ');
+        const resetsAt = Number(info.resetsAt ?? NaN);
+        const overageStatus = String(info.overageStatus ?? '').trim();
+        const parts = ['Rate limit'];
+        if (status) parts.push(status);
+        if (limitType) parts.push(`(${limitType})`);
+        if (Number.isFinite(resetsAt) && resetsAt > 0) {
+            const resetDate = new Date(resetsAt * 1000);
+            parts.push(`- resets ${resetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+        }
+        if (overageStatus && overageStatus !== status) parts.push(`[overage: ${overageStatus}]`);
+        return parts.join(' ');
+    }
+
+    if (type === 'error' || type === 'turn.failed') {
+        const errorObj = isRecord(obj.error) ? obj.error : null;
+        const msg = String(errorObj?.message ?? obj.message ?? obj.text ?? '').trim();
+        const code = String(errorObj?.code ?? obj.code ?? '').trim();
+        const label = type === 'error' ? 'Error' : 'Turn failed';
+        if (msg) return code ? `${label}: ${msg} (${code})` : `${label}: ${msg}`;
+        if (code) return `${label}: ${code}`;
+        return label;
     }
 
     return null;
@@ -1466,14 +1560,16 @@ const summarizeUnknownJsonPayload = (payloadObject) => {
         return null;
     }
 
-    const msg = String(payloadObject.message ?? payloadObject.text ?? payloadObject.content ?? '').trim();
-    if (msg !== '' && msg.length <= 200) {
+    const rawMsg = payloadObject.message ?? payloadObject.text ?? payloadObject.content ?? '';
+    const msg = (typeof rawMsg === 'string' ? rawMsg : (typeof rawMsg === 'object' ? stringifyPayload(rawMsg) : String(rawMsg))).trim();
+    if (msg !== '' && msg !== '[object Object]' && msg.length <= 200) {
         return msg;
     }
 
     const item = isRecord(payloadObject.item) ? payloadObject.item : null;
     const itemType = item ? String(item.type ?? '').trim() : '';
-    const itemText = item ? String(item.text ?? item.message ?? '').trim() : '';
+    const rawItemText = item ? (item.text ?? item.message ?? '') : '';
+    const itemText = (typeof rawItemText === 'string' ? rawItemText : stringifyPayload(rawItemText)).trim();
     if (itemText !== '' && itemText.length <= 200) {
         return itemText;
     }

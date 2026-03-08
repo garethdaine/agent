@@ -1,0 +1,25 @@
+{
+    "name": "list-submittals",
+    "display_name": "List Submittals",
+    "description": "Retrieve a list of submittals for a specific project.",
+    "method": "GET",
+    "path": "/projects/{projectId}/submittals",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "projectId": {"type": "integer", "description": "The ID of the project"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page (max 100)"},
+            "filters[status]": {"type": "string", "description": "Filter by submittal status"}
+        },
+        "required": ["projectId"]
+    },
+    "response_schema": {
+        "type": "array",
+        "items": {"type": "object"}
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

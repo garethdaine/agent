@@ -1,0 +1,46 @@
+{
+    "name": "create-invoice",
+    "display_name": "Create Invoice",
+    "description": "Create a new invoice in FreeAgent.",
+    "method": "POST",
+    "path": "/invoices",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "invoice": {
+                "type": "object",
+                "properties": {
+                    "contact": {"type": "string", "description": "URL of the contact to invoice"},
+                    "dated_on": {"type": "string", "description": "Invoice date (YYYY-MM-DD)"},
+                    "due_on": {"type": "string", "description": "Due date (YYYY-MM-DD)"},
+                    "reference": {"type": "string", "description": "Invoice reference"},
+                    "currency": {"type": "string", "description": "Currency code (e.g. GBP)"},
+                    "invoice_items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "description": {"type": "string"},
+                                "quantity": {"type": "number"},
+                                "price": {"type": "number"},
+                                "item_type": {"type": "string"}
+                            }
+                        }
+                    }
+                },
+                "required": ["contact", "dated_on", "invoice_items"]
+            }
+        },
+        "required": ["invoice"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "invoice": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

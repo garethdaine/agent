@@ -1,0 +1,21 @@
+{
+    "name": "list-warehouses",
+    "display_name": "List Warehouses",
+    "description": "Retrieve a list of warehouses configured in Brightpearl.",
+    "method": "GET",
+    "path": "/warehouse-service/warehouse",
+    "parameters": {
+        "type": "object",
+        "properties": {}
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "response": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

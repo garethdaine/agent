@@ -228,6 +228,37 @@ class Neo4jGraphStore
     }
 
     /**
+     * Get entity count for a user. Returns 0 if Neo4j is unavailable.
+     */
+    public function getEntityCount(int $userId): int
+    {
+        if (! $this->healthCheck()) {
+            return 0;
+        }
+
+        try {
+            $client = $this->getClient();
+            if ($client === null) {
+                return 0;
+            }
+
+            $result = $client->run(
+                'MATCH (e:Entity {user_id: $userId}) RETURN count(e) AS cnt',
+                ['userId' => $userId]
+            );
+
+            return (int) ($result->first()?->get('cnt') ?? 0);
+        } catch (\Throwable $e) {
+            Log::debug('Neo4jGraphStore: Entity count failed', [
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return 0;
+        }
+    }
+
+    /**
      * Check Neo4j connectivity health.
      *
      * Caches result to avoid repeated checks during a single request.

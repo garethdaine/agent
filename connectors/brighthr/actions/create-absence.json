@@ -1,0 +1,28 @@
+{
+    "name": "create-absence",
+    "display_name": "Create Absence",
+    "description": "Create a new absence record for an employee.",
+    "method": "POST",
+    "path": "/absences",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "employeeId": {"type": "string", "description": "The unique identifier of the employee"},
+            "type": {"type": "string", "description": "Absence type (e.g. holiday, sick, other)"},
+            "start_date": {"type": "string", "description": "Start date of the absence (YYYY-MM-DD)"},
+            "end_date": {"type": "string", "description": "End date of the absence (YYYY-MM-DD)"},
+            "reason": {"type": "string", "description": "Reason for the absence"}
+        },
+        "required": ["employeeId", "type", "start_date", "end_date"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "absence": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["employeeId"]
+}

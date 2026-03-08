@@ -1,0 +1,26 @@
+{
+    "name": "list-companies",
+    "display_name": "List Companies",
+    "description": "Query and retrieve a list of companies from Datto Autotask.",
+    "method": "GET",
+    "path": "/Companies/query",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "search": {"type": "object", "description": "Search filter object with field, op, and value properties"},
+            "MaxRecords": {"type": "integer", "description": "Maximum number of records to return"},
+            "IncludeFields": {"type": "array", "items": {"type": "string"}, "description": "List of fields to include in the response"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "items": {"type": "array", "items": {"type": "object"}},
+            "pageDetails": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

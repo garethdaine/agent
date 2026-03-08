@@ -1,0 +1,33 @@
+{
+    "name": "list-invoices",
+    "display_name": "List Invoices",
+    "description": "Retrieve a list of invoices from QuickBooks using a query.",
+    "method": "GET",
+    "path": "/query?query=SELECT * FROM Invoice",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "SQL-like query to filter invoices (default: SELECT * FROM Invoice)"},
+            "startPosition": {"type": "integer", "description": "Starting position for pagination (1-based)"},
+            "maxResults": {"type": "integer", "description": "Maximum number of results to return (max 1000)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "QueryResponse": {
+                "type": "object",
+                "properties": {
+                    "Invoice": {"type": "array", "items": {"type": "object"}},
+                    "startPosition": {"type": "integer"},
+                    "maxResults": {"type": "integer"},
+                    "totalCount": {"type": "integer"}
+                }
+            }
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

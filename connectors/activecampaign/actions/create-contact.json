@@ -1,0 +1,33 @@
+{
+    "name": "create-contact",
+    "display_name": "Create Contact",
+    "description": "Create a new contact in ActiveCampaign.",
+    "method": "POST",
+    "path": "/contacts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "contact": {
+                "type": "object",
+                "properties": {
+                    "email": {"type": "string", "description": "Contact email address"},
+                    "firstName": {"type": "string", "description": "Contact first name"},
+                    "lastName": {"type": "string", "description": "Contact last name"},
+                    "phone": {"type": "string", "description": "Contact phone number"}
+                },
+                "required": ["email"]
+            }
+        },
+        "required": ["contact"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "contact": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["email", "firstName", "lastName", "phone"]
+}

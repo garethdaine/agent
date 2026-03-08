@@ -1,0 +1,28 @@
+{
+    "name": "list-orders",
+    "display_name": "List Orders",
+    "description": "Search and retrieve orders from Brightpearl.",
+    "method": "GET",
+    "path": "/order-service/order-search",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "orderStatusId": {"type": "integer", "description": "Filter by order status ID"},
+            "orderTypeId": {"type": "integer", "description": "Filter by order type ID"},
+            "customerRef": {"type": "string", "description": "Filter by customer reference"},
+            "createdOn": {"type": "string", "description": "Filter by creation date range (e.g. 2024-01-01/2024-12-31)"},
+            "pageSize": {"type": "integer", "description": "Number of results per page"},
+            "firstResult": {"type": "integer", "description": "Index of the first result to return"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "response": {"type": "object", "properties": {"results": {"type": "array", "items": {"type": "array"}}, "metaData": {"type": "object"}}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

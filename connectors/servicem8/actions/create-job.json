@@ -1,0 +1,29 @@
+{
+    "name": "create-job",
+    "display_name": "Create Job",
+    "description": "Create a new job in ServiceM8.",
+    "method": "POST",
+    "path": "/job.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "description": "Job status (e.g. Quote, Work Order, Completed)"},
+            "job_description": {"type": "string", "description": "Description of the job"},
+            "company_uuid": {"type": "string", "description": "UUID of the associated company"},
+            "date": {"type": "string", "description": "Scheduled date (YYYY-MM-DD)"},
+            "time": {"type": "string", "description": "Scheduled time (HH:MM)"},
+            "job_address": {"type": "string", "description": "Address where the job will be performed"}
+        },
+        "required": ["status", "job_description"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "uuid": {"type": "string"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

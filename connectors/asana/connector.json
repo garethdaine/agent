@@ -1,0 +1,39 @@
+{
+    "name": "asana",
+    "display_name": "Asana",
+    "description": "Work management platform for teams to organize, track, and manage projects, tasks, and workflows.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://app.asana.com/-/oauth_authorize",
+        "token_url": "https://app.asana.com/-/oauth_token",
+        "scopes": ["default"],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://app.asana.com/api/1.0",
+    "rate_limits": {
+        "requests_per_minute": 150,
+        "daily_limit": 50000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "project-management",
+    "industries": ["consulting", "it", "manufacturing"],
+    "mcp_tool_prefix": "asana",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-task", "update-task"],
+    "data_regions": ["US", "EU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-workspaces", "method": "GET", "path": "/workspaces"},
+        {"name": "list-projects", "method": "GET", "path": "/projects"},
+        {"name": "list-tasks", "method": "GET", "path": "/tasks"},
+        {"name": "get-task", "method": "GET", "path": "/tasks/{taskId}"},
+        {"name": "create-task", "method": "POST", "path": "/tasks"},
+        {"name": "update-task", "method": "PUT", "path": "/tasks/{taskId}"}
+    ]
+}

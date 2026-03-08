@@ -1,0 +1,39 @@
+{
+    "name": "shopify",
+    "display_name": "Shopify",
+    "description": "E-commerce platform for managing online stores, products, orders, and customers.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://{shop}.myshopify.com/admin/oauth/authorize",
+        "token_url": "https://{shop}.myshopify.com/admin/oauth/access_token",
+        "scopes": ["read_products", "write_products", "read_orders", "read_customers"],
+        "pkce_required": false,
+        "refresh_strategy": "none",
+        "token_expiry_seconds": 0
+    },
+    "base_url": "https://{shop}.myshopify.com/admin/api/2024-01",
+    "rate_limits": {
+        "requests_per_minute": 40,
+        "daily_limit": 50000,
+        "concurrent_limit": 4
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "e-commerce",
+    "industries": ["retail", "manufacturing", "food"],
+    "mcp_tool_prefix": "shopify",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["create-product"],
+    "data_regions": ["US", "EU", "GB", "AU", "CA"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-products", "method": "GET", "path": "/products.json"},
+        {"name": "get-product", "method": "GET", "path": "/products/{productId}.json"},
+        {"name": "create-product", "method": "POST", "path": "/products.json"},
+        {"name": "list-orders", "method": "GET", "path": "/orders.json"},
+        {"name": "get-order", "method": "GET", "path": "/orders/{orderId}.json"},
+        {"name": "list-customers", "method": "GET", "path": "/customers.json"}
+    ]
+}

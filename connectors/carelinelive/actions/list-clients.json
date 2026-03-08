@@ -1,0 +1,26 @@
+{
+    "name": "list-clients",
+    "display_name": "List Clients",
+    "description": "Retrieve a list of care clients from CareLineLive.",
+    "method": "GET",
+    "path": "/clients",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"},
+            "status": {"type": "string", "description": "Filter by client status (e.g. active, inactive)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}},
+            "meta": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["name", "email", "phone"]
+}

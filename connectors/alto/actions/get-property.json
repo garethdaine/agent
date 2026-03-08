@@ -1,0 +1,24 @@
+{
+    "name": "get-property",
+    "display_name": "Get Property",
+    "description": "Retrieve detailed information about a specific property by its unique identifier.",
+    "method": "GET",
+    "path": "/properties/{propertyId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "propertyId": {"type": "string", "description": "The unique identifier of the property"}
+        },
+        "required": ["propertyId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "property": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

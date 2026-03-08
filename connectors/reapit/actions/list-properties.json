@@ -1,0 +1,27 @@
+{
+    "name": "list-properties",
+    "display_name": "List Properties",
+    "description": "Retrieve a list of property listings with optional filtering by status, type, and location.",
+    "method": "GET",
+    "path": "/properties",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "marketingMode": {"type": "string", "description": "Filter by marketing mode (e.g. selling, letting)"},
+            "departmentId": {"type": "string", "description": "Filter by department identifier"},
+            "pageNumber": {"type": "integer", "description": "Page number for pagination"},
+            "pageSize": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "_embedded": {"type": "array", "items": {"type": "object"}},
+            "totalCount": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,37 @@
+{
+    "name": "servicem8",
+    "display_name": "ServiceM8",
+    "description": "Field service management platform for trade and service businesses, supporting job scheduling, quoting, invoicing, and staff coordination.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://go.servicem8.com/oauth/authorize",
+        "token_url": "https://go.servicem8.com/oauth/access_token",
+        "scopes": ["read_staff", "read_schedule", "manage_jobs"],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://api.servicem8.com/api_1.0",
+    "rate_limits": {
+        "requests_per_minute": 100,
+        "daily_limit": 50000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "field-service",
+    "industries": ["facilities"],
+    "mcp_tool_prefix": "servicem8",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-job"],
+    "data_regions": ["AU", "GB", "US"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-jobs", "method": "GET", "path": "/job.json"},
+        {"name": "get-job", "method": "GET", "path": "/job/{jobId}.json"},
+        {"name": "create-job", "method": "POST", "path": "/job.json"},
+        {"name": "list-staff", "method": "GET", "path": "/staff.json"}
+    ]
+}

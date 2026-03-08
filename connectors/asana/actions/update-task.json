@@ -1,0 +1,35 @@
+{
+    "name": "update-task",
+    "display_name": "Update Task",
+    "description": "Update an existing Asana task by GID.",
+    "method": "PUT",
+    "path": "/tasks/{taskId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "taskId": {"type": "string", "description": "The GID of the task to update"},
+            "data": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "The name of the task"},
+                    "notes": {"type": "string", "description": "Free-form text describing the task"},
+                    "completed": {"type": "boolean", "description": "Whether the task is completed"},
+                    "assignee": {"type": "string", "description": "The assignee GID or 'me'"},
+                    "due_on": {"type": "string", "description": "Due date in YYYY-MM-DD format"},
+                    "due_at": {"type": "string", "description": "Due date and time in ISO 8601 format"}
+                }
+            }
+        },
+        "required": ["taskId", "data"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": true,
+    "pii_fields": []
+}

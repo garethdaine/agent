@@ -1,0 +1,29 @@
+{
+    "name": "update-issue",
+    "display_name": "Update Issue",
+    "description": "Update an existing Jira issue by ID or key.",
+    "method": "PUT",
+    "path": "/issue/{issueIdOrKey}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "issueIdOrKey": {"type": "string", "description": "The ID or key of the issue to update"},
+            "fields": {
+                "type": "object",
+                "properties": {
+                    "summary": {"type": "string"},
+                    "description": {"type": "object", "description": "Atlassian Document Format content"},
+                    "priority": {"type": "object", "properties": {"name": {"type": "string"}}},
+                    "assignee": {"type": "object", "properties": {"accountId": {"type": "string"}}},
+                    "labels": {"type": "array", "items": {"type": "string"}}
+                }
+            }
+        },
+        "required": ["issueIdOrKey", "fields"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": true,
+    "pii_fields": []
+}

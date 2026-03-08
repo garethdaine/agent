@@ -1,0 +1,41 @@
+{
+    "name": "create-ticket",
+    "display_name": "Create Ticket",
+    "description": "Create a new support ticket in Zendesk.",
+    "method": "POST",
+    "path": "/tickets.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "ticket": {
+                "type": "object",
+                "properties": {
+                    "subject": {"type": "string", "description": "Ticket subject line"},
+                    "description": {"type": "string", "description": "Ticket description or first comment body"},
+                    "priority": {"type": "string", "enum": ["urgent", "high", "normal", "low"], "description": "Ticket priority level"},
+                    "type": {"type": "string", "enum": ["problem", "incident", "question", "task"], "description": "Ticket type"},
+                    "requester": {
+                        "type": "object",
+                        "properties": {
+                            "name": {"type": "string", "description": "Requester name"},
+                            "email": {"type": "string", "description": "Requester email address"}
+                        }
+                    },
+                    "tags": {"type": "array", "items": {"type": "string"}, "description": "Tags to apply to the ticket"}
+                },
+                "required": ["subject", "description"]
+            }
+        },
+        "required": ["ticket"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "ticket": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["requester.email", "requester.name"]
+}

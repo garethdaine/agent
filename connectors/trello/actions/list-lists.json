@@ -1,0 +1,32 @@
+{
+    "name": "list-lists",
+    "display_name": "List Lists",
+    "description": "Retrieve all lists on a specific Trello board.",
+    "method": "GET",
+    "path": "/boards/{boardId}/lists",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "boardId": {"type": "string", "description": "The ID of the board"},
+            "filter": {"type": "string", "description": "Filter lists: all, closed, none, open"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to include"}
+        },
+        "required": ["boardId"]
+    },
+    "response_schema": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "name": {"type": "string"},
+                "idBoard": {"type": "string"},
+                "pos": {"type": "number"}
+            }
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,31 @@
+{
+    "name": "list-tasks",
+    "display_name": "List Tasks",
+    "description": "Retrieve a list of tasks filtered by project, section, tag, or assignee.",
+    "method": "GET",
+    "path": "/tasks",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "project": {"type": "string", "description": "The project GID to filter tasks by"},
+            "section": {"type": "string", "description": "The section GID to filter tasks by"},
+            "assignee": {"type": "string", "description": "The assignee GID or 'me' to filter tasks by"},
+            "workspace": {"type": "string", "description": "The workspace GID (required when using assignee filter)"},
+            "completed_since": {"type": "string", "description": "ISO 8601 date to filter tasks completed since"},
+            "limit": {"type": "integer", "description": "Number of results to return (max 100)"},
+            "offset": {"type": "string", "description": "Offset token for pagination"},
+            "opt_fields": {"type": "string", "description": "Comma-separated list of optional fields to include"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}},
+            "next_page": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,34 @@
+{
+    "name": "activecampaign",
+    "display_name": "ActiveCampaign",
+    "description": "Marketing automation platform combining email marketing, CRM, and sales automation. Manage contacts, campaigns, automations, and deals.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Api-Token",
+        "header_prefix": ""
+    },
+    "base_url": "https://{account}.api-us1.com/api/3",
+    "rate_limits": {
+        "requests_per_minute": 300,
+        "daily_limit": 100000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "marketing-automation",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "activecampaign",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["create-contact"],
+    "data_regions": ["US"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-contacts", "method": "GET", "path": "/contacts"},
+        {"name": "create-contact", "method": "POST", "path": "/contacts"},
+        {"name": "list-campaigns", "method": "GET", "path": "/campaigns"},
+        {"name": "list-automations", "method": "GET", "path": "/automations"},
+        {"name": "list-deals", "method": "GET", "path": "/deals"}
+    ]
+}

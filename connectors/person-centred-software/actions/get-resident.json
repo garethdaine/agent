@@ -1,0 +1,27 @@
+{
+    "name": "get-resident",
+    "display_name": "Get Resident",
+    "description": "Retrieve detailed information about a specific resident by ID.",
+    "method": "GET",
+    "path": "/residents/{residentId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "residentId": {"type": "string", "description": "The unique identifier of the resident"}
+        },
+        "required": ["residentId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string"},
+            "dateOfBirth": {"type": "string"},
+            "status": {"type": "string"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["name", "dateOfBirth", "nhsNumber", "nextOfKin"]
+}

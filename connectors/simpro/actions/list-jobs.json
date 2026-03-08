@@ -1,0 +1,25 @@
+{
+    "name": "list-jobs",
+    "display_name": "List Jobs",
+    "description": "Retrieve a list of jobs from simPRO for a specific company.",
+    "method": "GET",
+    "path": "/companies/{companyId}/jobs",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "companyId": {"type": "integer", "description": "The ID of the company"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "pageSize": {"type": "integer", "description": "Number of results per page"},
+            "status": {"type": "string", "description": "Filter by job status"}
+        },
+        "required": ["companyId"]
+    },
+    "response_schema": {
+        "type": "array",
+        "items": {"type": "object"}
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

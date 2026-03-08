@@ -10,6 +10,7 @@ use App\Models\MemoryCoreBlock;
 use App\Models\MemoryEmbedding;
 use App\Models\MemoryProviderUsage;
 use App\Support\Memory\MemoryCapabilityResolver;
+use App\Support\Memory\Neo4jGraphStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,7 +23,8 @@ use Illuminate\Http\Request;
 class MemoryDiagnosticsController extends Controller
 {
     public function __construct(
-        private readonly MemoryCapabilityResolver $capabilityResolver
+        private readonly MemoryCapabilityResolver $capabilityResolver,
+        private readonly Neo4jGraphStore $graphStore
     ) {}
 
     /**
@@ -43,8 +45,20 @@ class MemoryDiagnosticsController extends Controller
         // Conversation logs statistics
         $conversationLogsCount = MemoryConversationLog::forUser($userId)->count();
 
-        // Provider usage statistics
-        $providerUsage = MemoryProviderUsage::getUsageStats($userId);
+        // Graph entities (graceful fallback if Neo4j unavailable)
+        $graphEntitiesCount = $this->graphStore->getEntityCount($userId);
+
+        // Provider usage statistics (memory API operations only)
+        $providerUsage = MemoryProviderUsage::getUsageStats(
+            $userId,
+            excludeOperation: MemoryProviderUsage::OPERATION_CLI_EXECUTION
+        );
+
+        // CLI execution usage (agent run token consumption)
+        $cliUsage = MemoryProviderUsage::getUsageStats(
+            $userId,
+            onlyOperation: MemoryProviderUsage::OPERATION_CLI_EXECUTION
+        );
 
         // Operating mode
         $operatingMode = $this->capabilityResolver->getOperatingMode($userId);
@@ -54,7 +68,9 @@ class MemoryDiagnosticsController extends Controller
                 'core_blocks_count' => $coreBlocksCount,
                 'embeddings_count' => $embeddingsCount,
                 'conversation_logs_count' => $conversationLogsCount,
+                'graph_entities_count' => $graphEntitiesCount,
                 'provider_usage' => $providerUsage,
+                'cli_usage' => $cliUsage,
                 'operating_mode' => $operatingMode,
                 'generated_at' => now()->toIso8601String(),
             ],

@@ -175,6 +175,7 @@ return [
     |
     */
     'pricing' => [
+        // Memory system provider pricing (per 1M tokens USD)
         'openai' => [
             'gpt-4o-mini' => [
                 'input' => 0.15,
@@ -188,11 +189,33 @@ return [
                 'input' => 0.02,
                 'output' => 0.0,
             ],
+            // CLI execution models
+            'gpt-4o' => [
+                'input' => 2.50,
+                'output' => 10.00,
+            ],
+            'o3-mini' => [
+                'input' => 1.10,
+                'output' => 4.40,
+            ],
         ],
         'anthropic' => [
             'claude-3-haiku-20240307' => [
                 'input' => 0.25,
                 'output' => 1.25,
+            ],
+            // CLI execution models (API list prices for estimation)
+            'claude-opus-4-6' => [
+                'input' => 15.00,
+                'output' => 75.00,
+            ],
+            'claude-sonnet-4-6' => [
+                'input' => 3.00,
+                'output' => 15.00,
+            ],
+            'claude-haiku-4-5' => [
+                'input' => 0.80,
+                'output' => 4.00,
             ],
         ],
     ],

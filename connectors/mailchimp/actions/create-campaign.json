@@ -1,0 +1,38 @@
+{
+    "name": "create-campaign",
+    "display_name": "Create Campaign",
+    "description": "Create a new email campaign in Mailchimp.",
+    "method": "POST",
+    "path": "/campaigns",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "type": {"type": "string", "enum": ["regular", "plaintext", "absplit", "rss", "variate"], "description": "Campaign type"},
+            "recipients": {
+                "type": "object",
+                "properties": {
+                    "list_id": {"type": "string", "description": "The audience list ID to send to"}
+                },
+                "required": ["list_id"]
+            },
+            "settings": {
+                "type": "object",
+                "properties": {
+                    "subject_line": {"type": "string", "description": "Email subject line"},
+                    "from_name": {"type": "string", "description": "Sender name"},
+                    "reply_to": {"type": "string", "description": "Reply-to email address"},
+                    "title": {"type": "string", "description": "Internal campaign title"}
+                },
+                "required": ["subject_line", "from_name", "reply_to"]
+            }
+        },
+        "required": ["type", "recipients", "settings"]
+    },
+    "response_schema": {
+        "type": "object"
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

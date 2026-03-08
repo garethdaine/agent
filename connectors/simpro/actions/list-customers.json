@@ -1,0 +1,25 @@
+{
+    "name": "list-customers",
+    "display_name": "List Customers",
+    "description": "Retrieve a list of customers from simPRO for a specific company.",
+    "method": "GET",
+    "path": "/companies/{companyId}/customers",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "companyId": {"type": "integer", "description": "The ID of the company"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "pageSize": {"type": "integer", "description": "Number of results per page"},
+            "search": {"type": "string", "description": "Search term to filter customers"}
+        },
+        "required": ["companyId"]
+    },
+    "response_schema": {
+        "type": "array",
+        "items": {"type": "object"}
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "phone"]
+}

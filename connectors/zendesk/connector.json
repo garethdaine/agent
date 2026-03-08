@@ -1,0 +1,38 @@
+{
+    "name": "zendesk",
+    "display_name": "Zendesk",
+    "description": "Customer service and support ticketing platform. Manage support tickets, users, and customer interactions across multiple channels.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://{subdomain}.zendesk.com/oauth/authorizations/new",
+        "token_url": "https://{subdomain}.zendesk.com/oauth/tokens",
+        "scopes": ["read", "write", "tickets:read", "tickets:write"],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 7200
+    },
+    "base_url": "https://{subdomain}.zendesk.com/api/v2",
+    "rate_limits": {
+        "requests_per_minute": 200,
+        "daily_limit": 100000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "customer-support",
+    "industries": ["it", "consulting", "hospitality"],
+    "mcp_tool_prefix": "zendesk",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-ticket", "update-ticket"],
+    "data_regions": ["US", "EU", "GB", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-tickets", "method": "GET", "path": "/tickets.json"},
+        {"name": "get-ticket", "method": "GET", "path": "/tickets/{ticketId}.json"},
+        {"name": "create-ticket", "method": "POST", "path": "/tickets.json"},
+        {"name": "update-ticket", "method": "PUT", "path": "/tickets/{ticketId}.json"},
+        {"name": "list-users", "method": "GET", "path": "/users.json"}
+    ]
+}

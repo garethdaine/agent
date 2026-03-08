@@ -1,0 +1,26 @@
+{
+    "name": "list-policies",
+    "display_name": "List Policies",
+    "description": "Retrieve a list of insurance policies with optional filtering by status and policy type.",
+    "method": "GET",
+    "path": "/policies",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "description": "Filter by policy status (e.g. active, lapsed, cancelled)"},
+            "type": {"type": "string", "description": "Filter by policy type (e.g. motor, property, liability)"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "policies": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,24 @@
+{
+    "name": "list-tickets",
+    "display_name": "List Tickets",
+    "description": "Retrieve a list of service tickets from ConnectWise Manage.",
+    "method": "GET",
+    "path": "/service/tickets",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "conditions": {"type": "string", "description": "Filter conditions (e.g. status/name='Open')"},
+            "orderBy": {"type": "string", "description": "Field to order results by"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "pageSize": {"type": "integer", "description": "Number of results per page (max 1000)"}
+        }
+    },
+    "response_schema": {
+        "type": "array",
+        "items": {"type": "object"}
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

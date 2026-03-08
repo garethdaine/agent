@@ -7,6 +7,7 @@ use App\Events\AgentJobRunFinished;
 use App\Events\RunStatusChanged;
 use App\Jobs\Memory\MemoryFormationJob;
 use App\Models\AgentJobRun;
+use App\Models\MemoryProviderUsage;
 use App\Services\Cost\WorkflowBudgetEnforcer;
 use App\Support\Agent\CommandTemplateRenderer;
 use App\Support\Agent\DatabaseIsolationEnvironment;
@@ -683,10 +684,6 @@ class ExecuteAgentRunJob implements ShouldQueue
      */
     private function recordRunCostFromEvents(AgentJobRun $run): void
     {
-        if ($run->job === null || ($run->job->workflow_key ?? '') === '') {
-            return;
-        }
-
         try {
             $usage = $this->extractUsageFromEvents($run);
 
@@ -694,15 +691,35 @@ class ExecuteAgentRunJob implements ShouldQueue
                 return;
             }
 
-            $enforcer = app(WorkflowBudgetEnforcer::class);
-            $enforcer->recordRunCost(
-                job: $run->job,
-                runId: (string) $run->id,
-                rateCardVersion: config('agent.cost_governance.rate_card_version', 'v1'),
-                model: $usage['model'] ?? 'unknown',
-                inputTokens: $usage['input_tokens'],
-                outputTokens: $usage['output_tokens'],
-            );
+            $model = $usage['model'] ?? 'unknown';
+
+            // Record to workflow budget enforcer (existing behaviour)
+            if ($run->job !== null && ($run->job->workflow_key ?? '') !== '') {
+                $enforcer = app(WorkflowBudgetEnforcer::class);
+                $enforcer->recordRunCost(
+                    job: $run->job,
+                    runId: (string) $run->id,
+                    rateCardVersion: config('agent.cost_governance.rate_card_version', 'v1'),
+                    model: $model,
+                    inputTokens: $usage['input_tokens'],
+                    outputTokens: $usage['output_tokens'],
+                );
+            }
+
+            // Record CLI execution usage to memory provider usage for dashboard tracking
+            if ($run->user_id) {
+                $provider = MemoryProviderUsage::resolveProviderFromModel($model);
+
+                MemoryProviderUsage::record(
+                    userId: $run->user_id,
+                    provider: $provider,
+                    model: $model,
+                    operation: MemoryProviderUsage::OPERATION_CLI_EXECUTION,
+                    inputTokens: $usage['input_tokens'],
+                    outputTokens: $usage['output_tokens'],
+                    runId: $run->id,
+                );
+            }
         } catch (\Throwable $e) {
             Log::warning('Failed to record run cost', [
                 'run_id' => $run->id,

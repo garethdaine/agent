@@ -1,0 +1,34 @@
+{
+    "name": "person-centred-software",
+    "display_name": "Person Centred Software",
+    "description": "Digital care management platform for residential care homes, supporting resident records, care notes, and compliance reporting.",
+    "version": "1.0.0",
+    "status": "partnership_pending",
+    "partnership_notes": "Requires approved partner status with Person Centred Software. Apply via partner.personcentredsoftware.com.",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "X-Api-Key",
+        "header_prefix": ""
+    },
+    "base_url": "https://api.personcentredsoftware.com/v1",
+    "rate_limits": {
+        "requests_per_minute": 30,
+        "daily_limit": 10000,
+        "concurrent_limit": 3
+    },
+    "cost_model": "free",
+    "risk_level": "elevated",
+    "category": "care-management",
+    "industries": ["healthcare"],
+    "mcp_tool_prefix": "pcs",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": [],
+    "data_regions": ["GB"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-residents", "method": "GET", "path": "/residents"},
+        {"name": "get-resident", "method": "GET", "path": "/residents/{residentId}"},
+        {"name": "list-care-notes", "method": "GET", "path": "/residents/{residentId}/care-notes"}
+    ]
+}

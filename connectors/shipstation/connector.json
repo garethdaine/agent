@@ -1,0 +1,33 @@
+{
+    "name": "shipstation",
+    "display_name": "ShipStation",
+    "description": "Shipping and order fulfilment platform for e-commerce businesses, supporting multi-carrier label creation, order management, and shipment tracking.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": "Basic"
+    },
+    "base_url": "https://ssapi.shipstation.com",
+    "rate_limits": {
+        "requests_per_minute": 40,
+        "daily_limit": 20000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "shipping",
+    "industries": ["logistics"],
+    "mcp_tool_prefix": "shipstation",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["create-label"],
+    "data_regions": ["US", "GB", "AU", "CA"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-orders", "method": "GET", "path": "/orders"},
+        {"name": "get-order", "method": "GET", "path": "/orders/{orderId}"},
+        {"name": "list-shipments", "method": "GET", "path": "/shipments"},
+        {"name": "create-label", "method": "POST", "path": "/shipments/createlabel"}
+    ]
+}

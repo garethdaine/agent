@@ -1,0 +1,33 @@
+{
+    "name": "update-card",
+    "display_name": "Update Card",
+    "description": "Update an existing Trello card by ID.",
+    "method": "PUT",
+    "path": "/cards/{cardId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "cardId": {"type": "string", "description": "The ID of the card to update"},
+            "name": {"type": "string", "description": "The new name of the card"},
+            "desc": {"type": "string", "description": "The new description of the card"},
+            "closed": {"type": "boolean", "description": "Whether the card is archived"},
+            "idList": {"type": "string", "description": "The ID of the list to move the card to"},
+            "pos": {"type": "string", "description": "Position of the card: top, bottom, or a positive float"},
+            "due": {"type": "string", "description": "Due date in ISO 8601 format"},
+            "dueComplete": {"type": "boolean", "description": "Whether the due date is complete"}
+        },
+        "required": ["cardId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string"},
+            "url": {"type": "string"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,27 @@
+{
+    "name": "list-applicants",
+    "display_name": "List Applicants",
+    "description": "Retrieve a list of property applicants (buyers or tenants) with optional filtering.",
+    "method": "GET",
+    "path": "/applicants",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "marketingMode": {"type": "string", "description": "Filter by marketing mode (e.g. buying, renting)"},
+            "departmentId": {"type": "string", "description": "Filter by department identifier"},
+            "pageNumber": {"type": "integer", "description": "Page number for pagination"},
+            "pageSize": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "_embedded": {"type": "array", "items": {"type": "object"}},
+            "totalCount": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "mobileTelephone", "name"]
+}

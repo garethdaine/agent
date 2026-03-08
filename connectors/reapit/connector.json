@@ -1,0 +1,38 @@
+{
+    "name": "reapit",
+    "display_name": "Reapit",
+    "description": "Cloud-based estate agency software platform. Access property listings, applicant records, contacts, and offers through the Reapit Foundations API.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://connect.reapit.cloud/authorize",
+        "token_url": "https://connect.reapit.cloud/token",
+        "scopes": ["properties.read", "applicants.read", "contacts.read"],
+        "pkce_required": true,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://platform.reapit.cloud",
+    "rate_limits": {
+        "requests_per_minute": 250,
+        "daily_limit": 100000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "property-management",
+    "industries": ["property"],
+    "mcp_tool_prefix": "reapit",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": [],
+    "data_regions": ["GB"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-properties", "method": "GET", "path": "/properties"},
+        {"name": "get-property", "method": "GET", "path": "/properties/{propertyId}"},
+        {"name": "list-applicants", "method": "GET", "path": "/applicants"},
+        {"name": "list-contacts", "method": "GET", "path": "/contacts"},
+        {"name": "list-offers", "method": "GET", "path": "/offers"}
+    ]
+}

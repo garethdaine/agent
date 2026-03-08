@@ -1,0 +1,25 @@
+{
+    "name": "get-matter",
+    "display_name": "Get Matter",
+    "description": "Retrieve detailed information about a specific legal matter by its unique identifier.",
+    "method": "GET",
+    "path": "/matters/{matterId}.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "matterId": {"type": "integer", "description": "The unique identifier of the matter"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to return"}
+        },
+        "required": ["matterId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

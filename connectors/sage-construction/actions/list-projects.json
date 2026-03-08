@@ -1,0 +1,25 @@
+{
+    "name": "list-projects",
+    "display_name": "List Projects",
+    "description": "Retrieve a list of construction projects with optional filtering by status and date range.",
+    "method": "GET",
+    "path": "/projects",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "description": "Filter by project status (e.g. active, completed, archived)"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "projects": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,38 @@
+{
+    "name": "create-issue",
+    "display_name": "Create Issue",
+    "description": "Create a new issue in a Jira project.",
+    "method": "POST",
+    "path": "/issue",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "fields": {
+                "type": "object",
+                "properties": {
+                    "project": {"type": "object", "properties": {"key": {"type": "string"}}, "required": ["key"]},
+                    "summary": {"type": "string"},
+                    "description": {"type": "object", "description": "Atlassian Document Format content"},
+                    "issuetype": {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
+                    "priority": {"type": "object", "properties": {"name": {"type": "string"}}},
+                    "assignee": {"type": "object", "properties": {"accountId": {"type": "string"}}},
+                    "labels": {"type": "array", "items": {"type": "string"}}
+                },
+                "required": ["project", "summary", "issuetype"]
+            }
+        },
+        "required": ["fields"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "key": {"type": "string"},
+            "self": {"type": "string"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

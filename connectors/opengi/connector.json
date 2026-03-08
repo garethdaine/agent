@@ -1,0 +1,33 @@
+{
+    "name": "opengi",
+    "display_name": "Open GI",
+    "description": "Insurance software platform for brokers and MGAs. Manage policies, quotes, and client records with integrated rating and policy administration.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": "Bearer"
+    },
+    "base_url": "https://api.opengi.co.uk/v1",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 30000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "elevated",
+    "category": "insurance-management",
+    "industries": ["insurance"],
+    "mcp_tool_prefix": "opengi",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": [],
+    "data_regions": ["GB"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-policies", "method": "GET", "path": "/policies"},
+        {"name": "get-policy", "method": "GET", "path": "/policies/{policyId}"},
+        {"name": "list-quotes", "method": "GET", "path": "/quotes"},
+        {"name": "list-clients", "method": "GET", "path": "/clients"}
+    ]
+}

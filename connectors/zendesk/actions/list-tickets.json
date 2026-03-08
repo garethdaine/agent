@@ -1,0 +1,28 @@
+{
+    "name": "list-tickets",
+    "display_name": "List Tickets",
+    "description": "Retrieve a paginated list of support tickets with optional filtering by status, assignee, or date.",
+    "method": "GET",
+    "path": "/tickets.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page (max 100)"},
+            "sort_by": {"type": "string", "enum": ["created_at", "updated_at", "priority", "status"], "description": "Field to sort results by"},
+            "sort_order": {"type": "string", "enum": ["asc", "desc"], "description": "Sort direction"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "tickets": {"type": "array", "items": {"type": "object"}},
+            "next_page": {"type": "string"},
+            "count": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,25 @@
+{
+    "name": "get-order",
+    "display_name": "Get Order",
+    "description": "Retrieve a specific order from the Shopify store by ID.",
+    "method": "GET",
+    "path": "/orders/{orderId}.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "orderId": {"type": "string", "description": "The ID of the order to retrieve"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to include"}
+        },
+        "required": ["orderId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "order": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "customer.email", "shipping_address"]
+}

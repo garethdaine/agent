@@ -1,0 +1,38 @@
+{
+    "name": "freeagent",
+    "display_name": "FreeAgent",
+    "description": "Online accounting software for freelancers, micro-businesses, and their accountants, managing invoices, contacts, and expenses.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://api.freeagent.com/v2/approve_app",
+        "token_url": "https://api.freeagent.com/v2/token_endpoint",
+        "scopes": [],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://api.freeagent.com/v2",
+    "rate_limits": {
+        "requests_per_minute": 120,
+        "daily_limit": 50000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "elevated",
+    "category": "accounting",
+    "industries": ["accounting"],
+    "mcp_tool_prefix": "freeagent",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["create-invoice", "create-contact"],
+    "data_regions": ["GB"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-invoices", "method": "GET", "path": "/invoices"},
+        {"name": "create-invoice", "method": "POST", "path": "/invoices"},
+        {"name": "list-contacts", "method": "GET", "path": "/contacts"},
+        {"name": "create-contact", "method": "POST", "path": "/contacts"},
+        {"name": "list-expenses", "method": "GET", "path": "/expenses"}
+    ]
+}

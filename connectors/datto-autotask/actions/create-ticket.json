@@ -1,0 +1,29 @@
+{
+    "name": "create-ticket",
+    "display_name": "Create Ticket",
+    "description": "Create a new ticket in Datto Autotask.",
+    "method": "POST",
+    "path": "/Tickets",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "title": {"type": "string", "description": "Title of the ticket"},
+            "description": {"type": "string", "description": "Detailed description of the issue"},
+            "companyID": {"type": "integer", "description": "ID of the associated company"},
+            "status": {"type": "integer", "description": "Status ID for the ticket"},
+            "priority": {"type": "integer", "description": "Priority level ID"},
+            "queueID": {"type": "integer", "description": "Queue ID for ticket routing"}
+        },
+        "required": ["title", "companyID", "status", "priority"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "itemId": {"type": "integer"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

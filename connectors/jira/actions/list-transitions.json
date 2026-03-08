@@ -1,0 +1,34 @@
+{
+    "name": "list-transitions",
+    "display_name": "List Transitions",
+    "description": "Retrieve available workflow transitions for a specific Jira issue.",
+    "method": "GET",
+    "path": "/issue/{issueIdOrKey}/transitions",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "issueIdOrKey": {"type": "string", "description": "The ID or key of the issue"}
+        },
+        "required": ["issueIdOrKey"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "transitions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "name": {"type": "string"},
+                        "to": {"type": "object"}
+                    }
+                }
+            }
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

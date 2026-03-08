@@ -1,0 +1,25 @@
+{
+    "name": "list-clients",
+    "display_name": "List Clients",
+    "description": "Retrieve a list of insurance clients (policyholders and prospects) from the Acturis system.",
+    "method": "GET",
+    "path": "/clients",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "Search query to filter clients by name"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "clients": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["name", "email", "phone", "address"]
+}

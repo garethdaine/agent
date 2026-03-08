@@ -1,0 +1,26 @@
+{
+    "name": "list-automations",
+    "display_name": "List Automations",
+    "description": "Retrieve a list of automations with optional filtering.",
+    "method": "GET",
+    "path": "/automations",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of results to return"},
+            "offset": {"type": "integer", "description": "Number of results to skip"},
+            "orders[name]": {"type": "string", "enum": ["ASC", "DESC"], "description": "Sort by automation name"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "automations": {"type": "array", "items": {"type": "object"}},
+            "meta": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

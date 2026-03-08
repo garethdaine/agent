@@ -1,0 +1,28 @@
+{
+    "name": "create-absence",
+    "display_name": "Create Absence",
+    "description": "Create a new absence record for an employee in Breathe HR.",
+    "method": "POST",
+    "path": "/absences",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "employee_id": {"type": "string", "description": "The unique identifier of the employee"},
+            "type": {"type": "string", "description": "Absence type (e.g. holiday, sickness, other)"},
+            "start_date": {"type": "string", "description": "Start date of the absence (YYYY-MM-DD)"},
+            "end_date": {"type": "string", "description": "End date of the absence (YYYY-MM-DD)"},
+            "notes": {"type": "string", "description": "Additional notes about the absence"}
+        },
+        "required": ["employee_id", "type", "start_date", "end_date"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "absence": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

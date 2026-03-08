@@ -1,0 +1,26 @@
+{
+    "name": "list-properties",
+    "display_name": "List Properties",
+    "description": "Retrieve a list of properties managed within Alto with optional filtering by status and type.",
+    "method": "GET",
+    "path": "/properties",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "description": "Filter by property status (e.g. available, let, withdrawn)"},
+            "type": {"type": "string", "description": "Filter by property type (e.g. residential, commercial)"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "properties": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,49 @@
+{
+    "name": "create-customer",
+    "display_name": "Create Customer",
+    "description": "Create a new customer in QuickBooks.",
+    "method": "POST",
+    "path": "/customer",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "DisplayName": {"type": "string", "description": "Display name of the customer"},
+            "GivenName": {"type": "string", "description": "First name"},
+            "FamilyName": {"type": "string", "description": "Last name"},
+            "CompanyName": {"type": "string", "description": "Company name"},
+            "PrimaryEmailAddr": {
+                "type": "object",
+                "properties": {
+                    "Address": {"type": "string", "description": "Email address"}
+                }
+            },
+            "PrimaryPhone": {
+                "type": "object",
+                "properties": {
+                    "FreeFormNumber": {"type": "string", "description": "Phone number"}
+                }
+            },
+            "BillAddr": {
+                "type": "object",
+                "properties": {
+                    "Line1": {"type": "string"},
+                    "City": {"type": "string"},
+                    "CountrySubDivisionCode": {"type": "string"},
+                    "PostalCode": {"type": "string"},
+                    "Country": {"type": "string"}
+                }
+            }
+        },
+        "required": ["DisplayName"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "Customer": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["PrimaryEmailAddr.Address", "DisplayName"]
+}

@@ -1,0 +1,33 @@
+{
+    "name": "list-accounts",
+    "display_name": "List Accounts",
+    "description": "Retrieve a list of chart of accounts from QuickBooks.",
+    "method": "GET",
+    "path": "/query?query=SELECT * FROM Account",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "SQL-like query to filter accounts (default: SELECT * FROM Account)"},
+            "startPosition": {"type": "integer", "description": "Starting position for pagination (1-based)"},
+            "maxResults": {"type": "integer", "description": "Maximum number of results to return (max 1000)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "QueryResponse": {
+                "type": "object",
+                "properties": {
+                    "Account": {"type": "array", "items": {"type": "object"}},
+                    "startPosition": {"type": "integer"},
+                    "maxResults": {"type": "integer"},
+                    "totalCount": {"type": "integer"}
+                }
+            }
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

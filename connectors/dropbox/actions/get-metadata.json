@@ -1,0 +1,33 @@
+{
+    "name": "get-metadata",
+    "display_name": "Get Metadata",
+    "description": "Retrieve metadata for a file or folder in Dropbox.",
+    "method": "POST",
+    "path": "/files/get_metadata",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "path": {"type": "string", "description": "The path to the file or folder"},
+            "include_media_info": {"type": "boolean", "description": "Whether to include media info for photos/videos"},
+            "include_deleted": {"type": "boolean", "description": "Whether to return deleted entries"},
+            "include_has_explicit_shared_members": {"type": "boolean", "description": "Whether to include shared member info"}
+        },
+        "required": ["path"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            ".tag": {"type": "string"},
+            "name": {"type": "string"},
+            "path_lower": {"type": "string"},
+            "path_display": {"type": "string"},
+            "id": {"type": "string"},
+            "size": {"type": "integer"},
+            "server_modified": {"type": "string"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

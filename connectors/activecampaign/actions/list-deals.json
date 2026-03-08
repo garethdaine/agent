@@ -1,0 +1,28 @@
+{
+    "name": "list-deals",
+    "display_name": "List Deals",
+    "description": "Retrieve a list of deals from the ActiveCampaign CRM pipeline.",
+    "method": "GET",
+    "path": "/deals",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of results to return"},
+            "offset": {"type": "integer", "description": "Number of results to skip"},
+            "search": {"type": "string", "description": "Search deals by title"},
+            "orders[value]": {"type": "string", "enum": ["ASC", "DESC"], "description": "Sort by deal value"},
+            "filters[stage]": {"type": "integer", "description": "Filter by pipeline stage ID"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "deals": {"type": "array", "items": {"type": "object"}},
+            "meta": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

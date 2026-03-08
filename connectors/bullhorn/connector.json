@@ -1,0 +1,38 @@
+{
+    "name": "bullhorn",
+    "display_name": "Bullhorn",
+    "description": "Cloud-based recruitment CRM and applicant tracking system. Manage candidates, job orders, placements, and the full recruitment lifecycle.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://auth.bullhornstaffing.com/oauth/authorize",
+        "token_url": "https://auth.bullhornstaffing.com/oauth/token",
+        "scopes": [],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 600
+    },
+    "base_url": "https://rest.bullhornstaffing.com/rest-services/{corpToken}",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 50000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "recruitment",
+    "industries": ["recruitment"],
+    "mcp_tool_prefix": "bullhorn",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["create-candidate"],
+    "data_regions": ["US", "EU", "GB", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-candidates", "method": "GET", "path": "/search/Candidate"},
+        {"name": "get-candidate", "method": "GET", "path": "/entity/Candidate/{candidateId}"},
+        {"name": "list-job-orders", "method": "GET", "path": "/search/JobOrder"},
+        {"name": "create-candidate", "method": "POST", "path": "/entity/Candidate"},
+        {"name": "list-placements", "method": "GET", "path": "/search/Placement"}
+    ]
+}

@@ -1,0 +1,29 @@
+{
+    "name": "list-visits",
+    "display_name": "List Visits",
+    "description": "Retrieve a list of scheduled or completed care visits.",
+    "method": "GET",
+    "path": "/visits",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"},
+            "date_from": {"type": "string", "description": "Filter visits from this date (ISO 8601)"},
+            "date_to": {"type": "string", "description": "Filter visits up to this date (ISO 8601)"},
+            "client_id": {"type": "string", "description": "Filter by client ID"},
+            "carer_id": {"type": "string", "description": "Filter by carer ID"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}},
+            "meta": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,27 @@
+{
+    "name": "list-shared-links",
+    "display_name": "List Shared Links",
+    "description": "List shared links for a file or folder in Dropbox.",
+    "method": "POST",
+    "path": "/sharing/list_shared_links",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "path": {"type": "string", "description": "The path to list shared links for (optional, omit for all)"},
+            "cursor": {"type": "string", "description": "Cursor for pagination"},
+            "direct_only": {"type": "boolean", "description": "Whether to return only direct links to the path"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "links": {"type": "array", "items": {"type": "object"}},
+            "has_more": {"type": "boolean"},
+            "cursor": {"type": "string"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

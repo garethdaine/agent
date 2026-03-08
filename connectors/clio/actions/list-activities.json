@@ -1,0 +1,27 @@
+{
+    "name": "list-activities",
+    "display_name": "List Activities",
+    "description": "Retrieve a list of activities (time entries, expense entries) recorded against matters.",
+    "method": "GET",
+    "path": "/activities.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "matter_id": {"type": "integer", "description": "Filter activities by matter ID"},
+            "type": {"type": "string", "description": "Filter by activity type (e.g. TimeEntry, ExpenseEntry)"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to return"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "limit": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

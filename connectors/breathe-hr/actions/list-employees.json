@@ -1,0 +1,26 @@
+{
+    "name": "list-employees",
+    "display_name": "List Employees",
+    "description": "Retrieve a paginated list of employees with optional filtering.",
+    "method": "GET",
+    "path": "/employees",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"},
+            "status": {"type": "string", "enum": ["active", "inactive", "all"], "description": "Filter by employee status"},
+            "department": {"type": "string", "description": "Filter by department name"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "employees": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

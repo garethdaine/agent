@@ -1,0 +1,33 @@
+{
+    "name": "create-label",
+    "display_name": "Create Label",
+    "description": "Create a shipping label for an order in ShipStation.",
+    "method": "POST",
+    "path": "/shipments/createlabel",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "orderId": {"type": "integer", "description": "The ID of the order to create a label for"},
+            "carrierCode": {"type": "string", "description": "Carrier code (e.g. stamps_com, fedex, ups)"},
+            "serviceCode": {"type": "string", "description": "Service code for the shipping method"},
+            "packageCode": {"type": "string", "description": "Package type code"},
+            "weight": {"type": "object", "properties": {"value": {"type": "number"}, "units": {"type": "string"}}, "description": "Package weight"},
+            "dimensions": {"type": "object", "properties": {"length": {"type": "number"}, "width": {"type": "number"}, "height": {"type": "number"}, "units": {"type": "string"}}, "description": "Package dimensions"},
+            "testLabel": {"type": "boolean", "description": "If true, creates a test label without incurring charges"}
+        },
+        "required": ["orderId", "carrierCode", "serviceCode", "weight"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "shipmentId": {"type": "integer"},
+            "trackingNumber": {"type": "string"},
+            "labelData": {"type": "string"},
+            "shipmentCost": {"type": "number"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

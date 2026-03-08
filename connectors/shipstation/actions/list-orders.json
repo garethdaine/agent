@@ -1,0 +1,32 @@
+{
+    "name": "list-orders",
+    "display_name": "List Orders",
+    "description": "Retrieve a list of orders from ShipStation.",
+    "method": "GET",
+    "path": "/orders",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "orderStatus": {"type": "string", "description": "Filter by order status (e.g. awaiting_shipment, shipped, cancelled)"},
+            "orderNumber": {"type": "string", "description": "Filter by order number"},
+            "orderDateStart": {"type": "string", "description": "Filter orders created on or after this date (ISO 8601)"},
+            "orderDateEnd": {"type": "string", "description": "Filter orders created on or before this date (ISO 8601)"},
+            "storeId": {"type": "integer", "description": "Filter by store ID"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "pageSize": {"type": "integer", "description": "Number of results per page (max 500)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "orders": {"type": "array", "items": {"type": "object"}},
+            "total": {"type": "integer"},
+            "page": {"type": "integer"},
+            "pages": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

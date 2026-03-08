@@ -1,0 +1,26 @@
+{
+    "name": "list-claims",
+    "display_name": "List Claims",
+    "description": "Retrieve a list of insurance claims with optional filtering by status and policy.",
+    "method": "GET",
+    "path": "/claims",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "description": "Filter by claim status (e.g. open, closed, pending)"},
+            "policyId": {"type": "string", "description": "Filter claims by policy identifier"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "claims": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

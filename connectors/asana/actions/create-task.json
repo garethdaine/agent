@@ -1,0 +1,36 @@
+{
+    "name": "create-task",
+    "display_name": "Create Task",
+    "description": "Create a new task in an Asana project or workspace.",
+    "method": "POST",
+    "path": "/tasks",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "data": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "The name of the task"},
+                    "notes": {"type": "string", "description": "Free-form text describing the task"},
+                    "workspace": {"type": "string", "description": "The workspace GID"},
+                    "projects": {"type": "array", "items": {"type": "string"}, "description": "Array of project GIDs"},
+                    "assignee": {"type": "string", "description": "The assignee GID or 'me'"},
+                    "due_on": {"type": "string", "description": "Due date in YYYY-MM-DD format"},
+                    "due_at": {"type": "string", "description": "Due date and time in ISO 8601 format"}
+                },
+                "required": ["name"]
+            }
+        },
+        "required": ["data"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

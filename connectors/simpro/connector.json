@@ -1,0 +1,33 @@
+{
+    "name": "simpro",
+    "display_name": "simPRO",
+    "description": "Field service and job management platform for trade and service businesses, supporting quoting, scheduling, inventory, and invoicing.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": "Bearer"
+    },
+    "base_url": "https://api.simprogroup.com/api/v1.0",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 30000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "field-service",
+    "industries": ["facilities"],
+    "mcp_tool_prefix": "simpro",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-job"],
+    "data_regions": ["AU", "GB", "US"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-jobs", "method": "GET", "path": "/companies/{companyId}/jobs"},
+        {"name": "get-job", "method": "GET", "path": "/companies/{companyId}/jobs/{jobId}"},
+        {"name": "create-job", "method": "POST", "path": "/companies/{companyId}/jobs"},
+        {"name": "list-customers", "method": "GET", "path": "/companies/{companyId}/customers"}
+    ]
+}

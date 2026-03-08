@@ -1,0 +1,27 @@
+{
+    "name": "list-contacts",
+    "display_name": "List Contacts",
+    "description": "Retrieve a list of contacts (clients, opposing counsel, witnesses) from the Clio practice management system.",
+    "method": "GET",
+    "path": "/contacts.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "type": {"type": "string", "description": "Filter by contact type (e.g. Person, Company)"},
+            "query": {"type": "string", "description": "Search query to filter contacts by name"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to return"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "limit": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "name", "phone_numbers"]
+}

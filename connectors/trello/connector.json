@@ -1,0 +1,34 @@
+{
+    "name": "trello",
+    "display_name": "Trello",
+    "description": "Visual project management tool using boards, lists, and cards to organise tasks and collaborate with teams.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": "OAuth"
+    },
+    "base_url": "https://api.trello.com/1",
+    "rate_limits": {
+        "requests_per_minute": 100,
+        "daily_limit": 100000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "project-management",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "trello",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-card", "update-card"],
+    "data_regions": ["US"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-boards", "method": "GET", "path": "/members/me/boards"},
+        {"name": "list-lists", "method": "GET", "path": "/boards/{boardId}/lists"},
+        {"name": "list-cards", "method": "GET", "path": "/lists/{listId}/cards"},
+        {"name": "create-card", "method": "POST", "path": "/cards"},
+        {"name": "update-card", "method": "PUT", "path": "/cards/{cardId}"}
+    ]
+}

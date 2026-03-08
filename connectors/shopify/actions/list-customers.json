@@ -1,0 +1,27 @@
+{
+    "name": "list-customers",
+    "display_name": "List Customers",
+    "description": "Retrieve a list of customers from the Shopify store.",
+    "method": "GET",
+    "path": "/customers.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of results to return (max 250)"},
+            "page_info": {"type": "string", "description": "Cursor for pagination"},
+            "created_at_min": {"type": "string", "description": "Show customers created after date (ISO 8601)"},
+            "created_at_max": {"type": "string", "description": "Show customers created before date (ISO 8601)"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to include"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "customers": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "first_name", "last_name", "phone"]
+}

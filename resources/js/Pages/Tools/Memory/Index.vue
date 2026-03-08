@@ -155,6 +155,7 @@ onMounted(load);
                                     <div>
                                         <p class="text-sm text-muted-foreground">Core Blocks</p>
                                         <p class="text-2xl font-semibold">{{ formatNumber(stats?.core_blocks_count) }}</p>
+                                        <p v-if="!stats?.core_blocks_count" class="text-xs text-muted-foreground/70">Created via memory API</p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -169,6 +170,7 @@ onMounted(load);
                                     <div>
                                         <p class="text-sm text-muted-foreground">Embeddings</p>
                                         <p class="text-2xl font-semibold">{{ formatNumber(stats?.embeddings_count) }}</p>
+                                        <p v-if="!stats?.embeddings_count && operatingMode !== 'api'" class="text-xs text-muted-foreground/70">Requires API providers</p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -197,17 +199,59 @@ onMounted(load);
                                     <div>
                                         <p class="text-sm text-muted-foreground">Graph Entities</p>
                                         <p class="text-2xl font-semibold">{{ formatNumber(stats?.graph_entities_count || 0) }}</p>
+                                        <p v-if="!stats?.graph_entities_count && operatingMode !== 'api'" class="text-xs text-muted-foreground/70">Requires API providers + Neo4j</p>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
                     </div>
 
-                    <!-- Provider Usage -->
+                    <!-- CLI Usage (Subscription) -->
                     <Card>
                         <CardHeader>
-                            <CardTitle>Provider Usage</CardTitle>
-                            <CardDescription>API usage and cost tracking for memory operations.</CardDescription>
+                            <CardTitle>CLI Usage (Subscription)</CardTitle>
+                            <CardDescription>Token consumption from agent run executions, tracked per provider and model.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div v-if="stats?.cli_usage" class="space-y-4">
+                                <div class="flex items-center justify-between rounded-lg border bg-muted/30 p-4">
+                                    <div>
+                                        <p class="font-medium">Totals</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-medium">{{ formatNumber(stats.cli_usage.total_tokens) }} tokens</p>
+                                        <p class="text-sm text-muted-foreground">{{ formatCost(stats.cli_usage.total_cost) }} est. cost</p>
+                                    </div>
+                                </div>
+                                <div
+                                    v-for="(usage, provider) in stats.cli_usage.by_provider"
+                                    :key="`cli-${provider}`"
+                                    class="flex items-center justify-between rounded-lg border p-4"
+                                >
+                                    <div>
+                                        <p class="font-medium capitalize">{{ provider }}</p>
+                                        <p class="text-xs text-muted-foreground">Subscription</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-medium">{{ formatNumber(usage.tokens) }} tokens</p>
+                                        <p class="text-sm text-muted-foreground">{{ formatCost(usage.cost) }} est. cost</p>
+                                    </div>
+                                </div>
+                                <div v-if="!stats.cli_usage.by_provider || Object.keys(stats.cli_usage.by_provider).length === 0" class="text-sm text-muted-foreground">
+                                    No CLI usage recorded yet. Token usage is captured from agent run output.
+                                </div>
+                            </div>
+                            <div v-else class="text-sm text-muted-foreground">
+                                No CLI usage recorded yet.
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Memory API Provider Usage -->
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Memory API Usage</CardTitle>
+                            <CardDescription>API usage and cost tracking for memory operations (extraction, embedding, etc.).</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div v-if="stats?.provider_usage" class="space-y-4">
@@ -222,7 +266,7 @@ onMounted(load);
                                 </div>
                                 <div
                                     v-for="(usage, provider) in stats.provider_usage.by_provider"
-                                    :key="provider"
+                                    :key="`api-${provider}`"
                                     class="flex items-center justify-between rounded-lg border p-4"
                                 >
                                     <div>
@@ -234,11 +278,11 @@ onMounted(load);
                                     </div>
                                 </div>
                                 <div v-if="!stats.provider_usage.by_provider || Object.keys(stats.provider_usage.by_provider).length === 0" class="text-sm text-muted-foreground">
-                                    No per-provider usage recorded yet.
+                                    No memory API usage recorded yet. Requires API providers to be configured.
                                 </div>
                             </div>
                             <div v-else class="text-sm text-muted-foreground">
-                                No provider usage recorded yet.
+                                No memory API usage recorded yet.
                             </div>
                         </CardContent>
                     </Card>

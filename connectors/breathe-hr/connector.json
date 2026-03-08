@@ -1,0 +1,38 @@
+{
+    "name": "breathe-hr",
+    "display_name": "Breathe HR",
+    "description": "Cloud-based HR management software for SMEs. Manage employee records, absences, holidays, and HR documents in one place.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://login.breathehr.com/oauth/authorize",
+        "token_url": "https://login.breathehr.com/oauth/token",
+        "scopes": ["employees:read", "employees:write", "absences:read"],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://api.breathehr.com/v1",
+    "rate_limits": {
+        "requests_per_minute": 120,
+        "daily_limit": 50000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "hr",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "breathehr",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-employee", "create-absence"],
+    "data_regions": ["GB", "EU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-employees", "method": "GET", "path": "/employees"},
+        {"name": "get-employee", "method": "GET", "path": "/employees/{employeeId}"},
+        {"name": "create-employee", "method": "POST", "path": "/employees"},
+        {"name": "list-absences", "method": "GET", "path": "/absences"},
+        {"name": "create-absence", "method": "POST", "path": "/absences"}
+    ]
+}

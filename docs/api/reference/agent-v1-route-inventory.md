@@ -266,6 +266,8 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/runs/{id}/stop` | `-` | `AgentRunController@stop` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | GET | `agent/api/v1/runtime/policy` | `-` | `RuntimePolicyController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/security/audit` | `-` | `SecurityAuditController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| GET | `agent/api/v1/services` | `-` | `ServiceManagerController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| POST | `agent/api/v1/services/restart` | `-` | `ServiceManagerController@restart` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | GET | `agent/api/v1/skills` | `-` | `SkillController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/skills/dashboard/health` | `-` | `SkillDashboardController@health` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/skills/dashboard/usage` | `-` | `SkillDashboardController@usage` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |

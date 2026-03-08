@@ -1,0 +1,26 @@
+{
+    "name": "list-residents",
+    "display_name": "List Residents",
+    "description": "Retrieve a list of residents from Person Centred Software.",
+    "method": "GET",
+    "path": "/residents",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"},
+            "status": {"type": "string", "description": "Filter by resident status (e.g. current, discharged)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}},
+            "meta": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["name", "dateOfBirth", "nhsNumber"]
+}

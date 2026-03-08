@@ -1,0 +1,38 @@
+{
+    "name": "mailchimp",
+    "display_name": "Mailchimp",
+    "description": "Email marketing and automation platform. Manage mailing lists, subscribers, and email campaigns with audience segmentation and analytics.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://login.mailchimp.com/oauth2/authorize",
+        "token_url": "https://login.mailchimp.com/oauth2/token",
+        "scopes": [],
+        "pkce_required": false,
+        "refresh_strategy": "none",
+        "token_expiry_seconds": 0
+    },
+    "base_url": "https://{dc}.api.mailchimp.com/3.0",
+    "rate_limits": {
+        "requests_per_minute": 10,
+        "daily_limit": 50000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "email-marketing",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "mailchimp",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["add-member", "create-campaign"],
+    "data_regions": ["US"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-lists", "method": "GET", "path": "/lists"},
+        {"name": "list-members", "method": "GET", "path": "/lists/{listId}/members"},
+        {"name": "add-member", "method": "POST", "path": "/lists/{listId}/members"},
+        {"name": "list-campaigns", "method": "GET", "path": "/campaigns"},
+        {"name": "create-campaign", "method": "POST", "path": "/campaigns"}
+    ]
+}

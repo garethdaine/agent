@@ -1,0 +1,25 @@
+{
+    "name": "list-matters",
+    "display_name": "List Matters",
+    "description": "Retrieve a list of legal matters (cases) from the LEAP practice management system.",
+    "method": "GET",
+    "path": "/matters",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "description": "Filter by matter status (e.g. active, closed, archived)"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "matters": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

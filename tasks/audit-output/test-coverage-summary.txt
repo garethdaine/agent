@@ -1,0 +1,65 @@
+     75▕     {
+
+  1   tests/Feature/Tunnel/TunnelGracefulDegradationTest.php:71
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Tunnel\TunnelGracefulDegradationTest > all tunnel r…   
+  Route [settings.tunnel.index] should return 404 when tunnel feature is disabled, got 200
+Failed asserting that 200 matches expected 404.
+
+  at tests/Feature/Tunnel/TunnelGracefulDegradationTest.php:100
+     96▕ 
+     97▕             $response = $this->actingAs($this->user)
+     98▕                 ->json($method, route($routeName));
+     99▕ 
+  ➜ 100▕             $this->assertEquals(
+    101▕                 404,
+    102▕                 $response->getStatusCode(),
+    103▕                 "Route [{$routeName}] should return 404 when tunnel feature is disabled, got {$response->getStatusCode()}"
+    104▕             );
+
+  1   tests/Feature/Tunnel/TunnelGracefulDegradationTest.php:100
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Tunnel\TunnelStatusApiTest > status returns 404 whe…   
+  Expected response status code [404] but received 200.
+Failed asserting that 200 is identical to 404.
+
+  at tests/Feature/Tunnel/TunnelStatusApiTest.php:61
+     57▕     {
+     58▕         $response = $this->actingAs($this->user)
+     59▕             ->getJson(route('api.tunnel.status'));
+     60▕ 
+  ➜  61▕         $response->assertStatus(404);
+     62▕     }
+     63▕ 
+     64▕     public function test_status_response_schema_matches_expected(): void
+     65▕     {
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Integration\Telemetry\ActiveBuildReadScopeTest > missing ac…   
+  Failed asserting that two strings are identical.
+  -'missing_active_projection_build'
+  +'missing_active_build_projection_row'
+  
+
+  at tests/Integration/Telemetry/ActiveBuildReadScopeTest.php:48
+     44▕         $response = $this->getJson('/agent/api/v1/workflows/eng.code-implementation.v1/reliability');
+     45▕ 
+     46▕         $response->assertStatus(404)
+     47▕             ->assertJsonPath('error.code', 'NOT_FOUND')
+  ➜  48▕             ->assertJsonPath('error.details.reason_state', 'missing_active_projection_build')
+     49▕             ->assertJsonPath('error.details.active_projection_build_id', null)
+     50▕             ->assertJsonPath('error.details.workflow_key.0', 'eng.code-implementation.v1');
+     51▕     }
+     52▕
+
+
+  Tests:    11 failed, 9 skipped, 3959 passed (14382 assertions)
+  Duration: 270.36s
+
+Coverage report generation failed due to memory exhaustion (OOM at ~512MB during route file instrumentation).
+
+Test Results: 11 failed, 9 skipped, 3959 passed (14382 assertions)
+Duration: 270.36s
+Constraint: PCOV coverage instrumentation exhausts memory on large route files. Needs memory_limit increase or pcov.exclude for vendor/routes.

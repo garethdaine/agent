@@ -1,0 +1,29 @@
+{
+    "name": "list-care-notes",
+    "display_name": "List Care Notes",
+    "description": "Retrieve care notes for a specific resident.",
+    "method": "GET",
+    "path": "/residents/{residentId}/care-notes",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "residentId": {"type": "string", "description": "The unique identifier of the resident"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page"},
+            "date_from": {"type": "string", "description": "Filter notes from this date (ISO 8601)"},
+            "date_to": {"type": "string", "description": "Filter notes up to this date (ISO 8601)"}
+        },
+        "required": ["residentId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}},
+            "meta": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

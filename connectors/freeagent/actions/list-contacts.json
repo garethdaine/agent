@@ -1,0 +1,26 @@
+{
+    "name": "list-contacts",
+    "display_name": "List Contacts",
+    "description": "Retrieve a list of contacts from FreeAgent.",
+    "method": "GET",
+    "path": "/contacts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "view": {"type": "string", "description": "Filter by type: clients, suppliers, active, completed"},
+            "sort": {"type": "string", "description": "Sort field"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page (max 100)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "contacts": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "first_name", "last_name"]
+}

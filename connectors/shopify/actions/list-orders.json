@@ -1,0 +1,30 @@
+{
+    "name": "list-orders",
+    "display_name": "List Orders",
+    "description": "Retrieve a list of orders from the Shopify store.",
+    "method": "GET",
+    "path": "/orders.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of results to return (max 250)"},
+            "page_info": {"type": "string", "description": "Cursor for pagination"},
+            "status": {"type": "string", "description": "Filter by status: open, closed, cancelled, any"},
+            "financial_status": {"type": "string", "description": "Filter by financial status: authorized, pending, paid, refunded"},
+            "fulfillment_status": {"type": "string", "description": "Filter by fulfillment status: shipped, partial, unshipped, unfulfilled"},
+            "created_at_min": {"type": "string", "description": "Show orders created after date (ISO 8601)"},
+            "created_at_max": {"type": "string", "description": "Show orders created before date (ISO 8601)"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to include"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "orders": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "customer.email", "shipping_address"]
+}

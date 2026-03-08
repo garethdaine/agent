@@ -1,0 +1,33 @@
+{
+    "name": "leap",
+    "display_name": "LEAP",
+    "description": "Cloud-based legal practice management software for small to mid-size law firms. Manage matters, contacts, and time entries with integrated document management.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": "Bearer"
+    },
+    "base_url": "https://api.leap.services/v1",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 30000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "elevated",
+    "category": "legal-practice-management",
+    "industries": ["legal"],
+    "mcp_tool_prefix": "leap",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": [],
+    "data_regions": ["AU", "GB", "US"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-matters", "method": "GET", "path": "/matters"},
+        {"name": "get-matter", "method": "GET", "path": "/matters/{matterId}"},
+        {"name": "list-contacts", "method": "GET", "path": "/contacts"},
+        {"name": "list-time-entries", "method": "GET", "path": "/matters/{matterId}/time-entries"}
+    ]
+}

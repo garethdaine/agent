@@ -1,0 +1,30 @@
+{
+    "name": "get-project",
+    "display_name": "Get Project",
+    "description": "Retrieve detailed information about a specific construction project by ID.",
+    "method": "GET",
+    "path": "/projects/{projectId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "projectId": {"type": "integer", "description": "The ID of the project"},
+            "company_id": {"type": "integer", "description": "The ID of the company"}
+        },
+        "required": ["projectId", "company_id"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "integer"},
+            "name": {"type": "string"},
+            "status_id": {"type": "integer"},
+            "address": {"type": "string"},
+            "start_date": {"type": "string"},
+            "projected_finish_date": {"type": "string"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

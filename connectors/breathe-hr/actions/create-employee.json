@@ -1,0 +1,29 @@
+{
+    "name": "create-employee",
+    "display_name": "Create Employee",
+    "description": "Create a new employee record in Breathe HR.",
+    "method": "POST",
+    "path": "/employees",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "firstName": {"type": "string", "description": "Employee first name"},
+            "lastName": {"type": "string", "description": "Employee last name"},
+            "email": {"type": "string", "description": "Employee email address"},
+            "jobTitle": {"type": "string", "description": "Employee job title"},
+            "department": {"type": "string", "description": "Department name"},
+            "startDate": {"type": "string", "description": "Employment start date (YYYY-MM-DD)"}
+        },
+        "required": ["firstName", "lastName", "email"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "employee": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["firstName", "lastName", "email"]
+}

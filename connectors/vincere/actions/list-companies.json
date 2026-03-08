@@ -1,0 +1,26 @@
+{
+    "name": "list-companies",
+    "display_name": "List Companies",
+    "description": "Retrieve a list of client companies from the Vincere recruitment system.",
+    "method": "GET",
+    "path": "/company",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "sort": {"type": "string", "description": "Sort field and direction"},
+            "offset": {"type": "integer", "description": "Offset for pagination"},
+            "limit": {"type": "integer", "description": "Number of results to return"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "result": {"type": "array", "items": {"type": "object"}},
+            "total": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

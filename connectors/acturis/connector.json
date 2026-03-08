@@ -1,0 +1,35 @@
+{
+    "name": "acturis",
+    "display_name": "Acturis",
+    "description": "Insurance broking and MGA management platform. Access policies, claims, and client records for insurance intermediaries.",
+    "version": "1.0.0",
+    "status": "partnership_pending",
+    "partnership_notes": "Requires formal API partnership agreement with Acturis. Contact apipartners@acturis.com for onboarding.",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "X-Api-Key",
+        "header_prefix": ""
+    },
+    "base_url": "https://api.acturis.com/v1",
+    "rate_limits": {
+        "requests_per_minute": 30,
+        "daily_limit": 10000,
+        "concurrent_limit": 3
+    },
+    "cost_model": "free",
+    "risk_level": "elevated",
+    "category": "insurance-management",
+    "industries": ["insurance"],
+    "mcp_tool_prefix": "acturis",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": [],
+    "data_regions": ["GB"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-policies", "method": "GET", "path": "/policies"},
+        {"name": "get-policy", "method": "GET", "path": "/policies/{policyId}"},
+        {"name": "list-claims", "method": "GET", "path": "/claims"},
+        {"name": "list-clients", "method": "GET", "path": "/clients"}
+    ]
+}

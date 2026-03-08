@@ -1,0 +1,27 @@
+{
+    "name": "get-job",
+    "display_name": "Get Job",
+    "description": "Retrieve detailed information about a specific job by ID.",
+    "method": "GET",
+    "path": "/job/{jobId}.json",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "jobId": {"type": "string", "description": "The UUID of the job"}
+        },
+        "required": ["jobId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "uuid": {"type": "string"},
+            "status": {"type": "string"},
+            "job_description": {"type": "string"},
+            "company_name": {"type": "string"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,26 @@
+{
+    "name": "list-contacts",
+    "display_name": "List Contacts",
+    "description": "Retrieve a list of contacts (vendors, landlords, buyers, tenants) from the Reapit CRM.",
+    "method": "GET",
+    "path": "/contacts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "description": "Filter contacts by name"},
+            "pageNumber": {"type": "integer", "description": "Page number for pagination"},
+            "pageSize": {"type": "integer", "description": "Number of results per page"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "_embedded": {"type": "array", "items": {"type": "object"}},
+            "totalCount": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["email", "mobileTelephone", "name"]
+}

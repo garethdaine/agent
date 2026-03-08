@@ -1,0 +1,27 @@
+{
+    "name": "list-expenses",
+    "display_name": "List Expenses",
+    "description": "Retrieve a list of expenses from FreeAgent.",
+    "method": "GET",
+    "path": "/expenses",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "user": {"type": "string", "description": "Filter by user URL"},
+            "from_date": {"type": "string", "description": "Filter expenses from this date (YYYY-MM-DD)"},
+            "to_date": {"type": "string", "description": "Filter expenses to this date (YYYY-MM-DD)"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "per_page": {"type": "integer", "description": "Number of results per page (max 100)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "expenses": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

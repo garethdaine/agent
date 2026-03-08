@@ -1,0 +1,24 @@
+{
+    "name": "get-event",
+    "display_name": "Get Event",
+    "description": "Retrieve detailed information about a specific scheduled event by its ID.",
+    "method": "GET",
+    "path": "/scheduled_events/{eventId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "eventId": {"type": "string", "description": "The unique identifier of the scheduled event"}
+        },
+        "required": ["eventId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "resource": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}
