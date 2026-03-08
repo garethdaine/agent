@@ -285,6 +285,9 @@
   short_text: Browse and manage connected third-party services.
   severity: info
   learn_more_slug: connectors-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - tools.connectors.index
   metadata:
@@ -295,6 +298,9 @@
   short_text: Deployment history and release status tracking.
   severity: info
   learn_more_slug: deployments-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - agent.deployments.index
   metadata:
@@ -305,6 +311,9 @@
   short_text: Active runtime sessions and connection status.
   severity: info
   learn_more_slug: sessions-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - messenger.runtime.index
   metadata:
@@ -315,6 +324,9 @@
   short_text: Code analysis runs, findings, and quality metrics.
   severity: info
   learn_more_slug: code-analysis-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - tools.code-analysis.index
   metadata:
@@ -325,6 +337,9 @@
   short_text: Security audit findings and compliance status.
   severity: info
   learn_more_slug: security-audit
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - tools.security.index
   metadata:
@@ -335,6 +350,9 @@
   short_text: System diagnostics and health check results.
   severity: info
   learn_more_slug: diagnostics-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - tools.diagnostics.index
   metadata:
@@ -345,6 +363,9 @@
   short_text: Registered services and their operational status.
   severity: info
   learn_more_slug: services-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - tools.services.index
   metadata:
@@ -355,6 +376,9 @@
   short_text: Application log stream and filtering controls.
   severity: info
   learn_more_slug: logs-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - tools.logs.index
   metadata:
@@ -365,6 +389,9 @@
   short_text: Audit trail of user and system actions.
   severity: info
   learn_more_slug: audit-log
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - tools.audit.index
   metadata:
@@ -375,6 +402,9 @@
   short_text: Memory system configuration and storage settings.
   severity: info
   learn_more_slug: memory-settings
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - tools.memory.settings
   setting_keys:
@@ -387,6 +417,9 @@
   short_text: Tunnel configuration for secure remote access.
   severity: info
   learn_more_slug: tunnel-settings
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - settings.tunnel.index
   metadata:
@@ -397,6 +430,9 @@
   short_text: Application configuration and environment settings.
   severity: info
   learn_more_slug: configuration-settings
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - settings.configuration.index
   metadata:
@@ -407,6 +443,9 @@
   short_text: Secret and credential management for integrations.
   severity: info
   learn_more_slug: credentials-management
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
   route_names:
     - settings.secrets.index
   metadata:
