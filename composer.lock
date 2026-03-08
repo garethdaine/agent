@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a7c3f2987fdd63db3082a8c2ee9e1026",
+    "content-hash": "76fe96287c4eb7263f207fe21655b4c1",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -10027,6 +10027,60 @@
                 }
             ],
             "time": "2024-11-21T01:49:47+00:00"
+        },
+        {
+            "name": "yethee/tiktoken",
+            "version": "1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/yethee/tiktoken-php.git",
+                "reference": "d2b3bcf9c1437c0134da85e02482fc53c80bc37a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/yethee/tiktoken-php/zipball/d2b3bcf9c1437c0134da85e02482fc53c80bc37a",
+                "reference": "d2b3bcf9c1437c0134da85e02482fc53c80bc37a",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.1",
+                "symfony/service-contracts": "^2.5 || ^3.0"
+            },
+            "require-dev": {
+                "doctrine/coding-standard": "^13",
+                "mikey179/vfsstream": "^1.6.11",
+                "phpbench/phpbench": "^1.2",
+                "phpunit/phpunit": "^10.5.45",
+                "psalm/plugin-phpunit": "^0.19.2",
+                "vimeo/psalm": "6.14.2"
+            },
+            "suggest": {
+                "ext-ffi": "To allow use LibEncoder"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Yethee\\Tiktoken\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "PHP version of tiktoken",
+            "keywords": [
+                "bpe",
+                "decode",
+                "encode",
+                "openai",
+                "tiktoken",
+                "tokenizer"
+            ],
+            "support": {
+                "issues": "https://github.com/yethee/tiktoken-php/issues",
+                "source": "https://github.com/yethee/tiktoken-php/tree/1.1.0"
+            },
+            "time": "2025-12-13T18:55:17+00:00"
         }
     ],
     "packages-dev": [
@@ -10163,6 +10217,92 @@
                 }
             ],
             "time": "2025-08-08T12:00:00+00:00"
+        },
+        {
+            "name": "garethdaine/agent-rules",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/garethdaine/agent-rules.git",
+                "reference": "3cd01d105c340a7238c1f2871ab0fea1cd1a85f5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/garethdaine/agent-rules/zipball/3cd01d105c340a7238c1f2871ab0fea1cd1a85f5",
+                "reference": "3cd01d105c340a7238c1f2871ab0fea1cd1a85f5",
+                "shasum": ""
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "agentops": {
+                    "type": "rules",
+                    "submodules": [
+                        "vendor/ivangrynenko/cursorrules",
+                        "vendor/PatrickJS/awesome-cursorrules",
+                        "vendor/Van-LLM-Crew/cursor-secure-coding",
+                        "vendor/pekral/cursor-rules"
+                    ]
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "AgentOps curated AI agent rules — cursor rules, .mdc files, and coding standards bundled as git submodules.",
+            "support": {
+                "source": "https://github.com/garethdaine/agent-rules/tree/main",
+                "issues": "https://github.com/garethdaine/agent-rules/issues"
+            },
+            "time": "2026-03-08T10:04:50+00:00"
+        },
+        {
+            "name": "garethdaine/agent-skills",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/garethdaine/agent-skills.git",
+                "reference": "79e55c8cdc126799cb16ec46a25d9a647dd9a29b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/garethdaine/agent-skills/zipball/79e55c8cdc126799cb16ec46a25d9a647dd9a29b",
+                "reference": "79e55c8cdc126799cb16ec46a25d9a647dd9a29b",
+                "shasum": ""
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "agentops": {
+                    "type": "skills",
+                    "submodules": [
+                        "vendor/anthropics/skills",
+                        "vendor/vercel-labs/agent-skills",
+                        "vendor/getsentry/skills",
+                        "vendor/hashicorp/agent-skills",
+                        "vendor/supabase/agent-skills",
+                        "vendor/LambdaTest/agent-skills",
+                        "vendor/trailofbits/skills",
+                        "vendor/agamm/claude-code-owasp",
+                        "vendor/netresearch/security-audit-skill",
+                        "vendor/BehiSecc/VibeSec-Skill",
+                        "vendor/onmax/nuxt-skills",
+                        "vendor/Lombiq/Tailwind-Agent-Skills",
+                        "vendor/obra/superpowers",
+                        "vendor/sickn33/antigravity-awesome-skills",
+                        "vendor/ccheney/robust-skills",
+                        "vendor/addyosmani/web-quality-skills"
+                    ]
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "AgentOps curated AI agent skills — SKILL.md files, scripts, and resources bundled as git submodules.",
+            "support": {
+                "source": "https://github.com/garethdaine/agent-skills/tree/main",
+                "issues": "https://github.com/garethdaine/agent-skills/issues"
+            },
+            "time": "2026-03-08T10:05:41+00:00"
         },
         {
             "name": "hamcrest/hamcrest-php",
@@ -12348,7 +12488,10 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "garethdaine/agent-rules": 20,
+        "garethdaine/agent-skills": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
