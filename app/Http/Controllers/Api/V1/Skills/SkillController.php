@@ -68,7 +68,13 @@ class SkillController extends Controller
     {
         $this->ensureSkillsEnabled();
 
-        $teamId = $this->requireCurrentTeamId($request);
+        $team = $request->user()->currentTeam;
+
+        if (! $team) {
+            return SkillResource::collection(AgentSkill::query()->whereRaw('1 = 0')->paginate(25));
+        }
+
+        $teamId = (int) $team->id;
         $perPage = min((int) $request->query('per_page', 25), 100);
 
         $query = AgentSkill::query()
