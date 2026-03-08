@@ -15,11 +15,14 @@ class ExpireConnectorApprovalsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $queue = 'connector-approvals';
+    public int $tries = 3;
 
-    public $tries = 3;
+    public array $backoff = [5, 15, 30];
 
-    public $backoff = [5, 15, 30];
+    public function __construct()
+    {
+        $this->onQueue('connector-approvals');
+    }
 
     public function handle(): void
     {

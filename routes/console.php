@@ -115,6 +115,12 @@ Schedule::job(new \App\Jobs\Connectors\RefreshConnectorCredentialsJob)
     ->withoutOverlapping()
     ->when(fn () => config('connectors.credential_refresh'));
 
+// Expire overdue connector approval requests (every minute when connectors enabled)
+Schedule::job(new \App\Jobs\Connectors\ExpireConnectorApprovalsJob)
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->when(fn () => config('connectors.enabled'));
+
 // Prune old connector telemetry (daily at 03:00 when connectors enabled)
 Schedule::command('connector:prune-telemetry')
     ->dailyAt('03:00')

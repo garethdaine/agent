@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace App\Support\Connectors\Pipeline;
 
 use App\Models\AgentConnectorApproval;
+use App\Services\Connectors\DualChannelApprovalService;
 use App\Support\Connectors\ActionRequest;
 use App\Support\Connectors\Exceptions\ApprovalRequiredException;
 use Closure;
 
 class ApprovalGate
 {
+    public function __construct(
+        private readonly DualChannelApprovalService $approvalService,
+    ) {}
+
     public function handle(ActionRequest $request, Closure $next): mixed
     {
         if (! $this->requiresApproval($request)) {
@@ -39,17 +44,13 @@ class ApprovalGate
             return $next($request);
         }
 
-        $approval = AgentConnectorApproval::create([
-            'connection_id' => $request->connection->id,
-            'connector_id' => $request->connector->id,
-            'action_name' => $request->action,
-            'type' => AgentConnectorApproval::TYPE_APPROVAL,
-            'status' => AgentConnectorApproval::STATUS_PENDING,
-            'requested_by_run_id' => $request->runAttemptId,
-            'requested_at' => now(),
-            'expires_at' => now()->addMinutes(config('connectors.approval_timeout_minutes', 15)),
-            'request_context' => $request->parameters,
-        ]);
+        $approval = $this->approvalService->requestApproval(
+            connection: $request->connection,
+            actionName: $request->action,
+            type: AgentConnectorApproval::TYPE_APPROVAL,
+            context: $request->parameters,
+            runAttemptId: $request->runAttemptId,
+        );
 
         throw new ApprovalRequiredException($approval);
     }

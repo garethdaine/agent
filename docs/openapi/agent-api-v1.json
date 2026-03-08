@@ -6845,6 +6845,109 @@
                 }
             }
         },
+        "\/agent\/api\/v1\/connectors\/{connectorName}\/webhooks\/{event}": {
+            "post": {
+                "operationId": "connectors.webhook.ingest",
+                "tags": [
+                    "ConnectorWebhook"
+                ],
+                "parameters": [
+                    {
+                        "name": "connectorName",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "received": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "received"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "received": {
+                                                    "type": "boolean"
+                                                },
+                                                "deduplicated": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "required": [
+                                                "received",
+                                                "deduplicated"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "const": "Invalid signature"
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "const": "Webhooks disabled"
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "\/agent\/api\/v1\/credentials": {
             "get": {
                 "operationId": "credentials.index",
@@ -22463,7 +22566,44 @@
                                                     "type": "integer",
                                                     "minimum": 0
                                                 },
+                                                "graph_entities_count": {
+                                                    "type": "integer"
+                                                },
                                                 "provider_usage": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "total_tokens": {
+                                                            "type": "integer"
+                                                        },
+                                                        "total_cost": {
+                                                            "type": "number"
+                                                        },
+                                                        "by_provider": {
+                                                            "type": "object",
+                                                            "additionalProperties": {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "tokens": {
+                                                                        "type": "integer"
+                                                                    },
+                                                                    "cost": {
+                                                                        "type": "number"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "tokens",
+                                                                    "cost"
+                                                                ]
+                                                            }
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "total_tokens",
+                                                        "total_cost",
+                                                        "by_provider"
+                                                    ]
+                                                },
+                                                "cli_usage": {
                                                     "type": "object",
                                                     "properties": {
                                                         "total_tokens": {
@@ -22513,7 +22653,9 @@
                                                 "core_blocks_count",
                                                 "embeddings_count",
                                                 "conversation_logs_count",
+                                                "graph_entities_count",
                                                 "provider_usage",
+                                                "cli_usage",
                                                 "operating_mode",
                                                 "generated_at"
                                             ]

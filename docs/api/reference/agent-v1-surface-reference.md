@@ -135,7 +135,7 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ### Connectors
 
-**13 endpoint(s)** registered under `/agent/api/v1/connectors`.
+**14 endpoint(s)** registered under `/agent/api/v1/connectors`.
 
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
@@ -145,6 +145,7 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | POST | `agent/api/v1/connectors/slack/webhook` | `agent.api.connectors.slack.webhook` | `WebhookController@handleSlack` | - |
 | POST | `agent/api/v1/connectors/telegram/webhook/{accountKey}` | `agent.api.connectors.telegram.webhook` | `WebhookController@handleTelegram` | - |
 | GET,POST | `agent/api/v1/connectors/whatsapp/webhook` | `agent.api.connectors.whatsapp.webhook` | `WebhookController@handleWhatsApp` | - |
+| POST | `agent/api/v1/connectors/{connectorName}/webhooks/{event}` | `connectors.webhook.ingest` | `ConnectorWebhookController` | - |
 | GET | `agent/api/v1/connectors/{id}` | `-` | `ConnectorLibraryController@show` | `auth:sanctum` |
 | GET | `agent/api/v1/connectors/{id}/actions` | `-` | `ConnectorLibraryController@actions` | `auth:sanctum` |
 | POST | `agent/api/v1/connectors/{id}/connect` | `-` | `ConnectorConnectionController@connect` | `auth:sanctum` |
@@ -560,6 +561,8 @@ The following API endpoints are available for this feature:
   - Controller: `WebhookController@handleTelegram`
 - **`GET,POST agent/api/v1/connectors/whatsapp/webhook`**
   - Controller: `WebhookController@handleWhatsApp`
+- **`POST agent/api/v1/connectors/{connectorName}/webhooks/{event}`**
+  - Controller: `ConnectorWebhookController`
 - **`GET agent/api/v1/connectors/{id}`**
   - Controller: `ConnectorLibraryController@show`
   - Auth: `auth:sanctum`

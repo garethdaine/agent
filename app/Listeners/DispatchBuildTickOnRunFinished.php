@@ -6,7 +6,7 @@ namespace App\Listeners;
 
 use App\Events\AgentJobRunFinished;
 use App\Jobs\ExecuteInterrogationBuildJob;
-use App\Models\InterrogationBuildTask;
+use App\Models\InterrogationSession;
 use Illuminate\Contracts\Queue\ShouldQueue;
 
 class DispatchBuildTickOnRunFinished implements ShouldQueue
@@ -28,22 +28,32 @@ class DispatchBuildTickOnRunFinished implements ShouldQueue
             return;
         }
 
-        // Only dispatch if the build task is still in-progress and linked to
-        // this run — avoids duplicate ticks when the self-sustaining loop is
-        // already handling the transition.
-        $task = InterrogationBuildTask::query()
-            ->where('id', $buildTaskId)
-            ->where('agent_job_run_id', $run->id)
-            ->where('status', InterrogationBuildTask::STATUS_IN_PROGRESS)
-            ->first();
+        // Check whether the build is still actively running rather than
+        // checking task status.  The self-sustaining loop inside
+        // ExecuteInterrogationBuildJob may have already finalized the task
+        // (marking it completed) before this queued listener processes.  If
+        // the loop's follow-up dispatch failed silently, this safety net is
+        // the only mechanism that can restart the loop.  Checking task status
+        // would cause us to bail out, leaving the build permanently stalled.
+        // The build tick itself is idempotent — an extra dispatch is harmless.
+        $session = InterrogationSession::query()->find($sessionId);
 
-        if ($task === null) {
+        if ($session === null) {
+            return;
+        }
+
+        $sessionMeta = is_array($session->metadata_json) ? $session->metadata_json : [];
+        $buildStatus = is_array($sessionMeta['build'] ?? null)
+            ? ($sessionMeta['build']['status'] ?? null)
+            : null;
+
+        if ($buildStatus !== 'running') {
             return;
         }
 
         // Dispatch a build tick with a short delay to allow the self-sustaining
-        // loop a chance to process first. This acts as a safety net — if the
-        // loop already finalized the task, the tick will no-op.
+        // loop a chance to process first.  If the loop already dispatched its
+        // own follow-up, the tick will harmlessly handle whatever state it finds.
         ExecuteInterrogationBuildJob::dispatch($sessionId)
             ->delay(now()->addSeconds(3));
     }

@@ -599,6 +599,25 @@ const summarizeToolUseResult = (toolUseResult) => {
         messages.push(`Todo list updated (${toolUseResult.newTodos.length} item${toolUseResult.newTodos.length === 1 ? '' : 's'})`);
     }
 
+    // Bash/command tool results with stdout/stderr
+    if (typeof toolUseResult.stdout === 'string' || typeof toolUseResult.stderr === 'string') {
+        const stdout = String(toolUseResult.stdout ?? '').trim();
+        const stderr = String(toolUseResult.stderr ?? '').trim();
+        if (stdout !== '' && stdout.length <= 200) {
+            messages.push(stdout);
+        } else if (stdout !== '') {
+            messages.push(`${stdout.slice(0, 200).trimEnd()}…`);
+        }
+        if (stderr !== '' && stderr.length <= 200) {
+            messages.push(stderr);
+        } else if (stderr !== '') {
+            messages.push(`${stderr.slice(0, 200).trimEnd()}…`);
+        }
+        if (messages.length === 0) {
+            messages.push('Command completed');
+        }
+    }
+
     if (messages.length === 0 && typeof toolUseResult.type === 'string' && String(toolUseResult.type).trim() !== '') {
         messages.push(`Tool result: ${String(toolUseResult.type).trim()}`);
     }
@@ -1157,6 +1176,14 @@ export const formatAgentRunEventEntry = (entry) => {
         return null;
     }
 
+    // Suppress partial/fragmented structured envelope JSON that couldn't be
+    // parsed above.  These are internal protocol fragments (session_id,
+    // tool_use_result, parent_tool_use_id, etc.) that should never reach the
+    // user-facing output.
+    if (hasStructuredEnvelopeMarkers(normalizedPayload) || RAW_ENVELOPE_FRAGMENT_PATTERN.test(normalizedPayload)) {
+        return null;
+    }
+
     return makeFormattedEntry({
         key: context.key,
         prefix: context.prefix,
@@ -1411,6 +1438,7 @@ const NOISE_JSON_TYPES = new Set([
 ]);
 
 const NOISE_PAYLOAD_MARKERS = /"type"\s*:\s*"(?:stream_event|input_json_delta|content_block_delta|signature_delta)"/;
+const RAW_ENVELOPE_FRAGMENT_PATTERN = /"(?:tool_use_result|tool_use_id|parent_tool_use_id|session_id|uuid)"\s*:/;
 
 const inferKindFromSummaryText = (text) => {
     const t = String(text ?? '').trim();
@@ -1985,6 +2013,13 @@ export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
         }
 
         if (NOISE_PAYLOAD_MARKERS.test(text)) {
+            return;
+        }
+
+        // Suppress partial/fragmented structured envelope JSON that couldn't
+        // be parsed above.  These are internal protocol fragments that should
+        // never reach user-facing output.
+        if (hasStructuredEnvelopeMarkers(text) || RAW_ENVELOPE_FRAGMENT_PATTERN.test(text)) {
             return;
         }
 

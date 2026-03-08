@@ -870,6 +870,61 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         $this->assertTrue($failureEventExists);
     }
 
+    public function test_completed_task_triggers_next_pending_task_on_follow_up_tick(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ]);
+
+        $completedRun = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED);
+
+        InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'First task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $completedRun->id,
+        ]);
+
+        $pendingTask = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 2,
+            'title' => 'Second task',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+            'attempt_count' => 0,
+        ]);
+
+        $nextRun = $this->makeRun($user, AgentJobRun::STATUS_QUEUED, [
+            'metadata_json' => ['source' => 'interrogation_build'],
+        ], 'Synthetic build run job 2');
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')
+            ->once()
+            ->andReturn($nextRun);
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+
+        // First tick: finalize the completed task.
+        $this->app->call([$job, 'handle']);
+
+        // Second tick (simulates follow-up): start the next pending task.
+        $session->refresh();
+        $this->app->call([$job, 'handle']);
+
+        $pendingTask->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_IN_PROGRESS, (string) $pendingTask->status);
+        $this->assertSame((int) $nextRun->id, (int) $pendingTask->agent_job_run_id);
+        $this->assertSame(1, (int) $pendingTask->attempt_count);
+        $this->assertSame('running', data_get($session->metadata_json, 'build.status'));
+    }
+
     public function test_failed_handler_ignores_stale_failure_when_build_not_running(): void
     {
         $user = User::factory()->create();
@@ -919,11 +974,11 @@ class ExecuteInterrogationBuildJobTest extends TestCase
     /**
      * @param  array<string, mixed>  $overrides
      */
-    private function makeRun(User $user, string $status, array $overrides = []): AgentJobRun
+    private function makeRun(User $user, string $status, array $overrides = [], string $jobName = 'Synthetic build run job'): AgentJobRun
     {
         $job = AgentJob::query()->create([
             'user_id' => $user->id,
-            'name' => 'Synthetic build run job',
+            'name' => $jobName,
             'cron_expression' => '0 0 1 1 0',
             'timezone' => 'UTC',
             'is_enabled' => false,

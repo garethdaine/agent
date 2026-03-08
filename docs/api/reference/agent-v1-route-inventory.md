@@ -93,6 +93,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/connectors/slack/webhook` | `agent.api.connectors.slack.webhook` | `WebhookController@handleSlack` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
 | POST | `agent/api/v1/connectors/telegram/webhook/{accountKey}` | `agent.api.connectors.telegram.webhook` | `WebhookController@handleTelegram` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
 | GET,POST | `agent/api/v1/connectors/whatsapp/webhook` | `agent.api.connectors.whatsapp.webhook` | `WebhookController@handleWhatsApp` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
+| POST | `agent/api/v1/connectors/{connectorName}/webhooks/{event}` | `connectors.webhook.ingest` | `ConnectorWebhookController` | `api, App\Http\Middleware\AgentApiVersionHeader` |
 | GET | `agent/api/v1/connectors/{id}` | `-` | `ConnectorLibraryController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/connectors/{id}/actions` | `-` | `ConnectorLibraryController@actions` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | POST | `agent/api/v1/connectors/{id}/connect` | `-` | `ConnectorConnectionController@connect` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
@@ -321,6 +322,8 @@ The following API endpoints are available for this feature:
   - Controller: `WebhookController@handleTelegram`
 - **`GET,POST agent/api/v1/connectors/whatsapp/webhook`**
   - Controller: `WebhookController@handleWhatsApp`
+- **`POST agent/api/v1/connectors/{connectorName}/webhooks/{event}`**
+  - Controller: `ConnectorWebhookController`
 - **`GET agent/api/v1/connectors/{id}`**
   - Controller: `ConnectorLibraryController@show`
   - Auth: `auth:sanctum`

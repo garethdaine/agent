@@ -11,6 +11,7 @@ use App\Messenger\SlashCommands\AskCommandHandler;
 use App\Messenger\SlashCommands\BrowserCommandHandler;
 use App\Messenger\SlashCommands\CommandsCommandHandler;
 use App\Messenger\SlashCommands\CompactCommandHandler;
+use App\Messenger\SlashCommands\ConnectorCommandHandler;
 use App\Messenger\SlashCommands\ContextCommandHandler;
 use App\Messenger\SlashCommands\DenyCommandHandler;
 use App\Messenger\SlashCommands\HelpCommandHandler;
@@ -69,6 +70,7 @@ final class CommandRouter
         'subagents' => SubAgentsCommandHandler::class,
         'progress' => ProgressCommandHandler::class,
         'skills' => SkillsCommandHandler::class,
+        'connector' => ConnectorCommandHandler::class,
     ];
 
     /**
