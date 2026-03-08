@@ -139,6 +139,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/health` | `-` | `Closure` | `api, App\Http\Middleware\AgentApiVersionHeader` |
 | GET | `agent/api/v1/health/messenger` | `-` | `MessengerHealthController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/health/scheduler` | `-` | `AgentRunController@schedulerHealth` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| GET | `agent/api/v1/interrogation/git-branches-preview` | `-` | `InterrogationSessionController@gitBranchesPreview` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:interrogation` |
 | GET | `agent/api/v1/interrogation/runner-models` | `-` | `RunnerModelsController` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/interrogation/sessions` | `-` | `InterrogationSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | POST | `agent/api/v1/interrogation/sessions` | `-` | `InterrogationSessionController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:interrogation` |
@@ -165,6 +166,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/interrogation/sessions/{id}/export-summary` | `-` | `InterrogationSessionController@exportSummary` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:interrogation` |
 | POST | `agent/api/v1/interrogation/sessions/{id}/generate-build-tasks` | `-` | `InterrogationSessionController@generateBuildTasks` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:interrogation` |
 | POST | `agent/api/v1/interrogation/sessions/{id}/generate-plan` | `-` | `InterrogationSessionController@generatePlan` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:interrogation` |
+| GET | `agent/api/v1/interrogation/sessions/{id}/git-branches` | `-` | `InterrogationSessionController@gitBranches` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:interrogation` |
 | POST | `agent/api/v1/interrogation/sessions/{id}/pause` | `-` | `InterrogationSessionController@pause` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:interrogation` |
 | POST | `agent/api/v1/interrogation/sessions/{id}/pause-build` | `-` | `InterrogationSessionController@pauseBuild` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:interrogation` |
 | DELETE | `agent/api/v1/interrogation/sessions/{id}/providers/{driver}` | `-` | `InterrogationTaskProviderController@disconnect` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:interrogation` |
@@ -225,7 +227,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/messenger/pairings` | `-` | `PairingController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | POST | `agent/api/v1/messenger/pairings/{id}/approve` | `-` | `PairingController@approve` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | POST | `agent/api/v1/messenger/pairings/{id}/revoke` | `-` | `PairingController@revoke` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
-| POST | `agent/api/v1/n8n/webhook` | `-` | `N8nWebhookController` | `api, App\Http\Middleware\AgentApiVersionHeader` |
+| POST | `agent/api/v1/n8n/webhook` | `-` | `N8nWebhookController` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\VerifyN8nSignature` |
 | GET | `agent/api/v1/notifications` | `-` | `NotificationController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | DELETE | `agent/api/v1/notifications` | `-` | `NotificationController@clearAll` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | POST | `agent/api/v1/notifications/read-all` | `-` | `NotificationController@markAllAsRead` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |

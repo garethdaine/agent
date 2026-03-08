@@ -257,10 +257,11 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ### Interrogation
 
-**47 endpoint(s)** registered under `/agent/api/v1/interrogation`.
+**49 endpoint(s)** registered under `/agent/api/v1/interrogation`.
 
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/interrogation/git-branches-preview` | `-` | `InterrogationSessionController@gitBranchesPreview` | `auth:sanctum` |
 | GET | `agent/api/v1/interrogation/runner-models` | `-` | `RunnerModelsController` | `auth:sanctum` |
 | GET | `agent/api/v1/interrogation/sessions` | `-` | `InterrogationSessionController@index` | `auth:sanctum` |
 | POST | `agent/api/v1/interrogation/sessions` | `-` | `InterrogationSessionController@store` | `auth:sanctum` |
@@ -287,6 +288,7 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | POST | `agent/api/v1/interrogation/sessions/{id}/export-summary` | `-` | `InterrogationSessionController@exportSummary` | `auth:sanctum` |
 | POST | `agent/api/v1/interrogation/sessions/{id}/generate-build-tasks` | `-` | `InterrogationSessionController@generateBuildTasks` | `auth:sanctum` |
 | POST | `agent/api/v1/interrogation/sessions/{id}/generate-plan` | `-` | `InterrogationSessionController@generatePlan` | `auth:sanctum` |
+| GET | `agent/api/v1/interrogation/sessions/{id}/git-branches` | `-` | `InterrogationSessionController@gitBranches` | `auth:sanctum` |
 | POST | `agent/api/v1/interrogation/sessions/{id}/pause` | `-` | `InterrogationSessionController@pause` | `auth:sanctum` |
 | POST | `agent/api/v1/interrogation/sessions/{id}/pause-build` | `-` | `InterrogationSessionController@pauseBuild` | `auth:sanctum` |
 | DELETE | `agent/api/v1/interrogation/sessions/{id}/providers/{driver}` | `-` | `InterrogationTaskProviderController@disconnect` | `auth:sanctum` |
