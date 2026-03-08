@@ -154,6 +154,7 @@ class AgentJobCreateCommand extends Command
         $normalizedTemplate = $commandResult['normalized_template'] ?? config('agent.default_templates.'.$runnerType);
         $resolvedExecutablePath = $commandResult['resolved_executable_path'];
 
+        /** @var \App\Models\AgentJob $job */
         $job = $user->agentJobs()->create([
             'name' => $name,
             'workflow_key' => $workflowKey,
@@ -174,7 +175,6 @@ class AgentJobCreateCommand extends Command
             'targeted_retry_enabled' => null,
             'max_retries' => null,
         ]);
-
         $this->info("Agent job created: id={$job->id} name=\"{$job->name}\" runner_type={$job->runner_type}");
 
         return self::SUCCESS;

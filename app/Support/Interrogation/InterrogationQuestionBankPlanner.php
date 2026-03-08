@@ -27,7 +27,7 @@ class InterrogationQuestionBankPlanner
         $axisToCanonical = [];
 
         foreach ($rawQuestions as $question) {
-            if (! is_array($question)) {
+            if (! is_array($question)) { // @phpstan-ignore function.alreadyNarrowedType
                 continue;
             }
 
@@ -144,7 +144,7 @@ class InterrogationQuestionBankPlanner
         $newSuppressed = [];
 
         foreach ($questionBank as $entry) {
-            if (! is_array($entry)) {
+            if (! is_array($entry)) { // @phpstan-ignore function.alreadyNarrowedType
                 continue;
             }
 

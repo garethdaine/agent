@@ -299,8 +299,8 @@ class MessengerGatewayManager
                 : 'Never';
 
             $summary[] = [
-                'connector' => $account?->name ?? "Account #{$accountId}",
-                'provider' => $account?->provider ?? 'Unknown',
+                'connector' => $account->name ?? "Account #{$accountId}",
+                'provider' => $account->provider ?? 'Unknown',
                 'status' => $status->label(),
                 'last_event' => $lastEvent,
             ];

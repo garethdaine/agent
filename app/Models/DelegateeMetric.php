@@ -10,7 +10,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $delegatee_profile_id
+ * @property array|null $window_24h_json
+ * @property array|null $window_7d_json
+ * @property \Carbon\CarbonInterface|null $last_recomputed_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\DelegateeProfile|null $profile
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class DelegateeMetric extends Model
 {

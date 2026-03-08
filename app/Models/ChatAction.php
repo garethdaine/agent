@@ -12,7 +12,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $chat_message_id
+ * @property string $action_type
+ * @property array $parameters
+ * @property string $status
+ * @property array|null $result
+ * @property string|null $error
+ * @property bool $requires_confirmation
+ * @property \Carbon\CarbonInterface|null $confirmed_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $executed_at
+ * @property-read \App\Models\ChatMessage|null $message
+ * @property-read \App\Models\PendingConfirmation|null $pendingConfirmation
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class ChatAction extends Model
 {

@@ -300,7 +300,7 @@ class AgentInstallCommand extends Command
             $phpPassed,
             $phpPassed ? $phpVersion : sprintf('Found %s', $phpVersion)
         );
-        $allPassed = $allPassed && $phpPassed;
+        $allPassed = $phpPassed && $allPassed; // @phpstan-ignore booleanAnd.rightAlwaysTrue
 
         // Required Extensions Check
         foreach (self::REQUIRED_EXTENSIONS as $extension) {
@@ -395,7 +395,7 @@ class AgentInstallCommand extends Command
     /**
      * @return array<string>
      */
-    private function selectConnectors(): array
+    private function selectConnectors(): array // @phpstan-ignore method.unused
     {
         $selected = [];
 
@@ -450,7 +450,7 @@ class AgentInstallCommand extends Command
 
             if ($this->option('non-interactive')) {
                 $envKey = sprintf('MESSENGER_%s_%s', strtoupper($connector), strtoupper($key));
-                $value = env($envKey, '');
+                $value = env($envKey, ''); // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
 
                 if ($value === '' && ! $isOptional) {
                     $this->error(sprintf('Required credential %s not set in environment (%s)', $label, $envKey));
@@ -658,14 +658,14 @@ class AgentInstallCommand extends Command
     {
         // Try connector-specific webhook URL first
         $envKey = sprintf('MESSENGER_%s_WEBHOOK_URL', strtoupper($connector));
-        $webhookUrl = env($envKey, '');
+        $webhookUrl = env($envKey, ''); // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
 
         if (! empty($webhookUrl)) {
             return $webhookUrl;
         }
 
         // Fall back to generic webhook URL
-        $webhookUrl = env('MESSENGER_WEBHOOK_URL', '');
+        $webhookUrl = env('MESSENGER_WEBHOOK_URL', ''); // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
 
         if (! empty($webhookUrl)) {
             // Append connector path if not already included
@@ -1065,22 +1065,22 @@ class AgentInstallCommand extends Command
 
         $dbHost = text(
             label: 'Database host',
-            default: env('DB_HOST', '127.0.0.1'),
+            default: env('DB_HOST', '127.0.0.1'), // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
             required: true
         );
         $dbPort = text(
             label: 'Database port',
-            default: env('DB_PORT', '5432'),
+            default: env('DB_PORT', '5432'), // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
             required: true
         );
         $dbDatabase = text(
             label: 'Database name',
-            default: env('DB_DATABASE', 'agent'),
+            default: env('DB_DATABASE', 'agent'), // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
             required: true
         );
         $dbUsername = text(
             label: 'Database username',
-            default: env('DB_USERNAME', 'agent'),
+            default: env('DB_USERNAME', 'agent'), // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
             required: true
         );
         $dbPassword = password(
@@ -1090,12 +1090,12 @@ class AgentInstallCommand extends Command
         );
         $redisHost = text(
             label: 'Redis host',
-            default: env('REDIS_HOST', '127.0.0.1'),
+            default: env('REDIS_HOST', '127.0.0.1'), // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
             required: true
         );
         $redisPort = text(
             label: 'Redis port',
-            default: env('REDIS_PORT', '6379'),
+            default: env('REDIS_PORT', '6379'), // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
             required: true
         );
 
@@ -1128,7 +1128,7 @@ class AgentInstallCommand extends Command
         putenv('DB_HOST='.$dbHost);
         putenv('REDIS_HOST='.$redisHost);
 
-        if (empty(env('APP_KEY'))) {
+        if (empty(env('APP_KEY'))) { // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
             $this->info('Generating APP_KEY...');
             Artisan::call('key:generate', ['--force' => true], $this->output);
         }

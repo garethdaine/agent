@@ -51,7 +51,7 @@ class CliRuntimeExecutor
             return ['status' => 'failed', 'error' => 'Runtime session has no user.'];
         }
 
-        $apiKey = $this->credentialsManager->get($user, 'anthropic', 'api_key');
+        $apiKey = $this->credentialsManager->get($user, 'anthropic', 'api_key'); // @phpstan-ignore argument.type
         if ($apiKey === null || $apiKey === '') {
             return [
                 'status' => 'failed',
@@ -106,7 +106,7 @@ class CliRuntimeExecutor
 
         try {
             $command = $this->buildRuntimeCommand($executable, $runnerType, $useResume ? $runnerSessionId : null, $systemPrompt, $approvalMode);
-            $parentEnv = array_merge($_ENV ?? [], $_SERVER ?? []);
+            $parentEnv = array_merge($_ENV, $_SERVER);
             $env = array_merge(
                 array_filter($parentEnv, static fn ($_, string $k): bool => ! str_starts_with($k, 'ANTHROPIC_'), ARRAY_FILTER_USE_BOTH),
                 ['ANTHROPIC_API_KEY' => $apiKey]

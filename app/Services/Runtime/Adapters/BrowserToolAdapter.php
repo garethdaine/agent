@@ -23,7 +23,7 @@ class BrowserToolAdapter extends AbstractToolAdapter
     /**
      * Commands that mutate page state (require browser_action capability).
      */
-    private const MUTATION_COMMANDS = [
+    private const MUTATION_COMMANDS = [ // @phpstan-ignore classConstant.unused
         'open', 'click', 'dblclick', 'fill', 'type', 'press',
         'hover', 'focus', 'check', 'uncheck', 'select',
         'drag', 'upload', 'download', 'scroll', 'scrollintoview',

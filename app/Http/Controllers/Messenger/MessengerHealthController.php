@@ -43,7 +43,7 @@ class MessengerHealthController extends Controller
             'name' => $connector->name,
             'provider' => $connector->provider,
             'mode' => $connector->connection_mode,
-            'runtime_state' => $connector->runtime_state?->value ?? 'unknown',
+            'runtime_state' => $connector->runtime_state?->value ?? 'unknown', // @phpstan-ignore nullCoalesce.expr
             'last_health_check_at' => $connector->last_health_check_at?->toIso8601String(),
             'error_message' => $connector->runtime_error_message,
         ]);
@@ -175,7 +175,7 @@ class MessengerHealthController extends Controller
             'name' => $connector->name,
             'provider' => $connector->provider,
             'mode' => $connector->connection_mode,
-            'runtime_state' => $connector->runtime_state?->value ?? 'unknown',
+            'runtime_state' => $connector->runtime_state?->value ?? 'unknown', // @phpstan-ignore nullCoalesce.expr
             'last_health_check_at' => $connector->last_health_check_at?->toIso8601String(),
             'error_message' => $connector->runtime_error_message,
         ]);

@@ -166,7 +166,7 @@ class OrchestrationPolicyService implements OrchestrationPolicyServiceContract
         }
 
         // For InterrogationBuildTask, check the model's task_category property
-        if ($subject instanceof InterrogationBuildTask && $subject->task_category instanceof TaskCategory) {
+        if ($subject instanceof InterrogationBuildTask && $subject->task_category instanceof TaskCategory) { // @phpstan-ignore instanceof.alwaysTrue
             return $subject->task_category;
         }
 

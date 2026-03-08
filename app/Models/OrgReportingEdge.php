@@ -11,7 +11,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $subordinate_agent_id
+ * @property string $manager_agent_id
+ * @property int $user_id
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\OrgAgentProfile|null $subordinate
+ * @property-read \App\Models\OrgAgentProfile|null $manager
+ * @property-read \App\Models\User|null $user
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class OrgReportingEdge extends Model
 {

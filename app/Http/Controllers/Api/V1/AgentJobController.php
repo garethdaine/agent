@@ -17,7 +17,6 @@ use App\Support\Agent\UsageLimitState;
 use App\Support\Agent\WorkflowKey;
 use Carbon\CarbonImmutable;
 use Cron\CronExpression;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -128,6 +127,7 @@ class AgentJobController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
+        /** @var AgentJob $job */
         $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
         $this->authorize('view', $job);
         $includeTaskContent = $request->boolean('include_task_content', false);
@@ -139,6 +139,7 @@ class AgentJobController extends Controller
 
     public function showByWorkflowKey(Request $request, string $workflowKey): JsonResponse
     {
+        /** @var AgentJob $job */
         $job = AgentJob::query()
             ->forUser($request->user())
             ->where('workflow_key', $workflowKey)
@@ -185,6 +186,7 @@ class AgentJobController extends Controller
 
         $taskMarkdownPath = $this->resolveTaskMarkdownPath($request, $validated, $taskMarkdownStorage);
 
+        /** @var AgentJob $job */
         $job = $request->user()->agentJobs()->create([
             'name' => $validated['name'],
             'workflow_key' => $workflowKey,
@@ -240,6 +242,7 @@ class AgentJobController extends Controller
         AuditLogger $auditLogger,
         TaskMarkdownStorage $taskMarkdownStorage
     ): JsonResponse {
+        /** @var AgentJob $job */
         $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
         $this->authorize('update', $job);
         $before = $job->only([
@@ -358,6 +361,7 @@ class AgentJobController extends Controller
 
     public function toggle(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
+        /** @var AgentJob $job */
         $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
         $this->authorize('update', $job);
         $before = ['is_enabled' => (bool) $job->is_enabled];
@@ -382,6 +386,7 @@ class AgentJobController extends Controller
 
     public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
+        /** @var AgentJob $job */
         $job = AgentJob::query()->forUser($request->user())->findOrFail($id);
         $this->authorize('delete', $job);
         $before = ['deleted_at' => optional($job->deleted_at)?->toIso8601String()];
@@ -408,6 +413,7 @@ class AgentJobController extends Controller
 
     public function restore(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
+        /** @var AgentJob $job */
         $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
         $this->authorize('restore', $job);
         $before = ['deleted_at' => optional($job->deleted_at)?->toIso8601String()];
@@ -427,13 +433,17 @@ class AgentJobController extends Controller
             after: ['deleted_at' => optional($job->deleted_at)?->toIso8601String()],
         );
 
+        /** @var AgentJob $freshJob */
+        $freshJob = $job->fresh();
+
         return response()->json([
-            'data' => $this->transformJob($job->fresh()),
+            'data' => $this->transformJob($freshJob),
         ]);
     }
 
     public function runs(Request $request, int $id): JsonResponse
     {
+        /** @var AgentJob $job */
         $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
         $this->authorize('view', $job);
 
@@ -454,6 +464,7 @@ class AgentJobController extends Controller
 
     public function runNow(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
+        /** @var AgentJob $job */
         $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
         $this->authorize('update', $job);
         $ignoreRateLimitHold = $request->boolean('ignore_rate_limit_hold', false);
@@ -493,7 +504,7 @@ class AgentJobController extends Controller
                     'job_id' => $job->id,
                     'workflow_key' => $job->workflow_key,
                     'governance_pause_reason' => $job->governance_pause_reason,
-                    'governance_paused_at' => $job->governance_paused_at?->toIso8601String(),
+                    'governance_paused_at' => $job->governance_paused_at->toIso8601String(),
                 ]
             );
         }
@@ -566,7 +577,7 @@ class AgentJobController extends Controller
                     'agent_job_id' => $run->agent_job_id,
                 ],
             );
-        } catch (QueryException|\Throwable $throwable) {
+        } catch (\Throwable $throwable) {
             report($throwable);
 
             return ErrorEnvelope::make(
@@ -588,6 +599,7 @@ class AgentJobController extends Controller
 
     private function transformJob(AgentJob $job, bool $includeTaskContent = false): array
     {
+        /** @var AgentJobRun|null $lastRun */
         $lastRun = $job->runs()->latest('created_at')->first();
 
         $active = $job->runs()->whereIn('status', AgentJobRun::ACTIVE_STATUSES)->exists();

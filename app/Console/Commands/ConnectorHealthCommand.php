@@ -51,7 +51,7 @@ class ConnectorHealthCommand extends Command
             };
 
             return [
-                $connection->connector?->display_name ?? $connection->connector?->name ?? 'Unknown',
+                $connection->connector->display_name ?? $connection->connector->name ?? 'Unknown',
                 $connection->status,
                 number_format($healthScore, 2),
                 $status,

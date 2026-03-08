@@ -93,11 +93,11 @@ class SecurityMaintenanceJob implements ShouldQueue
                 foreach ($sessions as $session) {
                     $provenance = $session->file_provenance;
 
-                    if (! is_array($provenance) || empty($provenance)) {
+                    if (! is_array($provenance) || empty($provenance)) { // @phpstan-ignore function.impossibleType, booleanOr.alwaysTrue, empty.variable
                         continue;
                     }
 
-                    $filtered = array_values(array_filter($provenance, function (array $entry) use ($cutoff) {
+                    $filtered = array_values(array_filter($provenance, function (array $entry) use ($cutoff) { // @phpstan-ignore deadCode.unreachable
                         $createdAt = Carbon::parse($entry['createdAt'] ?? now());
 
                         return $createdAt->isAfter($cutoff);

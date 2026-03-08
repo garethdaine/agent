@@ -25,14 +25,18 @@ class RuntimeApprovalRequested implements ShouldBroadcastNow
 
     public static function fromApproval(RuntimeApproval $approval, int $userId): self
     {
+        /** @var \App\Models\Runtime\RuntimeToolCall $toolCall */
         $toolCall = $approval->toolCall;
+
+        /** @var \App\Models\Runtime\RuntimeTurn $turn */
+        $turn = $toolCall->turn;
 
         return new self(
             userId: $userId,
             approvalId: (int) $approval->id,
             toolCallId: (int) $toolCall->id,
             toolName: $toolCall->tool_name,
-            sessionId: (int) $toolCall->turn->runtime_session_id,
+            sessionId: (int) $turn->runtime_session_id,
         );
     }
 

@@ -100,8 +100,8 @@ class RuntimeLlmClient
     {
         $out = [];
         foreach ($messages as $m) {
-            $role = $m['role'] ?? 'user';
-            $content = $m['content'] ?? '';
+            $role = $m['role'] ?? 'user'; // @phpstan-ignore nullCoalesce.offset
+            $content = $m['content'] ?? ''; // @phpstan-ignore nullCoalesce.offset
             if (is_string($content)) {
                 $content = [['type' => 'text', 'text' => $content]];
             }

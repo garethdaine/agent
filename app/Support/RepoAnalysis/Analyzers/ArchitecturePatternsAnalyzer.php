@@ -344,7 +344,7 @@ class ArchitecturePatternsAnalyzer extends AbstractAnalyzer
 
         $topSegments = [];
         foreach ($normalized as $path) {
-            $segment = explode('/', $path)[0] ?? '';
+            $segment = explode('/', $path)[0] ?? ''; // @phpstan-ignore nullCoalesce.offset
             if ($segment !== '') {
                 $topSegments[$segment] = true;
             }
@@ -409,7 +409,7 @@ class ArchitecturePatternsAnalyzer extends AbstractAnalyzer
     {
         $counts = [];
         foreach ($paths as $path) {
-            $segment = explode('/', str_replace('\\', '/', $path))[0] ?? '(root)';
+            $segment = explode('/', str_replace('\\', '/', $path))[0] ?? '(root)'; // @phpstan-ignore nullCoalesce.offset
             if ($segment === '') {
                 $segment = '(root)';
             }

@@ -122,8 +122,8 @@ class AgentRestartCommand extends Command
      */
     private function resolveServices(array|string $requestedServices, bool $excludeWeb): array
     {
-        $includeDevServices = config('agent_restart.include_npm_dev', env('AGENT_RESTART_NPM_DEV', false));
-        $includeWebServer = config('agent_restart.include_web_server', env('AGENT_RESTART_WEB_SERVER', false));
+        $includeDevServices = config('agent_restart.include_npm_dev', false);
+        $includeWebServer = config('agent_restart.include_web_server', false);
 
         // Normalize requested services
         $requested = [];

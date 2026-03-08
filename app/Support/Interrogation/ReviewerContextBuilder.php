@@ -92,7 +92,7 @@ final class ReviewerContextBuilder
 
         // Fall back to metadata_json
         $metadata = $session->metadata_json ?? [];
-        if (! is_array($metadata)) {
+        if (! is_array($metadata)) { // @phpstan-ignore function.alreadyNarrowedType
             return '';
         }
 

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Queue;
 class MessengerHealthController extends Controller
 {
     public function __construct(
-        private readonly MetricsCollector $metricsCollector
+        private readonly MetricsCollector $metricsCollector // @phpstan-ignore property.onlyWritten
     ) {}
 
     public function index(): JsonResponse
@@ -36,7 +36,7 @@ class MessengerHealthController extends Controller
                 'provider' => $connector->provider,
                 'name' => $connector->name,
                 'status' => $connector->status,
-                'runtime_state' => $connector->runtime_state?->value,
+                'runtime_state' => $connector->runtime_state->value,
                 'effective_state' => $this->effectiveConnectorState($connector),
             ])->values(),
             'queue' => [
@@ -77,8 +77,8 @@ class MessengerHealthController extends Controller
     private function effectiveConnectorState(ConnectorAccount $connector): string
     {
         if ($connector->isLocalMode()) {
-            $runtimeState = $connector->runtime_state?->value;
-            if (is_string($runtimeState) && trim($runtimeState) !== '') {
+            $runtimeState = $connector->runtime_state->value;
+            if (is_string($runtimeState) && trim($runtimeState) !== '') { // @phpstan-ignore function.alreadyNarrowedType
                 return $runtimeState;
             }
         }

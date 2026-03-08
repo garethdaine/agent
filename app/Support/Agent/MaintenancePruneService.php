@@ -190,7 +190,7 @@ class MaintenancePruneService
                 'finished_at' => $finishedAt->toIso8601String(),
             ];
         } catch (\Throwable $throwable) {
-            if (! $dryRun && $checkpoint !== null) {
+            if (! $dryRun && $checkpoint !== null) { // @phpstan-ignore notIdentical.alwaysTrue
                 $checkpoint->status = 'failed';
                 $checkpoint->progress_json = array_merge((array) ($checkpoint->progress_json ?? []), [
                     'status' => 'failed',

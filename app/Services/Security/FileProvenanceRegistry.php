@@ -43,7 +43,7 @@ class FileProvenanceRegistry
         // Try Redis first
         $redisValue = Redis::connection('cache')->hget($this->redisKey($sessionId), $filePath);
 
-        if ($redisValue !== null && $redisValue !== false) {
+        if ($redisValue !== null && $redisValue !== false) { // @phpstan-ignore notIdentical.alwaysTrue
             $decoded = json_decode($redisValue, true);
 
             return ContentTrustLevel::tryFrom($decoded['trustLevel'] ?? '');
@@ -56,7 +56,7 @@ class FileProvenanceRegistry
             return null;
         }
 
-        foreach ($session->file_provenance as $entry) {
+        foreach ($session->file_provenance as $entry) { // @phpstan-ignore foreach.nonIterable
             if (($entry['filePath'] ?? '') === $filePath) {
                 return ContentTrustLevel::tryFrom($entry['trustLevel'] ?? '');
             }

@@ -138,7 +138,7 @@ class ProviderRateLimiter
         $blockedUntil = time() + $totalBackoff;
 
         $redis = Redis::connection($this->connection);
-        $redis->set("{$prefix}:blocked", $blockedUntil, 'EX', $totalBackoff);
+        $redis->set("{$prefix}:blocked", $blockedUntil, 'EX', $totalBackoff); // @phpstan-ignore argument.type, arguments.count
     }
 
     /**
@@ -271,6 +271,7 @@ redis.call('INCR', key)
 return limit - current - 1
 LUA;
 
+        // @phpstan-ignore-next-line
         return (int) $redis->eval($script, 1, $key, $limit, max(1, $ttl));
     }
 

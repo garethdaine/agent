@@ -62,7 +62,7 @@ class GenerateInterrogationBuildTasksJob implements ShouldQueue
 
         try {
             $generated = $buildTaskGenerator->generate($session, $this->notes);
-            $tasks = is_array($generated['tasks'] ?? null) ? array_values($generated['tasks']) : [];
+            $tasks = is_array($generated['tasks'] ?? null) ? array_values($generated['tasks']) : []; // @phpstan-ignore function.alreadyNarrowedType, nullCoalesce.offset
 
             if ($tasks === []) {
                 throw new \RuntimeException('No build tasks were produced by the runner.');

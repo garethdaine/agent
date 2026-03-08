@@ -257,6 +257,10 @@ return [
         'max_retries' => (int) env('AGENT_TARGETED_RETRY_MAX', 1),
     ],
 
+    'delegation' => [
+        'approval_trust_threshold' => (float) env('DELEGATION_APPROVAL_TRUST_THRESHOLD', 0.7),
+    ],
+
     'trust' => [
         'window_size' => (int) env('AGENT_TRUST_WINDOW_SIZE', 50),
         'default_score' => (float) env('AGENT_TRUST_DEFAULT_SCORE', 0.5),

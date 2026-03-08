@@ -51,11 +51,11 @@ class SummaryPayloadNormalizer
         $tagPattern = '/<parameter\s+name\s*=\s*["\']([^"\']+)["\']\s*>/i';
 
         while (preg_match($tagPattern, $clean, $matches, PREG_OFFSET_CAPTURE, $offset) === 1) {
-            $name = strtolower(trim((string) ($matches[1][0] ?? '')));
-            $tag = (string) ($matches[0][0] ?? '');
-            $tagStart = (int) ($matches[0][1] ?? 0);
+            $name = strtolower(trim((string) ($matches[1][0] ?? ''))); // @phpstan-ignore nullCoalesce.offset
+            $tag = (string) ($matches[0][0] ?? ''); // @phpstan-ignore nullCoalesce.offset
+            $tagStart = (int) ($matches[0][1] ?? 0); // @phpstan-ignore nullCoalesce.offset
 
-            if ($tag === '') {
+            if ($tag === '') { // @phpstan-ignore identical.alwaysFalse
                 break;
             }
 

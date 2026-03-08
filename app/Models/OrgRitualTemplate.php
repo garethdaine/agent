@@ -12,7 +12,29 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property int $user_id
+ * @property string $name
+ * @property string|null $description
+ * @property string $cron_expression
+ * @property string $timezone
+ * @property string|null $nl_source_metadata
+ * @property array $phase_graph
+ * @property array $phase_role_mappings
+ * @property array|null $context_inputs
+ * @property array|null $verification_strategy
+ * @property array|null $delivery_targets
+ * @property int $escalation_timeout_seconds
+ * @property string $notification_level
+ * @property bool $is_paused
+ * @property \Carbon\CarbonInterface|null $archived_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property array|null $required_skills
+ * @property-read \App\Models\User|null $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\OrgRitualRun> $runs
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class OrgRitualTemplate extends Model
 {

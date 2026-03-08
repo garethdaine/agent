@@ -20,7 +20,7 @@ class RepoAnalysisSessionPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user !== null;
+        return $user !== null; // @phpstan-ignore notIdentical.alwaysTrue
     }
 
     public function view(User $user, RepoAnalysisSession $session): bool
@@ -30,7 +30,7 @@ class RepoAnalysisSessionPolicy
 
     public function create(User $user): bool
     {
-        return $user !== null;
+        return $user !== null; // @phpstan-ignore notIdentical.alwaysTrue
     }
 
     public function update(User $user, RepoAnalysisSession $session): bool

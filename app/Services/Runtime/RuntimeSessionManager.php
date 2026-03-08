@@ -142,10 +142,9 @@ class RuntimeSessionManager
             }
 
             $markdown = "# Runtime Session {$session->id}\n\n";
-            $markdown .= "Mode: {$session->mode->value}\n";
-            $markdown .= "Started: {$session->started_at?->toIso8601String()}\n";
-            $markdown .= "Ended: {$session->ended_at?->toIso8601String()}\n\n";
-
+            $markdown .= "Mode: {$session->mode->value}\n"; // @phpstan-ignore property.nonObject
+            $markdown .= "Started: {$session->started_at?->toIso8601String()}\n"; // @phpstan-ignore method.nonObject
+            $markdown .= "Ended: {$session->ended_at?->toIso8601String()}\n\n"; // @phpstan-ignore method.nonObject
             foreach ($turnSummaries as $turnId => $summary) {
                 $markdown .= "## Turn {$turnId}\n\n{$summary}\n\n";
             }

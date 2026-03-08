@@ -9,7 +9,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $token_hash
+ * @property string $connector_account_id
+ * @property string $provider_user_id
+ * @property \Carbon\CarbonInterface|null $issued_at
+ * @property \Carbon\CarbonInterface|null $expires_at
+ * @property \Carbon\CarbonInterface|null $consumed_at
+ * @property-read \App\Models\ConnectorAccount|null $connectorAccount
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class AccountLinkToken extends Model
 {

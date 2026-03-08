@@ -14,7 +14,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $chat_session_id
+ * @property string $connector_account_id
+ * @property string $direction
+ * @property string $content
+ * @property array|null $attachment_ids
+ * @property string $idempotency_key
+ * @property string|null $provider_event_id
+ * @property string|null $provider_message_id
+ * @property \Carbon\CarbonInterface|null $provider_timestamp
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\ChatSession|null $session
+ * @property-read \App\Models\ConnectorAccount|null $connectorAccount
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ChatAction> $actions
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ChatAttachment> $attachments
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 #[ObservedBy(ChatMessageObserver::class)]
 class ChatMessage extends Model

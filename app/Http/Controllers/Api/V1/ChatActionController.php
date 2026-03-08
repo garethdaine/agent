@@ -99,7 +99,7 @@ class ChatActionController extends Controller
             ownerUserId: $this->getOwnerUserId($action),
             changedFields: ['confirmed_at'],
             before: $before,
-            after: ['confirmed_at' => $action->confirmed_at->toIso8601String(), 'status' => $action->status],
+            after: ['confirmed_at' => $action->confirmed_at?->toIso8601String(), 'status' => $action->status], // @phpstan-ignore method.nonObject
         );
 
         return response()->json([

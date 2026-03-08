@@ -13,7 +13,36 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $user_id
+ * @property string|null $name
+ * @property string $runner_type
+ * @property string $project_directory
+ * @property string $interrogation_type
+ * @property string|null $feature_brief
+ * @property string $status
+ * @property int $phase
+ * @property string|null $cli_session_id
+ * @property array|null $summary_json
+ * @property array|null $plan_json
+ * @property array|null $annotations_json
+ * @property array|null $metadata_json
+ * @property string|null $error_code
+ * @property string|null $error_summary
+ * @property \Carbon\CarbonInterface|null $started_at
+ * @property \Carbon\CarbonInterface|null $finished_at
+ * @property \Carbon\CarbonInterface|null $approved_at
+ * @property \Carbon\CarbonInterface|null $deleted_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property string|null $model
+ * @property-read \App\Models\User|null $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\InterrogationEvent> $events
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\InterrogationBuildTask> $buildTasks
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\InterrogationTechStack> $techStacks
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ConnectedProvider> $providerIntegrations
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class InterrogationSession extends Model
 {
@@ -112,11 +141,13 @@ class InterrogationSession extends Model
         return $this->belongsTo(User::class);
     }
 
+    /** @return HasMany<InterrogationEvent, $this> */
     public function events(): HasMany
     {
         return $this->hasMany(InterrogationEvent::class);
     }
 
+    /** @return HasMany<InterrogationBuildTask, $this> */
     public function buildTasks(): HasMany
     {
         return $this->hasMany(InterrogationBuildTask::class)->orderBy('sequence')->orderBy('id');

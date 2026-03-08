@@ -39,7 +39,7 @@ class RunsShowHandler implements ChatActionHandlerInterface
             default => '❓',
         };
 
-        $jobName = $run->job?->name ?? 'Unknown';
+        $jobName = $run->job->name ?? 'Unknown';
         $duration = $run->duration_ms ? $this->formatDuration($run->duration_ms) : '-';
         $startedAt = $run->started_at ? Carbon::parse($run->started_at)->format('M j, Y g:ia') : '-';
         $finishedAt = $run->finished_at ? Carbon::parse($run->finished_at)->format('M j, Y g:ia') : '-';

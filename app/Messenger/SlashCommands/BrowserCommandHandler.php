@@ -50,7 +50,7 @@ final class BrowserCommandHandler implements SlashCommandHandlerInterface
             'start' => $this->startBrowser($user, $chatSessionId, $connector),
             'stop' => $this->stopBrowser($user),
             'reset' => $this->resetBrowser($user),
-            'status' => $this->browserStatus($user),
+            'status' => $this->browserStatus($user), // @phpstan-ignore match.alwaysTrue
             default => $this->showUsage(),
         };
     }

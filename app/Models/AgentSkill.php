@@ -11,7 +11,41 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property int $team_id
+ * @property string $name
+ * @property string $slug
+ * @property string $description
+ * @property string $version
+ * @property string $author
+ * @property string $risk_level
+ * @property string $status
+ * @property array $industries
+ * @property array $memory_blocks
+ * @property array $mcp_dependencies
+ * @property array $tools_required
+ * @property array $trigger_keywords
+ * @property array $run_after
+ * @property bool $requires_approval
+ * @property string $skill_path
+ * @property string $checksum
+ * @property array $file_hashes
+ * @property array $validation_result
+ * @property bool $is_global
+ * @property int|null $installed_by
+ * @property \Carbon\CarbonInterface|null $installed_at
+ * @property int|null $updated_by
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property int|null $paused_by
+ * @property \Carbon\CarbonInterface|null $paused_at
+ * @property \Carbon\CarbonInterface|null $last_invoked_at
+ * @property int $invocation_count
+ * @property-read \App\Models\Team|null $team
+ * @property-read \App\Models\User|null $installedBy
+ * @property-read \App\Models\User|null $updatedBy
+ * @property-read \App\Models\User|null $pausedBy
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class AgentSkill extends Model
 {

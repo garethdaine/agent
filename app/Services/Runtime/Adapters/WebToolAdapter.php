@@ -107,7 +107,7 @@ class WebToolAdapter extends AbstractToolAdapter
                 'POST' => $request->withBody($body ?? '', 'application/octet-stream')->post($url),
                 'PUT' => $request->withBody($body ?? '', 'application/octet-stream')->put($url),
                 'PATCH' => $request->withBody($body ?? '', 'application/octet-stream')->patch($url),
-                'DELETE' => $request->delete($url),
+                'DELETE' => $request->delete($url), // @phpstan-ignore match.alwaysTrue
                 default => throw new \InvalidArgumentException("Unsupported method: {$method}"),
             };
 
@@ -132,7 +132,7 @@ class WebToolAdapter extends AbstractToolAdapter
     private function isUrlAllowed(string $url): bool
     {
         $parsed = parse_url($url);
-        if (! isset($parsed['host']) || ! is_string($parsed['host'])) {
+        if (! isset($parsed['host']) || ! is_string($parsed['host'])) { // @phpstan-ignore booleanNot.alwaysFalse
             return false;
         }
 

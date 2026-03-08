@@ -36,7 +36,7 @@ final class ActiveProjectionBuildStateService
     public function activatedAtIso8601(): ?string
     {
         $state = $this->currentState();
-        if (! isset($state?->activated_at) || $state->activated_at === null) {
+        if (! isset($state->activated_at) || $state->activated_at === null) { // @phpstan-ignore identical.alwaysFalse
             return null;
         }
 

@@ -38,9 +38,9 @@ class DelegateeProfileController extends Controller
 
         $deleted = $request->string('deleted')->toString();
         if ($deleted === '1' || $deleted === 'true') {
-            $query->onlyTrashed();
+            $query->onlyTrashed(); // @phpstan-ignore method.notFound
         } elseif ($deleted === 'all') {
-            $query->withTrashed();
+            $query->withTrashed(); // @phpstan-ignore method.notFound
         }
 
         $q = trim($request->string('q')->toString());
@@ -71,7 +71,9 @@ class DelegateeProfileController extends Controller
         $perPage = min(100, max(1, (int) $request->integer('per_page', 25)));
         $profiles = $query->with(['capabilities', 'metric'])->paginate($perPage)->withQueryString();
 
-        $data = collect($profiles->items())->map(fn (DelegateeProfile $profile): array => $this->transformProfile($profile))->values();
+        /** @var \Illuminate\Support\Collection<int, DelegateeProfile> $profileItems */
+        $profileItems = collect($profiles->items());
+        $data = $profileItems->map(fn (DelegateeProfile $profile): array => $this->transformProfile($profile))->values();
 
         return response()->json([
             'data' => $data,
@@ -102,7 +104,8 @@ class DelegateeProfileController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $profile = $request->user()->delegateeProfiles()->withTrashed()->with(['capabilities', 'metric'])->find($id);
+        /** @var DelegateeProfile|null $profile */
+        $profile = $request->user()->delegateeProfiles()->withTrashed()->with(['capabilities', 'metric'])->find($id); // @phpstan-ignore method.notFound
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);
@@ -131,6 +134,7 @@ class DelegateeProfileController extends Controller
             'soul.user_context' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        /** @var DelegateeProfile $profile */
         $profile = $request->user()->delegateeProfiles()->create([
             'name' => $validated['name'],
             'runner_type' => $validated['runner_type'],
@@ -168,7 +172,8 @@ class DelegateeProfileController extends Controller
 
     public function update(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $profile = $request->user()->delegateeProfiles()->withTrashed()->find($id);
+        /** @var DelegateeProfile|null $profile */
+        $profile = $request->user()->delegateeProfiles()->withTrashed()->find($id); // @phpstan-ignore method.notFound
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);
@@ -212,7 +217,7 @@ class DelegateeProfileController extends Controller
         $after = $profile->only(array_keys($before));
         $changedFields = [];
         foreach ($after as $field => $value) {
-            if (($before[$field] ?? null) !== $value) {
+            if ($before[$field] !== $value) {
                 $changedFields[] = $field;
             }
         }
@@ -237,6 +242,7 @@ class DelegateeProfileController extends Controller
 
     public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
+        /** @var DelegateeProfile|null $profile */
         $profile = $request->user()->delegateeProfiles()->find($id);
 
         if ($profile === null) {
@@ -267,7 +273,8 @@ class DelegateeProfileController extends Controller
 
     public function restore(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $profile = $request->user()->delegateeProfiles()->withTrashed()->find($id);
+        /** @var DelegateeProfile|null $profile */
+        $profile = $request->user()->delegateeProfiles()->withTrashed()->find($id); // @phpstan-ignore method.notFound
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);

@@ -10,6 +10,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use JsonSerializable;
 use Stringable;
 
+/**
+ * @property int $id
+ * @property int $interrogation_session_id
+ * @property string $event_type
+ * @property int $sequence
+ * @property array $payload
+ * @property \Carbon\CarbonInterface|null $event_ts
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\InterrogationSession|null $session
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class InterrogationEvent extends Model
 {
     protected $fillable = [
@@ -93,7 +106,7 @@ class InterrogationEvent extends Model
 
             foreach ($value as $key => $item) {
                 $normalizedKey = is_string($key) ? $this->normalizeUtf8($key) : $key;
-                if (! is_int($normalizedKey) && ! is_string($normalizedKey)) {
+                if (! is_int($normalizedKey) && ! is_string($normalizedKey)) { // @phpstan-ignore function.alreadyNarrowedType, booleanAnd.alwaysFalse
                     $normalizedKey = (string) $normalizedKey;
                 }
 

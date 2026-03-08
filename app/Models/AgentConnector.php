@@ -11,7 +11,29 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $name
+ * @property string $display_name
+ * @property string $description
+ * @property string $category
+ * @property array $industries
+ * @property string $version
+ * @property string $auth_type
+ * @property array|null $auth_config
+ * @property string|null $base_url
+ * @property array|null $rate_limits
+ * @property string $cost_model
+ * @property string $risk_level
+ * @property array|null $actions
+ * @property array $webhooks
+ * @property string|null $icon_path
+ * @property string|null $mcp_tool_prefix
+ * @property string $status
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\AgentConnectorConnection> $connections
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class AgentConnector extends Model
 {

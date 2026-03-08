@@ -122,8 +122,8 @@ final class WorkflowBudgetEnforcer
                 ->selectRaw('COALESCE(SUM(provider_billed_cost_usd), 0) as provider_spend_usd')
                 ->first();
 
-            $monthlyCanonicalSpendUsd = (float) ($aggregate?->canonical_spend_usd ?? 0.0);
-            $monthlyProviderSpendUsd = (float) ($aggregate?->provider_spend_usd ?? 0.0);
+            $monthlyCanonicalSpendUsd = (float) ($aggregate?->canonical_spend_usd ?? 0.0); // @phpstan-ignore nullsafe.neverNull
+            $monthlyProviderSpendUsd = (float) ($aggregate?->provider_spend_usd ?? 0.0); // @phpstan-ignore nullsafe.neverNull
 
             if ($policy === null) {
                 return new WorkflowBudgetEnforcementResult(

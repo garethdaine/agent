@@ -95,7 +95,7 @@ class AnalyzerRegistry
         $seen = [];
 
         foreach ($profileAnalyzers as $key) {
-            if (! is_string($key) || isset($seen[$key])) {
+            if (! is_string($key) || isset($seen[$key])) { // @phpstan-ignore function.alreadyNarrowedType
                 continue;
             }
             $seen[$key] = true;

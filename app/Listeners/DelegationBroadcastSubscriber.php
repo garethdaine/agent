@@ -213,7 +213,7 @@ class DelegationBroadcastSubscriber implements ShouldQueue
      */
     private function broadcastUserSummary(DelegationGraph $graph, string $eventType, array $payload): void
     {
-        if ($graph->user_id === null) {
+        if ($graph->user_id === null) { // @phpstan-ignore identical.alwaysFalse
             return;
         }
 

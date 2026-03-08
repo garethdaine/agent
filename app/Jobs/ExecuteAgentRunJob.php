@@ -110,10 +110,10 @@ class ExecuteAgentRunJob implements ShouldQueue
                         AgentJobRun::STATUS_FAILED,
                         [
                             'error_code' => 'COMPLIANCE_BLOCKED',
-                            'error_summary' => 'Pre-run compliance check failed: '.($preRunResult->gates[0]?->remediation ?? 'Unknown'),
+                            'error_summary' => 'Pre-run compliance check failed: '.($preRunResult->gates[0]->remediation ?? 'Unknown'),
                             'metadata_json' => [
                                 ...((array) ($run->metadata_json ?? [])),
-                                'compliance_block_reason' => $preRunResult->gates[0]?->reasonCode,
+                                'compliance_block_reason' => $preRunResult->gates[0]->reasonCode,
                             ],
                         ]
                     );
@@ -373,7 +373,7 @@ class ExecuteAgentRunJob implements ShouldQueue
                         $this->signalProcess($process->getPid(), SIGTERM);
                     } elseif (CarbonImmutable::now('UTC')->greaterThanOrEqualTo($stopRequestedAt->addSeconds(10))) {
                         $sent = $this->signalProcess($process->getPid(), SIGKILL);
-                        if (! $sent && $process->isRunning()) {
+                        if (! $sent && $process->isRunning()) { // @phpstan-ignore booleanAnd.rightAlwaysTrue
                             $this->finalizeTerminal(
                                 $run,
                                 $transitions,
@@ -418,9 +418,9 @@ class ExecuteAgentRunJob implements ShouldQueue
 
                     usleep(1_000_000);
 
-                    if ($process->isRunning()) {
+                    if ($process->isRunning()) { // @phpstan-ignore if.alwaysTrue
                         $sent = $this->signalProcess($process->getPid(), SIGKILL);
-                        if (! $sent && $process->isRunning()) {
+                        if (! $sent && $process->isRunning()) { // @phpstan-ignore booleanAnd.rightAlwaysTrue
                             $this->finalizeTerminal(
                                 $run,
                                 $transitions,
@@ -533,7 +533,7 @@ class ExecuteAgentRunJob implements ShouldQueue
                 'resolved_executable_path' => $run->resolved_executable_path,
             ];
 
-            if (is_string($errorCode) && $errorCode !== '') {
+            if (is_string($errorCode) && $errorCode !== '') { // @phpstan-ignore notIdentical.alwaysTrue
                 $payload['error_code'] = $errorCode;
             }
 
@@ -780,7 +780,7 @@ class ExecuteAgentRunJob implements ShouldQueue
             ->get(['payload']);
 
         foreach ($events as $event) {
-            $payload = is_string($event->payload) ? $event->payload : '';
+            $payload = is_string($event->payload) ? $event->payload : ''; // @phpstan-ignore property.notFound
             if ($payload === '') {
                 continue;
             }

@@ -17,7 +17,7 @@ class NlOrgParserService
 {
     public function __construct(
         private readonly NlOrgPromptBuilder $promptBuilder,
-        private readonly OrgAgentProfileService $profileService,
+        private readonly OrgAgentProfileService $profileService, // @phpstan-ignore property.onlyWritten
         private readonly CredentialsManager $credentialsManager,
     ) {}
 

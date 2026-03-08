@@ -14,7 +14,7 @@ class NotificationPresenter
      */
     public function present(DatabaseNotification $notification): array
     {
-        $payload = is_array($notification->data) ? $notification->data : [];
+        $payload = is_array($notification->data) ? $notification->data : []; // @phpstan-ignore function.alreadyNarrowedType
         $kind = (string) ($payload['type'] ?? class_basename($notification->type));
 
         $presentation = match ($kind) {

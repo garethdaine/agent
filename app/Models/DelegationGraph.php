@@ -12,7 +12,26 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $user_id
+ * @property string $name
+ * @property string|null $description
+ * @property string $status
+ * @property string $cancellation_policy
+ * @property int $max_parallel_tasks
+ * @property array|null $metadata_json
+ * @property string|null $error_code
+ * @property string|null $error_summary
+ * @property \Carbon\CarbonInterface|null $started_at
+ * @property \Carbon\CarbonInterface|null $finished_at
+ * @property \Carbon\CarbonInterface|null $deleted_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\User|null $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationTask> $tasks
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationEvent> $events
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class DelegationGraph extends Model
 {

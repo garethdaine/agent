@@ -39,7 +39,7 @@ class RunsSteerHandler implements ChatActionHandlerInterface
         }
 
         if ($this->requiresConfirmation($user, 'steer') && ! $context->isConfirmed()) {
-            $jobName = $run->job?->name ?? 'Unknown';
+            $jobName = $run->job->name ?? 'Unknown';
 
             return ChatActionResult::pendingConfirmation(
                 "Are you sure you want to steer run {$run->id} for job '{$jobName}'? Reply 'yes' to confirm.",

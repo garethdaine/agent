@@ -11,7 +11,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $ritual_run_id
+ * @property string $escalation_type
+ * @property string $escalated_to_agent_id
+ * @property string $state
+ * @property \Carbon\CarbonInterface|null $timeout_at
+ * @property string|null $resolved_by
+ * @property \Carbon\CarbonInterface|null $resolved_at
+ * @property string|null $resolution_notes
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\OrgRitualRun|null $ritualRun
+ * @property-read \App\Models\OrgAgentProfile|null $escalatedToAgent
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class OrgEscalation extends Model
 {

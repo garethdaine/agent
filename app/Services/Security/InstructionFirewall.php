@@ -113,7 +113,7 @@ class InstructionFirewall
         return false;
     }
 
-    private function isMutationOrExternal(string $qualifiedToolName): bool
+    private function isMutationOrExternal(string $qualifiedToolName): bool // @phpstan-ignore method.unused
     {
         $allMutations = self::SENSITIVE_MUTATION_TOOLS;
         $allExternal = [

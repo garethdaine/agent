@@ -231,7 +231,7 @@ GRAPHQL,
             return strcasecmp((string) ($left['name'] ?? ''), (string) ($right['name'] ?? ''));
         });
 
-        return array_values($projects);
+        return array_values($projects); // @phpstan-ignore arrayValues.list
     }
 
     public function listTeams(ConnectedProvider $provider): array
@@ -279,7 +279,7 @@ GRAPHQL,
             return strcasecmp((string) ($left['name'] ?? ''), (string) ($right['name'] ?? ''));
         });
 
-        return array_values($teams);
+        return array_values($teams); // @phpstan-ignore arrayValues.list
     }
 
     public function listProjectMilestones(ConnectedProvider $provider, string $projectId): array
@@ -330,7 +330,7 @@ GRAPHQL,
             return strcasecmp((string) ($left['name'] ?? ''), (string) ($right['name'] ?? ''));
         });
 
-        return array_values($milestones);
+        return array_values($milestones); // @phpstan-ignore arrayValues.list
     }
 
     public function createProjectMilestone(
@@ -358,7 +358,7 @@ GRAPHQL,
                     'projectId' => $projectId,
                     'name' => mb_substr(trim((string) $name), 0, 80),
                     'description' => is_string($description) ? trim($description) : null,
-                ], static fn ($value): bool => $value !== null && (! is_string($value) || $value !== '')),
+                ], static fn ($value): bool => $value !== null && (! is_string($value) || $value !== '')), // @phpstan-ignore function.alreadyNarrowedType
             ],
         );
 
@@ -496,7 +496,7 @@ GRAPHQL,
 
         $requested = array_values(array_unique(array_map(
             static fn (string $label): string => strtolower(trim($label)),
-            array_filter($labels, static fn ($label): bool => is_string($label) && trim($label) !== '')
+            array_filter($labels, static fn ($label): bool => is_string($label) && trim($label) !== '') // @phpstan-ignore function.alreadyNarrowedType
         )));
 
         if ($requested === []) {

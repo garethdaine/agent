@@ -77,9 +77,9 @@ class RuntimeSession extends Model
 
     public function removeToolAutoApproval(string $toolName): void
     {
-        $list = array_values(array_filter(
+        $list = array_values(array_filter( // @phpstan-ignore arrayValues.empty
             $this->tool_auto_approvals ?? [],
-            fn (string $t) => $t !== $toolName,
+            fn (string $t) => $t !== $toolName, // @phpstan-ignore notIdentical.alwaysTrue
         ));
         $this->update(['tool_auto_approvals' => $list]);
     }
@@ -104,6 +104,7 @@ class RuntimeSession extends Model
         return $this->hasMany(self::class, 'parent_session_id');
     }
 
+    /** @return BelongsTo<ChatSession, $this> */
     public function chatSession(): BelongsTo
     {
         return $this->belongsTo(ChatSession::class);

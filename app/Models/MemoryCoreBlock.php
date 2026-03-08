@@ -10,10 +10,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Core Memory block (Layer 1).
+ * @property int $id
+ * @property int $user_id
+ * @property int|null $job_id
+ * @property string $block_type
+ * @property string $block_key
+ * @property string|null $content_text
+ * @property array|null $content_json
+ * @property string $classification
+ * @property int $version
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\AgentJob|null $job
  *
- * Stores identity and operational blocks with version tracking.
- * Supports classification levels: public, internal, confidential.
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class MemoryCoreBlock extends Model
 {

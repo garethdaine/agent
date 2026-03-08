@@ -192,8 +192,8 @@ final class RuleBasedScheduleParser
         }
 
         $startHour = (int) $matches[1];
-        $startMinute = isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : 0;
-        $startAmPm = $matches[3] ?? null;
+        $startMinute = isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : 0; // @phpstan-ignore isset.offset
+        $startAmPm = $matches[3] ?? null; // @phpstan-ignore nullCoalesce.offset
         $endHour = (int) $matches[4];
         $endMinute = isset($matches[5]) && $matches[5] !== '' ? (int) $matches[5] : 0;
         $endAmPm = $matches[6] ?? null;
@@ -231,7 +231,7 @@ final class RuleBasedScheduleParser
         }
 
         $hour = (int) $matches[1];
-        $minute = isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : 0;
+        $minute = isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : 0; // @phpstan-ignore isset.offset
         $ampm = strtolower($matches[3]);
 
         $hour = $this->normalizeHour($hour, $ampm);
@@ -259,7 +259,7 @@ final class RuleBasedScheduleParser
         }
 
         $hour = (int) $matches[1];
-        $minute = isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : 0;
+        $minute = isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : 0; // @phpstan-ignore notIdentical.alwaysTrue
 
         // Assume PM for business hours (5-11), AM otherwise
         $assumedHour = ($hour >= 1 && $hour <= 11) ? $hour : $hour;
@@ -287,7 +287,7 @@ final class RuleBasedScheduleParser
         }
 
         $hour = (int) $matches[1];
-        $minute = isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : 0;
+        $minute = isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : 0; // @phpstan-ignore isset.offset
         $ampm = strtolower($matches[3]);
 
         $hour = $this->normalizeHour($hour, $ampm);
@@ -316,7 +316,7 @@ final class RuleBasedScheduleParser
         }
 
         $hour = (int) $matches[1];
-        $minute = isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : 0;
+        $minute = isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : 0; // @phpstan-ignore isset.offset
         $ampm = strtolower($matches[3]);
 
         $hour = $this->normalizeHour($hour, $ampm);

@@ -6,6 +6,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property array $settings
+ * @property string $status
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class TunnelSetting extends Model
 {
     protected $table = 'tunnel_settings';

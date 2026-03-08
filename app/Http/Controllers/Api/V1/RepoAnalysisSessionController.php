@@ -23,6 +23,7 @@ use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\RepoAnalysis\EventWriter;
 use App\Support\RepoAnalysis\SessionStateTransitionService;
+use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -896,7 +897,7 @@ class RepoAnalysisSessionController extends Controller
                 $paths[] = $storagePath;
             }
 
-            $warningArtifactPath = (string) data_get($artifact->payload_json, 'warning_artifact_path', '');
+            $warningArtifactPath = (string) data_get($artifact->payload_json, 'warning_artifact_path', ''); // @phpstan-ignore property.notFound
             if ($warningArtifactPath !== '') {
                 $paths[] = $warningArtifactPath;
             }
@@ -1099,7 +1100,7 @@ class RepoAnalysisSessionController extends Controller
             $task->attempt_count = max(1, (int) $task->attempt_count);
             $task->error_code = $errorCode;
             $task->error_summary = $errorSummary;
-            $task->finished_at = CarbonImmutable::now('UTC');
+            $task->finished_at = Carbon::now('UTC');
             $task->metadata_json = $metadata;
             $task->save();
 

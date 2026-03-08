@@ -10,6 +10,41 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $agent_job_id
+ * @property int $user_id
+ * @property int|null $initiated_by_user_id
+ * @property string $trigger_type
+ * @property \Carbon\CarbonInterface|null $due_window_utc_minute
+ * @property string $status
+ * @property int|null $pid
+ * @property string|null $resolved_executable_path
+ * @property \Carbon\CarbonInterface|null $started_at
+ * @property \Carbon\CarbonInterface|null $finished_at
+ * @property int|null $exit_code
+ * @property string|null $signal
+ * @property int $duration_ms
+ * @property int $stdout_bytes_pre
+ * @property int $stdout_bytes_post
+ * @property int $stderr_bytes_pre
+ * @property int $stderr_bytes_post
+ * @property string|null $error_summary
+ * @property string|null $error_code
+ * @property array|null $metadata_json
+ * @property string|null $star_ab_group
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property int|null $team_id
+ * @property-read \App\Models\AgentJob|null $job
+ * @property-read \App\Models\Team|null $team
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\User|null $initiatedBy
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\AgentRunEvent> $events
+ * @property string|null $trigger
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class AgentJobRun extends Model
 {
     use HasFactory;

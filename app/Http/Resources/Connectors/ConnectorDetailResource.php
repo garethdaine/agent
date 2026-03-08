@@ -7,6 +7,9 @@ namespace App\Http\Resources\Connectors;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin \App\Models\AgentConnector
+ */
 class ConnectorDetailResource extends JsonResource
 {
     public function toArray(Request $request): array

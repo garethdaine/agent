@@ -91,7 +91,7 @@ class ContentSanitizer
         // Remove remaining HTML tags
         $result = strip_tags($content);
         if ($result !== $content) {
-            if (! in_array('html_tags', $strippedElements, true)) {
+            if (! in_array('html_tags', $strippedElements, true)) { // @phpstan-ignore function.impossibleType
                 $strippedElements[] = 'html_tags';
             }
             $content = $result;

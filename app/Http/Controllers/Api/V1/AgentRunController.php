@@ -225,11 +225,12 @@ class AgentRunController extends Controller
             ->get();
 
         $hasMore = $events->count() > $limit;
+        /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\AgentRunEvent> $returned */
         $returned = $events->take($limit)->values();
-        $nextAfter = $returned->last()?->sequence ?? $after;
+        $nextAfter = $returned->last()->sequence ?? $after;
 
         return response()->json([
-            'data' => $returned->map(fn ($event): array => [
+            'data' => $returned->map(fn (\App\Models\AgentRunEvent $event): array => [
                 'id' => $event->id,
                 'run_id' => $event->agent_job_run_id,
                 'sequence' => $event->sequence,
@@ -484,7 +485,7 @@ class AgentRunController extends Controller
             'failure_mode_classification',
             [
                 'task_title' => $run->job->name,
-                'task_category' => $run->job->task_category?->value ?? 'unknown',
+                'task_category' => $run->job->task_category->value, // @phpstan-ignore property.notFound
                 'runner_type' => $run->job->runner_type,
                 'run_id' => $run->id,
             ]

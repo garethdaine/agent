@@ -43,7 +43,7 @@ class LessonExtractionListener
                 projectDirectory: base_path(),
                 context: [
                     'task_title' => $run->job->name ?? 'Unknown Job',
-                    'task_category' => $run->job->task_category?->value ?? 'unknown',
+                    'task_category' => $run->job->task_category->value ?? 'unknown',
                     'runner_type' => $run->job->runner_type ?? 'unknown',
                     'run_id' => $run->id,
                     'error_code' => $run->error_code,

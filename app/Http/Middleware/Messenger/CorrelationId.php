@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 class CorrelationId
 {
     public function __construct(
+        /** @phpstan-ignore property.onlyWritten */
         private readonly CorrelationContext $correlationContext
     ) {}
 

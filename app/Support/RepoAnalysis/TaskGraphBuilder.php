@@ -39,7 +39,7 @@ class TaskGraphBuilder
         foreach ($selectedAnalyzers as $analyzer) {
             $dependencies = [];
             foreach ($analyzer->dependencies() as $dependency) {
-                if (! is_string($dependency) || $dependency === '') {
+                if (! is_string($dependency) || $dependency === '') { // @phpstan-ignore function.alreadyNarrowedType
                     continue;
                 }
 

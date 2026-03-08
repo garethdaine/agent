@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
 class OrgEscalationService
 {
     public function __construct(
-        private readonly OrgReportingEdgeService $reportingEdgeService,
+        private readonly OrgReportingEdgeService $reportingEdgeService, // @phpstan-ignore property.onlyWritten
     ) {}
 
     /**

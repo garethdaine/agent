@@ -353,11 +353,11 @@ class DispatchDueService
             ->whereIn('status', AgentJobRun::ACTIVE_STATUSES)
             ->exists();
 
-        if ($status !== AgentJobRun::STATUS_SKIPPED && $job->governance_paused_at !== null) {
+        if ($status !== AgentJobRun::STATUS_SKIPPED && $job->governance_paused_at !== null) { // @phpstan-ignore notIdentical.alwaysTrue
             $status = AgentJobRun::STATUS_SKIPPED;
             $metadata['skip_reason'] = 'governance_paused';
             $metadata['governance_pause_reason'] = $job->governance_pause_reason;
-            $metadata['governance_paused_at'] = $job->governance_paused_at?->toIso8601String();
+            $metadata['governance_paused_at'] = $job->governance_paused_at->toIso8601String();
             $finishedAt = $tickTimestamp;
         }
 

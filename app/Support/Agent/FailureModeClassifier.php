@@ -78,7 +78,7 @@ class FailureModeClassifier
         }
 
         // If less than 30% of keywords appear in TASK, likely Type 1
-        return count($jobKeywords) > 0 && ($matchCount / count($jobKeywords)) < 0.3;
+        return count($jobKeywords) > 0 && ($matchCount / count($jobKeywords)) < 0.3; // @phpstan-ignore greater.alwaysTrue
     }
 
     private function isType2Failure(string $taskContent, string $actionContent): bool

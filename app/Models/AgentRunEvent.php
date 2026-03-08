@@ -7,6 +7,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $agent_job_run_id
+ * @property string $event_type
+ * @property int $sequence
+ * @property string $payload
+ * @property string|null $reasoning_step
+ * @property \Carbon\CarbonInterface|null $event_ts
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\AgentJobRun|null $run
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class AgentRunEvent extends Model
 {
     public const REASONING_STEPS = ['situation', 'task', 'action', 'result'];

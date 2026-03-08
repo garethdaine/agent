@@ -70,18 +70,22 @@ class ChatSessionManager
 
         $boundaryId = $session->compaction_boundary_message_id ?? null;
         if ($boundaryId !== null) {
+            /** @var ChatMessage|null $boundary */
             $boundary = ChatMessage::where('id', $boundaryId)->where('chat_session_id', $session->id)->first();
             if ($boundary !== null) {
                 $query->where('created_at', '>', $boundary->created_at);
             }
         }
 
-        return $query
+        /** @var Collection<int, ChatMessage> $messages */
+        $messages = $query
             ->orderByDesc('created_at')
             ->limit($limit)
             ->get()
             ->reverse()
             ->values();
+
+        return $messages;
     }
 
     /**
@@ -127,6 +131,7 @@ class ChatSessionManager
      */
     public function getLatestInboundMessage(ChatSession $session): ?ChatMessage
     {
+        /** @var ChatMessage|null */
         return $session->messages()
             ->where('direction', ChatMessage::DIRECTION_INBOUND)
             ->orderByDesc('created_at')
@@ -138,6 +143,7 @@ class ChatSessionManager
      */
     public function getLatestOutboundMessage(ChatSession $session): ?ChatMessage
     {
+        /** @var ChatMessage|null */
         return $session->messages()
             ->where('direction', ChatMessage::DIRECTION_OUTBOUND)
             ->orderByDesc('created_at')

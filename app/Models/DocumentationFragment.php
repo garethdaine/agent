@@ -10,6 +10,28 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Scout\Searchable;
 
+/**
+ * @property int $id
+ * @property string $ui_key
+ * @property string $locale
+ * @property string $short_text
+ * @property string|null $long_text
+ * @property int|null $learn_more_entry_id
+ * @property string $severity
+ * @property string|null $feature_flag
+ * @property string $status
+ * @property array|null $route_names
+ * @property array|null $setting_keys
+ * @property string|null $source_path
+ * @property string|null $source_checksum
+ * @property \Carbon\CarbonInterface|null $published_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\DocumentationEntry|null $learnMoreEntry
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DocumentationLink> $links
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class DocumentationFragment extends Model
 {
     use HasFactory;
@@ -65,7 +87,7 @@ class DocumentationFragment extends Model
             'section' => $this->sectionFromUiKey(),
             'route_names' => is_array($this->route_names) ? $this->route_names : [],
             'setting_keys' => is_array($this->setting_keys) ? $this->setting_keys : [],
-            'updated_at_timestamp' => (int) ($this->updated_at?->timestamp ?? now()->timestamp),
+            'updated_at_timestamp' => (int) ($this->updated_at->timestamp ?? now()->timestamp),
         ];
     }
 
@@ -94,7 +116,7 @@ class DocumentationFragment extends Model
 
     private function sectionFromUiKey(): string
     {
-        $segment = explode('.', (string) $this->ui_key)[0] ?? 'general';
+        $segment = explode('.', (string) $this->ui_key)[0] ?? 'general'; // @phpstan-ignore nullCoalesce.offset
 
         return $segment !== '' ? $segment : 'general';
     }

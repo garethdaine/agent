@@ -86,7 +86,7 @@ class MemorySettingsController extends Controller
             return response()->json([
                 'data' => [
                     'provider' => $provider,
-                    'success' => $result['success'] ?? false,
+                    'success' => $result['success'] ?? false, // @phpstan-ignore nullCoalesce.offset
                     'message' => $result['message'] ?? null,
                     'latency_ms' => $result['latency_ms'] ?? null,
                 ],

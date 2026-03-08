@@ -19,7 +19,7 @@ class ConversationReconstructor
         $lines = [];
 
         foreach ($events as $event) {
-            $payload = is_array($event->payload) ? $event->payload : [];
+            $payload = is_array($event->payload) ? $event->payload : []; // @phpstan-ignore function.alreadyNarrowedType
 
             if ($event->event_type === InterrogationEvent::TYPE_QUESTION) {
                 $questionId = trim((string) ($payload['question_id'] ?? ''));

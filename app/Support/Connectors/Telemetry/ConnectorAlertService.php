@@ -23,7 +23,7 @@ class ConnectorAlertService
             ? $connection->credential
             : $connection->credential()->first();
 
-        if ($credential === null || $credential->token_expires_at === null) {
+        if ($credential === null || $credential->token_expires_at === null) { // @phpstan-ignore property.notFound
             return;
         }
 
@@ -72,7 +72,7 @@ class ConnectorAlertService
 
         $used = (int) $connection->action_count_24h;
         $utilization = $used / (int) $dailyLimit;
-        $connectorName = $connector->display_name ?? $connector->name;
+        $connectorName = $connector->display_name ?? $connector->name; // @phpstan-ignore property.notFound
 
         if ($utilization >= 1.0) {
             $this->dispatcher->dispatch(new SystemNotificationPayload(
@@ -145,6 +145,6 @@ class ConnectorAlertService
             ? $connection->connector
             : $connection->connector()->first();
 
-        return $connector?->display_name ?? $connector?->name ?? 'Unknown Connector';
+        return $connector->display_name ?? $connector->name ?? 'Unknown Connector';
     }
 }

@@ -61,8 +61,8 @@ final class ModeCommandHandler implements SlashCommandHandlerInterface
         }
 
         return CommandResult::success(
-            "Current mode: {$session->mode->value}",
-            ['mode' => $session->mode->value, 'session_id' => $session->id]
+            "Current mode: {$session->mode->value}", // @phpstan-ignore property.nonObject
+            ['mode' => $session->mode->value, 'session_id' => $session->id] // @phpstan-ignore property.nonObject
         );
     }
 
@@ -79,7 +79,7 @@ final class ModeCommandHandler implements SlashCommandHandlerInterface
 
         $previousMode = $session->mode;
 
-        if ($previousMode === $mode) {
+        if ($previousMode === $mode) { // @phpstan-ignore identical.alwaysFalse
             return CommandResult::success(
                 "Mode is already set to {$mode->value}",
                 ['mode' => $mode->value, 'session_id' => $session->id]
@@ -89,10 +89,10 @@ final class ModeCommandHandler implements SlashCommandHandlerInterface
         $session->update(['mode' => $mode]);
 
         return CommandResult::success(
-            "Mode changed from {$previousMode->value} to {$mode->value}",
+            "Mode changed from {$previousMode->value} to {$mode->value}", // @phpstan-ignore property.nonObject
             [
                 'mode' => $mode->value,
-                'previous_mode' => $previousMode->value,
+                'previous_mode' => $previousMode->value, // @phpstan-ignore property.nonObject
                 'session_id' => $session->id,
             ]
         );

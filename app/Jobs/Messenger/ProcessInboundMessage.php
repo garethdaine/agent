@@ -120,6 +120,7 @@ class ProcessInboundMessage implements ShouldQueue
 
         // Create chat message with idempotency check
         try {
+            /** @var ChatMessage $message */
             $message = ChatMessage::create([
                 'chat_session_id' => $session->id,
                 'connector_account_id' => $account->id,

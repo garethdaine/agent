@@ -12,7 +12,32 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $user_id
+ * @property string|null $name
+ * @property string $project_directory
+ * @property string $analyzer_profile
+ * @property string $runner_type
+ * @property string $status
+ * @property int $phase
+ * @property string|null $snapshot_hash
+ * @property array|null $manifest_stats_json
+ * @property array|null $report_summary_json
+ * @property array|null $metadata_json
+ * @property string|null $error_code
+ * @property string|null $error_summary
+ * @property \Carbon\CarbonInterface|null $started_at
+ * @property \Carbon\CarbonInterface|null $finished_at
+ * @property \Carbon\CarbonInterface|null $deleted_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\User|null $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RepoAnalysisEvent> $events
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RepoAnalysisTask> $tasks
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RepoAnalysisArtifact> $artifacts
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RepoAnalysisReport> $reports
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class RepoAnalysisSession extends Model
 {

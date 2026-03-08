@@ -11,7 +11,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property int $user_id
+ * @property string $name
+ * @property string|null $description
+ * @property array $member_list
+ * @property array|null $evidence_payload_schema
+ * @property array|null $member_response_schema
+ * @property string $synthesis_mode
+ * @property bool $use_model_synthesis
+ * @property array|null $report_sections
+ * @property \Carbon\CarbonInterface|null $archived_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\User|null $user
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class OrgCouncilTemplate extends Model
 {

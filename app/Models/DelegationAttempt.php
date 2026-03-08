@@ -10,7 +10,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $delegation_task_id
+ * @property int $delegatee_profile_id
+ * @property int|null $agent_job_run_id
+ * @property int $attempt_number
+ * @property string $status
+ * @property \Carbon\CarbonInterface|null $started_at
+ * @property \Carbon\CarbonInterface|null $finished_at
+ * @property int $duration_ms
+ * @property string|null $error_code
+ * @property string|null $error_summary
+ * @property array|null $metadata_json
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\DelegationTask|null $task
+ * @property-read \App\Models\DelegateeProfile|null $profile
+ * @property-read \App\Models\AgentJobRun|null $agentJobRun
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class DelegationAttempt extends Model
 {

@@ -28,7 +28,7 @@ class InterrogationSemanticDeduper
         $matchedText = '';
 
         foreach ($existingTexts as $existingText) {
-            if (! is_string($existingText)) {
+            if (! is_string($existingText)) { // @phpstan-ignore function.alreadyNarrowedType
                 continue;
             }
 
@@ -96,7 +96,7 @@ class InterrogationSemanticDeduper
         $intersection = count(array_intersect_key($leftSet, $rightSet));
         $union = count($leftSet + $rightSet);
 
-        if ($union === 0) {
+        if ($union === 0) { // @phpstan-ignore identical.alwaysFalse
             return 0.0;
         }
 

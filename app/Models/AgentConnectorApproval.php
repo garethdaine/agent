@@ -11,7 +11,27 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string|null $connection_id
+ * @property string $connector_id
+ * @property string $action_name
+ * @property string $type
+ * @property string $status
+ * @property string|null $requested_by_run_id
+ * @property \Carbon\CarbonInterface|null $requested_at
+ * @property \Carbon\CarbonInterface|null $expires_at
+ * @property int|null $resolved_by
+ * @property \Carbon\CarbonInterface|null $resolved_at
+ * @property string|null $resolved_via
+ * @property array $resolution_payload
+ * @property array $request_context
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\AgentConnectorConnection|null $connection
+ * @property-read \App\Models\AgentConnector|null $connector
+ * @property-read \App\Models\User|null $resolvedBy
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class AgentConnectorApproval extends Model
 {

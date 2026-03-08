@@ -392,7 +392,7 @@ class MessengerConnectorController extends Controller
     {
         $connector = ConnectorAccount::findOrFail($id);
         $provider = strtolower(trim((string) $connector->provider));
-        $credentials = is_array($connector->credentials) ? $connector->credentials : [];
+        $credentials = $connector->credentials ?? [];
         $credentialManager = app(ConnectorCredentialManager::class);
 
         try {
@@ -423,7 +423,7 @@ class MessengerConnectorController extends Controller
             ], 422);
         }
 
-        if (($result['ok'] ?? false) === true) {
+        if ($result['ok'] === true) {
             $updates = [
                 'status' => ConnectorAccount::STATUS_CONNECTED,
             ];
@@ -459,9 +459,9 @@ class MessengerConnectorController extends Controller
                 'id' => $connector->id,
                 'provider' => $connector->provider,
                 'connection_mode' => $connector->connection_mode,
-                'test_status' => ($result['ok'] ?? false) === true ? 'connected' : 'failed',
-                'message' => (string) ($result['message'] ?? 'Connectivity test complete.'),
-                'details' => is_array($result['details'] ?? null) ? $result['details'] : [],
+                'test_status' => $result['ok'] ? 'connected' : 'failed',
+                'message' => (string) $result['message'],
+                'details' => $result['details'],
                 'setup' => [
                     'webhook_url' => $credentialManager->webhookUrl($connector),
                 ],

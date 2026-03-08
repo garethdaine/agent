@@ -25,8 +25,8 @@ class DatabaseDestructionGuard
     public function enforceFromGlobals(): void
     {
         $environment = array_merge(
-            is_array($_SERVER) ? $_SERVER : [],
-            is_array($_ENV) ? $_ENV : [],
+            is_array($_SERVER) ? $_SERVER : [], // @phpstan-ignore function.alreadyNarrowedType
+            is_array($_ENV) ? $_ENV : [], // @phpstan-ignore function.alreadyNarrowedType
         );
 
         $this->enforce(

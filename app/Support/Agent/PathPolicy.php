@@ -128,7 +128,7 @@ class PathPolicy
         $resolved = [];
 
         foreach ($bases as $base) {
-            if (! is_string($base) || $base === '') {
+            if (! is_string($base) || $base === '') { // @phpstan-ignore function.alreadyNarrowedType
                 continue;
             }
 

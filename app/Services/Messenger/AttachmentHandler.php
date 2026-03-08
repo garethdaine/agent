@@ -219,7 +219,7 @@ class AttachmentHandler
         $disk = $this->getStorageDisk();
         $ttlMinutes = (int) config('messenger.attachment_config.signed_url_ttl_minutes', 15);
 
-        if (method_exists($disk, 'temporaryUrl')) {
+        if (method_exists($disk, 'temporaryUrl')) { // @phpstan-ignore function.alreadyNarrowedType
             return $disk->temporaryUrl($attachment->storage_path, now()->addMinutes($ttlMinutes));
         }
 

@@ -108,7 +108,7 @@ class RitualToDelegationMapper
 
         $agent = $agentsByRole[$roleSlug] ?? null;
 
-        return $agent?->delegatee_profile_id;
+        return $agent !== null ? (string) $agent->delegatee_profile_id : null;
     }
 
     /**

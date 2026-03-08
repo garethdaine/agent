@@ -17,7 +17,7 @@ class PromptIsolationService
 
     public function __construct(
         private readonly InjectionDetectionEngine $detector,
-        private readonly ContentSanitizer $sanitizer,
+        private readonly ContentSanitizer $sanitizer, // @phpstan-ignore property.onlyWritten
         private readonly SecurityConfigProvider $config,
         private readonly TokenEstimator $tokenEstimator,
     ) {}

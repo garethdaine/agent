@@ -35,7 +35,7 @@ class SendAgentJobFinishedNotification
             return;
         }
 
-        $duration = $run->duration_ms !== null
+        $duration = $run->duration_ms !== null // @phpstan-ignore notIdentical.alwaysTrue
             ? round($run->duration_ms / 1000, 1).'s'
             : 'N/A';
 

@@ -9,7 +9,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $task_id
+ * @property int $depends_on_task_id
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\DelegationTask|null $task
+ * @property-read \App\Models\DelegationTask|null $dependsOnTask
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class DelegationTaskDependency extends Model
 {

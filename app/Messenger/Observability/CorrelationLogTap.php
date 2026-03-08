@@ -31,7 +31,7 @@ class CorrelationLogTap
     public function __invoke($logger): void
     {
         foreach ($logger->getHandlers() as $handler) {
-            $handler->pushProcessor(function (LogRecord $record): LogRecord {
+            $handler->pushProcessor(function (LogRecord $record): LogRecord { // @phpstan-ignore method.notFound
                 $correlationId = app(CorrelationContext::class)->get();
 
                 if ($correlationId) {

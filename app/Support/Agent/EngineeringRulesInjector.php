@@ -197,7 +197,7 @@ class EngineeringRulesInjector
         }
 
         /** @var array<int, string> $selectedSections */
-        $selectedSections = self::PROFILES[$profile];
+        $selectedSections = self::PROFILES[$profile]; // @phpstan-ignore varTag.nativeType
 
         return $this->extractSections($fullContent, $selectedSections);
     }

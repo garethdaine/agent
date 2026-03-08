@@ -15,8 +15,7 @@ use Stringable;
 
 class InterrogationEventWriter
 {
-    private int $nextSequence;
-
+    private int $nextSequence; // @phpstan-ignore property.onlyWritten
     public function __construct(private InterrogationSession $session)
     {
         $this->nextSequence = (int) (InterrogationEvent::query()
@@ -176,7 +175,7 @@ class InterrogationEventWriter
                 $next = [];
                 foreach ($value as $key => $item) {
                     $normalizedKey = is_string($key) ? $this->normalizeUtf8($key) : $key;
-                    if (! is_int($normalizedKey) && ! is_string($normalizedKey)) {
+                    if (! is_int($normalizedKey) && ! is_string($normalizedKey)) { // @phpstan-ignore function.alreadyNarrowedType, booleanAnd.alwaysFalse
                         $normalizedKey = (string) $normalizedKey;
                     }
 
@@ -267,7 +266,7 @@ class InterrogationEventWriter
                 $next = [];
                 foreach ($value as $key => $item) {
                     $normalizedKey = is_string($key) ? $this->normalizeUtf8($key) : $key;
-                    if (! is_int($normalizedKey) && ! is_string($normalizedKey)) {
+                    if (! is_int($normalizedKey) && ! is_string($normalizedKey)) { // @phpstan-ignore function.alreadyNarrowedType, booleanAnd.alwaysFalse
                         $normalizedKey = (string) $normalizedKey;
                     }
 

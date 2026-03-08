@@ -34,7 +34,7 @@ class FsToolAdapter extends AbstractToolAdapter
     /**
      * Operations that only read filesystem state.
      */
-    private const READ_OPERATIONS = ['read', 'list'];
+    private const READ_OPERATIONS = ['read', 'list']; // @phpstan-ignore classConstant.unused
 
     public function name(): string
     {

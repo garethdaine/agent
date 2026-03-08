@@ -42,7 +42,7 @@ class EntitySanitizer
             $name = $entity['name'] ?? null;
 
             // Reject null/missing type
-            if ($type === null || ! is_string($type)) {
+            if ($type === null || ! is_string($type)) { // @phpstan-ignore function.alreadyNarrowedType
                 Log::warning('EntitySanitizer: Rejected entity with null/missing type');
 
                 continue;
@@ -56,7 +56,7 @@ class EntitySanitizer
             }
 
             // Reject null/missing name
-            if ($name === null || ! is_string($name)) {
+            if ($name === null || ! is_string($name)) { // @phpstan-ignore function.alreadyNarrowedType
                 Log::warning('EntitySanitizer: Rejected entity with null/missing name');
 
                 continue;
@@ -103,7 +103,7 @@ class EntitySanitizer
             if (isset($entity['confidence'])) {
                 $sanitizedEntity['confidence'] = $entity['confidence'];
             }
-            if (isset($entity['classification'])) {
+            if (isset($entity['classification'])) { // @phpstan-ignore isset.offset
                 $sanitizedEntity['classification'] = $entity['classification'];
             }
 

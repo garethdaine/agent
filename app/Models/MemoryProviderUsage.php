@@ -10,9 +10,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Provider usage tracking for memory API operations.
+ * @property int $id
+ * @property int $user_id
+ * @property int|null $run_id
+ * @property string $provider
+ * @property string $model
+ * @property string $operation
+ * @property int $input_tokens
+ * @property int|null $output_tokens
+ * @property float|null $cost_estimate_usd
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\AgentJobRun|null $run
+ * @property int|null $requests
  *
- * Tracks token usage and cost estimates per provider operation.
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class MemoryProviderUsage extends Model
 {
@@ -178,10 +190,10 @@ class MemoryProviderUsage extends Model
         int $inputTokens,
         ?int $outputTokens = null,
         ?int $runId = null
-    ): static {
+    ): self {
         $cost = self::calculateCost($provider, $model, $inputTokens, $outputTokens);
 
-        return static::create([
+        return self::create([
             'user_id' => $userId,
             'run_id' => $runId,
             'provider' => $provider,

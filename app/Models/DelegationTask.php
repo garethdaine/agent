@@ -12,7 +12,29 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $delegation_graph_id
+ * @property string $name
+ * @property string $status
+ * @property int $sequence_order
+ * @property array $contract_json
+ * @property int|null $assigned_delegatee_profile_id
+ * @property array|null $assignment_reason_json
+ * @property array|null $metadata_json
+ * @property string|null $error_code
+ * @property string|null $error_summary
+ * @property \Carbon\CarbonInterface|null $started_at
+ * @property \Carbon\CarbonInterface|null $finished_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\DelegationGraph|null $graph
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationAttempt> $attempts
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationVerificationResult> $verificationResults
+ * @property-read \App\Models\DelegateeProfile|null $assignedProfile
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationTask> $dependencies
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationTask> $dependents
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class DelegationTask extends Model
 {
@@ -50,6 +72,8 @@ class DelegationTask extends Model
     public const STATUS_FAILED = 'failed';
 
     public const STATUS_CANCELLED = 'cancelled';
+
+    public const STATUS_PENDING_APPROVAL = 'pending_approval';
 
     protected function casts(): array
     {

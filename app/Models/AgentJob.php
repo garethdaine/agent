@@ -14,7 +14,39 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use InvalidArgumentException;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $user_id
+ * @property string $name
+ * @property string $workflow_key
+ * @property string|null $description
+ * @property string $cron_expression
+ * @property string $timezone
+ * @property array|null $active_hours_config
+ * @property bool|null $star_preamble_enabled
+ * @property bool|null $targeted_retry_enabled
+ * @property int|null $max_retries
+ * @property bool $is_enabled
+ * @property int $max_runtime_seconds
+ * @property int $cooldown_seconds
+ * @property string $runner_type
+ * @property string $command_template
+ * @property string $task_markdown_path
+ * @property string $working_directory
+ * @property array|null $env_json
+ * @property string|null $last_validated_executable_path
+ * @property int $scheduled_path_failure_streak
+ * @property \Carbon\CarbonInterface|null $deleted_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property \Carbon\CarbonInterface|null $governance_paused_at
+ * @property string|null $governance_pause_reason
+ * @property string|null $governance_paused_by
+ * @property int|null $team_id
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\Team|null $team
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\AgentJobRun> $runs
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class AgentJob extends Model
 {

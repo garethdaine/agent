@@ -94,8 +94,8 @@ final class ProgressCommandHandler implements SlashCommandHandlerInterface
         $lines = [];
 
         foreach ($children as $child) {
-            $childProgress = SessionProcessManager::getLiveProgress($child->id);
-            $shortId = substr($child->id, 0, 8);
+            $childProgress = SessionProcessManager::getLiveProgress($child->id); // @phpstan-ignore property.notFound
+            $shortId = substr($child->id, 0, 8); // @phpstan-ignore property.notFound
             $title = $child->title ?? 'Untitled';
 
             if ($childProgress === null) {
@@ -104,9 +104,9 @@ final class ProgressCommandHandler implements SlashCommandHandlerInterface
                 continue;
             }
 
-            $elapsed = $this->formatDuration((int) ($childProgress['elapsed_seconds'] ?? 0));
-            $fragments = (int) ($childProgress['fragment_count'] ?? 0);
-            $activity = (string) ($childProgress['recent_activity'] ?? 'unknown');
+            $elapsed = $this->formatDuration((int) ($childProgress['elapsed_seconds'] ?? 0)); // @phpstan-ignore nullCoalesce.offset
+            $fragments = (int) ($childProgress['fragment_count'] ?? 0); // @phpstan-ignore nullCoalesce.offset
+            $activity = (string) ($childProgress['recent_activity'] ?? 'unknown'); // @phpstan-ignore nullCoalesce.offset
 
             $lines[] = "• [{$shortId}] **{$title}** — {$elapsed}, {$fragments} fragments, recent: {$activity}";
         }

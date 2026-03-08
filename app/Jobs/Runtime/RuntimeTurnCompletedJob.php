@@ -52,6 +52,7 @@ class RuntimeTurnCompletedJob implements ShouldQueue
         }
 
         $adapter = $connectorManager->resolve($account->provider);
+        /** @var \App\Models\ChatSession|null $chatSession */
         $chatSession = $account->sessions()->whereKey($this->chatSessionId)->first();
         if ($chatSession === null) {
             return;

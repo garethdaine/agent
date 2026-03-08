@@ -8,6 +8,29 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
 
+/**
+ * @property int $id
+ * @property int|null $user_id
+ * @property string $actor_type
+ * @property string|null $actor_id
+ * @property string $action
+ * @property string $target_type
+ * @property string $target_id
+ * @property array|null $changed_fields_json
+ * @property array|null $before_json
+ * @property array|null $after_json
+ * @property string|null $request_id
+ * @property string|null $ip_address
+ * @property string|null $user_agent
+ * @property string|null $hostname
+ * @property string $outcome
+ * @property string|null $error_code
+ * @property string|null $error_message
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\User|null $user
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class AgentAuditLog extends Model
 {
     public const UPDATED_AT = null;

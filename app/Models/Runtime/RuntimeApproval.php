@@ -33,6 +33,7 @@ class RuntimeApproval extends Model
         ];
     }
 
+    /** @return BelongsTo<RuntimeToolCall, $this> */
     public function toolCall(): BelongsTo
     {
         return $this->belongsTo(RuntimeToolCall::class, 'runtime_tool_call_id');

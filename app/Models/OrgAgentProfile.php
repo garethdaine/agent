@@ -13,7 +13,28 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property int $user_id
+ * @property string $name
+ * @property string $role_slug
+ * @property string $role_description
+ * @property int $delegatee_profile_id
+ * @property array $capability_bindings
+ * @property array $authority_overrides
+ * @property array|null $default_output_schema
+ * @property string|null $parent_agent_id
+ * @property \Carbon\CarbonInterface|null $archived_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property array|null $soul_json
+ * @property array|null $skill_access_profile
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\DelegateeProfile|null $delegateeProfile
+ * @property-read \App\Models\OrgAgentProfile|null $parent
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\OrgAgentProfile> $children
+ * @property-read \App\Models\OrgReportingEdge|null $reportingEdge
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class OrgAgentProfile extends Model
 {

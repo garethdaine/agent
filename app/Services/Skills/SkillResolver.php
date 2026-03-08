@@ -201,7 +201,7 @@ class SkillResolver
                 // Try to sort — detect cycles
                 $hasCycle = false;
                 foreach (array_keys($byName) as $n) {
-                    if (! isset($visited[$n])) {
+                    if (! isset($visited[$n])) { // @phpstan-ignore isset.offset
                         if (! $visit($n)) {
                             $hasCycle = true;
                             break;
@@ -229,7 +229,7 @@ class SkillResolver
                 $inStack = [];
 
                 foreach (array_keys($byName) as $n) {
-                    if (! isset($visited[$n])) {
+                    if (! isset($visited[$n])) { // @phpstan-ignore isset.offset
                         $visit($n);
                     }
                 }
@@ -259,7 +259,7 @@ class SkillResolver
                     $inCycle = $current;
                     do {
                         $cyclic[] = $inCycle;
-                        $deps = ($byName[$inCycle] ?? null)?->runAfter ?? [];
+                        $deps = ($byName[$inCycle] ?? null)?->runAfter ?? []; // @phpstan-ignore nullsafe.neverNull
                         $inCycle = null;
                         foreach ($deps as $dep) {
                             if (isset($byName[$dep]) && isset($visited[$dep])) {
@@ -273,7 +273,7 @@ class SkillResolver
                 }
 
                 $visited[$current] = true;
-                $deps = ($byName[$current] ?? null)?->runAfter ?? [];
+                $deps = ($byName[$current] ?? null)?->runAfter ?? []; // @phpstan-ignore nullsafe.neverNull
                 $nextInSet = null;
 
                 foreach ($deps as $dep) {

@@ -104,9 +104,9 @@ class DiscoveryToolAdapter extends AbstractToolAdapter
         ]);
 
         return ToolResult::success([
-            'session_id' => $session->id,
-            'status' => $session->status,
-            'phase' => $session->phase,
+            'session_id' => $session->id, // @phpstan-ignore property.notFound
+            'status' => $session->status, // @phpstan-ignore property.notFound
+            'phase' => $session->phase, // @phpstan-ignore property.notFound
             'message' => 'Discovery session created. Complete setup in the UI or API to start discovery.',
         ], $this->duration($startTime));
     }

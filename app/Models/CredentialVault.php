@@ -10,6 +10,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @property string $id
+ * @property int $user_id
+ * @property string $provider
+ * @property string $key
+ * @property string $encrypted_value
+ * @property array|null $metadata
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\User|null $user
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class CredentialVault extends Model
 {
     use HasUuids;
@@ -40,7 +53,7 @@ class CredentialVault extends Model
 
     public function getDecryptedValue(): ?string
     {
-        if ($this->encrypted_value === null || $this->encrypted_value === '') {
+        if ($this->encrypted_value === null || $this->encrypted_value === '') { // @phpstan-ignore identical.alwaysFalse
             return null;
         }
 

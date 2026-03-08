@@ -42,7 +42,7 @@ class RunsListHistoryHandler implements ChatActionHandlerInterface
 
         $lines = [];
         foreach ($runs as $run) {
-            $jobName = $run->job?->name ?? 'Unknown';
+            $jobName = $run->job->name ?? 'Unknown';
             $icon = match ($run->status) {
                 'succeeded' => '✅',
                 'failed' => '❌',

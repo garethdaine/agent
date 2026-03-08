@@ -11,7 +11,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $skill_name
+ * @property int $team_id
+ * @property array $validation_result
+ * @property float $risk_score
+ * @property bool $overall_pass
+ * @property string $source
+ * @property int|null $validated_by
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\Team|null $team
+ * @property-read \App\Models\User|null $validatedBy
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class AgentSkillValidation extends Model
 {

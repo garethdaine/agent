@@ -53,7 +53,7 @@ class ResumeRuntimeTurnJob implements ShouldQueue
             $progressCallback,
         );
 
-        $status = $result['status'] ?? 'failed';
+        $status = $result['status'] ?? 'failed'; // @phpstan-ignore nullCoalesce.offset
 
         Log::info('ResumeRuntimeTurnJob: Resume result', [
             'runtime_session_id' => $this->runtimeSessionId,
@@ -110,6 +110,7 @@ class ResumeRuntimeTurnJob implements ShouldQueue
             return null;
         }
 
+        /** @var \App\Models\ChatSession|null $chatSession */
         $chatSession = $account->sessions()->whereKey($this->chatSessionId)->first();
         if ($chatSession === null) {
             return null;
@@ -147,6 +148,7 @@ class ResumeRuntimeTurnJob implements ShouldQueue
             return;
         }
 
+        /** @var \App\Models\ChatSession|null $chatSession */
         $chatSession = $account->sessions()->whereKey($this->chatSessionId)->first();
         if ($chatSession === null) {
             return;

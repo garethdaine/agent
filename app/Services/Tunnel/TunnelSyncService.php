@@ -81,11 +81,11 @@ class TunnelSyncService
         } else {
             posix_kill($pid, SIGTERM);
             $waited = 0;
-            while ($waited < 5 && $this->isProcessRunning($pid)) {
+            while ($waited < 5 && $this->isProcessRunning($pid)) { // @phpstan-ignore booleanAnd.rightAlwaysTrue
                 usleep(200_000);
                 $waited++;
             }
-            if ($this->isProcessRunning($pid)) {
+            if ($this->isProcessRunning($pid)) { // @phpstan-ignore if.alwaysTrue
                 posix_kill($pid, SIGKILL);
             }
         }

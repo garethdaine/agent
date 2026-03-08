@@ -11,7 +11,27 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $connection_id
+ * @property string $connector_id
+ * @property string $action_name
+ * @property string|null $run_attempt_id
+ * @property string|null $delegatee_id
+ * @property string|null $workflow_key
+ * @property string $http_method
+ * @property int|null $http_status
+ * @property int|null $duration_ms
+ * @property int|null $request_size_bytes
+ * @property int|null $response_size_bytes
+ * @property int|null $token_usage
+ * @property int $retry_count
+ * @property string $outcome
+ * @property string|null $error_message
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\AgentConnectorConnection|null $connection
+ * @property-read \App\Models\AgentConnector|null $connector
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class AgentConnectorInvocation extends Model
 {

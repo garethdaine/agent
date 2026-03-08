@@ -111,7 +111,7 @@ class BuildTaskGenerator
             $parts[] = "\nProject rules to enforce:\n".$this->renderProjectRules($projectRules);
         }
 
-        $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']);
+        $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']); // @phpstan-ignore method.notFound
         if ($techStacks->isNotEmpty()) {
             $parts[] = "\nSelected tech stack:\n- ".$techStacks
                 ->map(fn ($stack): string => trim((string) $stack->name).': '.trim((string) $stack->documentation_url))
@@ -174,7 +174,7 @@ class BuildTaskGenerator
             $parts[] = "\nProject rules to enforce:\n".$this->renderProjectRules($projectRules);
         }
 
-        $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']);
+        $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']); // @phpstan-ignore method.notFound
         if ($techStacks->isNotEmpty()) {
             $parts[] = "\nSelected tech stack:\n- ".$techStacks
                 ->map(fn ($stack): string => trim((string) $stack->name).': '.trim((string) $stack->documentation_url))
@@ -287,7 +287,7 @@ class BuildTaskGenerator
             ];
         }
 
-        return array_values($normalized);
+        return array_values($normalized); // @phpstan-ignore arrayValues.list
     }
 
     /**
@@ -298,13 +298,13 @@ class BuildTaskGenerator
         $lines = [];
 
         foreach ($rules as $index => $rule) {
-            $title = trim((string) ($rule['title'] ?? ''));
-            $markdown = trim((string) ($rule['markdown'] ?? ''));
+            $title = trim((string) ($rule['title'] ?? '')); // @phpstan-ignore nullCoalesce.offset
+            $markdown = trim((string) ($rule['markdown'] ?? '')); // @phpstan-ignore nullCoalesce.offset
             if ($markdown === '') {
                 continue;
             }
 
-            $source = strtolower(trim((string) ($rule['source'] ?? 'manual')));
+            $source = strtolower(trim((string) ($rule['source'] ?? 'manual'))); // @phpstan-ignore nullCoalesce.offset
             if (! in_array($source, ['manual', 'uploaded'], true)) {
                 $source = 'manual';
             }

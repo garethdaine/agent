@@ -11,7 +11,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $credential_id
+ * @property string $event_type
+ * @property int|null $actor_id
+ * @property array $details
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\AgentConnectorCredential|null $credential
+ * @property-read \App\Models\User|null $actor
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class AgentConnectorCredentialEvent extends Model
 {

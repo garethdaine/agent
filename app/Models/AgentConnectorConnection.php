@@ -13,7 +13,32 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property int $team_id
+ * @property string $connector_id
+ * @property string $status
+ * @property float $health_score
+ * @property array $config
+ * @property array $webhook_subscriptions
+ * @property \Carbon\CarbonInterface|null $last_health_check_at
+ * @property \Carbon\CarbonInterface|null $last_action_at
+ * @property int $action_count_24h
+ * @property int $error_count_24h
+ * @property int|null $connected_by
+ * @property \Carbon\CarbonInterface|null $connected_at
+ * @property int|null $disconnected_by
+ * @property \Carbon\CarbonInterface|null $disconnected_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\Team|null $team
+ * @property-read \App\Models\AgentConnector|null $connector
+ * @property-read \App\Models\AgentConnectorCredential|null $credential
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\AgentConnectorInvocation> $invocations
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\AgentConnectorWebhookEvent> $webhookEvents
+ * @property-read \App\Models\User|null $connectedBy
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\AgentConnectorApproval> $approvals
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class AgentConnectorConnection extends Model
 {

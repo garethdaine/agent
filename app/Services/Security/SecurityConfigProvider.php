@@ -77,7 +77,7 @@ class SecurityConfigProvider
         }
 
         $envKey = 'SECURITY_'.strtoupper($key);
-        $envValue = env($envKey);
+        $envValue = env($envKey); // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
 
         if ($envValue !== null) {
             return $this->clamp($key, $this->castValue($key, $envValue));

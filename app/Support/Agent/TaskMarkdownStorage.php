@@ -35,7 +35,7 @@ class TaskMarkdownStorage
 
         $resolved = realpath($path);
 
-        if (! is_string($resolved) || $resolved === '') {
+        if (! is_string($resolved) || $resolved === '') { // @phpstan-ignore identical.alwaysFalse
             throw new RuntimeException('Persisted markdown path could not be resolved.');
         }
 

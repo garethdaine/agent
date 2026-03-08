@@ -52,9 +52,9 @@ final class SubAgentsCommandHandler implements SlashCommandHandlerInterface
         $lines = $children->map(function (RuntimeSession $child) {
             $shortId = substr($child->id, 0, 8);
             $title = $child->title ?? 'Untitled';
-            $status = $child->status->value;
+            $status = $child->status->value; // @phpstan-ignore property.nonObject
             $duration = $child->started_at
-                ? now()->diffForHumans($child->started_at, true)
+                ? now()->diffForHumans($child->started_at, true) // @phpstan-ignore argument.type
                 : '—';
 
             return "• [{$shortId}] **{$title}** — {$status} ({$duration})";

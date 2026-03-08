@@ -218,7 +218,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('agent-mutations', function (Request $request) {
             return [
                 Limit::perMinute(30)
-                    ->by((string) ($request->user()?->id ?? $request->ip()))
+                    ->by((string) ($request->user()->id ?? $request->ip()))
                     ->response(function () {
                         return ErrorEnvelope::make(
                             'RATE_LIMITED',
@@ -232,7 +232,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('interrogation', function (Request $request) {
             return [
                 Limit::perMinute(120)
-                    ->by((string) ($request->user()?->id ?? $request->ip()))
+                    ->by((string) ($request->user()->id ?? $request->ip()))
                     ->response(function () {
                         return ErrorEnvelope::make(
                             'RATE_LIMITED',
@@ -246,7 +246,7 @@ class AppServiceProvider extends ServiceProvider
         // Memory API rate limiters
         RateLimiter::for('memory-reads', function (Request $request) {
             return Limit::perMinute(120)
-                ->by((string) ($request->user()?->id ?? $request->ip()))
+                ->by((string) ($request->user()->id ?? $request->ip()))
                 ->response(function () {
                     return ErrorEnvelope::make(
                         'RATE_LIMITED',
@@ -264,7 +264,7 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('memory-writes', function (Request $request) {
             return Limit::perMinute(30)
-                ->by((string) ($request->user()?->id ?? $request->ip()))
+                ->by((string) ($request->user()->id ?? $request->ip()))
                 ->response(function () {
                     return ErrorEnvelope::make(
                         'RATE_LIMITED',

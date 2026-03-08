@@ -32,7 +32,7 @@ class ComplianceFlagResolver
     ];
 
     public function __construct(
-        private readonly FeatureFlagManager $flagManager
+        private readonly FeatureFlagManager $flagManager // @phpstan-ignore property.onlyWritten
     ) {}
 
     /**

@@ -11,7 +11,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $ritual_template_id
+ * @property int $user_id
+ * @property string $state
+ * @property int|null $delegation_graph_id
+ * @property array|null $phase_outputs
+ * @property \Carbon\CarbonInterface|null $started_at
+ * @property \Carbon\CarbonInterface|null $completed_at
+ * @property string $correlation_id
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\OrgRitualTemplate|null $template
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\DelegationGraph|null $delegationGraph
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class OrgRitualRun extends Model
 {

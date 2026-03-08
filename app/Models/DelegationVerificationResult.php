@@ -10,8 +10,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Represents the result of a verification step for a delegation task.
- *
  * @property int $id
  * @property int $delegation_task_id
  * @property int|null $delegation_attempt_id
@@ -19,13 +17,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $step_order
  * @property string $verdict
  * @property array|null $evidence_json
- * @property \Carbon\Carbon|null $started_at
- * @property \Carbon\Carbon|null $finished_at
- * @property \Carbon\Carbon|null $expires_at
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
+ * @property \Carbon\CarbonInterface|null $started_at
+ * @property \Carbon\CarbonInterface|null $finished_at
+ * @property \Carbon\CarbonInterface|null $expires_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\DelegationTask|null $task
+ * @property-read \App\Models\DelegationAttempt|null $attempt
  *
- * @mixin Builder
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class DelegationVerificationResult extends Model
 {

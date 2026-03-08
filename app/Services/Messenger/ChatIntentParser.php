@@ -72,7 +72,7 @@ class ChatIntentParser
 
         // Simple list commands
         if (preg_match('/^(list|show|get)\s*(my\s+)?((active|enabled|disabled|paused)\s+)?(jobs?|cron)$/i', $normalized, $matches)) {
-            $filterKeyword = strtolower(trim((string) ($matches[3] ?? '')));
+            $filterKeyword = strtolower(trim((string) ($matches[3] ?? ''))); // @phpstan-ignore nullCoalesce.offset
             $parameters = [];
 
             if ($filterKeyword !== '') {
@@ -134,7 +134,7 @@ class ChatIntentParser
         // Run history commands
         if (preg_match('/^(show|list|get)\s+(run\s+)?history(\s+(?:for\s+)?(?:job\s+)?([a-z0-9_-]+))?$/i', $normalized, $matches)) {
             $parameters = [];
-            if (isset($matches[4]) && $matches[4] !== '') {
+            if (isset($matches[4]) && $matches[4] !== '') { // @phpstan-ignore notIdentical.alwaysTrue
                 $parameters['job_id'] = $matches[4];
             }
 
@@ -440,7 +440,7 @@ PROMPT;
         }
 
         $account = $session->connectorAccount;
-        $config = $account?->config ?? [];
+        $config = $account->config ?? [];
 
         return new ParsedAction(
             type: $actionType,

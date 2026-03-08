@@ -16,6 +16,40 @@ use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Jetstream\HasTeams;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property \Carbon\CarbonInterface|null $email_verified_at
+ * @property string $password
+ * @property string|null $two_factor_secret
+ * @property string|null $two_factor_recovery_codes
+ * @property \Carbon\CarbonInterface|null $two_factor_confirmed_at
+ * @property string|null $remember_token
+ * @property int|null $current_team_id
+ * @property string|null $profile_photo_path
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property string|null $stripe_id
+ * @property string|null $pm_type
+ * @property string|null $pm_last_four
+ * @property \Carbon\CarbonInterface|null $trial_ends_at
+ * @property \Carbon\CarbonInterface|null $onboarding_completed_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\AgentJob> $agentJobs
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\AgentJobRun> $agentJobRuns
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\InterrogationSession> $interrogationSessions
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\InterrogationSetting> $interrogationSettings
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ConnectedProvider> $connectedProviders
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationGraph> $delegationGraphs
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegateeProfile> $delegateeProfiles
+ * @property-read \App\Models\UserNotificationSetting|null $notificationSetting
+ * @property-read \App\Models\UserChatPreference|null $chatPreference
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \Laravel\Sanctum\PersonalAccessToken> $tokens
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Team> $ownedTeams
+ * @property-read \App\Models\Team|null $currentTeam
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class User extends Authenticatable
 {
     use Billable;
@@ -34,7 +68,7 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-    protected $fillable = [
+    protected $fillable = [ // @phpstan-ignore property.phpDocType
         'name',
         'email',
         'password',
@@ -45,7 +79,7 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-    protected $hidden = [
+    protected $hidden = [ // @phpstan-ignore property.phpDocType
         'password',
         'remember_token',
         'two_factor_recovery_codes',
@@ -57,7 +91,7 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-    protected $appends = [
+    protected $appends = [ // @phpstan-ignore property.phpDocType
         'profile_photo_url',
     ];
 
@@ -127,7 +161,7 @@ class User extends Authenticatable
 
     public function getNotificationChannel(): string
     {
-        return $this->notificationSetting?->channel ?? 'email';
+        return $this->notificationSetting->channel ?? 'email';
     }
 
     public function requiresConfirmationFor(string $action): bool

@@ -13,9 +13,9 @@ use App\Support\Interrogation\BuildExecutionBackupService;
 use App\Support\Interrogation\BuildTaskRunFactory;
 use App\Support\Interrogation\GitOperationsService;
 use App\Support\Interrogation\InterrogationEventWriter;
-use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Carbon;
 
 class ExecuteInterrogationBuildJob implements ShouldQueue
 {
@@ -53,6 +53,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             return;
         }
 
+        /** @var InterrogationBuildTask|null $activeTask */
         $activeTask = $session->buildTasks()
             ->with('run')
             ->where('status', InterrogationBuildTask::STATUS_IN_PROGRESS)
@@ -60,6 +61,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             ->first();
 
         if ($activeTask !== null) {
+            /** @var AgentJobRun|null $run */
             $run = $activeTask->run;
 
             if ($run !== null && in_array((string) $run->status, AgentJobRun::ACTIVE_STATUSES, true)) {
@@ -76,6 +78,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             // "failed" and the pointer update.  If we see a newer active run,
             // update the pointer and keep polling instead of killing the build.
             if ($run !== null && in_array((string) $run->status, [AgentJobRun::STATUS_FAILED], true)) {
+                /** @var AgentJobRun|null $activeRetryRun */
                 $activeRetryRun = AgentJobRun::query()
                     ->where('agent_job_id', $run->agent_job_id)
                     ->whereIn('status', AgentJobRun::ACTIVE_STATUSES)
@@ -127,6 +130,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             return;
         }
 
+        /** @var InterrogationBuildTask|null $nextTask */
         $nextTask = $session->buildTasks()
             ->where('status', InterrogationBuildTask::STATUS_PENDING)
             ->orderBy('sequence')
@@ -145,7 +149,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $nextTask->attempt_count = $nextAttempt;
             $nextTask->agent_job_run_id = $run->id;
             $nextTask->last_error = null;
-            $nextTask->started_at = $nextTask->started_at ?? CarbonImmutable::now('UTC');
+            $nextTask->started_at = $nextTask->started_at ?? Carbon::now('UTC');
             $nextTask->finished_at = null;
             $nextTask->save();
             $this->queueTaskProviderStatusSync($session, $nextTask);
@@ -158,7 +162,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 'sequence' => $nextTask->sequence,
                 'title' => $nextTask->title,
                 'run_id' => $run->id,
-                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'at' => Carbon::now('UTC')->toIso8601String(),
             ]);
 
             $this->dispatchFollowUpBuildTick((int) $session->id, 2, $writer);
@@ -185,8 +189,9 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         }
 
         $error = $this->normalizeJobFailure($throwable);
-        $failedAt = CarbonImmutable::now('UTC')->toIso8601String();
+        $failedAt = Carbon::now('UTC')->toIso8601String();
 
+        /** @var InterrogationBuildTask|null $activeTask */
         $activeTask = $session->buildTasks()
             ->with('run')
             ->where('status', InterrogationBuildTask::STATUS_IN_PROGRESS)
@@ -205,7 +210,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $session->phase = InterrogationSession::PHASE_BUILD_EXECUTION;
         $session->error_code = 'BUILD_EXECUTION_JOB_FAILED';
         $session->error_summary = $error;
-        $session->finished_at = CarbonImmutable::now('UTC');
+        $session->finished_at = Carbon::now('UTC');
         $session->save();
 
         $writer = new InterrogationEventWriter($session);
@@ -218,6 +223,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
 
     private function finalizeBuildLifecycle(InterrogationSession $session, InterrogationEventWriter $writer): void
     {
+        /** @var \Illuminate\Database\Eloquent\Collection<int, InterrogationBuildTask> $tasks */
         $tasks = $session->buildTasks()->get();
 
         $hasFailed = $tasks->contains(fn (InterrogationBuildTask $task): bool => $task->status === InterrogationBuildTask::STATUS_FAILED);
@@ -229,20 +235,20 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
 
         if ($hasFailed) {
             $build['status'] = 'failed';
-            $build['finished_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+            $build['finished_at'] = Carbon::now('UTC')->toIso8601String();
             $build['completion_summary'] = $this->buildCompletionSummary($tasks, false);
             $this->saveBuildMetadata($session, $build);
 
             $session->status = InterrogationSession::STATUS_FAILED;
             $session->error_code = 'BUILD_EXECUTION_FAILED';
             $session->error_summary = 'One or more build tasks failed.';
-            $session->finished_at = CarbonImmutable::now('UTC');
+            $session->finished_at = Carbon::now('UTC');
             $session->save();
 
             $writer->appendSystem([
                 'notice' => 'build_failed',
                 'summary' => $build['completion_summary'],
-                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'at' => Carbon::now('UTC')->toIso8601String(),
             ]);
 
             return;
@@ -250,7 +256,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
 
         if ($hasBlocked) {
             $build['status'] = 'paused';
-            $build['paused_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+            $build['paused_at'] = Carbon::now('UTC')->toIso8601String();
             $build['pause_reason'] = (string) ($build['pause_reason'] ?? 'blocked');
             $this->saveBuildMetadata($session, $build);
 
@@ -262,20 +268,20 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $writer->appendSystem([
                 'notice' => 'build_paused',
                 'reason' => $build['pause_reason'],
-                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'at' => Carbon::now('UTC')->toIso8601String(),
             ]);
 
             return;
         }
 
         $build['status'] = 'completed';
-        $build['finished_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+        $build['finished_at'] = Carbon::now('UTC')->toIso8601String();
         $build['completion_summary'] = $this->buildCompletionSummary($tasks, true);
         $this->saveBuildMetadata($session, $build);
 
         $session->status = InterrogationSession::STATUS_COMPLETED;
         $session->phase = InterrogationSession::PHASE_BUILD_EXECUTION;
-        $session->finished_at = CarbonImmutable::now('UTC');
+        $session->finished_at = Carbon::now('UTC');
         $session->error_code = null;
         $session->error_summary = null;
         $session->save();
@@ -283,7 +289,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $writer->appendSystem([
             'notice' => 'build_completed',
             'summary' => $build['completion_summary'],
-            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            'at' => Carbon::now('UTC')->toIso8601String(),
         ]);
     }
 
@@ -301,7 +307,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         if ($run === null) {
             $task->status = InterrogationBuildTask::STATUS_FAILED;
             $task->last_error = 'Run record not found for active build task.';
-            $task->finished_at = CarbonImmutable::now('UTC');
+            $task->finished_at = Carbon::now('UTC');
             $task->save();
 
             $this->saveBuildMetadata($session, $build);
@@ -325,7 +331,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         if ($runStatus !== AgentJobRun::STATUS_SUCCEEDED && ($runMetadata['rate_limit_detected'] ?? false) === true) {
             $task->status = InterrogationBuildTask::STATUS_BLOCKED;
             $task->last_error = trim((string) ($run->error_summary ?? 'Rate limit detected while executing build task.'));
-            $task->finished_at = CarbonImmutable::now('UTC');
+            $task->finished_at = Carbon::now('UTC');
             $task->save();
 
             $build['status'] = 'paused';
@@ -338,7 +344,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $build['clarification_excerpt'] = null;
             $build['active_task_id'] = (int) $task->id;
             $build['active_run_id'] = (int) $run->id;
-            $build['paused_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+            $build['paused_at'] = Carbon::now('UTC')->toIso8601String();
             $this->saveBuildMetadata($session, $build);
 
             $writer->appendSystem([
@@ -346,7 +352,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 'task_id' => $task->id,
                 'run_id' => $run->id,
                 'reset_at' => $build['rate_limit_reset_at'] ?? null,
-                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'at' => Carbon::now('UTC')->toIso8601String(),
             ]);
 
             $this->queueTaskProviderStatusSync($session, $task, $writer);
@@ -357,7 +363,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         if ($runStatus !== AgentJobRun::STATUS_SUCCEEDED && $clarificationRequired) {
             $task->status = InterrogationBuildTask::STATUS_BLOCKED;
             $task->last_error = trim((string) ($run->error_summary ?? 'Clarification required before continuing this task.'));
-            $task->finished_at = CarbonImmutable::now('UTC');
+            $task->finished_at = Carbon::now('UTC');
             $task->save();
 
             $build['status'] = 'paused';
@@ -373,7 +379,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $build['rate_limit_excerpt'] = null;
             $build['active_task_id'] = (int) $task->id;
             $build['active_run_id'] = (int) $run->id;
-            $build['paused_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+            $build['paused_at'] = Carbon::now('UTC')->toIso8601String();
             $this->saveBuildMetadata($session, $build);
 
             $writer->appendSystem([
@@ -381,7 +387,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 'task_id' => $task->id,
                 'run_id' => $run->id,
                 'message' => $build['clarification_excerpt'] ?? null,
-                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'at' => Carbon::now('UTC')->toIso8601String(),
             ]);
 
             $this->queueTaskProviderStatusSync($session, $task, $writer);
@@ -397,14 +403,14 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 if (! $evidence['has_actionable_execution']) {
                     $task->status = InterrogationBuildTask::STATUS_FAILED;
                     $task->last_error = 'Runner exited successfully but did not execute concrete implementation or verification commands.';
-                    $task->finished_at = CarbonImmutable::now('UTC');
+                    $task->finished_at = Carbon::now('UTC');
                     $task->save();
 
                     $build['status'] = 'failed';
                     $build['error'] = $task->last_error;
                     $build['active_task_id'] = (int) $task->id;
                     $build['active_run_id'] = (int) $run->id;
-                    $build['failed_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+                    $build['failed_at'] = Carbon::now('UTC')->toIso8601String();
                     $this->saveBuildMetadata($session, $build);
 
                     $writer->appendError([
@@ -436,7 +442,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                             'reason' => $g->reasonCode,
                         ], $completionResult->gates),
                     ]);
-                    $task->finished_at = CarbonImmutable::now('UTC');
+                    $task->finished_at = Carbon::now('UTC');
                     $task->save();
 
                     // Pause the build for compliance
@@ -450,7 +456,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
 
             $task->status = InterrogationBuildTask::STATUS_COMPLETED;
             $task->last_error = null;
-            $task->finished_at = CarbonImmutable::now('UTC');
+            $task->finished_at = Carbon::now('UTC');
             $task->save();
 
             $build['permission_required'] = false;
@@ -468,7 +474,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 'sequence' => $task->sequence,
                 'title' => $task->title,
                 'run_id' => $run->id,
-                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'at' => Carbon::now('UTC')->toIso8601String(),
             ]);
 
             $this->queueTaskProviderStatusSync($session, $task, $writer);
@@ -482,7 +488,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         ], true)) {
             $task->status = InterrogationBuildTask::STATUS_BLOCKED;
             $task->last_error = 'Execution paused before completion.';
-            $task->finished_at = CarbonImmutable::now('UTC');
+            $task->finished_at = Carbon::now('UTC');
             $task->save();
 
             $build['active_task_id'] = (int) $task->id;
@@ -496,7 +502,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
 
         $task->status = InterrogationBuildTask::STATUS_FAILED;
         $task->last_error = trim((string) ($run->error_summary ?? 'Build task execution failed.'));
-        $task->finished_at = CarbonImmutable::now('UTC');
+        $task->finished_at = Carbon::now('UTC');
         $task->save();
 
         $build['status'] = 'failed';
@@ -511,7 +517,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             : null;
         $build['active_task_id'] = (int) $task->id;
         $build['active_run_id'] = (int) $run->id;
-        $build['failed_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+        $build['failed_at'] = Carbon::now('UTC')->toIso8601String();
         $this->saveBuildMetadata($session, $build);
 
         $writer->appendError([
@@ -566,7 +572,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $payload = (string) $event->payload;
 
             foreach ($this->extractCommandsFromRunEventPayload($payload) as $command) {
-                if (! is_string($command) || trim($command) === '') {
+                if (trim($command) === '') {
                     continue;
                 }
 
@@ -586,8 +592,8 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             }
 
             foreach ($this->extractVerificationCommandCompletionStatsFromRunEventPayload($payload) as $stats) {
-                $verificationSuccessfulCommandCount += (int) ($stats['success'] ?? 0);
-                $verificationFailedCommandCount += (int) ($stats['failed'] ?? 0);
+                $verificationSuccessfulCommandCount += $stats['success'];
+                $verificationFailedCommandCount += $stats['failed'];
             }
 
             foreach ($this->extractChangedPathsFromRunEventPayload($payload) as $changedPath) {
@@ -609,7 +615,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 if ($messages !== []) {
                     $latestAgentMessage = stripcslashes((string) end($messages));
                     foreach ($messages as $message) {
-                        if (is_string($message)) {
+                        if (is_string($message)) { // @phpstan-ignore function.alreadyNarrowedType
                             $agentMessages[] = stripcslashes($message);
                         }
                     }
@@ -682,8 +688,8 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         }
 
         $fallback = [];
-        foreach ((array) ($matches[1] ?? []) as $rawCommand) {
-            if (! is_string($rawCommand) || trim($rawCommand) === '') {
+        foreach ($matches[1] as $rawCommand) {
+            if (trim($rawCommand) === '') {
                 continue;
             }
 
@@ -770,8 +776,8 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         }
 
         $fallback = [];
-        foreach ((array) ($matches[1] ?? []) as $rawPath) {
-            if (! is_string($rawPath) || trim($rawPath) === '') {
+        foreach ($matches[1] as $rawPath) {
+            if (trim($rawPath) === '') {
                 continue;
             }
 
@@ -868,7 +874,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $build['status'] = 'running';
         $build['active_task_id'] = $task->id;
         $build['active_run_id'] = $run->id;
-        $build['started_at'] = $build['started_at'] ?? CarbonImmutable::now('UTC')->toIso8601String();
+        $build['started_at'] = $build['started_at'] ?? Carbon::now('UTC')->toIso8601String();
 
         $runMetadata = is_array($run->metadata_json) ? $run->metadata_json : [];
         $build['approval_required'] = (bool) ($runMetadata['approval_required'] ?? false);
@@ -951,7 +957,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $build['status'] = 'paused';
         $build['pause_reason'] = 'compliance_blocked';
         $build['blocked_task_id'] = (int) $task->id;
-        $build['paused_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+        $build['paused_at'] = Carbon::now('UTC')->toIso8601String();
         $build['active_task_id'] = (int) $task->id;
         $build['active_run_id'] = $task->agent_job_run_id;
 
@@ -965,7 +971,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             'sequence' => $task->sequence,
             'block_reason' => $taskMetadata['compliance_block_reason'] ?? 'verification_incomplete',
             'remediation' => $taskMetadata['compliance_remediation'] ?? null,
-            'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            'at' => Carbon::now('UTC')->toIso8601String(),
         ]);
     }
 
@@ -985,7 +991,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                     'task_id' => (int) $task->id,
                     'sequence' => (int) $task->sequence,
                     'error' => mb_substr(trim((string) $throwable->getMessage()), 0, 300),
-                    'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                    'at' => Carbon::now('UTC')->toIso8601String(),
                 ]);
             }
         }
@@ -1006,7 +1012,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                     'notice' => 'build_follow_up_dispatch_failed',
                     'delay_seconds' => max(0, $delaySeconds),
                     'error' => mb_substr(trim((string) $throwable->getMessage()), 0, 300),
-                    'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                    'at' => Carbon::now('UTC')->toIso8601String(),
                 ]);
             }
         }
@@ -1028,24 +1034,24 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         }
 
         $result = $backupService->backupBeforeBuildStart($session);
-        $attemptedAt = (string) ($result['attempted_at'] ?? CarbonImmutable::now('UTC')->toIso8601String());
-        $message = trim((string) ($result['message'] ?? ''));
-        $nowIso = CarbonImmutable::now('UTC')->toIso8601String();
+        $attemptedAt = $result['attempted_at'];
+        $message = trim($result['message']);
+        $nowIso = Carbon::now('UTC')->toIso8601String();
 
         $executionBackup['build_start'] = [
-            'status' => ($result['ok'] ?? false) ? 'succeeded' : 'failed',
+            'status' => $result['ok'] ? 'succeeded' : 'failed',
             'attempted_at' => $attemptedAt,
-            'completed_at' => ($result['ok'] ?? false) ? $attemptedAt : null,
+            'completed_at' => $result['ok'] ? $attemptedAt : null,
             'message' => $message !== '' ? $message : null,
-            'output' => is_string($result['output'] ?? null) && trim((string) $result['output']) !== ''
-                ? trim((string) $result['output'])
+            'output' => is_string($result['output']) && trim($result['output']) !== ''
+                ? trim($result['output'])
                 : null,
-            'skipped' => ($result['skipped'] ?? false) === true,
+            'skipped' => $result['skipped'] === true,
         ];
         $build['execution_backup'] = $executionBackup;
         $build['updated_at'] = $nowIso;
 
-        if (($result['ok'] ?? false) !== true) {
+        if ($result['ok'] !== true) {
             $build['status'] = 'paused';
             $build['pause_reason'] = 'backup_failed';
             $build['error'] = mb_substr(
@@ -1069,12 +1075,11 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         }
 
         $this->saveBuildMetadata($session, $build);
-
         $writer->appendSystem([
             'notice' => 'build_backup_completed',
             'scope' => 'build_start',
             'message' => $message !== '' ? $message : 'Database backup completed before build start.',
-            'skipped' => ($result['skipped'] ?? false) === true,
+            'skipped' => $result['skipped'] === true,
             'at' => $nowIso,
         ]);
 
@@ -1089,9 +1094,9 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         BuildExecutionBackupService $backupService,
     ): bool {
         $result = $backupService->backupBeforeTaskStart($session, $task, $attempt);
-        $attemptedAt = (string) ($result['attempted_at'] ?? CarbonImmutable::now('UTC')->toIso8601String());
-        $message = trim((string) ($result['message'] ?? ''));
-        $nowIso = CarbonImmutable::now('UTC')->toIso8601String();
+        $attemptedAt = $result['attempted_at'];
+        $message = trim($result['message']);
+        $nowIso = Carbon::now('UTC')->toIso8601String();
 
         $build = $this->buildMetadata($session);
         $executionBackup = is_array($build['execution_backup'] ?? null) ? $build['execution_backup'] : [];
@@ -1100,24 +1105,23 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             'task_id' => (int) $task->id,
             'sequence' => (int) $task->sequence,
             'attempt' => $attempt,
-            'status' => ($result['ok'] ?? false) ? 'succeeded' : 'failed',
+            'status' => $result['ok'] ? 'succeeded' : 'failed',
             'attempted_at' => $attemptedAt,
             'message' => $message !== '' ? $message : null,
-            'output' => is_string($result['output'] ?? null) && trim((string) $result['output']) !== ''
-                ? trim((string) $result['output'])
+            'output' => is_string($result['output']) && trim($result['output']) !== ''
+                ? trim($result['output'])
                 : null,
-            'skipped' => ($result['skipped'] ?? false) === true,
+            'skipped' => $result['skipped'] === true,
         ];
 
         if (count($taskBackups) > 200) {
             $taskBackups = array_slice($taskBackups, -200);
         }
-
         $executionBackup['task_starts'] = $taskBackups;
         $build['execution_backup'] = $executionBackup;
         $build['updated_at'] = $nowIso;
 
-        if (($result['ok'] ?? false) !== true) {
+        if ($result['ok'] !== true) {
             $build['status'] = 'paused';
             $build['pause_reason'] = 'backup_failed';
             $build['error'] = mb_substr(
@@ -1154,7 +1158,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             'sequence' => $task->sequence,
             'attempt' => $attempt,
             'message' => $message !== '' ? $message : 'Database backup completed before task start.',
-            'skipped' => ($result['skipped'] ?? false) === true,
+            'skipped' => $result['skipped'] === true,
             'at' => $nowIso,
         ]);
 

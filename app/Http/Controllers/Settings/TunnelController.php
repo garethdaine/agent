@@ -263,7 +263,7 @@ class TunnelController extends Controller
         ]);
 
         $tunnels = $this->cloudflaredService->listTunnels();
-        $list = is_array($tunnels) && isset($tunnels[0]) ? $tunnels : ($tunnels['tunnels'] ?? []);
+        $list = is_array($tunnels) && isset($tunnels[0]) ? $tunnels : ($tunnels['tunnels'] ?? []); // @phpstan-ignore function.alreadyNarrowedType
         $match = collect($list)->first(fn ($t) => ($t['name'] ?? '') === $validated['tunnel_name']);
         $uuid = $match['id'] ?? $match['tunnel_id'] ?? null;
 

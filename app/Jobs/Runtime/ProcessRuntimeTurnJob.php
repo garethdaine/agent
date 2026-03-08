@@ -8,7 +8,9 @@ use App\DTOs\Messenger\OutboundPayload;
 use App\Enums\Messenger\ApprovalMode;
 use App\Jobs\Compliance\LessonExtractionJob;
 use App\Jobs\Messenger\CompactionJob;
+use App\Jobs\Runtime\ResumeRuntimeTurnJob;
 use App\Models\ChatMessage;
+use App\Models\ChatSession;
 use App\Models\ConnectorAccount;
 use App\Models\Runtime\RuntimeSession;
 use App\Services\Messenger\CompactionService;
@@ -124,8 +126,7 @@ class ProcessRuntimeTurnJob implements ShouldQueue
 
             Log::info('ProcessRuntimeTurnJob: Turn finished', [
                 'runtime_session_id' => $this->runtimeSessionId,
-                'status' => $result['status'] ?? 'unknown',
-                'has_runner_session_id' => isset($result['runner_session_id']),
+                'status' => $result['status'],
             ]);
         } catch (\Throwable $e) {
             Log::error('ProcessRuntimeTurnJob: Turn execution failed', [
@@ -138,21 +139,12 @@ class ProcessRuntimeTurnJob implements ShouldQueue
             throw $e;
         }
 
-        if (($result['status'] ?? '') === 'yielded') {
-            $this->handleYielded($result, $connectorManager);
-
-            return;
-        }
-
         if ($this->chatSessionId === null || $account === null) {
             return;
         }
-        $adapter = $account !== null ? $connectorManager->resolve($account->provider) : null;
+        $adapter = $connectorManager->resolve($account->provider);
 
-        if ($adapter === null) {
-            return;
-        }
-
+        /** @var ChatSession|null $chatSession */
         $chatSession = $account->sessions()->whereKey($this->chatSessionId)->first();
         if ($chatSession === null) {
             return;
@@ -176,6 +168,10 @@ class ProcessRuntimeTurnJob implements ShouldQueue
                     'error' => $e->getMessage(),
                 ]);
             }
+        }
+
+        if ($result['status'] === 'yielded') { // @phpstan-ignore identical.alwaysFalse
+            $this->handleYielded($result, $connectorManager);
         }
 
         if ($result['status'] === 'pending_approval') {
@@ -228,15 +224,15 @@ class ProcessRuntimeTurnJob implements ShouldQueue
         }
 
         $adapter = $connectorManager->resolve($account->provider);
-        if ($adapter === null || ! $adapter->supportsMessageEditing()) {
+        if (! $adapter->supportsMessageEditing()) {
             return null;
         }
 
+        /** @var ChatSession|null $chatSession */
         $chatSession = $account->sessions()->whereKey($this->chatSessionId)->first();
         if ($chatSession === null) {
             return null;
         }
-
         $placeholderMessageId = $this->placeholderMessageId;
 
         return function (array $state) use ($adapter, $chatSession, $placeholderMessageId) {
@@ -265,10 +261,8 @@ class ProcessRuntimeTurnJob implements ShouldQueue
         }
 
         $adapter = $connectorManager->resolve($account->provider);
-        if ($adapter === null) {
-            return;
-        }
 
+        /** @var ChatSession|null $chatSession */
         $chatSession = $account->sessions()->whereKey($this->chatSessionId)->first();
         if ($chatSession === null) {
             return;
@@ -305,7 +299,7 @@ class ProcessRuntimeTurnJob implements ShouldQueue
         }
     }
 
-    private function buildSystemPromptFromSoul(ConnectorAccount $account): ?string
+    private function buildSystemPromptFromSoul(ConnectorAccount $account): string
     {
         $soul = $account->getSoul();
         $parts = [];
@@ -332,9 +326,12 @@ class ProcessRuntimeTurnJob implements ShouldQueue
 
         $parts[] = "You have access to agent-browser for browser automation. Run it via Bash.\n\n".MessengerRuntimeOrchestrator::browserInstructions();
 
-        return $parts !== [] ? implode("\n\n", $parts) : null;
+        return implode("\n\n", $parts);
     }
 
+    /**
+     * @param  array<string, mixed>  $result
+     */
     private function handleYielded(array $result, ConnectorManager $connectorManager): void
     {
         $elapsed = $result['elapsed_seconds'] ?? 0;
@@ -370,6 +367,7 @@ class ProcessRuntimeTurnJob implements ShouldQueue
         }
 
         $adapter = $connectorManager->resolve($account->provider);
+        /** @var ChatSession|null $chatSession */
         $chatSession = $account->sessions()->whereKey($this->chatSessionId)->first();
         if ($chatSession === null) {
             return;

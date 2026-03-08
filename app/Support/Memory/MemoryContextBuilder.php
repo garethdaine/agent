@@ -227,7 +227,7 @@ class MemoryContextBuilder
         $currentLength = 0;
 
         foreach ($memories as $memory) {
-            $content = $memory['content'] ?? '';
+            $content = $memory['content'] ?? ''; // @phpstan-ignore nullCoalesce.offset
             $line = '- '.$content;
 
             // Check if adding this line would exceed budget

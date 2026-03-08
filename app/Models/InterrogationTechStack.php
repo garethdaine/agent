@@ -9,7 +9,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $interrogation_session_id
+ * @property int $sequence
+ * @property string $name
+ * @property string $documentation_url
+ * @property array|null $metadata_json
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\InterrogationSession|null $session
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class InterrogationTechStack extends Model
 {

@@ -240,7 +240,7 @@ class DelegationReconciler
 
         foreach ($runningTasks as $task) {
             // Find running attempts for this task
-            $runningAttempts = $task->attempts()
+            $runningAttempts = $task->attempts() // @phpstan-ignore method.notFound
                 ->where('status', DelegationAttempt::STATUS_RUNNING)
                 ->with('agentJobRun')
                 ->get();

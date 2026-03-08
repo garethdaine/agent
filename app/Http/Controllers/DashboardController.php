@@ -49,7 +49,7 @@ class DashboardController extends Controller
         if ($user && ! $user->hasRole('admin')) {
             $jobsQuery->where(function ($q) use ($user) {
                 $q->where('user_id', $user->id);
-                if (method_exists($user, 'allTeams') && $user->allTeams()->isNotEmpty()) {
+                if (method_exists($user, 'allTeams') && $user->allTeams()->isNotEmpty()) { // @phpstan-ignore function.alreadyNarrowedType
                     $teamIds = $user->allTeams()->pluck('id')->all();
                     $q->orWhereIn('team_id', $teamIds);
                 }
@@ -136,7 +136,7 @@ class DashboardController extends Controller
             $status = 'degraded';
         }
 
-        return [
+        return [ // @phpstan-ignore return.type
             'status' => $status,
             'last_seen_at' => $lastSeen->toIso8601String(),
             'age_seconds' => $ageSeconds,

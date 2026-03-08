@@ -44,12 +44,12 @@ class SendRitualRunCompletedNotification
             return;
         }
 
-        $templateName = $run->template?->name ?? 'Unknown Ritual';
+        $templateName = $run->template->name ?? 'Unknown Ritual';
         $duration = $run->started_at && $run->completed_at
-            ? $run->started_at->diffForHumans($run->completed_at, true)
+            ? $run->started_at->diffForHumans($run->completed_at, true) // @phpstan-ignore argument.type
             : 'N/A';
 
-        $phaseCount = count($run->template?->phase_graph ?? []);
+        $phaseCount = count($run->template->phase_graph ?? []);
         $completedPhases = count(array_filter($run->phase_outputs ?? []));
 
         $body = "**Ritual:** {$templateName}\n"

@@ -15,10 +15,12 @@ class InterrogationTechStackController extends Controller
 {
     public function store(StoreInterrogationTechStackRequest $request, int $id): JsonResponse
     {
+        /** @var InterrogationSession $session */
         $session = $request->user()->interrogationSessions()->findOrFail($id);
         $validated = $request->validated();
 
         $maxSequence = (int) $session->techStacks()->max('sequence');
+        /** @var InterrogationTechStack $stack */
         $stack = $session->techStacks()->create([
             'sequence' => $maxSequence + 1,
             'name' => $validated['name'],
@@ -46,6 +48,7 @@ class InterrogationTechStackController extends Controller
 
     public function destroy(Request $request, int $id, int $stackId): JsonResponse
     {
+        /** @var InterrogationSession $session */
         $session = $request->user()->interrogationSessions()->findOrFail($id);
 
         $stack = InterrogationTechStack::query()

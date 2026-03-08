@@ -103,7 +103,7 @@ class PolicyEngine
         return RuntimePolicySnapshot::create([
             'runtime_session_id' => $session->id,
             'snapshot_reason' => $reason,
-            'policy_json' => $this->getEffectivePolicy($session->mode),
+            'policy_json' => $this->getEffectivePolicy($session->mode), // @phpstan-ignore argument.type
             'captured_at' => now(),
         ]);
     }

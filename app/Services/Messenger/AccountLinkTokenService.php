@@ -148,7 +148,7 @@ class AccountLinkTokenService
         }
 
         return new AccountLinkPayload(
-            provider: $record->connectorAccount?->provider ?? 'unknown',
+            provider: $record->connectorAccount->provider ?? 'unknown',
             providerUserId: $record->provider_user_id,
             createdAt: $record->issued_at->unix(),
             connectorAccountId: $record->connector_account_id
@@ -197,7 +197,7 @@ class AccountLinkTokenService
         }
 
         return new AccountLinkPayload(
-            provider: $record->connectorAccount?->provider ?? 'unknown',
+            provider: $record->connectorAccount->provider ?? 'unknown',
             providerUserId: $record->provider_user_id,
             createdAt: $record->issued_at->unix(),
             connectorAccountId: $record->connector_account_id

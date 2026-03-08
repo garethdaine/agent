@@ -146,7 +146,7 @@ class AuditLogger
     ): AgentAuditLog {
         $message = $action->message;
         $session = $message?->session;
-        $connector = $message?->connectorAccount ?? $session?->connectorAccount;
+        $connector = $message->connectorAccount ?? $session?->connectorAccount;
 
         return $this->record(
             userId: $session?->user_id,

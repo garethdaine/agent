@@ -52,7 +52,7 @@ class ConnectorRotateKeysCommand extends Command
         foreach ($credentials as $credential) {
             $encryptedData = $credential->encrypted_data;
             // PostgreSQL BYTEA columns return PHP streams — convert to string
-            if (is_resource($encryptedData)) {
+            if (is_resource($encryptedData)) { // @phpstan-ignore if.alwaysFalse
                 $encryptedData = stream_get_contents($encryptedData);
             }
             $decrypted[$credential->id] = $vault->decrypt($team, $encryptedData);

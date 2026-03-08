@@ -9,6 +9,34 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Scout\Searchable;
 
+/**
+ * @property int $id
+ * @property string $domain
+ * @property string $slug
+ * @property string $locale
+ * @property string $title
+ * @property string|null $summary
+ * @property string|null $section
+ * @property string|null $audience
+ * @property string $status
+ * @property string|null $version
+ * @property array|null $tags
+ * @property string|null $owner
+ * @property string $body_markdown
+ * @property string|null $body_html
+ * @property string|null $source_path
+ * @property string|null $source_checksum
+ * @property string|null $source_commit
+ * @property \Carbon\CarbonInterface|null $published_at
+ * @property \Carbon\CarbonInterface|null $last_reviewed_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DocumentationFragment> $fragments
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DocumentationLink> $links
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ApiDocArtifact> $apiArtifacts
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class DocumentationEntry extends Model
 {
     use HasFactory;
@@ -88,7 +116,7 @@ class DocumentationEntry extends Model
             'section' => (string) ($this->section ?? ''),
             'route_names' => $routeNames,
             'setting_keys' => $settingKeys,
-            'updated_at_timestamp' => (int) ($this->updated_at?->timestamp ?? now()->timestamp),
+            'updated_at_timestamp' => (int) ($this->updated_at->timestamp ?? now()->timestamp),
         ];
     }
 

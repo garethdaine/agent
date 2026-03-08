@@ -217,12 +217,12 @@ class AgentBenchmarkSloCommand extends Command
             $status = $runStatuses[$i % count($runStatuses)];
             $createdAt = $now->subSeconds($i * 15);
             $startedAt = in_array($status, [AgentJobRun::STATUS_QUEUED], true) ? null : $createdAt->addSeconds(1);
-            $finishedAt = in_array($status, AgentJobRun::TERMINAL_STATUSES, true) && $status !== AgentJobRun::STATUS_QUEUED
+            $finishedAt = in_array($status, AgentJobRun::TERMINAL_STATUSES, true)
                 ? $createdAt->addSeconds(12)
                 : null;
 
             $durationMs = $finishedAt !== null
-                ? max(1, ((int) (($finishedAt->getTimestampMs() - $startedAt?->getTimestampMs()) ?? 1000)))
+                ? max(1, ((int) ($finishedAt->getTimestampMs() - $startedAt->getTimestampMs())))
                 : 0;
 
             $runIds[] = (int) DB::table('agent_job_runs')->insertGetId([
@@ -582,11 +582,11 @@ class AgentBenchmarkSloCommand extends Command
 
         foreach ($activeRuns as $run) {
             if ($run->started_at === null) {
-                $run->started_at = $now;
+                $run->started_at = $now->toMutable();
             }
 
             $run->status = AgentJobRun::STATUS_SUCCEEDED;
-            $run->finished_at = $now;
+            $run->finished_at = $now->toMutable();
             $run->duration_ms = max(1, (int) $run->started_at->diffInMilliseconds($now));
             $run->exit_code = 0;
             $run->signal = null;
@@ -605,8 +605,8 @@ class AgentBenchmarkSloCommand extends Command
         $startedAt = $run->started_at ?? $run->created_at ?? $now;
 
         $run->status = AgentJobRun::STATUS_SUCCEEDED;
-        $run->started_at = $startedAt;
-        $run->finished_at = $now;
+        $run->started_at = $startedAt instanceof CarbonImmutable ? $startedAt->toMutable() : $startedAt;
+        $run->finished_at = $now->toMutable();
         $run->duration_ms = max(1, (int) CarbonImmutable::parse($startedAt)->diffInMilliseconds($now));
         $run->exit_code = 0;
         $run->signal = null;

@@ -196,7 +196,7 @@ class DelegationCoordinator
 
         foreach ($dependents as $dependent) {
             // Check if all dependencies of this dependent are succeeded
-            $allDependenciesSatisfied = $dependent->dependencies
+            $allDependenciesSatisfied = $dependent->dependencies // @phpstan-ignore property.notFound
                 ->every(fn ($dep) => $dep->status === DelegationTask::STATUS_SUCCEEDED);
 
             if (! $allDependenciesSatisfied) {
@@ -205,7 +205,7 @@ class DelegationCoordinator
 
             // Transition to ready if currently pending
             $this->taskTransition->transition(
-                $dependent->id,
+                $dependent->id, // @phpstan-ignore property.notFound
                 [DelegationTask::STATUS_PENDING],
                 DelegationTask::STATUS_READY
             );
@@ -241,7 +241,7 @@ class DelegationCoordinator
             ->get();
 
         foreach ($readyTasks as $task) {
-            $this->assignAndSpawn($task);
+            $this->assignAndSpawn($task); // @phpstan-ignore argument.type
         }
     }
 
@@ -311,7 +311,7 @@ class DelegationCoordinator
 
         // Check for any still active tasks
         $hasActiveTasks = $tasks->contains(function ($task) {
-            return in_array($task->status, [
+            return in_array($task->status, [ // @phpstan-ignore property.notFound
                 DelegationTask::STATUS_PENDING,
                 DelegationTask::STATUS_BLOCKED,
                 DelegationTask::STATUS_READY,

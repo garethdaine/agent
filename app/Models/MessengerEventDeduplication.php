@@ -9,7 +9,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property string $connector_account_id
+ * @property string $event_id
+ * @property \Carbon\CarbonInterface|null $expires_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\ConnectorAccount|null $connectorAccount
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class MessengerEventDeduplication extends Model
 {

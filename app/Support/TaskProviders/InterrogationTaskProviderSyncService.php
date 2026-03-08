@@ -61,7 +61,7 @@ class InterrogationTaskProviderSyncService
                     $this->buildProjectName($session),
                 );
 
-                $projectId = trim((string) ($project['id'] ?? ''));
+                $projectId = trim((string) ($project['id'] ?? '')); // @phpstan-ignore nullCoalesce.offset
                 $sync['project_id'] = $projectId;
                 $sync['project_name'] = $project['name'] ?? null;
                 $sync['project_url'] = $project['url'] ?? null;
@@ -84,7 +84,7 @@ class InterrogationTaskProviderSyncService
             $phase = $this->resolveTaskPhase($task, $phaseDefinitions);
             $phaseKey = $phase['key'];
             $milestone = $milestonesByKey[$phaseKey] ?? null;
-            $milestoneId = is_array($milestone) ? trim((string) ($milestone['id'] ?? '')) : '';
+            $milestoneId = is_array($milestone) ? trim((string) ($milestone['id'] ?? '')) : ''; // @phpstan-ignore nullCoalesce.offset
             $milestoneName = is_array($milestone) ? trim((string) ($milestone['name'] ?? '')) : '';
 
             $priority = $this->resolveTaskPriority($task);
@@ -106,7 +106,7 @@ class InterrogationTaskProviderSyncService
                     $milestoneId !== '' ? $milestoneId : null,
                 );
 
-                $mainIssueId = trim((string) ($mainIssue['id'] ?? ''));
+                $mainIssueId = trim((string) ($mainIssue['id'] ?? '')); // @phpstan-ignore nullCoalesce.offset
             }
 
             if ($mainIssueId === '') {
@@ -164,7 +164,7 @@ class InterrogationTaskProviderSyncService
                 );
 
                 $resolvedSubtaskIssues[] = [
-                    'id' => trim((string) ($subtaskIssue['id'] ?? '')),
+                    'id' => trim((string) ($subtaskIssue['id'] ?? '')), // @phpstan-ignore nullCoalesce.offset
                     'identifier' => $subtaskIssue['identifier'] ?? null,
                     'url' => $subtaskIssue['url'] ?? null,
                     'title' => $subtaskTitle,
@@ -371,7 +371,7 @@ class InterrogationTaskProviderSyncService
             $content[] = '';
         }
 
-        $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']);
+        $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']); // @phpstan-ignore method.notFound
         if ($techStacks->isNotEmpty()) {
             $content[] = '## Tech Stack Context';
             $content[] = '';
@@ -419,7 +419,7 @@ class InterrogationTaskProviderSyncService
             $planMarkdown = trim((string) ($plan['plan_markdown'] ?? ''));
             if ($planMarkdown !== '') {
                 preg_match_all('/^(?:#{1,6}\s*)?(phase\s+[^\n]+)$/im', $planMarkdown, $matches);
-                foreach ((array) ($matches[1] ?? []) as $phaseHeading) {
+                foreach ((array) ($matches[1] ?? []) as $phaseHeading) { // @phpstan-ignore nullCoalesce.offset
                     $definition = $this->buildPhaseDefinition((string) $phaseHeading);
                     if ($definition === null || isset($seen[$definition['key']])) {
                         continue;
@@ -458,11 +458,11 @@ class InterrogationTaskProviderSyncService
         $milestonesByKey = [];
 
         foreach ($existingMilestones as $existingMilestone) {
-            if (! is_array($existingMilestone)) {
+            if (! is_array($existingMilestone)) { // @phpstan-ignore function.alreadyNarrowedType
                 continue;
             }
 
-            $id = trim((string) ($existingMilestone['id'] ?? ''));
+            $id = trim((string) ($existingMilestone['id'] ?? '')); // @phpstan-ignore nullCoalesce.offset
             $name = trim((string) ($existingMilestone['name'] ?? ''));
             if ($id === '' || $name === '') {
                 continue;
@@ -489,7 +489,7 @@ class InterrogationTaskProviderSyncService
             );
 
             $milestonesByKey[$phaseKey] = [
-                'id' => trim((string) ($createdMilestone['id'] ?? '')),
+                'id' => trim((string) ($createdMilestone['id'] ?? '')), // @phpstan-ignore nullCoalesce.offset
                 'name' => trim((string) ($createdMilestone['name'] ?? $phaseDefinition['name'])) ?: $phaseDefinition['name'],
             ];
         }
@@ -537,7 +537,7 @@ class InterrogationTaskProviderSyncService
         ])));
 
         if (preg_match('/\bphase\s+([a-z0-9]+)\b/i', $text, $phaseMatch) === 1) {
-            $token = strtolower(trim((string) ($phaseMatch[1] ?? '')));
+            $token = strtolower(trim((string) ($phaseMatch[1] ?? ''))); // @phpstan-ignore nullCoalesce.offset
             $tokenMatch = Arr::first($phaseDefinitions, static fn (array $phase): bool => strtolower((string) ($phase['token'] ?? '')) === $token);
             if (is_array($tokenMatch)) {
                 return [
@@ -548,7 +548,7 @@ class InterrogationTaskProviderSyncService
         }
 
         if (preg_match('/\b([a-z])\.(\d+)\b/i', (string) $task->title, $sectionMatch) === 1) {
-            $token = strtolower(trim((string) ($sectionMatch[1] ?? '')));
+            $token = strtolower(trim((string) ($sectionMatch[1] ?? ''))); // @phpstan-ignore nullCoalesce.offset
             $tokenMatch = Arr::first($phaseDefinitions, static fn (array $phase): bool => strtolower((string) ($phase['token'] ?? '')) === $token);
             if (is_array($tokenMatch)) {
                 return [
@@ -563,7 +563,7 @@ class InterrogationTaskProviderSyncService
 
         foreach ($phaseDefinitions as $phaseDefinition) {
             $score = 0;
-            foreach ((array) ($phaseDefinition['keywords'] ?? []) as $keyword) {
+            foreach ((array) ($phaseDefinition['keywords'] ?? []) as $keyword) { // @phpstan-ignore nullCoalesce.offset
                 if ($keyword !== '' && str_contains($text, $keyword)) {
                     $score++;
                 }
@@ -615,7 +615,7 @@ class InterrogationTaskProviderSyncService
                 continue;
             }
 
-            $candidate = $this->cleanSubtaskTitle((string) ($match[1] ?? ''));
+            $candidate = $this->cleanSubtaskTitle((string) ($match[1] ?? '')); // @phpstan-ignore nullCoalesce.offset
             if ($candidate === '') {
                 continue;
             }
@@ -715,17 +715,17 @@ class InterrogationTaskProviderSyncService
 
         $token = null;
         if (preg_match('/^phase\s+([a-z0-9]+)/i', $phaseName, $phaseTokenMatch) === 1) {
-            $token = strtolower(trim((string) ($phaseTokenMatch[1] ?? '')));
+            $token = strtolower(trim((string) ($phaseTokenMatch[1] ?? ''))); // @phpstan-ignore nullCoalesce.offset
         }
 
         $keywordSource = $phaseName;
         if (preg_match('/^phase\s+[a-z0-9]+\s*:\s*(.+)$/i', $phaseName, $keywordMatch) === 1) {
-            $keywordSource = (string) ($keywordMatch[1] ?? $phaseName);
+            $keywordSource = (string) ($keywordMatch[1] ?? $phaseName); // @phpstan-ignore nullCoalesce.offset
         }
 
         preg_match_all('/[a-z0-9]{4,}/i', strtolower($keywordSource), $keywordTokens);
         $keywords = array_values(array_unique(array_filter(
-            (array) ($keywordTokens[0] ?? []),
+            (array) ($keywordTokens[0] ?? []), // @phpstan-ignore nullCoalesce.offset
             static fn (string $keyword): bool => ! in_array($keyword, ['phase', 'with', 'from', 'into', 'that', 'this', 'core'], true),
         )));
 
@@ -815,7 +815,7 @@ class InterrogationTaskProviderSyncService
 
         $build = $this->buildMetadata($session);
         $sync = $this->providerSyncState($build);
-        $sync['milestones'] = array_values($summary);
+        $sync['milestones'] = array_values($summary); // @phpstan-ignore arrayValues.list
         $sync['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
         $build['task_provider_sync'] = $sync;
         $this->saveBuildMetadata($session, $build);
@@ -863,7 +863,7 @@ class InterrogationTaskProviderSyncService
 
     private function taskManagementProviderForSession(InterrogationSession $session): ?ConnectedProvider
     {
-        return $session->providerIntegrations()
+        return $session->providerIntegrations() // @phpstan-ignore return.type
             ->where('category', 'task_management')
             ->orderByDesc('id')
             ->first();

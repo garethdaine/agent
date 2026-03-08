@@ -7,6 +7,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property bool $require_confirmation_for_delete
+ * @property bool $require_confirmation_for_stop
+ * @property bool $require_confirmation_for_steer
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\User|null $user
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class UserChatPreference extends Model
 {
     protected $fillable = [

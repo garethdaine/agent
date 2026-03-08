@@ -44,7 +44,7 @@ final class SkillsCommandHandler implements SlashCommandHandlerInterface
             'install' => $this->installSkill($user, $subArgs),
             'pause' => $this->pauseSkill($user, $subArgs),
             'resume' => $this->resumeSkill($user, $subArgs),
-            'info' => $this->skillInfo($user, $subArgs),
+            'info' => $this->skillInfo($user, $subArgs), // @phpstan-ignore match.alwaysTrue
             default => $this->showUsage(),
         };
     }

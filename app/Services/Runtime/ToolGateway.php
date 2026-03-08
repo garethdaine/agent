@@ -204,7 +204,6 @@ class ToolGateway
         }
 
         $toolName = $toolCall->tool_name;
-
         if (! $this->hasAdapter($toolName)) {
             return $this->recordFailure($toolCall, "Unknown tool: {$toolName}", $startTime);
         }

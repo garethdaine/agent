@@ -57,9 +57,9 @@ class RegenerateInterrogationBuildTaskJob implements ShouldQueue
         try {
             $payload = $buildTaskGenerator->regenerateTask($session, $task, $this->amendNotes, $this->additionalContext);
 
-            $task->title = trim((string) ($payload['title'] ?? $task->title));
-            $task->description = $this->normalizedNullableText($payload['description'] ?? $task->description);
-            $task->instructions_markdown = $this->normalizedNullableText($payload['instructions_markdown'] ?? $task->instructions_markdown);
+            $task->title = trim((string) ($payload['title'] ?? $task->title)); // @phpstan-ignore nullCoalesce.offset
+            $task->description = $this->normalizedNullableText($payload['description'] ?? $task->description); // @phpstan-ignore nullCoalesce.offset
+            $task->instructions_markdown = $this->normalizedNullableText($payload['instructions_markdown'] ?? $task->instructions_markdown); // @phpstan-ignore nullCoalesce.offset
             $task->status = InterrogationBuildTask::STATUS_PENDING;
             $task->attempt_count = 0;
             $task->agent_job_run_id = null;

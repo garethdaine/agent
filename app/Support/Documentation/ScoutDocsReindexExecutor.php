@@ -21,21 +21,21 @@ class ScoutDocsReindexExecutor implements DocsReindexExecutor
             DocumentationEntry::query()
                 ->whereIn('id', $entryIds)
                 ->get()
-                ->searchable();
+                ->searchable(); // @phpstan-ignore method.notFound
         }
 
         if ($fragmentIds !== []) {
             DocumentationFragment::query()
                 ->whereIn('id', $fragmentIds)
                 ->get()
-                ->searchable();
+                ->searchable(); // @phpstan-ignore method.notFound
         }
 
         if ($apiArtifactIds !== []) {
             ApiDocArtifact::query()
                 ->whereIn('id', $apiArtifactIds)
                 ->get()
-                ->searchable();
+                ->searchable(); // @phpstan-ignore method.notFound
         }
     }
 }

@@ -225,12 +225,6 @@ class MessengerGatewayCommand extends Command
     {
         $this->info('Health Status Report:');
 
-        if (! method_exists($this->manager, 'getHealthSummary')) {
-            $this->line(sprintf('Workers: %d active', $this->manager->getWorkerCount()));
-
-            return;
-        }
-
         $health = $this->manager->getHealthSummary();
 
         if (empty($health)) {

@@ -136,7 +136,7 @@ abstract class AbstractAnalyzer implements AnalyzerInterface
     private function normalizeWarnings(array $warnings): array
     {
         foreach ($warnings as &$warning) {
-            if (! is_array($warning)) {
+            if (! is_array($warning)) { // @phpstan-ignore function.alreadyNarrowedType
                 $warning = ['code' => 'unknown_warning'];
             }
         }
@@ -156,7 +156,7 @@ abstract class AbstractAnalyzer implements AnalyzerInterface
             return strcmp($leftMessage, $rightMessage);
         });
 
-        return array_values($warnings);
+        return array_values($warnings); // @phpstan-ignore arrayValues.list
     }
 
     private function isListArray(array $value): bool

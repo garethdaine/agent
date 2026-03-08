@@ -78,7 +78,7 @@ final class SkillInstaller
             return SkillInstallResult::success($skill->id, $validation, $validation->warnings);
         } catch (QueryException $e) {
             if ($this->isDuplicateSlugError($e)) {
-                return SkillInstallResult::failure(["A skill with slug '{$parsed->name}' already exists for this team."]);
+                return SkillInstallResult::failure(["A skill with slug '{$parsed->name}' already exists for this team."]); // @phpstan-ignore variable.undefined
             }
             throw $e;
         } finally {

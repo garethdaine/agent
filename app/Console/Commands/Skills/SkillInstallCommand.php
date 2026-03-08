@@ -32,7 +32,7 @@ class SkillInstallCommand extends Command
         }
 
         if ($result->requiresAdminConfirmation) {
-            $riskScore = $result->validationResult?->riskScore ?? 0;
+            $riskScore = $result->validationResult->riskScore ?? 0;
 
             $this->displayValidationResults($result->validationResult);
 

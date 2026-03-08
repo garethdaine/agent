@@ -257,10 +257,10 @@ class MemoryStatsCommand extends Command
             ['Provider', 'Requests', 'Input Tokens', 'Output Tokens', 'Est. Cost (USD)'],
             $usage->map(fn ($u) => [
                 $u->provider,
-                number_format($u->requests),
-                number_format($u->input_tokens ?? 0),
-                number_format($u->output_tokens ?? 0),
-                '$'.number_format($u->cost ?? 0, 4),
+                number_format((int) $u->requests),
+                number_format((int) ($u->input_tokens ?? 0)),
+                number_format((int) ($u->output_tokens ?? 0)),
+                '$'.number_format((float) ($u->cost ?? 0), 4),
             ])->toArray()
         );
     }

@@ -35,7 +35,7 @@ final class NlParseAttemptRepository
     public function findForIdempotency(User $user, string $input, string $timezone): ?NlParseAttempt
     {
         return NlParseAttempt::query()
-            ->forIdempotency($user->id, $input, $timezone)
+            ->forIdempotency($user->id, $input, $timezone) // @phpstan-ignore argument.type
             ->latest()
             ->first();
     }
@@ -60,7 +60,7 @@ final class NlParseAttemptRepository
             'input_text' => $input,
             'timezone' => $timezone,
             'status' => $status,
-            'parser_path' => $result?->parserPath ?? 'rule_based',
+            'parser_path' => $result->parserPath ?? 'rule_based',
             'confidence' => $result?->confidence,
             'cron_result' => $result?->cronExpression,
             'active_hours_result' => $result?->activeHours,

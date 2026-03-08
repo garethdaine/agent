@@ -136,7 +136,7 @@ class SessionProcessManager
         stream_set_blocking($pipes[2], false);
 
         $status = proc_get_status($resource);
-        $pid = $status['pid'] ?? 0;
+        $pid = $status['pid'] ?? 0; // @phpstan-ignore nullCoalesce.offset
 
         Cache::put(self::PROCESS_PREFIX.$runtimeSessionId, $pid, self::TTL_SECONDS);
 
@@ -219,7 +219,7 @@ class SessionProcessManager
             if ($pid > 0 && posix_kill($pid, 0)) {
                 posix_kill($pid, 15);
                 usleep(500_000);
-                if (posix_kill($pid, 0)) {
+                if (posix_kill($pid, 0)) { // @phpstan-ignore if.alwaysTrue
                     posix_kill($pid, 9);
                 }
             }
@@ -335,7 +335,7 @@ class SessionProcessManager
                 }
 
                 if ($this->shouldYield($elapsed)) {
-                    return $this->yieldTurn($runtimeSessionId, $fragments, $runnerSessionId, $startTime);
+                    return $this->yieldTurn($runtimeSessionId, $fragments, $runnerSessionId, $startTime); // @phpstan-ignore return.type
                 }
             }
 

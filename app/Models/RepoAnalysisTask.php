@@ -8,6 +8,33 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $repo_analysis_session_id
+ * @property string $task_key
+ * @property string $task_type
+ * @property string $status
+ * @property int|null $phase
+ * @property array|null $depends_on_json
+ * @property array|null $artifact_ids_json
+ * @property string|null $input_hash
+ * @property string|null $output_hash
+ * @property string|null $analyzer_name
+ * @property string|null $analyzer_version
+ * @property int $attempt_count
+ * @property int $max_attempts
+ * @property string|null $error_code
+ * @property string|null $error_summary
+ * @property array|null $metadata_json
+ * @property \Carbon\CarbonInterface|null $started_at
+ * @property \Carbon\CarbonInterface|null $finished_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\RepoAnalysisSession|null $session
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\RepoAnalysisArtifact> $artifacts
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class RepoAnalysisTask extends Model
 {
     protected $fillable = [

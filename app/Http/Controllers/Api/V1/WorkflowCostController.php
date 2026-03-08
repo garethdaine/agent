@@ -65,9 +65,9 @@ class WorkflowCostController extends Controller
             activeProjectionBuildId: $activeBuildId,
         );
 
-        $monthlyCanonicalCostUsd = (float) ($aggregate?->canonical_cost_usd ?? 0.0);
-        $monthlyProviderBilledCostUsd = (float) ($aggregate?->provider_billed_cost_usd ?? 0.0);
-        $monthlyBudgetUsd = isset($policy?->monthly_budget_usd) ? (float) $policy->monthly_budget_usd : null;
+        $monthlyCanonicalCostUsd = (float) ($aggregate->canonical_cost_usd ?? 0.0);
+        $monthlyProviderBilledCostUsd = (float) ($aggregate->provider_billed_cost_usd ?? 0.0);
+        $monthlyBudgetUsd = isset($policy->monthly_budget_usd) ? (float) $policy->monthly_budget_usd : null;
 
         $budgetUtilizationPercent = null;
         if ($monthlyBudgetUsd !== null && $monthlyBudgetUsd > 0) {
@@ -82,17 +82,17 @@ class WorkflowCostController extends Controller
                 'monthly_provider_billed_cost_usd' => $monthlyProviderBilledCostUsd,
                 'budget_utilization_percent' => $budgetUtilizationPercent,
                 'monthly_budget_usd' => $monthlyBudgetUsd,
-                'warning_threshold_percent' => isset($policy?->warning_threshold_percent)
+                'warning_threshold_percent' => isset($policy->warning_threshold_percent)
                     ? (float) $policy->warning_threshold_percent
                     : null,
-                'enforcement_threshold_percent' => isset($policy?->enforcement_threshold_percent)
+                'enforcement_threshold_percent' => isset($policy->enforcement_threshold_percent)
                     ? (float) $policy->enforcement_threshold_percent
                     : null,
-                'latest_rate_card_version' => isset($latestRollup?->rate_card_version)
+                'latest_rate_card_version' => isset($latestRollup->rate_card_version)
                     ? (string) $latestRollup->rate_card_version
                     : null,
                 'active_projection_build_id' => $activeBuildId,
-                'projection_build_id' => isset($latestRollup?->projection_build_id)
+                'projection_build_id' => isset($latestRollup->projection_build_id)
                     ? (string) $latestRollup->projection_build_id
                     : $activeBuildId,
                 'active_build_activated_at' => $freshness['active_build_activated_at'],
@@ -104,7 +104,7 @@ class WorkflowCostController extends Controller
                 'countability_state' => $governance['countability_state'],
                 'countability_reason' => $governance['countability_reason'],
                 'lineage' => array_merge($governance['lineage'], [
-                    'cost_latest_occurred_at' => isset($latestRollup?->occurred_at)
+                    'cost_latest_occurred_at' => isset($latestRollup->occurred_at)
                         ? (string) $latestRollup->occurred_at
                         : null,
                 ]),

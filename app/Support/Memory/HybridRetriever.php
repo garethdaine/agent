@@ -208,7 +208,7 @@ class HybridRetriever
             'id' => $entity['id'],
             'content' => sprintf('[%s] %s', $entity['type'], $entity['name']),
             'classification' => 'internal', // Graph entities inherit default classification
-            'importance_score' => $entity['importance'] ?? 0.5,
+            'importance_score' => $entity['importance'] ?? 0.5, // @phpstan-ignore nullCoalesce.offset
             'score' => 1.0 / ($entity['distance'] + 1), // Closer entities score higher
         ], array_slice($relatedEntities, 0, $limit));
     }

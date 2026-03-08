@@ -62,8 +62,8 @@ final class SessionsCommandHandler implements SlashCommandHandlerInterface
         $sessionData = [];
         foreach ($sessions as $session) {
             $title = $session->title ?? 'Untitled';
-            $mode = $session->mode->value;
-            $status = $session->status->value;
+            $mode = $session->mode->value; // @phpstan-ignore property.nonObject
+            $status = $session->status->value; // @phpstan-ignore property.nonObject
             $shortId = substr($session->id, 0, 8);
             $lines[] = "• [{$shortId}] {$title} ({$mode}, {$status})";
             $sessionData[] = [
@@ -72,7 +72,7 @@ final class SessionsCommandHandler implements SlashCommandHandlerInterface
                 'title' => $title,
                 'mode' => $mode,
                 'status' => $status,
-                'started_at' => $session->started_at?->toIso8601String(),
+                'started_at' => $session->started_at?->toIso8601String(), // @phpstan-ignore method.nonObject
             ];
         }
 

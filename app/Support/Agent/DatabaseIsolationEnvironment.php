@@ -53,7 +53,7 @@ class DatabaseIsolationEnvironment
         $stripped = array_merge(self::PRODUCTION_DB_KEYS, ['APP_KEY'], self::SUPPRESSED_KEYS);
 
         foreach ($baseEnv as $key => $value) {
-            if (! is_string($key) || ! is_scalar($value)) {
+            if (! is_string($key) || ! is_scalar($value)) { // @phpstan-ignore function.alreadyNarrowedType
                 continue;
             }
 
@@ -65,7 +65,7 @@ class DatabaseIsolationEnvironment
         }
 
         foreach ($overrides as $key => $value) {
-            if (! is_string($key) || ! is_scalar($value)) {
+            if (! is_string($key) || ! is_scalar($value)) { // @phpstan-ignore function.alreadyNarrowedType
                 continue;
             }
 

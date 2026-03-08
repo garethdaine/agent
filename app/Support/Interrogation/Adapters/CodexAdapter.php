@@ -437,7 +437,7 @@ class CodexAdapter implements InterrogationRunnerAdapter
             return null;
         }
 
-        $endpoint = trim((string) ($matches[1] ?? ''));
+        $endpoint = trim((string) ($matches[1] ?? '')); // @phpstan-ignore nullCoalesce.offset
 
         return $endpoint !== '' ? $endpoint : null;
     }
@@ -831,7 +831,7 @@ class CodexAdapter implements InterrogationRunnerAdapter
         }
 
         usort($normalizedTasks, static fn (array $a, array $b): int => $a['sequence'] <=> $b['sequence']);
-        $normalizedTasks = array_values(array_map(static function (array $task, int $index): array {
+        $normalizedTasks = array_values(array_map(static function (array $task, int $index): array { // @phpstan-ignore arrayValues.list
             $task['sequence'] = $index + 1;
 
             return $task;
@@ -1118,7 +1118,7 @@ class CodexAdapter implements InterrogationRunnerAdapter
             return;
         }
 
-        $bucket[] = [
+        $bucket[] = [ // @phpstan-ignore parameterByRef.type
             'payload' => $value,
             'position' => $position,
         ];

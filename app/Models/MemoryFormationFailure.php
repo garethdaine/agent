@@ -9,9 +9,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Formation failure record for memory formation retry.
+ * @property int $id
+ * @property int $run_id
+ * @property int $user_id
+ * @property string $failure_type
+ * @property string $error_message
+ * @property int $attempts
+ * @property \Carbon\CarbonInterface|null $backfilled_at
+ * @property array $payload_json
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\AgentJobRun|null $run
  *
- * Stores failed formation attempts with serialized payload for backfill retry.
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class MemoryFormationFailure extends Model
 {
@@ -104,7 +114,7 @@ class MemoryFormationFailure extends Model
      */
     public function scopeRetriable(Builder $query): void
     {
-        $query->pending()
+        $query->pending() // @phpstan-ignore method.notFound
             ->where('attempts', '<', self::MAX_BACKFILL_ATTEMPTS);
     }
 
@@ -113,7 +123,7 @@ class MemoryFormationFailure extends Model
      */
     public function scopePermanentlyFailed(Builder $query): void
     {
-        $query->pending()
+        $query->pending() // @phpstan-ignore method.notFound
             ->where('attempts', '>=', self::MAX_BACKFILL_ATTEMPTS);
     }
 
@@ -191,7 +201,7 @@ class MemoryFormationFailure extends Model
         string $errorMessage,
         array $payload
     ): static {
-        return static::create([
+        return static::create([ // @phpstan-ignore return.type
             'run_id' => $runId,
             'user_id' => $userId,
             'failure_type' => $failureType,

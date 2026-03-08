@@ -15,7 +15,7 @@ class ContentTrustClassifier
     ];
 
     public function __construct(
-        private readonly SecurityConfigProvider $config,
+        private readonly SecurityConfigProvider $config, // @phpstan-ignore property.onlyWritten
     ) {}
 
     public function classify(string $sourceIdentifier): ContentTrustLevel

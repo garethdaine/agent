@@ -55,12 +55,12 @@ class JobsShowHandler implements ChatActionHandlerInterface
         $lines[] = "**Runs:** {$totalRuns} total, {$succeededRuns} succeeded, {$failedRuns} failed";
 
         if ($lastRun) {
-            $lastRunIcon = match ($lastRun->status) {
+            $lastRunIcon = match ($lastRun->status) { // @phpstan-ignore property.notFound
                 'succeeded' => '✅',
                 'failed' => '❌',
                 default => '❓',
             };
-            $lastRunTime = Carbon::parse($lastRun->created_at)->diffForHumans();
+            $lastRunTime = Carbon::parse($lastRun->created_at)->diffForHumans(); // @phpstan-ignore property.notFound
             $lines[] = "**Last Run:** {$lastRunIcon} {$lastRun->status} ({$lastRunTime})";
         }
 

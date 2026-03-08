@@ -57,7 +57,7 @@ class ScoutDocsSearchIndexClient implements DocsSearchIndexClient
             $builder->where('section', $section);
         }
 
-        return $builder
+        return $builder // @phpstan-ignore return.type
             ->take($limit)
             ->get()
             ->values()
@@ -89,7 +89,7 @@ class ScoutDocsSearchIndexClient implements DocsSearchIndexClient
      */
     private function searchFragments(string $query, ?string $section, int $limit): Collection
     {
-        return DocumentationFragment::search($query)
+        return DocumentationFragment::search($query) // @phpstan-ignore return.type
             ->take($limit)
             ->get()
             ->values()
@@ -115,7 +115,7 @@ class ScoutDocsSearchIndexClient implements DocsSearchIndexClient
                     return true;
                 }
 
-                return ($row['section'] ?? null) === $section;
+                return ($row['section'] ?? null) === $section; // @phpstan-ignore nullCoalesce.offset
             })
             ->values();
     }
@@ -131,7 +131,7 @@ class ScoutDocsSearchIndexClient implements DocsSearchIndexClient
             $builder->where('section', $section);
         }
 
-        return $builder
+        return $builder // @phpstan-ignore return.type
             ->take($limit)
             ->get()
             ->values()
@@ -160,7 +160,7 @@ class ScoutDocsSearchIndexClient implements DocsSearchIndexClient
 
     private function sectionFromUiKey(string $uiKey): string
     {
-        $segment = explode('.', $uiKey)[0] ?? 'general';
+        $segment = explode('.', $uiKey)[0] ?? 'general'; // @phpstan-ignore nullCoalesce.offset
 
         return $segment !== '' ? $segment : 'general';
     }

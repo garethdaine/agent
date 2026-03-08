@@ -328,7 +328,7 @@ class IngressProbe
      */
     public function verifyTelegram(string $url, array $credentials): ProbeResult
     {
-        $botToken = $credentials['bot_token'] ?? '';
+        $botToken = $credentials['bot_token'] ?? ''; // @phpstan-ignore nullCoalesce.offset
 
         if (empty($botToken)) {
             return ProbeResult::failure(

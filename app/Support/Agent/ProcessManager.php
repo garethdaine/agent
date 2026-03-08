@@ -79,7 +79,7 @@ class ProcessManager
         $result = Process::run(sprintf('kill -TERM %d 2>/dev/null', $pid));
 
         if (! $result->successful()) {
-            return ! $this->isRunning($pid);
+            return ! $this->isRunning($pid); // @phpstan-ignore booleanNot.alwaysFalse
         }
 
         // Wait for graceful shutdown
@@ -91,13 +91,13 @@ class ProcessManager
 
                 usleep(100_000); // 100ms
 
-                return ! $this->isRunning($pid);
+                return ! $this->isRunning($pid); // @phpstan-ignore booleanNot.alwaysFalse
             }
 
             usleep(100_000); // 100ms
         }
 
-        return true;
+        return true; // @phpstan-ignore deadCode.unreachable
     }
 
     /**

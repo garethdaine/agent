@@ -245,7 +245,7 @@ class SlackAdapter extends AbstractConnectorAdapter
         $account = $session->connectorAccount;
         $botToken = $account ? $this->getBotToken($account) : null;
 
-        if (! $botToken || ! $account) {
+        if (! $botToken || ! $account) { // @phpstan-ignore booleanNot.alwaysFalse
             return ['ok' => false, 'ts' => null, 'error' => 'Missing bot token or account'];
         }
 
@@ -287,7 +287,7 @@ class SlackAdapter extends AbstractConnectorAdapter
         $account = $session->connectorAccount;
         $botToken = $account ? $this->getBotToken($account) : null;
 
-        if (! $botToken || ! $account) {
+        if (! $botToken || ! $account) { // @phpstan-ignore booleanNot.alwaysFalse
             return false;
         }
 
@@ -314,7 +314,7 @@ class SlackAdapter extends AbstractConnectorAdapter
         $account = $session->connectorAccount;
         $botToken = $account ? $this->getBotToken($account) : null;
 
-        if (! $botToken || ! $account) {
+        if (! $botToken || ! $account) { // @phpstan-ignore booleanNot.alwaysFalse
             return false;
         }
 

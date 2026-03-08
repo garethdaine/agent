@@ -36,7 +36,7 @@ class SummaryOpenQuestionQueueService
                 'progress_estimate' => 0,
                 'is_complete' => false,
             ]);
-            if (! (bool) ($validation['valid'] ?? false)) {
+            if (! (bool) ($validation['valid'] ?? false)) { // @phpstan-ignore nullCoalesce.offset
                 continue;
             }
 
@@ -132,7 +132,7 @@ class SummaryOpenQuestionQueueService
         }
 
         $nextQuestion = array_shift($pending);
-        if (! is_string($nextQuestion) || trim($nextQuestion) === '') {
+        if (! is_string($nextQuestion) || trim($nextQuestion) === '') { // @phpstan-ignore function.alreadyNarrowedType
             return false;
         }
 

@@ -104,7 +104,7 @@ class DocsIngestionPipeline
 
             /** @var array<string, mixed> $frontMatter */
             $frontMatter = $parsed['front_matter'];
-            $bodyMarkdown = (string) ($parsed['body'] ?? '');
+            $bodyMarkdown = (string) ($parsed['body'] ?? ''); // @phpstan-ignore nullCoalesce.offset
             $entries[] = [
                 'domain' => $domain,
                 'slug' => (string) $frontMatter['slug'],

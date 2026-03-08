@@ -163,7 +163,7 @@ class SnapshotBuilder
             }
 
             $contentHash = @hash_file('sha256', $resolvedPath);
-            if (! is_string($contentHash) || $contentHash === '') {
+            if (! is_string($contentHash) || $contentHash === '') { // @phpstan-ignore identical.alwaysFalse
                 $skippedEntries[] = [
                     'path' => $relativePath,
                     'reason' => 'unreadable',

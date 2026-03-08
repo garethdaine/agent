@@ -105,7 +105,7 @@ class GenerateRepoAnalysisReportJob implements ShouldQueue
             if (! $transitioned) {
                 $session->phase = 6;
                 $session->status = SessionStateTransitionService::STATUS_COMPLETED;
-                $session->finished_at = CarbonImmutable::now('UTC');
+                $session->finished_at = CarbonImmutable::now('UTC')->toMutable();
                 $session->error_code = null;
                 $session->error_summary = null;
                 $session->save();

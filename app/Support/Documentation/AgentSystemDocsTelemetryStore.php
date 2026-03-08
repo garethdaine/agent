@@ -44,7 +44,7 @@ class AgentSystemDocsTelemetryStore implements DocsTelemetryStore
     public function getCounters(array $counterNames): array
     {
         $normalizedNames = array_values(array_unique(array_filter(array_map(
-            static fn ($counter): string => is_string($counter) ? trim($counter) : '',
+            static fn ($counter): string => is_string($counter) ? trim($counter) : '', // @phpstan-ignore function.alreadyNarrowedType
             $counterNames
         ))));
 
@@ -176,7 +176,7 @@ class AgentSystemDocsTelemetryStore implements DocsTelemetryStore
         try {
             $encoded = json_encode($events, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
-            return is_string($encoded) ? $encoded : '[]';
+            return is_string($encoded) ? $encoded : '[]'; // @phpstan-ignore function.alreadyNarrowedType
         } catch (JsonException) {
             return '[]';
         }

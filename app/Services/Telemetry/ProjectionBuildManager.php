@@ -62,7 +62,7 @@ final class ProjectionBuildManager
         try {
             return DB::transaction(function (): ProjectionRebuildStartResult {
                 $state = $this->loadStateForUpdate();
-                $activeBuildId = $this->normalizeId($state?->active_projection_build_id ?? null);
+                $activeBuildId = $this->normalizeId($state->active_projection_build_id ?? null);
 
                 $existingRebuild = $this->findExistingRebuildingBuildForUpdate();
                 if ($existingRebuild !== null) {
@@ -147,8 +147,8 @@ final class ProjectionBuildManager
     {
         return DB::transaction(function () use ($buildId): ProjectionBuildActivationResult {
             $state = $this->loadStateForUpdate();
-            $activeBuildId = $this->normalizeId($state?->active_projection_build_id ?? null);
-            $rebuildingBuildId = $this->normalizeId($state?->rebuilding_build_id ?? null);
+            $activeBuildId = $this->normalizeId($state->active_projection_build_id ?? null);
+            $rebuildingBuildId = $this->normalizeId($state->rebuilding_build_id ?? null);
 
             $build = DB::table($this->buildsTable())
                 ->where('id', $buildId)
@@ -216,8 +216,8 @@ final class ProjectionBuildManager
             ->where('id', 1)
             ->first();
 
-        $activeBuildId = $this->normalizeId($state?->active_projection_build_id ?? null);
-        $rebuildingBuildId = $this->normalizeId($state?->rebuilding_build_id ?? null);
+        $activeBuildId = $this->normalizeId($state->active_projection_build_id ?? null);
+        $rebuildingBuildId = $this->normalizeId($state->rebuilding_build_id ?? null);
 
         if ($rebuildingBuildId === null) {
             $rebuildingBuildId = $this->normalizeId(

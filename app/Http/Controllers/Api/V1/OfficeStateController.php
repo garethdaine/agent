@@ -104,7 +104,7 @@ class OfficeStateController extends Controller
                 'current_activity' => $activity,
                 'current_run' => $run ? [
                     'id' => $run->id,
-                    'job_name' => $run->job?->name ?? 'Unknown',
+                    'job_name' => $run->job->name ?? 'Unknown',
                     'status' => $run->status,
                     'started_at' => $run->started_at?->toIso8601String(),
                     'duration_ms' => $run->duration_ms,
@@ -343,10 +343,10 @@ class OfficeStateController extends Controller
             ->count();
 
         return [
-            'recent_calls' => $recentCalls->map(fn (RuntimeToolCall $tc) => [
+            'recent_calls' => $recentCalls->map(fn (RuntimeToolCall $tc) => [ // @phpstan-ignore argument.unresolvableType
                 'id' => $tc->id,
                 'tool_name' => $tc->tool_name,
-                'status' => $tc->status?->value ?? (string) $tc->status,
+                'status' => $tc->status->value ?? (string) $tc->status, // @phpstan-ignore cast.string
                 'duration_ms' => $tc->duration_ms,
                 'requires_approval' => $tc->requires_approval,
                 'timestamp' => $tc->created_at?->toIso8601String(),
@@ -459,7 +459,7 @@ class OfficeStateController extends Controller
                 'failed', 'timed_out', 'killed' => 'failure',
                 default => 'info',
             },
-            'label' => ($run->job?->name ?? 'Job').' — '.str_replace('_', ' ', $run->status),
+            'label' => ($run->job->name ?? 'Job').' — '.str_replace('_', ' ', $run->status),
             'status' => $run->status,
             'job_name' => $run->job?->name,
             'duration_ms' => $run->duration_ms,

@@ -11,7 +11,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property int $user_id
+ * @property string $connector_account_id
+ * @property string $provider_user_id
+ * @property string|null $provider_username
+ * @property \Carbon\CarbonInterface|null $expires_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property string $status
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\ConnectorAccount|null $connectorAccount
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class MessengerIdentityLink extends Model
 {

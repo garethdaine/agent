@@ -10,7 +10,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $chat_action_id
+ * @property string $chat_session_id
+ * @property string $connector_account_id
+ * @property string $confirmation_token
+ * @property string|null $provider_message_id
+ * @property array|null $callback_data
+ * @property \Carbon\CarbonInterface|null $expires_at
+ * @property \Carbon\CarbonInterface|null $confirmed_at
+ * @property \Carbon\CarbonInterface|null $cancelled_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\ChatAction|null $action
+ * @property-read \App\Models\ChatSession|null $session
+ * @property-read \App\Models\ConnectorAccount|null $connectorAccount
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class PendingConfirmation extends Model
 {

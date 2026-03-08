@@ -7,6 +7,28 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $repo_analysis_session_id
+ * @property int|null $repo_analysis_task_id
+ * @property string $artifact_type
+ * @property string $artifact_key
+ * @property string $content_hash
+ * @property string|null $schema_version
+ * @property string|null $analyzer_version
+ * @property string|null $storage_disk
+ * @property string|null $storage_path
+ * @property array|null $payload_json
+ * @property array|null $metadata_json
+ * @property string|null $error_code
+ * @property string|null $error_summary
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\RepoAnalysisSession|null $session
+ * @property-read \App\Models\RepoAnalysisTask|null $task
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class RepoAnalysisArtifact extends Model
 {
     protected $fillable = [

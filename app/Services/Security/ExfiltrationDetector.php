@@ -16,7 +16,7 @@ class ExfiltrationDetector
      * @param  array<string>|null  $allowedHosts  Override for testing; defaults to config('runtime.web.allowed_hosts')
      */
     public function __construct(
-        private readonly SecurityConfigProvider $config,
+        private readonly SecurityConfigProvider $config, // @phpstan-ignore property.onlyWritten
         private readonly SecurityEventLogger $logger,
         ?array $allowedHosts = null,
     ) {

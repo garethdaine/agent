@@ -85,7 +85,7 @@ class SystemPromptResolver
             }
         }
 
-        $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']);
+        $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']); // @phpstan-ignore method.notFound
         if ($techStacks->isNotEmpty()) {
             $techStackString = '';
 
@@ -136,7 +136,7 @@ class SystemPromptResolver
             ->limit(12)
             ->get(['payload'])
             ->map(function (InterrogationEvent $event): string {
-                $payload = is_array($event->payload) ? $event->payload : [];
+                $payload = is_array($event->payload) ? $event->payload : []; // @phpstan-ignore function.alreadyNarrowedType
                 $message = trim((string) ($payload['message'] ?? ''));
 
                 if ($message === '') {

@@ -63,7 +63,7 @@ class ConnectorHealthScorer
             $latencyScore = max(0.0, 1.0 - ($p95 / $timeout));
         }
 
-        $rateLimits = $connection->connector?->rate_limits ?? [];
+        $rateLimits = $connection->connector->rate_limits ?? [];
         $dailyLimit = $rateLimits['daily_limit'] ?? null;
         $rateLimitHeadroom = 1.0;
         if ($dailyLimit && $connection->action_count_24h > 0) {

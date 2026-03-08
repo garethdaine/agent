@@ -57,6 +57,7 @@ class TaskProviderOAuthController extends Controller
             );
         }
 
+        /** @var \App\Models\InterrogationSession|null $session */
         $session = $user->interrogationSessions()->find($sessionId);
         if ($session === null) {
             return $this->redirectWithError($request, null, 'Session not found for task provider callback.');

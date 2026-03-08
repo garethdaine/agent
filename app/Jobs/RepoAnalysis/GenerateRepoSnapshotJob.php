@@ -91,10 +91,10 @@ class GenerateRepoSnapshotJob implements ShouldQueue
                 'content_hash' => (string) $snapshot['snapshot_hash'],
                 'schema_version' => '1.0.0',
                 'analyzer_version' => 'snapshot-builder-1.0.0',
-                'payload_json' => is_array($snapshot['manifest'] ?? null) ? $snapshot['manifest'] : [],
+                'payload_json' => is_array($snapshot['manifest'] ?? null) ? $snapshot['manifest'] : [], // @phpstan-ignore function.alreadyNarrowedType, nullCoalesce.offset
                 'metadata_json' => [
-                    'manifest_json' => $snapshot['manifest_json'] ?? null,
-                    'hash_input_json' => $snapshot['hash_input_json'] ?? null,
+                    'manifest_json' => $snapshot['manifest_json'] ?? null, // @phpstan-ignore nullCoalesce.offset
+                    'hash_input_json' => $snapshot['hash_input_json'] ?? null, // @phpstan-ignore nullCoalesce.offset
                 ],
                 'error_code' => null,
                 'error_summary' => null,

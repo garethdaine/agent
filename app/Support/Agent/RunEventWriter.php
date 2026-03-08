@@ -308,7 +308,7 @@ class RunEventWriter
                 'agent.escalation',
                 [
                     'run_id' => $this->run->id,
-                    'job_name' => $this->run->job?->name ?? 'Unknown',
+                    'job_name' => $this->run->job->name ?? 'Unknown',
                     'reason' => $reason,
                     'summary' => $summary,
                 ],
@@ -781,7 +781,7 @@ class RunEventWriter
         return null;
     }
 
-    private function isStructuredStreamEvent(string $chunk): bool
+    private function isStructuredStreamEvent(string $chunk): bool // @phpstan-ignore method.unused
     {
         $decoded = $this->decodeStructuredEvent($chunk);
         if (! is_array($decoded)) {
@@ -819,9 +819,9 @@ class RunEventWriter
         }
 
         $endpoints = [];
-        $captured = $matches[1] ?? [];
+        $captured = $matches[1] ?? []; // @phpstan-ignore nullCoalesce.offset
 
-        if (! is_array($captured)) {
+        if (! is_array($captured)) { // @phpstan-ignore function.alreadyNarrowedType
             return [];
         }
 
@@ -931,7 +931,7 @@ class RunEventWriter
         }
 
         $blob = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if (! is_string($blob) || $blob === '') {
+        if (! is_string($blob) || $blob === '') { // @phpstan-ignore identical.alwaysFalse
             return false;
         }
 
@@ -1018,7 +1018,7 @@ class RunEventWriter
 
         if (preg_match('/resets?\s+(?:at\s+)?([0-9]{1,2})(?::([0-9]{2}))?\s*(am|pm)\b/i', $excerpt, $matches) === 1) {
             $hour = (int) $matches[1];
-            $minute = isset($matches[2]) ? (int) $matches[2] : 0;
+            $minute = isset($matches[2]) ? (int) $matches[2] : 0; // @phpstan-ignore isset.offset
             $meridiem = strtolower((string) $matches[3]);
 
             if ($hour < 1 || $hour > 12 || $minute < 0 || $minute > 59) {

@@ -8,10 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Memory settings with encrypted value storage.
+ * @property int $id
+ * @property int|null $user_id
+ * @property string $key
+ * @property string $value
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\User|null $user
  *
- * Follows the InterrogationSetting pattern for user-scoped encrypted settings.
- * Supports global settings (user_id = null) for system-wide configuration.
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class MemorySetting extends Model
 {
@@ -49,7 +54,7 @@ class MemorySetting extends Model
             ->where('key', $key)
             ->first();
 
-        return $setting?->value ?? $default;
+        return $setting->value ?? $default;
     }
 
     /**

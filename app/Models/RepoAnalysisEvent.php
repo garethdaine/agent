@@ -8,6 +8,24 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $repo_analysis_session_id
+ * @property int $sequence
+ * @property string $event_type
+ * @property array|null $payload_json
+ * @property \Carbon\CarbonInterface|null $event_ts
+ * @property int|null $phase
+ * @property string|null $status
+ * @property string|null $error_code
+ * @property string|null $error_summary
+ * @property array|null $metadata_json
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\RepoAnalysisSession|null $session
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class RepoAnalysisEvent extends Model
 {
     protected $fillable = [

@@ -74,12 +74,15 @@ final class CompactionService
             return false;
         }
 
+        /** @var \Illuminate\Support\Collection<int, ChatMessage> $messages */
         $messages = $session->messages()->orderBy('created_at')->get();
         if ($messages->count() <= $targetMessages) {
             return false;
         }
 
+        /** @var \Illuminate\Support\Collection<int, ChatMessage> $toSummarize */
         $toSummarize = $messages->slice(0, -$targetMessages);
+        /** @var ChatMessage|null $boundaryMessage */
         $boundaryMessage = $toSummarize->last();
         if ($boundaryMessage === null) {
             return false;

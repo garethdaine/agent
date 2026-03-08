@@ -54,7 +54,7 @@ class MessengerPairingCommand extends Command
 
         $rows = $links->map(fn (MessengerIdentityLink $link) => [
             $link->id,
-            $link->connectorAccount?->provider ?? '—',
+            $link->connectorAccount->provider ?? '—',
             $link->provider_username ?? $link->provider_user_id,
             $link->status,
             $link->created_at?->diffForHumans() ?? '—',

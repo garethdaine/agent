@@ -1,0 +1,23 @@
+name: NPM Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 9 * * 1' # Weekly on Monday at 9am UTC
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde8c81c89c3166c0 # v4.2.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Audit dependencies
+        run: npm audit

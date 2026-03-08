@@ -18,18 +18,21 @@ class ChatMessageResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        /** @var ChatMessage $resource */
+        $resource = $this->resource;
+
         return [
-            'id' => $this->id,
-            'chat_session_id' => $this->chat_session_id,
-            'connector_account_id' => $this->connector_account_id,
-            'direction' => $this->direction,
-            'content' => $this->content,
-            'attachment_ids' => $this->attachment_ids,
-            'provider_message_id' => $this->provider_message_id,
-            'provider_timestamp' => $this->provider_timestamp?->toIso8601String(),
-            'created_at' => $this->created_at?->toIso8601String(),
+            'id' => $resource->id,
+            'chat_session_id' => $resource->chat_session_id,
+            'connector_account_id' => $resource->connector_account_id,
+            'direction' => $resource->direction,
+            'content' => $resource->content,
+            'attachment_ids' => $resource->attachment_ids,
+            'provider_message_id' => $resource->provider_message_id,
+            'provider_timestamp' => $resource->provider_timestamp?->toIso8601String(),
+            'created_at' => $resource->created_at?->toIso8601String(),
             'actions' => ChatActionResource::collection($this->whenLoaded('actions')),
-            'attachments' => $this->whenLoaded('attachments', fn () => $this->attachments->map(fn ($attachment) => [
+            'attachments' => $this->whenLoaded('attachments', fn () => $resource->attachments->map(fn ($attachment) => [
                 'id' => $attachment->id,
                 'filename' => $attachment->filename,
                 'mime_type' => $attachment->mime_type,

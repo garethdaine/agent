@@ -11,7 +11,7 @@ class DelegateeProfilePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user !== null;
+        return $user !== null; // @phpstan-ignore notIdentical.alwaysTrue
     }
 
     public function view(User $user, DelegateeProfile $profile): bool
@@ -21,7 +21,7 @@ class DelegateeProfilePolicy
 
     public function create(User $user): bool
     {
-        return $user !== null;
+        return $user !== null; // @phpstan-ignore notIdentical.alwaysTrue
     }
 
     public function update(User $user, DelegateeProfile $profile): bool

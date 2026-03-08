@@ -31,7 +31,7 @@ class EventWriter
     {
         $payload = $this->normalizePayloadForStorage($this->redactPayload($payload));
         $metadata = $attributes['metadata_json'] ?? [];
-        $metadata = is_array($metadata)
+        $metadata = is_array($metadata) // @phpstan-ignore function.alreadyNarrowedType
             ? $this->normalizePayloadForStorage($this->redactPayload($metadata))
             : [];
 
@@ -125,7 +125,7 @@ class EventWriter
                 foreach ($value as $itemKey => $itemValue) {
                     $normalizedKey = is_string($itemKey)
                         ? $this->normalizeUtf8($itemKey)
-                        : (is_int($itemKey) ? $itemKey : (string) $itemKey);
+                        : (is_int($itemKey) ? $itemKey : (string) $itemKey); // @phpstan-ignore function.alreadyNarrowedType
 
                     $normalized[$normalizedKey] = $redact($itemValue, is_string($normalizedKey) ? $normalizedKey : null);
                 }

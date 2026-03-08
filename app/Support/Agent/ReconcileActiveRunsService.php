@@ -260,11 +260,11 @@ class ReconcileActiveRunsService
         }
 
         $resolvedRenderedExecutable = realpath($tokens[0]);
-        if (is_string($resolvedRenderedExecutable) && $resolvedRenderedExecutable !== '') {
+        if (is_string($resolvedRenderedExecutable) && $resolvedRenderedExecutable !== '') { // @phpstan-ignore notIdentical.alwaysTrue
             $executableCandidates[] = $resolvedRenderedExecutable;
         }
 
-        $executableCandidates = array_values(array_unique(array_filter($executableCandidates, static fn ($value) => is_string($value) && $value !== '')));
+        $executableCandidates = array_values(array_unique(array_filter($executableCandidates, static fn ($value) => is_string($value) && $value !== ''))); // @phpstan-ignore function.alreadyNarrowedType
 
         if ($hasLaunchFingerprint) {
             if (is_string($expectedTaskPath) && $expectedTaskPath !== '' && str_contains($commandLine, $expectedTaskPath)) {

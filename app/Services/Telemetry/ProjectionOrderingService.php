@@ -41,7 +41,7 @@ class ProjectionOrderingService
             return (int) ($left['id'] ?? 0) <=> (int) ($right['id'] ?? 0);
         });
 
-        return array_values($events);
+        return array_values($events); // @phpstan-ignore arrayValues.list
     }
 
     private function normalizeComparableInstant(mixed $value): string

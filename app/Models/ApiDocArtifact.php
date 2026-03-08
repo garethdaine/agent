@@ -9,6 +9,27 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Laravel\Scout\Searchable;
 
+/**
+ * @property int $id
+ * @property int $documentation_entry_id
+ * @property string $domain
+ * @property string $operation_id
+ * @property string $http_method
+ * @property string $path
+ * @property string|null $summary
+ * @property string|null $description
+ * @property string|null $section
+ * @property array|null $tags
+ * @property string|null $spec_version
+ * @property string|null $spec_checksum
+ * @property array|null $linked_doc_slugs
+ * @property \Carbon\CarbonInterface|null $published_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\DocumentationEntry|null $entry
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class ApiDocArtifact extends Model
 {
     use HasFactory;
@@ -73,7 +94,7 @@ class ApiDocArtifact extends Model
             'section' => (string) ($this->section ?? ''),
             'route_names' => $routeNames,
             'setting_keys' => $settingKeys,
-            'updated_at_timestamp' => (int) ($this->updated_at?->timestamp ?? now()->timestamp),
+            'updated_at_timestamp' => (int) ($this->updated_at->timestamp ?? now()->timestamp),
         ];
     }
 

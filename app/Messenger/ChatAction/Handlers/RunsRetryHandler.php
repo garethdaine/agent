@@ -42,7 +42,7 @@ class RunsRetryHandler implements ChatActionHandlerInterface
 
         dispatch(new ExecuteAgentRunJob($newRun->id));
 
-        $jobName = $run->job?->name ?? 'Unknown';
+        $jobName = $run->job->name ?? 'Unknown';
 
         return ChatActionResult::success(
             "Retry queued for job '{$jobName}' (New Run ID: {$newRun->id})",

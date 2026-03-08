@@ -8,6 +8,19 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $id
+ * @property int $user_id
+ * @property string $raw_input
+ * @property array|null $parsed_result
+ * @property float|null $confidence
+ * @property \Carbon\CarbonInterface|null $applied_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\User|null $user
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class NlOrgParseAttempt extends Model
 {
     use HasUuids;

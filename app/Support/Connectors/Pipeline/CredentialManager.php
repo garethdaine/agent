@@ -28,7 +28,7 @@ class CredentialManager
         }
 
         $encryptedData = $credential->encrypted_data;
-        if (is_resource($encryptedData)) {
+        if (is_resource($encryptedData)) { // @phpstan-ignore if.alwaysFalse
             $encryptedData = stream_get_contents($encryptedData);
         }
 

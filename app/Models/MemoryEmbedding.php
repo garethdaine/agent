@@ -10,10 +10,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Memory embedding for Long-term Memory (Layer 3).
+ * @property int $id
+ * @property int $user_id
+ * @property string $source_type
+ * @property string $source_id
+ * @property string $content
+ * @property string $content_hash
+ * @property array|null $metadata_json
+ * @property string $classification
+ * @property float $importance_score
+ * @property int $access_count
+ * @property \Carbon\CarbonInterface|null $last_accessed_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property mixed $embedding
+ * @property-read \App\Models\User|null $user
+ * @property int|null $duplicate_count
  *
- * Stores text embeddings with content_hash for deduplication.
- * Supports access tracking for importance decay calculations.
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class MemoryEmbedding extends Model
 {

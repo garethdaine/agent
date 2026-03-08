@@ -12,6 +12,27 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property string $id
+ * @property string $runtime_turn_id
+ * @property string $tool_name
+ * @property array|null $arguments_json
+ * @property array|null $result_json
+ * @property RuntimeToolCallStatus $status
+ * @property int|null $duration_ms
+ * @property bool $requires_approval
+ * @property \Carbon\CarbonInterface|null $approved_at
+ * @property ContentTrustLevel|null $content_trust_level
+ * @property float|null $injection_score
+ * @property string|null $injection_action
+ * @property bool|null $content_sanitized
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read RuntimeTurn|null $turn
+ * @property-read RuntimeApproval|null $approval
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class RuntimeToolCall extends Model
 {
     use HasFactory;
@@ -48,6 +69,7 @@ class RuntimeToolCall extends Model
         ];
     }
 
+    /** @return BelongsTo<RuntimeTurn, $this> */
     public function turn(): BelongsTo
     {
         return $this->belongsTo(RuntimeTurn::class, 'runtime_turn_id');

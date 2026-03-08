@@ -11,7 +11,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $connection_id
+ * @property string $connector_id
+ * @property string $event_type
+ * @property string|null $external_event_id
+ * @property string $payload_hash
+ * @property string $processing_status
+ * @property string|null $routed_to_workflow
+ * @property string|null $routed_to_job_id
+ * @property int|null $processing_duration_ms
+ * @property int $retry_count
+ * @property string|null $error_message
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\AgentConnectorConnection|null $connection
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class AgentConnectorWebhookEvent extends Model
 {

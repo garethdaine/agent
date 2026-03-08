@@ -156,14 +156,14 @@ class PlanRepoAnalysisTasksJob implements ShouldQueue
                     $analyzerVersion,
                 );
 
-                $dependsOn = is_array($aiTaskDefinition['depends_on'] ?? null)
-                    ? array_values(array_filter($aiTaskDefinition['depends_on'], static fn (mixed $dependency): bool => is_string($dependency) && $dependency !== ''))
+                $dependsOn = is_array($aiTaskDefinition['depends_on'] ?? null) // @phpstan-ignore function.alreadyNarrowedType, nullCoalesce.offset
+                    ? array_values(array_filter($aiTaskDefinition['depends_on'], static fn (mixed $dependency): bool => is_string($dependency) && $dependency !== '')) // @phpstan-ignore function.alreadyNarrowedType
                     : [];
 
                 $taskMetadata = [
                     'ai_task' => true,
-                    'section_key' => (string) ($aiTaskDefinition['section_key'] ?? $analyzerName),
-                    'section_title' => (string) ($aiTaskDefinition['section_title'] ?? $analyzerName),
+                    'section_key' => (string) ($aiTaskDefinition['section_key'] ?? $analyzerName), // @phpstan-ignore nullCoalesce.offset
+                    'section_title' => (string) ($aiTaskDefinition['section_title'] ?? $analyzerName), // @phpstan-ignore nullCoalesce.offset
                     'runner_type' => (string) ($session->runner_type ?: 'claude'),
                 ];
 

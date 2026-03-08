@@ -10,7 +10,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $chat_message_id
+ * @property string $filename
+ * @property string $mime_type
+ * @property int $size_bytes
+ * @property string $storage_path
+ * @property string|null $provider_file_id
+ * @property string $scan_status
+ * @property \Carbon\CarbonInterface|null $expires_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\ChatMessage|null $message
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class ChatAttachment extends Model
 {

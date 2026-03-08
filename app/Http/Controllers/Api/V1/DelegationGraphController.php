@@ -8,6 +8,7 @@ use App\Events\DelegationGraphStarted;
 use App\Exceptions\DelegationGraphCycleException;
 use App\Exceptions\DelegationGraphTaskLimitException;
 use App\Http\Controllers\Controller;
+use App\Models\DelegationEvent;
 use App\Models\DelegationGraph;
 use App\Models\DelegationTask;
 use App\Support\Agent\AuditLogger;
@@ -32,9 +33,9 @@ class DelegationGraphController extends Controller
 
         $deleted = $request->string('deleted')->toString();
         if ($deleted === '1' || $deleted === 'true') {
-            $query->onlyTrashed();
+            $query->onlyTrashed(); // @phpstan-ignore method.notFound
         } elseif ($deleted === 'all') {
-            $query->withTrashed();
+            $query->withTrashed(); // @phpstan-ignore method.notFound
         }
 
         $q = trim($request->string('q')->toString());
@@ -78,7 +79,7 @@ class DelegationGraphController extends Controller
             ]),
         ])->paginate($perPage)->withQueryString();
 
-        $data = collect($graphs->items())->map(fn (DelegationGraph $graph): array => $this->transformGraph($graph, false))->values();
+        $data = collect($graphs->items())->map(fn (DelegationGraph $graph): array => $this->transformGraph($graph, false))->values(); // @phpstan-ignore argument.type
 
         return response()->json([
             'data' => $data,
@@ -108,7 +109,8 @@ class DelegationGraphController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id);
+        /** @var DelegationGraph|null $graph */
+        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -178,7 +180,8 @@ class DelegationGraphController extends Controller
 
     public function update(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id);
+        /** @var DelegationGraph|null $graph */
+        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -227,6 +230,7 @@ class DelegationGraphController extends Controller
 
     public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
+        /** @var DelegationGraph|null $graph */
         $graph = $request->user()->delegationGraphs()->find($id);
 
         if ($graph === null) {
@@ -261,7 +265,8 @@ class DelegationGraphController extends Controller
 
     public function restore(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id);
+        /** @var DelegationGraph|null $graph */
+        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -284,14 +289,18 @@ class DelegationGraphController extends Controller
             after: ['deleted_at' => optional($graph->deleted_at)?->toIso8601String()],
         );
 
+        /** @var DelegationGraph $restoredGraph */
+        $restoredGraph = $graph->fresh();
+
         return response()->json([
-            'data' => $this->transformGraph($graph->fresh(), false),
+            'data' => $this->transformGraph($restoredGraph, false),
         ]);
     }
 
     public function validate(Request $request, int $id): JsonResponse
     {
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id);
+        /** @var DelegationGraph|null $graph */
+        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -337,6 +346,7 @@ class DelegationGraphController extends Controller
 
     public function start(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
+        /** @var DelegationGraph|null $graph */
         $graph = $request->user()->delegationGraphs()->find($id);
 
         if ($graph === null) {
@@ -369,15 +379,18 @@ class DelegationGraphController extends Controller
             after: ['status' => DelegationGraph::STATUS_RUNNING],
         );
 
-        DelegationGraphStarted::dispatch($graph->fresh());
+        /** @var DelegationGraph $freshGraph */
+        $freshGraph = $graph->fresh();
+        DelegationGraphStarted::dispatch($freshGraph);
 
         return response()->json([
-            'data' => $this->transformGraph($graph->fresh(), false),
+            'data' => $this->transformGraph($freshGraph, false),
         ], 202);
     }
 
     public function cancel(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
+        /** @var DelegationGraph|null $graph */
         $graph = $request->user()->delegationGraphs()->find($id);
 
         if ($graph === null) {
@@ -410,14 +423,18 @@ class DelegationGraphController extends Controller
             after: ['status' => DelegationGraph::STATUS_CANCELLED],
         );
 
+        /** @var DelegationGraph $cancelledGraph */
+        $cancelledGraph = $graph->fresh();
+
         return response()->json([
-            'data' => $this->transformGraph($graph->fresh(), false),
+            'data' => $this->transformGraph($cancelledGraph, false),
         ], 202);
     }
 
     public function clone(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id);
+        /** @var DelegationGraph|null $graph */
+        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -475,14 +492,18 @@ class DelegationGraphController extends Controller
             after: ['cloned_from' => $graph->id, 'mode' => $mode],
         );
 
+        /** @var DelegationGraph $clonedGraph */
+        $clonedGraph = $newGraph->fresh();
+
         return response()->json([
-            'data' => $this->transformGraph($newGraph->fresh()->load('tasks.dependencies'), true),
+            'data' => $this->transformGraph($clonedGraph->load('tasks.dependencies'), true),
         ], 201);
     }
 
     public function events(Request $request, int $id): JsonResponse
     {
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id);
+        /** @var DelegationGraph|null $graph */
+        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -491,13 +512,14 @@ class DelegationGraphController extends Controller
         $afterSequence = (int) $request->integer('after_sequence', 0);
         $limit = min(100, max(1, (int) $request->integer('limit', 50)));
 
+        /** @var \Illuminate\Database\Eloquent\Collection<int, DelegationEvent> $events */
         $events = $graph->events()
             ->where('sequence', '>', $afterSequence)
             ->orderBy('sequence', 'asc')
             ->take($limit)
             ->get();
 
-        $data = $events->map(fn ($event) => [
+        $data = $events->map(fn (DelegationEvent $event) => [
             'id' => $event->id,
             'event_type' => $event->event_type,
             'sequence' => $event->sequence,

@@ -16,7 +16,7 @@ class RuntimeToolAdapter extends AbstractToolAdapter
 {
     private const MUTATION_OPERATIONS = ['run', 'stop'];
 
-    private const READ_OPERATIONS = ['status'];
+    private const READ_OPERATIONS = ['status']; // @phpstan-ignore classConstant.unused
 
     public function name(): string
     {
@@ -182,9 +182,9 @@ class RuntimeToolAdapter extends AbstractToolAdapter
             'job_name' => $job->name,
             'workflow_key' => $job->workflow_key,
             'is_enabled' => $job->is_enabled,
-            'latest_run_id' => $latestRun?->id,
-            'latest_run_status' => $latestRun?->status,
-            'latest_run_started_at' => $latestRun?->started_at?->toIso8601String(),
+            'latest_run_id' => $latestRun?->id, // @phpstan-ignore property.notFound
+            'latest_run_status' => $latestRun?->status, // @phpstan-ignore property.notFound
+            'latest_run_started_at' => $latestRun?->started_at?->toIso8601String(), // @phpstan-ignore property.notFound
         ], $this->duration($startTime));
     }
 

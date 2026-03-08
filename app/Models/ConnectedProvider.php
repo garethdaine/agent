@@ -10,7 +10,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $user_id
+ * @property string $providerable_type
+ * @property int $providerable_id
+ * @property string $category
+ * @property string $driver
+ * @property string|null $provider_user_id
+ * @property string|null $provider_workspace_id
+ * @property string|null $provider_workspace_name
+ * @property string|null $access_token
+ * @property string|null $refresh_token
+ * @property string|null $token_type
+ * @property \Carbon\CarbonInterface|null $expires_at
+ * @property array|null $scopes_json
+ * @property array|null $metadata_json
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\User|null $user
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class ConnectedProvider extends Model
 {

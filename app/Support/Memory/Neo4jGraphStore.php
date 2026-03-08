@@ -82,10 +82,10 @@ class Neo4jGraphStore
         $preparedEntities = [];
         foreach ($entities as $entity) {
             $preparedEntities[] = [
-                'type' => $entity['type'] ?? 'Unknown',
-                'name' => $entity['name'] ?? '',
+                'type' => $entity['type'] ?? 'Unknown', // @phpstan-ignore nullCoalesce.offset
+                'name' => $entity['name'] ?? '', // @phpstan-ignore nullCoalesce.offset
                 'confidence' => $entity['confidence'] ?? 0.5,
-                'classification' => $entity['classification'] ?? config('memory.default_classification', 'internal'),
+                'classification' => $entity['classification'] ?? config('memory.default_classification', 'internal'), // @phpstan-ignore nullCoalesce.offset
             ];
         }
 
@@ -141,9 +141,9 @@ class Neo4jGraphStore
         $preparedRelationships = [];
         foreach ($relationships as $relationship) {
             $preparedRelationships[] = [
-                'from_name' => $relationship['from'] ?? '',
-                'to_name' => $relationship['to'] ?? '',
-                'type' => $relationship['type'] ?? 'RELATED_TO',
+                'from_name' => $relationship['from'] ?? '', // @phpstan-ignore nullCoalesce.offset
+                'to_name' => $relationship['to'] ?? '', // @phpstan-ignore nullCoalesce.offset
+                'type' => $relationship['type'] ?? 'RELATED_TO', // @phpstan-ignore nullCoalesce.offset
             ];
         }
 
@@ -247,7 +247,7 @@ class Neo4jGraphStore
                 ['userId' => $userId]
             );
 
-            return (int) ($result->first()?->get('cnt') ?? 0);
+            return (int) ($result->first()->get('cnt') ?? 0);
         } catch (\Throwable $e) {
             Log::debug('Neo4jGraphStore: Entity count failed', [
                 'user_id' => $userId,
@@ -279,7 +279,7 @@ class Neo4jGraphStore
 
             // Simple connectivity check
             $result = $client->run('RETURN 1 AS health');
-            $this->isHealthy = $result->first()?->get('health') === 1;
+            $this->isHealthy = $result->first()->get('health') === 1;
 
             return $this->isHealthy;
         } catch (\Throwable $e) {
@@ -396,7 +396,7 @@ class Neo4jGraphStore
                     'cutoffDate' => $cutoffDate,
                 ]);
 
-                return ['would_prune' => $result->first()?->get('count') ?? 0];
+                return ['would_prune' => $result->first()->get('count') ?? 0];
             }
 
             // Actually prune - delete relationships first, then entities
@@ -419,7 +419,7 @@ class Neo4jGraphStore
                 'cutoffDate' => $cutoffDate,
             ]);
 
-            $pruned = $result->first()?->get('count') ?? 0;
+            $pruned = $result->first()->get('count') ?? 0;
 
             if ($pruned > 0) {
                 Log::info('Neo4jGraphStore: Pruned entities', [

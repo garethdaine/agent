@@ -39,7 +39,7 @@ class DocsGenerationService
         }
 
         $ingested = $this->pipeline->ingest();
-        $entries = $ingested['entries'] ?? [];
+        $entries = $ingested['entries'] ?? []; // @phpstan-ignore nullCoalesce.offset
 
         $routes = collect(Route::getRoutes()->getRoutes());
         $routesByName = $this->mapRoutesByName($routes->all());
@@ -90,11 +90,11 @@ class DocsGenerationService
                 continue;
             }
 
-            $body = (string) ($matches['body'] ?? '');
+            $body = (string) ($matches['body'] ?? ''); // @phpstan-ignore nullCoalesce.offset
             $autogenBlock = $this->renderRuntimeSnapshotBlock($entry, $routesByName);
 
             $updatedBody = $this->replaceOrAppendAutogenBlock($body, $autogenBlock);
-            $updated = (string) ($matches['frontmatter'] ?? '').$updatedBody;
+            $updated = (string) ($matches['frontmatter'] ?? '').$updatedBody; // @phpstan-ignore nullCoalesce.offset
 
             if ($updated !== $raw) {
                 File::put($sourcePath, $updated);

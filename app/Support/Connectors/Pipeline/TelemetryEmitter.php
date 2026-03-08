@@ -33,10 +33,10 @@ class TelemetryEmitter
             'delegatee_id' => $request->delegateeId,
             'workflow_key' => $request->workflowKey,
             'http_method' => strtoupper($action['method'] ?? 'GET'),
-            'http_status' => $response?->status ?? 0,
-            'duration_ms' => (int) ($response?->durationMs ?? 0),
+            'http_status' => $response->status ?? 0,
+            'duration_ms' => (int) ($response->durationMs ?? 0),
             'request_size_bytes' => strlen(json_encode($request->parameters) ?: ''),
-            'response_size_bytes' => strlen($response?->rawResponse ?? ''),
+            'response_size_bytes' => strlen($response->rawResponse ?? ''),
             'retry_count' => $retryCount,
             'outcome' => $outcome,
             'error_message' => $outcome !== AgentConnectorInvocation::OUTCOME_SUCCESS

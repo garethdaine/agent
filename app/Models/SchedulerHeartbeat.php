@@ -6,6 +6,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property string $source
+ * @property \Carbon\CarbonInterface|null $last_seen_at
+ * @property array|null $meta_json
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class SchedulerHeartbeat extends Model
 {
     public $timestamps = false;

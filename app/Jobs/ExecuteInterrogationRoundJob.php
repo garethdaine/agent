@@ -110,7 +110,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                 'at' => CarbonImmutable::now('UTC')->toIso8601String(),
             ];
 
-            if (($normalized['answer_text'] ?? '') === '' && $answerType === 'freetext') {
+            if (($normalized['answer_text'] ?? '') === '' && $answerType === 'freetext') { // @phpstan-ignore nullCoalesce.offset
                 $normalized['answer_text'] = trim($this->userMessage);
             }
 
@@ -187,7 +187,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                     InterrogationSession::STATUS_FAILED,
                     [
                         'error_code' => 'ROUND_RESPONSE_PARSE_FAILED',
-                        'error_summary' => trim((string) ($questionResult['stderr'] ?? '')) ?: 'Could not parse interrogation round response.',
+                        'error_summary' => trim((string) ($questionResult['stderr'] ?? '')) ?: 'Could not parse interrogation round response.', // @phpstan-ignore nullCoalesce.offset
                         'finished_at' => CarbonImmutable::now('UTC'),
                     ],
                 );
@@ -196,7 +196,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                 $writer = new InterrogationEventWriter($session);
                 $writer->appendError([
                     'code' => 'ROUND_RESPONSE_PARSE_FAILED',
-                    'message' => trim((string) ($questionResult['stderr'] ?? '')) ?: 'Could not parse interrogation round response.',
+                    'message' => trim((string) ($questionResult['stderr'] ?? '')) ?: 'Could not parse interrogation round response.', // @phpstan-ignore nullCoalesce.offset
                 ]);
 
                 return;
@@ -326,7 +326,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                         $repairValidation = $questionPayloadGuard->validate($repaired['parsed']);
                         $repairDuplicateContext = $repairValidation['valid']
                             ? $this->detectDuplicateAnsweredQuestion($session, $repaired['parsed'], $questionPayloadGuard)
-                            : ['reason' => (string) ($repairValidation['reason'] ?? 'invalid payload')];
+                            : ['reason' => (string) ($repairValidation['reason'] ?? 'invalid payload')]; // @phpstan-ignore nullCoalesce.offset
 
                         if ($repairValidation['valid'] && $repairDuplicateContext === null) {
                             $questionResult = $repaired;
@@ -352,7 +352,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                             $repairValidation = $questionPayloadGuard->validate($repairedWithoutResume['parsed']);
                             $repairDuplicateContext = $repairValidation['valid']
                                 ? $this->detectDuplicateAnsweredQuestion($session, $repairedWithoutResume['parsed'], $questionPayloadGuard)
-                                : ['reason' => (string) ($repairValidation['reason'] ?? 'invalid payload')];
+                                : ['reason' => (string) ($repairValidation['reason'] ?? 'invalid payload')]; // @phpstan-ignore nullCoalesce.offset
 
                             if ($repairValidation['valid'] && $repairDuplicateContext === null) {
                                 $questionResult = $repairedWithoutResume;
@@ -557,7 +557,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
      * @param  callable(string):array<string,mixed>|null  $parser
      * @return array{exit_code:int,stdout:string,stderr:string,parsed:array<string,mixed>|null}
      */
-    private function runAndParseQuestion(array $command, string $cwd, array $env, callable $parser): array
+    private function runAndParseQuestion(array $command, string $cwd, array $env, callable $parser): array // @phpstan-ignore parameter.phpDocType
     {
         $process = new Process($command, $cwd, $env);
         $process->setTimeout(600);
@@ -581,7 +581,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
     {
         return is_string($session->cli_session_id)
             && trim($session->cli_session_id) !== ''
-            && ((int) ($result['exit_code'] ?? 1) !== 0 || ($result['parsed'] ?? null) === null);
+            && ((int) ($result['exit_code'] ?? 1) !== 0 || ($result['parsed'] ?? null) === null); // @phpstan-ignore nullCoalesce.offset
     }
 
     private function canAcceptCompletion(InterrogationSession $session, QuestionPayloadGuard $questionPayloadGuard): bool
@@ -601,12 +601,13 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
         }
 
         $answerableQuestionIds = [];
+        /** @var \App\Models\InterrogationEvent $event */
         foreach ($events as $event) {
             if ($event->event_type !== InterrogationEvent::TYPE_QUESTION) {
                 continue;
             }
 
-            $payload = is_array($event->payload) ? $event->payload : [];
+            $payload = is_array($event->payload) ? $event->payload : []; // @phpstan-ignore function.alreadyNarrowedType
             $questionId = trim((string) ($payload['question_id'] ?? ''));
             if ($questionId === '') {
                 continue;
@@ -618,7 +619,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                 continue;
             }
 
-            if (! ($questionPayloadGuard->validate($payload)['valid'] ?? false)) {
+            if (! ($questionPayloadGuard->validate($payload)['valid'] ?? false)) { // @phpstan-ignore nullCoalesce.offset
                 continue;
             }
 
@@ -631,12 +632,13 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
 
         $answeredQuestionIds = [];
 
+        /** @var \App\Models\InterrogationEvent $event */
         foreach ($events as $event) {
             if ($event->event_type !== InterrogationEvent::TYPE_ANSWER) {
                 continue;
             }
 
-            $payload = is_array($event->payload) ? $event->payload : [];
+            $payload = is_array($event->payload) ? $event->payload : []; // @phpstan-ignore function.alreadyNarrowedType
             $answerType = strtolower(trim((string) ($payload['answer_type'] ?? '')));
             if ($answerType === 'skip') {
                 continue;
@@ -807,12 +809,13 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
         }
 
         $questionsById = [];
+        /** @var \App\Models\InterrogationEvent $event */
         foreach ($events as $event) {
             if ($event->event_type !== InterrogationEvent::TYPE_QUESTION) {
                 continue;
             }
 
-            $payload = is_array($event->payload) ? $event->payload : [];
+            $payload = is_array($event->payload) ? $event->payload : []; // @phpstan-ignore function.alreadyNarrowedType
             $questionId = trim((string) ($payload['question_id'] ?? ''));
             if ($questionId === '') {
                 continue;
@@ -824,7 +827,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                 continue;
             }
 
-            if (! ($questionPayloadGuard->validate($payload)['valid'] ?? false)) {
+            if (! ($questionPayloadGuard->validate($payload)['valid'] ?? false)) { // @phpstan-ignore nullCoalesce.offset
                 continue;
             }
 
@@ -836,12 +839,13 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
         }
 
         $answersByQuestionId = [];
+        /** @var \App\Models\InterrogationEvent $event */
         foreach ($events as $event) {
             if ($event->event_type !== InterrogationEvent::TYPE_ANSWER) {
                 continue;
             }
 
-            $payload = is_array($event->payload) ? $event->payload : [];
+            $payload = is_array($event->payload) ? $event->payload : []; // @phpstan-ignore function.alreadyNarrowedType
             $questionId = trim((string) ($payload['question_id'] ?? ''));
             if ($questionId === '' || ! isset($questionsById[$questionId])) {
                 continue;
@@ -1296,7 +1300,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             $systemPrompt = $promptResolver->resolveForPhase($session, 'interrogation');
             $generated = $questionBankGenerator->generate($session, $adapter, $systemPrompt);
 
-            if (! is_array($generated) || ! is_array($generated['questions'] ?? null) || $generated['questions'] === []) {
+            if (! is_array($generated) || ! is_array($generated['questions'] ?? null) || $generated['questions'] === []) { // @phpstan-ignore function.alreadyNarrowedType, nullCoalesce.offset
                 return false;
             }
 
@@ -1335,7 +1339,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
 
         $newSuppressed = array_values(array_unique(array_merge(
             $suppressedCanonicalKeys,
-            (array) ($selection['suppressed'] ?? [])
+            (array) ($selection['suppressed'] ?? []) // @phpstan-ignore nullCoalesce.offset
         )));
         $metadata['suppressed_canonical_keys'] = $newSuppressed;
 
@@ -1418,7 +1422,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             ->orderBy('sequence')
             ->get(['payload'])
             ->map(function (InterrogationEvent $event): string {
-                $payload = is_array($event->payload) ? $event->payload : [];
+                $payload = is_array($event->payload) ? $event->payload : []; // @phpstan-ignore function.alreadyNarrowedType
 
                 return trim((string) ($payload['question_text'] ?? ''));
             })

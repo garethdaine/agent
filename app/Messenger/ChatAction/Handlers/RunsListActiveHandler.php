@@ -35,7 +35,7 @@ class RunsListActiveHandler implements ChatActionHandlerInterface
     {
         $lines = ["Active runs ({$runs->count()}):"];
         foreach ($runs as $run) {
-            $jobName = $run->job?->name ?? 'Unknown';
+            $jobName = $run->job->name ?? 'Unknown';
             $lines[] = "• [{$run->id}] {$jobName} ({$run->status})";
         }
 

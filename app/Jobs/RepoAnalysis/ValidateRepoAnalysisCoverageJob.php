@@ -89,7 +89,7 @@ class ValidateRepoAnalysisCoverageJob implements ShouldQueue
             'status' => SessionStateTransitionService::STATUS_VALIDATING,
         ]);
 
-        if (($summary['passed'] ?? false) !== true) {
+        if (($summary['passed'] ?? false) !== true) { // @phpstan-ignore nullCoalesce.offset
             $firstFailure = $summary['blocking_failures'][0] ?? null;
             $errorCode = is_array($firstFailure) ? strtoupper((string) ($firstFailure['code'] ?? '')) : 'COVERAGE_GATE_FAILED';
             $errorSummary = is_array($firstFailure)

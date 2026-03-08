@@ -42,21 +42,21 @@ class ReindexDocumentationSearchJob implements ShouldQueue
                 DocumentationEntry::query()
                     ->whereIn('id', $this->entryIds)
                     ->get()
-                    ->searchable();
+                    ->searchable(); // @phpstan-ignore method.notFound
             }
 
             if ($this->fragmentIds !== []) {
                 DocumentationFragment::query()
                     ->whereIn('id', $this->fragmentIds)
                     ->get()
-                    ->searchable();
+                    ->searchable(); // @phpstan-ignore method.notFound
             }
 
             if ($this->apiArtifactIds !== []) {
                 ApiDocArtifact::query()
                     ->whereIn('id', $this->apiArtifactIds)
                     ->get()
-                    ->searchable();
+                    ->searchable(); // @phpstan-ignore method.notFound
             }
         } catch (Throwable $throwable) {
             Log::warning('Documentation search reindex job failed.', [

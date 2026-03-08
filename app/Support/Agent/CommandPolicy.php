@@ -74,7 +74,7 @@ class CommandPolicy
         }
 
         preg_match_all('/\{\{[^}]+\}\}/', $template, $placeholderMatches);
-        $placeholders = $placeholderMatches[0] ?? [];
+        $placeholders = $placeholderMatches[0] ?? []; // @phpstan-ignore nullCoalesce.offset
         $allowedPlaceholders = config('agent.allowed_placeholders', []);
 
         foreach ($placeholders as $placeholder) {

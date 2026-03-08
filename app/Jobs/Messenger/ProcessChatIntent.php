@@ -61,8 +61,11 @@ class ProcessChatIntent implements ShouldQueue
         ConnectorManager $connectorManager,
         CommandRouter $commandRouter
     ): void {
+        /** @var ChatMessage|null $message */
         $message = ChatMessage::find($this->messageId);
+        /** @var ChatSession|null $session */
         $session = ChatSession::find($this->sessionId);
+        /** @var User|null $user */
         $user = User::find($this->userId);
 
         if ($message === null || $session === null || $user === null) {
@@ -476,7 +479,7 @@ class ProcessChatIntent implements ShouldQueue
             $response = $adapter->sendMessage($session, $payload);
             Log::channel('messenger')->info('ProcessChatIntent: Placeholder sent', [
                 'session_id' => $session->id,
-                'provider_message_id' => $response?->providerMessageId,
+                'provider_message_id' => $response->providerMessageId,
             ]);
 
             return $response;
@@ -551,6 +554,7 @@ class ProcessChatIntent implements ShouldQueue
             $isApproval = str_starts_with($customId, 'tool_approve:');
             $toolCallId = substr($customId, $isApproval ? strlen('tool_approve:') : strlen('tool_deny:'));
 
+            /** @var RuntimeToolCall|null $toolCall */
             $toolCall = RuntimeToolCall::find($toolCallId);
 
             if ($toolCall === null || $toolCall->status !== RuntimeToolCallStatus::PendingApproval) {

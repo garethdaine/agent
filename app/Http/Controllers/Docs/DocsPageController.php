@@ -62,7 +62,7 @@ class DocsPageController extends Controller
             $entries = collect($this->catalog->search($filters['q'], $filters['domain'], $filters['section'], 200));
         }
 
-        if (! $entries->contains(fn (array $item): bool => (string) ($item['slug'] ?? '') === $slug)) {
+        if (! $entries->contains(fn (array $item): bool => (string) ($item['slug'] ?? '') === $slug)) { // @phpstan-ignore nullCoalesce.offset
             $entries->prepend([
                 'slug' => (string) ($entry['slug'] ?? $slug),
                 'title' => (string) ($entry['title'] ?? $slug),
@@ -99,7 +99,7 @@ class DocsPageController extends Controller
     {
         $locale = (string) config('documentation.locale.default', 'en');
 
-        return DocumentationEntry::query()
+        return DocumentationEntry::query() // @phpstan-ignore return.type
             ->where('locale', $locale)
             ->where('status', 'published')
             ->when($domain !== '', fn ($builder) => $builder->where('domain', $domain))

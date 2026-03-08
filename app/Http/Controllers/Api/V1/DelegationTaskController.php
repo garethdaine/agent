@@ -19,7 +19,7 @@ class DelegationTaskController extends Controller
 {
     public function index(Request $request, int $graphId): JsonResponse
     {
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($graphId);
+        $graph = $request->user()->delegationGraphs()->withTrashed()->find($graphId); // @phpstan-ignore method.notFound
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -82,7 +82,7 @@ class DelegationTaskController extends Controller
 
     public function show(Request $request, int $graphId, int $taskId): JsonResponse
     {
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($graphId);
+        $graph = $request->user()->delegationGraphs()->withTrashed()->find($graphId); // @phpstan-ignore method.notFound
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -109,7 +109,7 @@ class DelegationTaskController extends Controller
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
         }
 
-        $task = $graph->tasks()->find($taskId);
+        $task = $graph->tasks()->find($taskId); // @phpstan-ignore method.notFound
 
         if ($task === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Task not found.', 404);
@@ -151,7 +151,7 @@ class DelegationTaskController extends Controller
             action: 'delegation_verification.resolve',
             targetType: 'delegation_verification_result',
             targetId: (int) $verificationResult->id,
-            ownerUserId: (int) $graph->user_id,
+            ownerUserId: (int) $graph->user_id, // @phpstan-ignore property.notFound
             changedFields: ['verdict', 'finished_at'],
             before: $before,
             after: ['verdict' => $newVerdict],

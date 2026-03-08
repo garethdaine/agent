@@ -13,7 +13,26 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $user_id
+ * @property string $name
+ * @property string $runner_type
+ * @property string $command_template
+ * @property string $working_directory
+ * @property array|null $env_json
+ * @property array|null $config_json
+ * @property bool $is_active
+ * @property float|null $trust_score
+ * @property \Carbon\CarbonInterface|null $trust_updated_at
+ * @property \Carbon\CarbonInterface|null $deleted_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property array|null $soul_json
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\DelegateeMetric|null $metric
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationCapability> $capabilities
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class DelegateeProfile extends Model
 {

@@ -31,7 +31,7 @@ class RunStatusChanged implements ShouldBroadcastNow
             userId: (int) $run->user_id,
             runId: (int) $run->id,
             jobId: (int) $run->agent_job_id,
-            jobName: $run->job?->name ?? 'Unknown',
+            jobName: $run->job->name ?? 'Unknown',
             status: $status,
         );
     }

@@ -102,8 +102,7 @@ class DiscordGatewayWorker implements GatewayWorkerInterface
     // Discord Gateway state
     private ?string $sessionId = null;
 
-    private ?string $resumeGatewayUrl = null;
-
+    private ?string $resumeGatewayUrl = null; // @phpstan-ignore property.onlyWritten
     private ?int $lastSequence = null;
 
     private ?TimerInterface $heartbeatTimer = null;

@@ -14,7 +14,28 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property string $provider
+ * @property string $name
+ * @property array $credentials
+ * @property string|null $webhook_secret
+ * @property string $connection_mode
+ * @property string $status
+ * @property \App\Messenger\Gateway\Enums\WorkerHealthStatus $runtime_state
+ * @property \Carbon\CarbonInterface|null $last_health_check_at
+ * @property string|null $runtime_error_message
+ * @property array|null $config
+ * @property string $account_key
+ * @property \Carbon\CarbonInterface|null $deleted_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ChatSession> $sessions
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ChatMessage> $messages
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MessengerIdentityLink> $identityLinks
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PendingConfirmation> $pendingConfirmations
+ * @property array|null $runtime_settings
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class ConnectorAccount extends Model
 {
@@ -69,6 +90,7 @@ class ConnectorAccount extends Model
         ];
     }
 
+    /** @return HasMany<ChatSession, $this> */
     public function sessions(): HasMany
     {
         return $this->hasMany(ChatSession::class);

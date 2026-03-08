@@ -183,8 +183,8 @@ class MemoryGraphSnapshotCommand extends Command
             'entities' => $entities,
             'relationships' => $relationships,
             'summary' => [
-                'entity_count' => $counts?->get('entity_count') ?? 0,
-                'relationship_count' => $counts?->get('relationship_count') ?? 0,
+                'entity_count' => $counts->get('entity_count') ?? 0,
+                'relationship_count' => $counts->get('relationship_count') ?? 0,
                 'entity_types' => array_count_values(array_column($entities, 'type')),
             ],
         ];

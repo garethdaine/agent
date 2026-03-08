@@ -9,9 +9,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Consolidation log entry for memory consolidation operations.
+ * @property int $id
+ * @property int|null $user_id
+ * @property string $consolidation_type
+ * @property int $source_count
+ * @property string|null $result_summary
+ * @property array|null $checkpoint_json
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property-read \App\Models\User|null $user
+ * @property int|null $count
+ * @property int|null $total_processed
  *
- * Tracks consolidation operations with checkpoint support for resumability.
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class MemoryConsolidationLog extends Model
 {
@@ -160,8 +169,8 @@ class MemoryConsolidationLog extends Model
         int $sourceCount,
         ?string $summary = null,
         ?array $checkpoint = null
-    ): static {
-        return static::create([
+    ): self {
+        return self::create([
             'user_id' => $userId,
             'consolidation_type' => $type,
             'source_count' => $sourceCount,

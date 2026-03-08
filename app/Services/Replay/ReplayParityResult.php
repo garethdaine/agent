@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Replay;
 
-use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 
 class ReplayParityResult
 {
@@ -12,6 +12,6 @@ class ReplayParityResult
         public readonly bool $passed,
         /** @var list<array{source: string, expected: mixed, actual: mixed}> */
         public readonly array $discrepancies,
-        public readonly CarbonImmutable $checkedAt,
+        public readonly CarbonInterface $checkedAt,
     ) {}
 }

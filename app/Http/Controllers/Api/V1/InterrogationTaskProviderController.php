@@ -24,6 +24,7 @@ class InterrogationTaskProviderController extends Controller
         TaskManagementProviderManager $providerManager,
         ProviderOAuthStateStore $oauthStateStore,
     ): JsonResponse {
+        /** @var InterrogationSession $session */
         $session = $request->user()->interrogationSessions()->findOrFail($id);
 
         try {
@@ -61,6 +62,7 @@ class InterrogationTaskProviderController extends Controller
 
     public function disconnect(Request $request, int $id, string $driver): JsonResponse
     {
+        /** @var InterrogationSession $session */
         $session = $request->user()->interrogationSessions()->findOrFail($id);
 
         $deleted = $session->providerIntegrations()
@@ -82,6 +84,7 @@ class InterrogationTaskProviderController extends Controller
         string $driver,
         TaskManagementProviderManager $providerManager,
     ): JsonResponse {
+        /** @var InterrogationSession $session */
         $session = $request->user()->interrogationSessions()->findOrFail($id);
         $normalizedDriver = strtolower(trim($driver));
         $provider = $this->connectedProviderForSession($session, $normalizedDriver);
@@ -157,6 +160,7 @@ class InterrogationTaskProviderController extends Controller
         string $driver,
         TaskManagementProviderManager $providerManager,
     ): JsonResponse {
+        /** @var InterrogationSession $session */
         $session = $request->user()->interrogationSessions()->findOrFail($id);
         $normalizedDriver = strtolower(trim($driver));
         $provider = $this->connectedProviderForSession($session, $normalizedDriver);
@@ -198,7 +202,7 @@ class InterrogationTaskProviderController extends Controller
             }
 
             $selectedTeam = collect($teams)->first(
-                static fn (array $team): bool => trim((string) ($team['id'] ?? '')) === $teamId
+                static fn (array $team): bool => trim((string) ($team['id'] ?? '')) === $teamId // @phpstan-ignore nullCoalesce.offset
             );
 
             if (! is_array($selectedTeam)) {
@@ -213,7 +217,7 @@ class InterrogationTaskProviderController extends Controller
                 ], 422);
             }
 
-            $metadata['team_id'] = trim((string) ($selectedTeam['id'] ?? ''));
+            $metadata['team_id'] = trim((string) ($selectedTeam['id'] ?? '')); // @phpstan-ignore nullCoalesce.offset
             $metadata['team_name'] = $selectedTeam['name'] ?? null;
             $metadata['team_key'] = $selectedTeam['key'] ?? null;
             $identity['team_id'] = $metadata['team_id'];
@@ -252,7 +256,7 @@ class InterrogationTaskProviderController extends Controller
 
             $targetProjectId = trim((string) ($validated['existing_project_id'] ?? ''));
             $selected = collect($projects)->first(
-                static fn (array $project): bool => trim((string) ($project['id'] ?? '')) === $targetProjectId
+                static fn (array $project): bool => trim((string) ($project['id'] ?? '')) === $targetProjectId // @phpstan-ignore nullCoalesce.offset
             );
 
             if (! is_array($selected)) {
@@ -267,7 +271,7 @@ class InterrogationTaskProviderController extends Controller
                 ], 422);
             }
 
-            $selectedProjectId = trim((string) ($selected['id'] ?? ''));
+            $selectedProjectId = trim((string) ($selected['id'] ?? '')); // @phpstan-ignore nullCoalesce.offset
             $selectedProjectName = $selected['name'] ?? null;
             $selectedProjectUrl = $selected['url'] ?? null;
         }
@@ -309,6 +313,7 @@ class InterrogationTaskProviderController extends Controller
 
     private function connectedProviderForSession(InterrogationSession $session, string $driver): ?ConnectedProvider
     {
+        /** @var ConnectedProvider|null */
         return $session->providerIntegrations()
             ->where('category', 'task_management')
             ->where('driver', $driver)

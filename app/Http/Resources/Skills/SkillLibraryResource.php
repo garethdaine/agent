@@ -8,11 +8,11 @@ use App\Services\Skills\DTOs\SkillLibraryEntry;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/** @property SkillLibraryEntry $resource */
 class SkillLibraryResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        /** @var SkillLibraryEntry $this->resource */
         return [
             'slug' => $this->resource->slug,
             'name' => $this->resource->name,

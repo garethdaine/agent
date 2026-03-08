@@ -73,7 +73,7 @@ final class RunsCommandHandler implements SlashCommandHandlerInterface
 
         $lines = ["Active runs ({$runs->count()}):"];
         foreach ($runs as $run) {
-            $jobName = $run->job?->name ?? 'Unknown';
+            $jobName = $run->job->name ?? 'Unknown';
             $lines[] = "• [{$run->id}] {$jobName} ({$run->status})";
         }
 
@@ -106,7 +106,7 @@ final class RunsCommandHandler implements SlashCommandHandlerInterface
 
         $lines = [];
         foreach ($runs as $run) {
-            $jobName = $run->job?->name ?? 'Unknown';
+            $jobName = $run->job->name ?? 'Unknown';
             $icon = match ($run->status) {
                 'succeeded' => '✅',
                 'failed' => '❌',
@@ -151,7 +151,7 @@ final class RunsCommandHandler implements SlashCommandHandlerInterface
             'queued', 'starting' => '⏳',
             default => '❓',
         };
-        $jobName = $run->job?->name ?? 'Unknown';
+        $jobName = $run->job->name ?? 'Unknown';
         $duration = $run->duration_ms ? $this->formatDuration($run->duration_ms) : '-';
         $startedAt = $run->started_at ? Carbon::parse($run->started_at)->format('M j, Y g:ia') : '-';
         $finishedAt = $run->finished_at ? Carbon::parse($run->finished_at)->format('M j, Y g:ia') : '-';
@@ -227,7 +227,7 @@ final class RunsCommandHandler implements SlashCommandHandlerInterface
         ]);
         dispatch(new ExecuteAgentRunJob($newRun->id));
 
-        $jobName = $run->job?->name ?? 'Unknown';
+        $jobName = $run->job->name ?? 'Unknown';
 
         return CommandResult::success(
             "Retry queued for job '{$jobName}' (New Run ID: {$newRun->id})",

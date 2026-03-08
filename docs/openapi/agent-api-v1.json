@@ -4957,8 +4957,7 @@
                                             "minimum": 0
                                         },
                                         "total_runs": {
-                                            "type": "integer",
-                                            "minimum": 0
+                                            "type": "string"
                                         },
                                         "success_rate": {
                                             "type": [
@@ -4973,8 +4972,7 @@
                                             ]
                                         },
                                         "active_runs": {
-                                            "type": "integer",
-                                            "minimum": 0
+                                            "type": "string"
                                         }
                                     },
                                     "required": [
@@ -7244,12 +7242,10 @@
                                                             "minimum": 0
                                                         },
                                                         "runs_24h": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "string"
                                                         },
                                                         "failed_24h": {
-                                                            "type": "integer",
-                                                            "minimum": 0
+                                                            "type": "string"
                                                         }
                                                     },
                                                     "required": [
@@ -7330,10 +7326,7 @@
                                                     ]
                                                 },
                                                 "recent_events": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "$ref": "#\/components\/schemas\/AgentAuditLog"
-                                                    }
+                                                    "type": "string"
                                                 },
                                                 "environment": {
                                                     "type": "object",
@@ -32156,123 +32149,6 @@
                     }
                 },
                 "title": "ActivateReplayBuildRequest"
-            },
-            "AgentAuditLog": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "integer"
-                    },
-                    "user_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
-                    "actor_type": {
-                        "type": "string"
-                    },
-                    "actor_id": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "action": {
-                        "type": "string"
-                    },
-                    "target_type": {
-                        "type": "string"
-                    },
-                    "target_id": {
-                        "type": "string"
-                    },
-                    "changed_fields_json": {
-                        "type": [
-                            "array",
-                            "null"
-                        ],
-                        "items": {}
-                    },
-                    "before_json": {
-                        "type": [
-                            "array",
-                            "null"
-                        ],
-                        "items": {}
-                    },
-                    "after_json": {
-                        "type": [
-                            "array",
-                            "null"
-                        ],
-                        "items": {}
-                    },
-                    "request_id": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "ip_address": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "user_agent": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "hostname": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "outcome": {
-                        "type": "string"
-                    },
-                    "error_code": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "error_message": {
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time"
-                    }
-                },
-                "required": [
-                    "id",
-                    "user_id",
-                    "actor_type",
-                    "actor_id",
-                    "action",
-                    "target_type",
-                    "target_id",
-                    "changed_fields_json",
-                    "before_json",
-                    "after_json",
-                    "request_id",
-                    "ip_address",
-                    "user_agent",
-                    "hostname",
-                    "outcome",
-                    "error_code",
-                    "error_message",
-                    "created_at"
-                ],
-                "title": "AgentAuditLog"
             },
             "AgentJobRun": {
                 "type": "object",

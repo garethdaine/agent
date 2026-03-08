@@ -38,6 +38,7 @@ class ConnectorConnectCommand extends Command
             return self::FAILURE;
         }
 
+        /** @var \App\Models\User|null $user */
         $user = $team->users()->first();
         if (! $user) {
             $this->error('No users found for this team.');

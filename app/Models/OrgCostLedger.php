@@ -11,7 +11,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property int $user_id
+ * @property string|null $org_agent_id
+ * @property string|null $ritual_run_id
+ * @property int $token_count
+ * @property int $runtime_ms
+ * @property float $estimated_cost_usd
+ * @property \Carbon\CarbonInterface|null $recorded_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\OrgAgentProfile|null $agent
+ * @property-read \App\Models\OrgRitualRun|null $ritualRun
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class OrgCostLedger extends Model
 {

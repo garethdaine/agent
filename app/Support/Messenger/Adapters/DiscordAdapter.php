@@ -127,7 +127,7 @@ class DiscordAdapter extends AbstractConnectorAdapter
 
         // Gateway event
         if (isset($data['t']) && isset($data['d'])) {
-            if (($data['t'] ?? null) === 'INTERACTION_CREATE' && is_array($data['d'] ?? null)) {
+            if ($data['t'] === 'INTERACTION_CREATE' && is_array($data['d'])) {
                 $this->storeInteractionContext($account, $data['d']);
             }
 
@@ -741,7 +741,7 @@ class DiscordAdapter extends AbstractConnectorAdapter
     /**
      * @param  array<int, mixed>  $options
      */
-    private function extractOptionValue(array $options, string $optionName): ?string
+    private function extractOptionValue(array $options, string $optionName): ?string // @phpstan-ignore method.unused
     {
         foreach ($options as $option) {
             if (! is_array($option)) {

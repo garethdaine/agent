@@ -135,13 +135,9 @@ class MemoryPurgeUserCommand extends Command
      */
     private function countRedisKeys(int $userId): string
     {
-        try {
-            // Working memory is keyed by run_id, not user_id
-            // We can't easily count user-specific keys without iterating all runs
-            return 'Associated run buffers';
-        } catch (\Throwable $e) {
-            return 'Redis not available';
-        }
+        // Working memory is keyed by run_id, not user_id
+        // We can't easily count user-specific keys without iterating all runs
+        return 'Associated run buffers';
     }
 
     /**

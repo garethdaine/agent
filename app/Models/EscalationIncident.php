@@ -7,6 +7,24 @@ namespace App\Models;
 use App\Support\Telemetry\ProjectionTable;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property string $workflow_key
+ * @property string $trigger_type
+ * @property string $status
+ * @property string|null $reason_code
+ * @property string|null $reason
+ * @property \Carbon\CarbonInterface|null $opened_at
+ * @property \Carbon\CarbonInterface|null $investigating_at
+ * @property \Carbon\CarbonInterface|null $resolved_at
+ * @property \Carbon\CarbonInterface|null $last_triggered_at
+ * @property string|null $projection_build_id
+ * @property array|null $metadata_json
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class EscalationIncident extends Model
 {
     protected $fillable = [

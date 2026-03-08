@@ -100,8 +100,8 @@ final class ContextCommandHandler implements SlashCommandHandlerInterface
             foreach ($turns as $turn) {
                 $in = (int) ($turn->input_tokens ?? 0);
                 $out = (int) ($turn->output_tokens ?? 0);
-                $summary = $turn->summary !== null ? substr((string) $turn->summary, 0, 60).'...' : '-';
-                $lines[] = "Turn #{$turn->sequence}: in {$in}, out {$out} — {$summary}";
+                $summary = $turn->summary !== null ? substr((string) $turn->summary, 0, 60).'...' : '-'; // @phpstan-ignore property.notFound
+                $lines[] = "Turn #{$turn->sequence}: in {$in}, out {$out} — {$summary}"; // @phpstan-ignore property.notFound
             }
         }
 

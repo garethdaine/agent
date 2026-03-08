@@ -9,24 +9,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Dead letter record for failed messenger messages.
- *
- * Messages that exceed retry duration are moved here for manual inspection
- * and retry. Stores the original payload, error history, and attempt count.
- *
- * @mixin Builder
- *
  * @property int $id
  * @property string $connector_account_id
  * @property array $original_payload
  * @property string $error_message
  * @property array $error_history
  * @property int $attempts
- * @property \Carbon\Carbon $failed_at
- * @property \Carbon\Carbon|null $retried_at
- * @property \Carbon\Carbon $created_at
- * @property \Carbon\Carbon $updated_at
- * @property-read ConnectorAccount $connectorAccount
+ * @property \Carbon\CarbonInterface|null $failed_at
+ * @property \Carbon\CarbonInterface|null $retried_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\ConnectorAccount|null $connectorAccount
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class MessengerDeadLetter extends Model
 {

@@ -11,9 +11,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Immutable conversation log entry for Long-term Memory (Layer 3).
+ * @property int $id
+ * @property int $user_id
+ * @property int|null $run_id
+ * @property int|null $job_id
+ * @property string $role
+ * @property string $content
+ * @property int $sequence
+ * @property string $event_type
+ * @property string $classification
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property string|null $runtime_session_id
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\AgentJobRun|null $run
+ * @property-read \App\Models\AgentJob|null $job
+ * @property-read \App\Models\Runtime\RuntimeSession|null $runtimeSession
  *
- * Records agent run conversation history with role and sequence tracking.
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class MemoryConversationLog extends Model
 {
@@ -213,7 +227,7 @@ class MemoryConversationLog extends Model
      */
     public static function getConversationForRun(int $runId): \Illuminate\Database\Eloquent\Collection
     {
-        return static::query()
+        return static::query() // @phpstan-ignore return.type
             ->forRun($runId)
             ->ordered()
             ->get();

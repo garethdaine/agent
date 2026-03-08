@@ -49,7 +49,7 @@ class InterrogationSessionController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = $request->user()->interrogationSessions()->newQuery();
+        $query = InterrogationSession::query()->where('user_id', $request->user()->id);
 
         $deleted = $request->string('deleted')->toString();
         if ($deleted === '1' || $deleted === 'true') {
@@ -85,7 +85,9 @@ class InterrogationSessionController extends Controller
         $perPage = min(100, max(1, (int) $request->integer('per_page', 25)));
         $sessions = $query->latest()->paginate($perPage)->withQueryString();
 
-        $data = collect($sessions->items())
+        /** @var \Illuminate\Support\Collection<int, InterrogationSession> $items */
+        $items = collect($sessions->items());
+        $data = $items
             ->map(fn (InterrogationSession $session): array => $this->transformSession($session, false))
             ->values();
 
@@ -115,7 +117,8 @@ class InterrogationSessionController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $session = $request->user()->interrogationSessions()->withTrashed()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::withTrashed()->where('user_id', $request->user()->id)->findOrFail($id);
         $includeEvents = $request->boolean('include_events', false);
 
         $data = $this->transformSession($session, true);
@@ -127,7 +130,7 @@ class InterrogationSessionController extends Controller
                 ->get()
                 ->sortBy('sequence')
                 ->values()
-                ->map(fn ($event): array => [
+                ->map(fn (InterrogationEvent $event): array => [
                     'id' => $event->id,
                     'sequence' => $event->sequence,
                     'event_type' => $event->event_type,
@@ -152,7 +155,9 @@ class InterrogationSessionController extends Controller
             $metadata['git'] = $this->normalizeGitSettings($gitInput);
         }
 
-        $session = $request->user()->interrogationSessions()->create([
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::query()->create([
+            'user_id' => $request->user()->id,
             'name' => $validated['name'] ?? null,
             'runner_type' => $validated['runner_type'],
             'model' => $validated['model'] ?? null,
@@ -192,7 +197,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->withTrashed()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::withTrashed()->where('user_id', $request->user()->id)->findOrFail($id);
         $validated = $request->validated();
         $before = [
             'name' => $session->name,
@@ -269,7 +275,8 @@ class InterrogationSessionController extends Controller
 
     public function gitBranches(Request $request, int $id): JsonResponse
     {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         $projectDirectory = (string) $session->project_directory;
 
         return $this->resolveGitBranches($projectDirectory);
@@ -331,7 +338,8 @@ class InterrogationSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if ((int) $session->phase === InterrogationSession::PHASE_TECH_STACK_SETUP) {
             return $this->startDiscovery($request, $id, $transitions, $auditLogger);
@@ -399,7 +407,8 @@ class InterrogationSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if ((int) $session->phase < InterrogationSession::PHASE_TECH_STACK_SETUP) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Pre-discovery setup must reach tech stack step before starting discovery.', 409);
@@ -465,7 +474,8 @@ class InterrogationSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if (in_array($session->status, InterrogationSession::TERMINAL_STATUSES, true)) {
             if ($this->shouldAutoRecoverInterruptedFailedSession($session)) {
@@ -527,7 +537,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         $validated = $request->validated();
         $questionId = (string) ($validated['question_id'] ?? 'unknown');
@@ -573,7 +584,8 @@ class InterrogationSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         $summary = $this->normalizedSummaryJson($session, true);
 
         if ($summary === []) {
@@ -634,7 +646,8 @@ class InterrogationSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if ((int) $session->phase !== InterrogationSession::PHASE_SUMMARY) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is not in summary phase.', 409);
@@ -692,7 +705,8 @@ class InterrogationSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if ((int) $session->phase !== InterrogationSession::PHASE_SUMMARY) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is not in summary phase.', 409);
@@ -778,7 +792,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if ((int) $session->phase < InterrogationSession::PHASE_PLANNING || in_array($session->status, [InterrogationSession::STATUS_FAILED], true)) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is not ready to generate a plan.', 409);
@@ -812,7 +827,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         if ((int) $session->phase !== InterrogationSession::PHASE_PLANNING) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Plan regeneration is only available during planning phase.', 409);
         }
@@ -882,7 +898,8 @@ class InterrogationSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if ((int) $session->phase > InterrogationSession::PHASE_PLANNING && $session->approved_at !== null) {
             return response()->json([
@@ -1018,7 +1035,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         if ((int) $session->phase !== InterrogationSession::PHASE_PLANNING) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Plan revision is only available during planning phase.', 409);
         }
@@ -1095,7 +1113,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if (
             ! in_array((int) $session->phase, [InterrogationSession::PHASE_BUILD_RULES, InterrogationSession::PHASE_BUILD_TASKS], true)
@@ -1176,7 +1195,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         if ($conflict = $this->buildTaskEditingConflict($session)) {
             return $conflict;
         }
@@ -1194,6 +1214,7 @@ class InterrogationSessionController extends Controller
             ]);
         }
 
+        /** @var InterrogationBuildTask $task */
         $task = InterrogationBuildTask::query()->create([
             'interrogation_session_id' => (int) $session->id,
             'sequence' => ((int) ($session->buildTasks()->max('sequence') ?? 0)) + 1,
@@ -1238,7 +1259,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         if ($conflict = $this->buildTaskEditingConflict($session)) {
             return $conflict;
         }
@@ -1335,11 +1357,13 @@ class InterrogationSessionController extends Controller
         int $taskId,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         if ($conflict = $this->buildTaskEditingConflict($session)) {
             return $conflict;
         }
 
+        /** @var InterrogationBuildTask $task */
         $task = $session->buildTasks()->whereKey($taskId)->firstOrFail();
 
         $validated = $request->validate([
@@ -1418,11 +1442,13 @@ class InterrogationSessionController extends Controller
         int $taskId,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         if ($conflict = $this->buildTaskEditingConflict($session)) {
             return $conflict;
         }
 
+        /** @var InterrogationBuildTask $task */
         $task = $session->buildTasks()->whereKey($taskId)->firstOrFail();
         $deletedTaskId = (int) $task->id;
 
@@ -1455,11 +1481,13 @@ class InterrogationSessionController extends Controller
         int $taskId,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         if ($conflict = $this->buildTaskEditingConflict($session)) {
             return $conflict;
         }
 
+        /** @var InterrogationBuildTask $task */
         $task = $session->buildTasks()->whereKey($taskId)->firstOrFail();
 
         $validated = $request->validate([
@@ -1521,7 +1549,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if ((int) $session->phase !== InterrogationSession::PHASE_BUILD_TASKS) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build task approval is only available from build tasks phase.', 409);
@@ -1602,7 +1631,8 @@ class InterrogationSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if (! in_array((int) $session->phase, [InterrogationSession::PHASE_BUILD_TASKS, InterrogationSession::PHASE_BUILD_EXECUTION], true)) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build can only start from build phases.', 409);
@@ -1752,7 +1782,8 @@ class InterrogationSessionController extends Controller
         RunStateTransitionService $runTransitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if ((int) $session->phase !== InterrogationSession::PHASE_BUILD_EXECUTION) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build execution is not active.', 409);
@@ -1779,6 +1810,9 @@ class InterrogationSessionController extends Controller
         $build['pause_reason'] = 'user';
         $build['paused_at'] = CarbonImmutable::now('UTC')->toIso8601String();
         $build['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
+
+        /** @var InterrogationBuildTask|null $activeTask */
+
 
         $activeTask = $session->buildTasks()
             ->with('run')
@@ -1832,7 +1866,8 @@ class InterrogationSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if ((int) $session->phase !== InterrogationSession::PHASE_BUILD_EXECUTION) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build execution is not active.', 409);
@@ -1928,7 +1963,8 @@ class InterrogationSessionController extends Controller
         RunStateTransitionService $runTransitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if ((int) $session->phase !== InterrogationSession::PHASE_BUILD_EXECUTION) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Build clarification is only available during build execution.', 409);
@@ -1942,6 +1978,7 @@ class InterrogationSessionController extends Controller
         $message = trim((string) $validated['message']);
 
         $targetTaskId = isset($validated['task_id']) ? (int) $validated['task_id'] : null;
+        /** @var InterrogationBuildTask|null $targetTask */
         $targetTask = $targetTaskId !== null
             ? $session->buildTasks()->with('run')->whereKey($targetTaskId)->first()
             : $session->buildTasks()
@@ -2037,7 +2074,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         $validated = $request->validated();
 
         $annotations = (array) ($session->annotations_json ?? []);
@@ -2069,7 +2107,8 @@ class InterrogationSessionController extends Controller
 
     public function exportSummary(Request $request, int $id, ExportService $exportService): JsonResponse
     {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         $summary = $this->normalizedSummaryJson($session, true);
         if ($summary === []) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Summary is not available for export.', 409);
@@ -2086,7 +2125,8 @@ class InterrogationSessionController extends Controller
 
     public function exportPlan(Request $request, int $id, ExportService $exportService): JsonResponse
     {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if (! is_array($session->plan_json) || $session->plan_json === []) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Plan is not available for export.', 409);
@@ -2106,7 +2146,8 @@ class InterrogationSessionController extends Controller
         int $id,
         SessionStateTransitionService $transitions,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         $transitioned = $transitions->transition(
             (int) $session->id,
@@ -2133,7 +2174,8 @@ class InterrogationSessionController extends Controller
         int $id,
         SessionStateTransitionService $transitions,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         if (! in_array($session->status, InterrogationSession::RESUMABLE_STATUSES, true)) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot be resumed from its current state.', 409);
@@ -2179,7 +2221,8 @@ class InterrogationSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->withTrashed()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::withTrashed()->where('user_id', $request->user()->id)->findOrFail($id);
 
         if ($session->trashed()) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is deleted. Restore it before retrying.', 409);
@@ -2299,7 +2342,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->withTrashed()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::withTrashed()->where('user_id', $request->user()->id)->findOrFail($id);
 
         if ($session->trashed()) {
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session is deleted. Restore it before restarting.', 409);
@@ -2368,8 +2412,9 @@ class InterrogationSessionController extends Controller
             ->orderByDesc('sequence')
             ->get();
 
+        /** @var InterrogationEvent $questionEvent */
         foreach ($questions as $questionEvent) {
-            $payload = is_array($questionEvent->payload) ? $questionEvent->payload : [];
+            $payload = (array) $questionEvent->payload;
             if (! $this->isAnswerableQuestionPayload($payload)) {
                 continue;
             }
@@ -2442,7 +2487,7 @@ class InterrogationSessionController extends Controller
         $guard = new QuestionPayloadGuard;
         $validation = $guard->validate($payload);
 
-        return (bool) ($validation['valid'] ?? false);
+        return (bool) $validation['valid'];
     }
 
     public function cleanupInvalidQuestions(
@@ -2450,7 +2495,8 @@ class InterrogationSessionController extends Controller
         int $id,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         $pruned = $this->pruneInvalidQuestionEvents($session);
         $queue = $this->sanitizeSummaryOpenQuestionQueue($session);
         $dispatched = false;
@@ -2548,8 +2594,9 @@ class InterrogationSessionController extends Controller
         $removeQuestionEventIds = [];
         $removeQuestionIds = [];
 
+        /** @var InterrogationEvent $questionEvent */
         foreach ($questionEvents as $questionEvent) {
-            $payload = is_array($questionEvent->payload) ? $questionEvent->payload : [];
+            $payload = (array) $questionEvent->payload;
 
             if (! $this->shouldRemoveQuestionPayload($payload)) {
                 continue;
@@ -2578,8 +2625,9 @@ class InterrogationSessionController extends Controller
                 ->get(['id', 'payload']);
 
             $removeAnswerEventIds = [];
+            /** @var InterrogationEvent $answerEvent */
             foreach ($answerEvents as $answerEvent) {
-                $payload = is_array($answerEvent->payload) ? $answerEvent->payload : [];
+                $payload = (array) $answerEvent->payload;
                 $questionId = trim((string) ($payload['question_id'] ?? ''));
                 if ($questionId === '' || ! isset($removeQuestionIds[$questionId])) {
                     continue;
@@ -2604,7 +2652,7 @@ class InterrogationSessionController extends Controller
         return [
             'removed_question_events' => (int) $removedQuestionEvents,
             'removed_answer_events' => (int) $removedAnswerEvents,
-            'removed_question_ids' => array_values(array_keys($removeQuestionIds)),
+            'removed_question_ids' => array_keys($removeQuestionIds),
         ];
     }
 
@@ -2709,8 +2757,8 @@ class InterrogationSessionController extends Controller
             ];
         }
 
-        $queue['pending_questions'] = array_values($pending);
-        $queue['asked_questions'] = array_values($asked);
+        $queue['pending_questions'] = $pending;
+        $queue['asked_questions'] = $asked;
         $activeCount = isset($queue['active_open_question']) ? 1 : 0;
         $queue['total'] = max(1, count($queue['pending_questions']) + count($queue['asked_questions']) + $activeCount);
         $queue['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
@@ -2731,9 +2779,9 @@ class InterrogationSessionController extends Controller
 
     public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
         $session->delete();
-
         $auditLogger->recordUserAction(
             request: $request,
             action: 'interrogation.session.delete',
@@ -2750,7 +2798,8 @@ class InterrogationSessionController extends Controller
 
     public function restore(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $session = $request->user()->interrogationSessions()->withTrashed()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::withTrashed()->where('user_id', $request->user()->id)->findOrFail($id);
         $session->restore();
 
         $auditLogger->recordUserAction(
@@ -2769,7 +2818,8 @@ class InterrogationSessionController extends Controller
 
     public function events(Request $request, int $id): JsonResponse
     {
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        /** @var \App\Models\InterrogationSession $session */
+        $session = InterrogationSession::where('user_id', $request->user()->id)->findOrFail($id);
 
         $after = max(0, (int) $request->integer('after_sequence', 0));
         $limit = min(500, max(1, (int) $request->integer('limit', 100)));
@@ -2782,10 +2832,12 @@ class InterrogationSessionController extends Controller
 
         $hasMore = $events->count() > $limit;
         $returned = $events->take($limit)->values();
-        $nextAfter = $returned->last()?->sequence ?? $after;
+        /** @var InterrogationEvent|null $lastEvent */
+        $lastEvent = $returned->last();
+        $nextAfter = $lastEvent->sequence ?? $after;
 
         return response()->json([
-            'data' => $returned->map(fn ($event): array => [
+            'data' => $returned->map(fn (InterrogationEvent $event): array => [
                 'id' => $event->id,
                 'session_id' => $event->interrogation_session_id,
                 'sequence' => $event->sequence,
@@ -2903,10 +2955,13 @@ class InterrogationSessionController extends Controller
      */
     private function taskProviderPayloads(InterrogationSession $session): array
     {
-        return $session->providerIntegrations()
+        /** @var \Illuminate\Database\Eloquent\Collection<int, ConnectedProvider> $providers */
+        $providers = $session->providerIntegrations()
             ->where('category', 'task_management')
             ->orderBy('id')
-            ->get()
+            ->get();
+
+        return $providers
             ->map(function (ConnectedProvider $provider): array {
                 $metadata = is_array($provider->metadata_json) ? $provider->metadata_json : [];
                 $identity = is_array($metadata['identity'] ?? null) ? $metadata['identity'] : [];
@@ -2995,7 +3050,7 @@ class InterrogationSessionController extends Controller
     private function techStackPayloads(InterrogationSession $session): array
     {
         return $session->techStacks()
-            ->ordered()
+            ->ordered() // @phpstan-ignore method.notFound
             ->get()
             ->map(fn ($stack): array => [
                 'id' => $stack->id,
@@ -3021,7 +3076,6 @@ class InterrogationSessionController extends Controller
         if (! $includeDetails) {
             $projectRules = $this->normalizedProjectRules((array) ($build['project_rules'] ?? []));
             $taskProviderSync = is_array($build['task_provider_sync'] ?? null) ? $build['task_provider_sync'] : [];
-
             return [
                 'status' => $status,
                 'summary' => [
@@ -3181,7 +3235,7 @@ class InterrogationSessionController extends Controller
     private function effectiveBuildRunStatus(AgentJobRun $run, ?InterrogationBuildTask $activeTask, array $flags): string
     {
         $runStatus = Str::lower(trim((string) $run->status));
-        $taskStatus = Str::lower(trim((string) ($activeTask?->status ?? '')));
+        $taskStatus = Str::lower(trim((string) ($activeTask->status ?? '')));
 
         if ($taskStatus === InterrogationBuildTask::STATUS_FAILED) {
             return 'failed_task';
@@ -3443,7 +3497,7 @@ class InterrogationSessionController extends Controller
 
         return [
             'provided' => $provided,
-            'rules' => array_values(array_merge($rules, $uploadRules)),
+            'rules' => array_merge($rules, $uploadRules),
         ];
     }
 
@@ -3512,7 +3566,7 @@ class InterrogationSessionController extends Controller
             ];
         }
 
-        return array_values($normalized);
+        return $normalized;
     }
 
     /**
@@ -3567,7 +3621,7 @@ class InterrogationSessionController extends Controller
             ];
         }
 
-        return array_values($normalized);
+        return $normalized;
     }
 
     private function hasMeaningfulPlan(InterrogationSession $session): bool
@@ -3579,7 +3633,7 @@ class InterrogationSessionController extends Controller
         $guard = new PlanPayloadGuard;
         $validation = $guard->validate($session->plan_json);
 
-        return (bool) ($validation['valid'] ?? false);
+        return (bool) $validation['valid'];
     }
 
     /**
@@ -3637,7 +3691,7 @@ class InterrogationSessionController extends Controller
         return null;
     }
 
-    private function secondsSinceReference(mixed $reference, CarbonImmutable $now): ?int
+    private function secondsSinceReference(mixed $reference, CarbonImmutable $now): float|null
     {
         if ($reference === null) {
             return null;
@@ -3690,7 +3744,7 @@ class InterrogationSessionController extends Controller
             ];
         }
 
-        return array_values($normalized);
+        return $normalized;
     }
 
     /**
@@ -3813,6 +3867,7 @@ class InterrogationSessionController extends Controller
         return true;
     }
 
+    /** @phpstan-ignore method.unused */
     private function summaryOpenQuestionPrompt(string $openQuestion, int $ordinal, int $total, string $focus): string
     {
         return app(SummaryOpenQuestionQueueService::class)->buildPrompt($openQuestion, $ordinal, $total, $focus);
@@ -3945,12 +4000,13 @@ class InterrogationSessionController extends Controller
         }
 
         $questionsById = [];
+        /** @var InterrogationEvent $event */
         foreach ($events as $event) {
             if ($event->event_type !== InterrogationEvent::TYPE_QUESTION) {
                 continue;
             }
 
-            $payload = is_array($event->payload) ? $event->payload : [];
+            $payload = (array) $event->payload;
             $questionId = trim((string) ($payload['question_id'] ?? ''));
             if ($questionId === '') {
                 continue;
@@ -3971,12 +4027,13 @@ class InterrogationSessionController extends Controller
         $resolvedFingerprints = [];
         $resolvedOpenQuestionIndexes = [];
         $resolvedOpenQuestionOrdinals = [];
+        /** @var InterrogationEvent $event */
         foreach ($events as $event) {
             if ($event->event_type !== InterrogationEvent::TYPE_ANSWER) {
                 continue;
             }
 
-            $payload = is_array($event->payload) ? $event->payload : [];
+            $payload = (array) $event->payload;
             $answerType = strtolower(trim((string) ($payload['answer_type'] ?? '')));
             if ($answerType === 'skip') {
                 continue;
@@ -4097,7 +4154,7 @@ class InterrogationSessionController extends Controller
             return null;
         }
 
-        $ordinal = (int) ($matches[1] ?? 0);
+        $ordinal = (int) $matches[1];
 
         return $ordinal > 0 ? $ordinal : null;
     }
@@ -4113,7 +4170,7 @@ class InterrogationSessionController extends Controller
             return null;
         }
 
-        $ordinal = (int) ($matches[1] ?? 0);
+        $ordinal = (int) $matches[1];
 
         return $ordinal > 0 ? $ordinal : null;
     }
@@ -4129,7 +4186,7 @@ class InterrogationSessionController extends Controller
             return null;
         }
 
-        $ordinal = (int) ($matches[1] ?? 0);
+        $ordinal = (int) $matches[1];
 
         return $ordinal > 0 ? $ordinal : null;
     }

@@ -9,6 +9,28 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $interrogation_session_id
+ * @property int $sequence
+ * @property \App\Enums\TaskCategory $task_category
+ * @property string $title
+ * @property string|null $description
+ * @property string|null $instructions_markdown
+ * @property string $status
+ * @property int $attempt_count
+ * @property int|null $agent_job_run_id
+ * @property string|null $last_error
+ * @property array|null $metadata_json
+ * @property \Carbon\CarbonInterface|null $started_at
+ * @property \Carbon\CarbonInterface|null $finished_at
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\InterrogationSession|null $session
+ * @property-read \App\Models\AgentJobRun|null $run
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
+ */
 class InterrogationBuildTask extends Model
 {
     protected $fillable = [

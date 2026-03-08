@@ -10,7 +10,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * @mixin Builder
+ * @property int $id
+ * @property int $delegation_graph_id
+ * @property int|null $delegation_task_id
+ * @property string $event_type
+ * @property int $sequence
+ * @property array|null $payload_json
+ * @property \Carbon\CarbonInterface|null $event_ts
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property-read \App\Models\DelegationGraph|null $graph
+ * @property-read \App\Models\DelegationTask|null $task
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class DelegationEvent extends Model
 {

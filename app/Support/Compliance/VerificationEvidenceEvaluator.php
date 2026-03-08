@@ -69,7 +69,7 @@ class VerificationEvidenceEvaluator
      */
     public function getRequirements(TaskCategory $category): array
     {
-        return self::REQUIREMENTS[$category->value] ?? self::REQUIREMENTS['custom'];
+        return self::REQUIREMENTS[$category->value] ?? self::REQUIREMENTS['custom']; // @phpstan-ignore nullCoalesce.offset
     }
 
     /**

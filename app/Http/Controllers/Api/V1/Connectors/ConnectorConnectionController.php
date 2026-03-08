@@ -34,6 +34,7 @@ class ConnectorConnectionController extends Controller
         $this->ensureConnectorsEnabled();
 
         $connector = AgentConnector::findOrFail($id);
+        /** @var \App\Models\User $user */
         $user = $request->user();
         $team = $user->currentTeam;
 
@@ -89,6 +90,7 @@ class ConnectorConnectionController extends Controller
     {
         $this->ensureConnectorsEnabled();
 
+        /** @var \App\Models\User $user */
         $user = $request->user();
         $team = $user->currentTeam;
 
@@ -116,6 +118,7 @@ class ConnectorConnectionController extends Controller
     {
         $this->ensureConnectorsEnabled();
 
+        /** @var \App\Models\User $user */
         $user = $request->user();
         $team = $user->currentTeam;
 
@@ -161,6 +164,7 @@ class ConnectorConnectionController extends Controller
     {
         $this->ensureConnectorsEnabled();
 
+        /** @var \App\Models\User $user */
         $user = $request->user();
         $team = $user->currentTeam;
 

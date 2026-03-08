@@ -12,7 +12,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * @mixin Builder
+ * @property string $id
+ * @property int $user_id
+ * @property string $connector_account_id
+ * @property string $provider
+ * @property string $channel_id
+ * @property string|null $thread_id
+ * @property string $status
+ * @property \Carbon\CarbonInterface|null $created_at
+ * @property \Carbon\CarbonInterface|null $updated_at
+ * @property string|null $compaction_summary
+ * @property int $compaction_message_count
+ * @property \Carbon\CarbonInterface|null $compaction_at
+ * @property string|null $compaction_boundary_message_id
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\ConnectorAccount|null $connectorAccount
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ChatMessage> $messages
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PendingConfirmation> $pendingConfirmations
+ *
+ * @mixin \Illuminate\Database\Eloquent\Builder
  */
 class ChatSession extends Model
 {

@@ -67,7 +67,7 @@ class ConnectorCostAttributor
         }
 
         $connection = $this->resolveConnection($invocation);
-        $usedCount = $connection?->action_count_24h ?? 0;
+        $usedCount = $connection->action_count_24h ?? 0;
 
         return max(0, (int) $dailyLimit - (int) $usedCount);
     }

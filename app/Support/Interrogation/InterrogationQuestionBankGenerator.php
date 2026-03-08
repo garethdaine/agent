@@ -70,7 +70,7 @@ class InterrogationQuestionBankGenerator
             ->limit(30)
             ->get(['payload'])
             ->map(function (InterrogationEvent $event): string {
-                $payload = is_array($event->payload) ? $event->payload : [];
+                $payload = is_array($event->payload) ? $event->payload : []; // @phpstan-ignore function.alreadyNarrowedType
 
                 return trim((string) ($payload['message'] ?? ''));
             })
