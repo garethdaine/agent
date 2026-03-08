@@ -22,7 +22,19 @@ class ConnectorAccount extends Model
     use HasUuids;
     use SoftDeletes;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'provider',
+        'name',
+        'credentials',
+        'webhook_secret',
+        'connection_mode',
+        'status',
+        'runtime_state',
+        'last_health_check_at',
+        'runtime_error_message',
+        'config',
+        'account_key',
+    ];
 
     protected $hidden = [
         'credentials',

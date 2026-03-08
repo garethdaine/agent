@@ -18,7 +18,17 @@ class PendingConfirmation extends Model
 
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'chat_action_id',
+        'chat_session_id',
+        'connector_account_id',
+        'confirmation_token',
+        'provider_message_id',
+        'callback_data',
+        'expires_at',
+        'confirmed_at',
+        'cancelled_at',
+    ];
 
     protected function casts(): array
     {

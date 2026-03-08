@@ -16,7 +16,13 @@ class CredentialVault extends Model
 
     protected $table = 'credential_vault';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'provider',
+        'key',
+        'encrypted_value',
+        'metadata',
+    ];
 
     protected $hidden = ['encrypted_value'];
 

@@ -9,7 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InterrogationSetting extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'key',
+        'value',
+    ];
 
     protected function casts(): array
     {

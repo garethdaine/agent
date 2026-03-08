@@ -40,7 +40,29 @@ class AgentJobRun extends Model
 
     public const TERMINAL_STATUSES = ['succeeded', 'failed', 'killed', 'timed_out', 'skipped'];
 
-    protected $guarded = [];
+    protected $fillable = [
+        'agent_job_id',
+        'user_id',
+        'initiated_by_user_id',
+        'trigger_type',
+        'due_window_utc_minute',
+        'status',
+        'pid',
+        'resolved_executable_path',
+        'started_at',
+        'finished_at',
+        'exit_code',
+        'signal',
+        'duration_ms',
+        'stdout_bytes_pre',
+        'stdout_bytes_post',
+        'stderr_bytes_pre',
+        'stderr_bytes_post',
+        'error_summary',
+        'error_code',
+        'metadata_json',
+        'star_ab_group',
+    ];
 
     protected function casts(): array
     {

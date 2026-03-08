@@ -43,6 +43,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\Process\Process;
 
 class InterrogationSessionController extends Controller
 {
@@ -145,6 +146,12 @@ class InterrogationSessionController extends Controller
     ): JsonResponse {
         $validated = $request->validated();
 
+        $metadata = ['source' => 'ui'];
+        $gitInput = $validated['git'] ?? null;
+        if (is_array($gitInput) && $gitInput !== []) {
+            $metadata['git'] = $this->normalizeGitSettings($gitInput);
+        }
+
         $session = $request->user()->interrogationSessions()->create([
             'name' => $validated['name'] ?? null,
             'runner_type' => $validated['runner_type'],
@@ -154,10 +161,15 @@ class InterrogationSessionController extends Controller
             'feature_brief' => $validated['feature_brief'] ?? null,
             'status' => InterrogationSession::STATUS_SETUP,
             'phase' => InterrogationSession::PHASE_SETUP,
-            'metadata_json' => [
-                'source' => 'ui',
-            ],
+            'metadata_json' => $metadata,
         ]);
+
+        $afterSnapshot = $session->only(['id', 'name', 'runner_type', 'model', 'project_directory', 'interrogation_type', 'status', 'phase']);
+        $changedFields = ['name', 'runner_type', 'model', 'project_directory', 'interrogation_type', 'feature_brief', 'status', 'phase'];
+        if (isset($metadata['git'])) {
+            $changedFields[] = 'git_settings';
+            $afterSnapshot['git_settings'] = $session->gitSettings();
+        }
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -165,9 +177,9 @@ class InterrogationSessionController extends Controller
             targetType: 'interrogation_session',
             targetId: (int) $session->id,
             ownerUserId: (int) $session->user_id,
-            changedFields: ['name', 'runner_type', 'model', 'project_directory', 'interrogation_type', 'feature_brief', 'status', 'phase'],
+            changedFields: $changedFields,
             before: null,
-            after: $session->only(['id', 'name', 'runner_type', 'model', 'project_directory', 'interrogation_type', 'status', 'phase']),
+            after: $afterSnapshot,
         );
 
         return response()->json([
@@ -186,6 +198,7 @@ class InterrogationSessionController extends Controller
             'name' => $session->name,
             'feature_brief' => $session->feature_brief,
             'model' => $session->model,
+            'git_settings' => $session->gitSettings(),
         ];
 
         if (array_key_exists('name', $validated)) {
@@ -200,6 +213,14 @@ class InterrogationSessionController extends Controller
             $session->model = $validated['model'];
         }
 
+        if (array_key_exists('git', $validated)) {
+            $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+            $existingGit = is_array($metadata['git'] ?? null) ? $metadata['git'] : [];
+            $incomingGit = is_array($validated['git']) ? $validated['git'] : [];
+            $metadata['git'] = $this->normalizeGitSettings(array_merge($existingGit, $incomingGit));
+            $session->metadata_json = $metadata;
+        }
+
         $session->save();
 
         $changedFields = [];
@@ -211,6 +232,9 @@ class InterrogationSessionController extends Controller
         }
         if ($before['model'] !== $session->model) {
             $changedFields[] = 'model';
+        }
+        if ($before['git_settings'] !== $session->gitSettings()) {
+            $changedFields[] = 'git_settings';
         }
 
         if ($changedFields !== []) {
@@ -226,12 +250,66 @@ class InterrogationSessionController extends Controller
                     'name' => $session->name,
                     'feature_brief' => $session->feature_brief,
                     'model' => $session->model,
+                    'git_settings' => $session->gitSettings(),
                 ],
             );
         }
 
         return response()->json([
             'data' => $this->transformSession($session, false),
+        ]);
+    }
+
+    public function gitBranches(Request $request, int $id): JsonResponse
+    {
+        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        $projectDirectory = (string) $session->project_directory;
+
+        if ($projectDirectory === '' || ! is_dir($projectDirectory)) {
+            return ErrorEnvelope::make('INVALID_DIRECTORY', 'Session project directory does not exist.', 422);
+        }
+
+        $gitDir = rtrim($projectDirectory, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'.git';
+        if (! is_dir($gitDir) && ! is_file($gitDir)) {
+            return ErrorEnvelope::make('NOT_A_GIT_REPO', 'Session project directory is not a git repository.', 422);
+        }
+
+        $process = new Process(
+            ['git', 'branch', '--list', '--format=%(refname:short)'],
+            $projectDirectory
+        );
+        $process->setTimeout(10);
+
+        try {
+            $process->run();
+        } catch (\Throwable $e) {
+            return ErrorEnvelope::make('GIT_COMMAND_FAILED', 'Failed to list git branches: '.$e->getMessage(), 500);
+        }
+
+        if (! $process->isSuccessful()) {
+            return ErrorEnvelope::make('GIT_COMMAND_FAILED', 'Failed to list git branches.', 500);
+        }
+
+        $output = trim($process->getOutput());
+        $branches = $output !== '' ? array_values(array_filter(
+            array_map('trim', explode("\n", $output)),
+            fn (string $b): bool => $b !== ''
+        )) : [];
+
+        $headProcess = new Process(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            $projectDirectory
+        );
+        $headProcess->setTimeout(5);
+        $headProcess->run();
+        $currentBranch = trim($headProcess->getOutput());
+
+        return response()->json([
+            'data' => [
+                'branches' => $branches,
+                'current_branch' => $currentBranch !== '' ? $currentBranch : null,
+                'project_directory' => $projectDirectory,
+            ],
         ]);
     }
 
@@ -2737,6 +2815,7 @@ class InterrogationSessionController extends Controller
             'approved_at' => $this->toRfc3339Millis($session->approved_at),
             'annotations_json' => $session->annotations_json,
             'metadata_json' => $session->metadata_json,
+            'git_settings' => $session->gitSettings(),
             'task_providers' => $this->taskProviderPayloads($session),
             'tech_stacks' => $this->techStackPayloads($session),
             'error_code' => $session->error_code,
@@ -2767,6 +2846,27 @@ class InterrogationSessionController extends Controller
      * @param  array<string, mixed>  $metadata
      * @return array<string, mixed>
      */
+    /**
+     * @param  array<string, mixed>  $raw
+     * @return array<string, mixed>
+     */
+    private function normalizeGitSettings(array $raw): array
+    {
+        return [
+            'commit_enabled' => (bool) ($raw['commit_enabled'] ?? false),
+            'conventional_commits' => (bool) ($raw['conventional_commits'] ?? false),
+            'worktree_enabled' => (bool) ($raw['worktree_enabled'] ?? false),
+            'branching_enabled' => (bool) ($raw['branching_enabled'] ?? false),
+            'branch_prefix' => is_string($raw['branch_prefix'] ?? null) && trim($raw['branch_prefix']) !== ''
+                ? trim($raw['branch_prefix'])
+                : null,
+            'target_branch' => is_string($raw['target_branch'] ?? null) && trim($raw['target_branch']) !== ''
+                ? trim($raw['target_branch'])
+                : null,
+            'updated_at' => \Carbon\CarbonImmutable::now('UTC')->toIso8601String(),
+        ];
+    }
+
     private function extractComplianceData(array $metadata): array
     {
         $complianceKeys = [

@@ -12,7 +12,13 @@ use Stringable;
 
 class InterrogationEvent extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'interrogation_session_id',
+        'event_type',
+        'sequence',
+        'payload',
+        'event_ts',
+    ];
 
     public const TYPE_DISCOVERY_ACTIVITY = 'discovery_activity';
 

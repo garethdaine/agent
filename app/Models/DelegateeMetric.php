@@ -16,7 +16,12 @@ class DelegateeMetric extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'delegatee_profile_id',
+        'window_24h_json',
+        'window_7d_json',
+        'last_recomputed_at',
+    ];
 
     protected function casts(): array
     {

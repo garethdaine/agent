@@ -58,4 +58,21 @@ class InterrogationSessionFactory extends Factory
             'phase' => InterrogationSession::PHASE_PLANNING,
         ]);
     }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    public function withGitSettings(array $overrides = []): static
+    {
+        $defaults = [
+            'commit_enabled' => false,
+            'conventional_commits' => false,
+            'worktree_enabled' => false,
+            'branching_enabled' => false,
+            'branch_prefix' => null,
+            'target_branch' => null,
+        ];
+
+        return $this->withMetadata(['git' => array_merge($defaults, $overrides)]);
+    }
 }

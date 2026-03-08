@@ -10,7 +10,11 @@ class SchedulerHeartbeat extends Model
 {
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'source',
+        'last_seen_at',
+        'meta_json',
+    ];
 
     protected function casts(): array
     {

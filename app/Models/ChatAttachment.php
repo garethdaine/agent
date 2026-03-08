@@ -18,7 +18,17 @@ class ChatAttachment extends Model
 
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'chat_message_id',
+        'filename',
+        'mime_type',
+        'size_bytes',
+        'storage_path',
+        'provider_file_id',
+        'scan_status',
+        'expires_at',
+        'created_at',
+    ];
 
     public const SCAN_STATUS_PENDING = 'pending';
 

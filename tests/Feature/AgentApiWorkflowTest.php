@@ -379,7 +379,7 @@ class AgentApiWorkflowTest extends TestCase
             ]);
 
             $makeRun = function (string $status, CarbonImmutable $createdAt, int $durationMs = 0) use ($job, $user): void {
-                AgentJobRun::query()->create([
+                AgentJobRun::query()->forceCreate([
                     'agent_job_id' => $job->id,
                     'user_id' => $user->id,
                     'initiated_by_user_id' => $user->id,

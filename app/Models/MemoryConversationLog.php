@@ -19,7 +19,18 @@ class MemoryConversationLog extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'run_id',
+        'job_id',
+        'runtime_session_id',
+        'role',
+        'content',
+        'sequence',
+        'event_type',
+        'classification',
+        'created_at',
+    ];
 
     /**
      * The name of the "updated at" column.

@@ -415,9 +415,12 @@ class RunEventWriter
         $patterns = [
             '/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/m' => '[REDACTED_PRIVATE_KEY]',
             '/\bBearer\s+[A-Za-z0-9._\-]+\b/i' => '[REDACTED_BEARER_TOKEN]',
+            '/\bsk-[a-zA-Z0-9]{20,}\b/' => '[REDACTED_API_KEY]',
+            '/\bAKIA[A-Z0-9]{16}\b/' => '[REDACTED_AWS_KEY]',
             '/\b(?:api[_-]?key|apikey)\s*[:=]\s*[^\s,;]+/i' => '[REDACTED_API_KEY]',
             '/\b(?:password|passwd|pwd)\s*[:=]\s*[^\s,;]+/i' => '[REDACTED_PASSWORD]',
             '/\b(?:secret|token|credential)\s*[:=]\s*[^\s,;]+/i' => '[REDACTED]',
+            '/[\w.\-+]+@[\w.\-]+\.[a-zA-Z]{2,}/' => '[REDACTED_EMAIL]',
         ];
 
         foreach ($patterns as $pattern => $replacement) {

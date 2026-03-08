@@ -21,7 +21,7 @@ class InterrogationCodexAdapterCommandTest extends TestCase
             $_ENV['SAFE_KEEP'] = 'yes';
 
             $adapter = new CodexAdapter;
-            $session = new InterrogationSession(['id' => 42]);
+            $session = (new InterrogationSession)->forceFill(['id' => 42]);
 
             $env = $adapter->buildEnvironment($session);
 
@@ -91,7 +91,7 @@ class InterrogationCodexAdapterCommandTest extends TestCase
     public function test_question_command_uses_schema_file_path_for_codex_cli(): void
     {
         $adapter = new CodexAdapter;
-        $session = new InterrogationSession(['id' => 99, 'cli_session_id' => null]);
+        $session = (new InterrogationSession)->forceFill(['id' => 99, 'cli_session_id' => null]);
 
         $command = $adapter->buildQuestionCommand($session, 'Ask first question', 'system');
 
@@ -117,7 +117,7 @@ class InterrogationCodexAdapterCommandTest extends TestCase
     public function test_question_command_uses_exec_resume_when_session_id_exists(): void
     {
         $adapter = new CodexAdapter;
-        $session = new InterrogationSession(['id' => 99, 'cli_session_id' => 'session-123']);
+        $session = (new InterrogationSession)->forceFill(['id' => 99, 'cli_session_id' => 'session-123']);
 
         $command = $adapter->buildQuestionCommand($session, 'Ask next question', 'system');
 
@@ -133,7 +133,7 @@ class InterrogationCodexAdapterCommandTest extends TestCase
         config()->set('agent.interrogation.codex_model', 'gpt-5.3-codex');
 
         $adapter = new CodexAdapter;
-        $session = new InterrogationSession(['id' => 99, 'cli_session_id' => null]);
+        $session = (new InterrogationSession)->forceFill(['id' => 99, 'cli_session_id' => null]);
 
         $command = $adapter->buildQuestionCommand($session, 'Ask next question', 'system');
 
@@ -145,7 +145,7 @@ class InterrogationCodexAdapterCommandTest extends TestCase
     public function test_question_command_composes_system_prompt_into_user_prompt(): void
     {
         $adapter = new CodexAdapter;
-        $session = new InterrogationSession(['id' => 99, 'cli_session_id' => null]);
+        $session = (new InterrogationSession)->forceFill(['id' => 99, 'cli_session_id' => null]);
 
         $command = $adapter->buildQuestionCommand($session, 'User prompt', 'System prompt');
         $finalPrompt = (string) (end($command) ?: '');

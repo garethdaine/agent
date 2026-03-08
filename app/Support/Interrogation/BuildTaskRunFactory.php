@@ -18,7 +18,8 @@ class BuildTaskRunFactory
 {
     public function __construct(
         private readonly TaskMarkdownStorage $taskMarkdownStorage,
-        private readonly OrchestrationPolicyServiceContract $policyService
+        private readonly OrchestrationPolicyServiceContract $policyService,
+        private readonly GitOperationsService $gitOperationsService,
     ) {}
 
     public function create(InterrogationSession $session, InterrogationBuildTask $task): AgentJobRun
@@ -42,6 +43,9 @@ class BuildTaskRunFactory
             $task->save();
         }
 
+        // Prepare git environment (branching, worktrees, env vars)
+        $gitPrep = $this->gitOperationsService->prepareForTask($session, $task);
+
         $markdownPath = $this->taskMarkdownStorage->persistInlineContent(
             $this->buildTaskMarkdown($session, $task),
             (int) $session->user_id,
@@ -50,7 +54,7 @@ class BuildTaskRunFactory
         $jobName = $this->buildJobName($session, $task);
 
         /** @var AgentJobRun $run */
-        $run = DB::transaction(function () use ($session, $task, $markdownPath, $commandTemplate, $jobName, $complianceMetadata): AgentJobRun {
+        $run = DB::transaction(function () use ($session, $task, $markdownPath, $commandTemplate, $jobName, $complianceMetadata, $gitPrep): AgentJobRun {
             $job = $this->resolveReusableJob($session, $task, $jobName) ?? new AgentJob([
                 'user_id' => $session->user_id,
             ]);
@@ -67,8 +71,11 @@ class BuildTaskRunFactory
             $job->runner_type = $session->runner_type;
             $job->command_template = $commandTemplate;
             $job->task_markdown_path = $markdownPath;
-            $job->working_directory = $session->project_directory;
-            $job->env_json = $this->buildIsolatedRunEnvironment($session, $task);
+            $job->working_directory = $gitPrep['working_directory'];
+            $job->env_json = array_merge(
+                $this->buildIsolatedRunEnvironment($session, $task),
+                $gitPrep['env']
+            );
             $job->save();
 
             // Merge compliance metadata into run metadata
@@ -271,6 +278,41 @@ class BuildTaskRunFactory
         $content[] = '- If repository instructions request a check-in before implementation, perform the check internally and continue execution in this same run.';
         $content[] = '- A run that exits after planning only is considered incomplete.';
         $content[] = '';
+
+        $gitSettings = $session->gitSettings();
+        if ($gitSettings['commit_enabled'] || $gitSettings['branching_enabled'] || $gitSettings['worktree_enabled']) {
+            $content[] = '## Git Operations';
+            $content[] = '';
+
+            if ($gitSettings['commit_enabled']) {
+                $content[] = '- You MUST commit your work after completing each logical unit of change.';
+                if ($gitSettings['conventional_commits']) {
+                    $content[] = '- Use Conventional Commit message format (https://www.conventionalcommits.org/en/v1.0.0/).';
+                    $content[] = '- Format: `<type>[optional scope]: <description>` where type is one of: feat, fix, refactor, test, docs, style, chore, perf, ci, build.';
+                    $content[] = '- Examples: `feat: add user auth module`, `fix: resolve null pointer in parser`, `refactor: extract validation logic`.';
+                    $content[] = '- Include a body when the change is non-trivial. Use BREAKING CHANGE footer when applicable.';
+                } else {
+                    $content[] = '- Write clear, descriptive commit messages that explain the intent of each change.';
+                }
+            } else {
+                $content[] = '- Do NOT make any git commits. Leave all changes unstaged and uncommitted.';
+            }
+
+            if ($gitSettings['branching_enabled']) {
+                $content[] = '- You are working on a feature branch. Follow gitflow practices.';
+                $content[] = '- Do not merge into the main branch or any upstream branch.';
+                $content[] = '- Keep commits focused and atomic on this feature branch.';
+            } elseif ($gitSettings['target_branch'] !== null) {
+                $content[] = sprintf('- You are working directly on the `%s` branch (trunk-based development).', $gitSettings['target_branch']);
+                $content[] = '- Commit directly to this branch. Keep commits small and self-contained.';
+            }
+
+            if ($gitSettings['worktree_enabled']) {
+                $content[] = '- You are working in an isolated git worktree. All changes are scoped to this worktree.';
+            }
+
+            $content[] = '';
+        }
 
         $content[] = '## Mandatory Workflow';
         $content[] = '';

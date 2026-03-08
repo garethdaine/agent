@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Interrogation;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class UpdateInterrogationSessionRequest extends FormRequest
 {
@@ -44,6 +45,29 @@ class UpdateInterrogationSessionRequest extends FormRequest
             'name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'feature_brief' => ['sometimes', 'nullable', 'string', 'max:'.$maxTextLength],
             'model' => ['sometimes', 'nullable', 'string', 'max:128'],
+
+            'git' => ['sometimes', 'nullable', 'array'],
+            'git.commit_enabled' => ['sometimes', 'boolean'],
+            'git.conventional_commits' => ['sometimes', 'boolean'],
+            'git.worktree_enabled' => ['sometimes', 'boolean'],
+            'git.branching_enabled' => ['sometimes', 'boolean'],
+            'git.branch_prefix' => ['sometimes', 'nullable', 'string', 'max:50', 'regex:/^[a-zA-Z0-9\/_\-\.]*$/'],
+            'git.target_branch' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $git = (array) ($this->input('git') ?? []);
+            if ($git !== []) {
+                $branchingEnabled = (bool) ($git['branching_enabled'] ?? false);
+                $targetBranch = $git['target_branch'] ?? null;
+
+                if ($branchingEnabled && is_string($targetBranch) && trim($targetBranch) !== '') {
+                    $validator->errors()->add('git.target_branch', 'Target branch is only used when branching is disabled (trunk-based mode).');
+                }
+            }
+        });
     }
 }

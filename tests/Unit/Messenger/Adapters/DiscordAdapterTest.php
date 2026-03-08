@@ -775,7 +775,7 @@ class DiscordAdapterTest extends TestCase
             'channel_id' => '987654321098765432',
         ]);
 
-        ChatMessage::create([
+        ChatMessage::forceCreate([
             'chat_session_id' => $session->id,
             'connector_account_id' => $this->account->id,
             'direction' => ChatMessage::DIRECTION_INBOUND,

@@ -79,7 +79,17 @@ class DelegationVerificationResult extends Model
         self::VERDICT_SKIPPED,
     ];
 
-    protected $guarded = [];
+    protected $fillable = [
+        'delegation_task_id',
+        'delegation_attempt_id',
+        'step_type',
+        'step_order',
+        'verdict',
+        'evidence_json',
+        'started_at',
+        'finished_at',
+        'expires_at',
+    ];
 
     /**
      * @var array<string, string>

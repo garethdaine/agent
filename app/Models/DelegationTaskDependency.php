@@ -15,7 +15,10 @@ class DelegationTaskDependency extends Model
 {
     protected $table = 'delegation_task_dependencies';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'task_id',
+        'depends_on_task_id',
+    ];
 
     public function task(): BelongsTo
     {

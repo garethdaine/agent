@@ -11,7 +11,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InterrogationBuildTask extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'interrogation_session_id',
+        'sequence',
+        'title',
+        'description',
+        'instructions_markdown',
+        'task_category',
+        'status',
+        'attempt_count',
+        'agent_job_run_id',
+        'last_error',
+        'metadata_json',
+        'started_at',
+        'finished_at',
+    ];
 
     public const STATUS_PENDING = 'pending';
 

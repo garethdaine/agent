@@ -11,6 +11,7 @@ use App\Models\AgentJobRun;
 use App\Models\DelegationAttempt;
 use App\Models\DelegationTask;
 use App\Models\DelegationVerificationResult;
+use App\Support\Security\PromptSanitizer;
 use Illuminate\Support\Facades\Bus;
 use JsonException;
 
@@ -150,10 +151,10 @@ class AiCriticStep
             'attempt_status' => $attempt->status,
         ];
 
-        // Simple placeholder substitution
+        // Simple placeholder substitution with sanitization
         $prompt = $template;
         foreach ($context as $key => $value) {
-            $prompt = str_replace("{{{$key}}}", (string) $value, $prompt);
+            $prompt = str_replace("{{{$key}}}", PromptSanitizer::sanitizeForTemplate((string) $value), $prompt);
         }
 
         return $prompt;

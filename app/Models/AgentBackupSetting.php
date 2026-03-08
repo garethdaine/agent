@@ -12,7 +12,17 @@ class AgentBackupSetting extends Model
 
     public const STATUS_FAILED = 'failed';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'is_enabled',
+        'timezone',
+        'run_hour',
+        'run_minute',
+        'retention_days',
+        'last_run_at',
+        'last_status',
+        'last_error',
+        'updated_by_user_id',
+    ];
 
     protected function casts(): array
     {

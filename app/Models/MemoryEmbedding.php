@@ -19,7 +19,19 @@ class MemoryEmbedding extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'source_type',
+        'source_id',
+        'content',
+        'content_hash',
+        'metadata_json',
+        'classification',
+        'importance_score',
+        'access_count',
+        'last_accessed_at',
+        'created_at',
+    ];
 
     /**
      * The name of the "updated at" column.

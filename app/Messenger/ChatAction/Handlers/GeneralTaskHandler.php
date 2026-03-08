@@ -6,6 +6,7 @@ namespace App\Messenger\ChatAction\Handlers;
 
 use App\Messenger\ChatAction\ChatActionContext;
 use App\Messenger\ChatAction\ChatActionResult;
+use App\Support\Security\PromptSanitizer;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 
@@ -177,13 +178,13 @@ class GeneralTaskHandler implements StreamableHandlerInterface
 
         $parts = [];
         if (! empty($soul['name'])) {
-            $parts[] = "Your name is {$soul['name']}.";
+            $parts[] = 'Your name is '.PromptSanitizer::sanitize($soul['name']).'.';
         }
         if (! empty($soul['personality'])) {
-            $parts[] = $soul['personality'];
+            $parts[] = PromptSanitizer::sanitize($soul['personality']);
         }
         if (! empty($soul['user_context'])) {
-            $parts[] = "About the user: {$soul['user_context']}";
+            $parts[] = 'About the user: '.PromptSanitizer::sanitize($soul['user_context']);
         }
 
         return implode("\n", $parts);

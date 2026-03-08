@@ -12,7 +12,13 @@ class NlOrgParseAttempt extends Model
 {
     use HasUuids;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'raw_input',
+        'parsed_result',
+        'confidence',
+        'applied_at',
+    ];
 
     protected function casts(): array
     {

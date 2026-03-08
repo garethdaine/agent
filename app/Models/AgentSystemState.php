@@ -18,5 +18,9 @@ class AgentSystemState extends Model
 
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'key',
+        'value',
+        'updated_at',
+    ];
 }

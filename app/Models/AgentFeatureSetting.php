@@ -8,7 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class AgentFeatureSetting extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'key',
+        'is_enabled',
+        'updated_by_user_id',
+    ];
 
     protected function casts(): array
     {

@@ -86,7 +86,7 @@ class AgentMaintenancePruneTest extends TestCase
         $job = $this->createJob($user, 'Run Prune Job');
 
         for ($i = 1; $i <= 25; $i++) {
-            AgentJobRun::query()->create([
+            AgentJobRun::query()->forceCreate([
                 'agent_job_id' => $job->id,
                 'user_id' => $user->id,
                 'initiated_by_user_id' => null,
@@ -129,7 +129,7 @@ class AgentMaintenancePruneTest extends TestCase
         $user = User::factory()->create();
 
         $job = $this->createJob($user, 'Event Prune Job');
-        $terminalRun = AgentJobRun::query()->create([
+        $terminalRun = AgentJobRun::query()->forceCreate([
             'agent_job_id' => $job->id,
             'user_id' => $user->id,
             'initiated_by_user_id' => null,
@@ -147,7 +147,7 @@ class AgentMaintenancePruneTest extends TestCase
             'updated_at' => now('UTC')->subDays(8),
         ]);
 
-        $activeRun = AgentJobRun::query()->create([
+        $activeRun = AgentJobRun::query()->forceCreate([
             'agent_job_id' => $job->id,
             'user_id' => $user->id,
             'initiated_by_user_id' => null,
@@ -164,7 +164,7 @@ class AgentMaintenancePruneTest extends TestCase
             'updated_at' => now('UTC')->subDays(8),
         ]);
 
-        $oldTerminalEvent = AgentRunEvent::query()->create([
+        $oldTerminalEvent = AgentRunEvent::query()->forceCreate([
             'agent_job_run_id' => $terminalRun->id,
             'event_type' => 'stdout',
             'sequence' => 1,
@@ -174,7 +174,7 @@ class AgentMaintenancePruneTest extends TestCase
             'updated_at' => now('UTC')->subDays(8),
         ]);
 
-        $oldActiveEvent = AgentRunEvent::query()->create([
+        $oldActiveEvent = AgentRunEvent::query()->forceCreate([
             'agent_job_run_id' => $activeRun->id,
             'event_type' => 'stdout',
             'sequence' => 1,
@@ -190,7 +190,7 @@ class AgentMaintenancePruneTest extends TestCase
         $this->assertDatabaseHas('agent_run_events', ['id' => $oldActiveEvent->id]);
 
         $deletedJob = $this->createJob($user, 'Deleted Old Job');
-        $deletedRun = AgentJobRun::query()->create([
+        $deletedRun = AgentJobRun::query()->forceCreate([
             'agent_job_id' => $deletedJob->id,
             'user_id' => $user->id,
             'initiated_by_user_id' => null,
@@ -208,7 +208,7 @@ class AgentMaintenancePruneTest extends TestCase
             'updated_at' => now('UTC')->subDays(40),
         ]);
 
-        AgentRunEvent::query()->create([
+        AgentRunEvent::query()->forceCreate([
             'agent_job_run_id' => $deletedRun->id,
             'event_type' => 'stdout',
             'sequence' => 1,
@@ -229,7 +229,7 @@ class AgentMaintenancePruneTest extends TestCase
 
     public function test_prune_audit_removes_rows_older_than_ninety_days(): void
     {
-        AgentAuditLog::query()->create([
+        AgentAuditLog::query()->forceCreate([
             'user_id' => null,
             'actor_type' => 'system',
             'actor_id' => null,
@@ -239,7 +239,7 @@ class AgentMaintenancePruneTest extends TestCase
             'created_at' => now('UTC')->subDays(100),
         ]);
 
-        AgentAuditLog::query()->create([
+        AgentAuditLog::query()->forceCreate([
             'user_id' => null,
             'actor_type' => 'system',
             'actor_id' => null,

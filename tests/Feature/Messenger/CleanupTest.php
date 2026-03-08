@@ -106,7 +106,7 @@ class CleanupTest extends TestCase
     public function test_session_prune_respects_retention_period(): void
     {
         // Create an old archived session (35 days old)
-        $oldSession = ChatSession::create([
+        $oldSession = ChatSession::forceCreate([
             'id' => Str::uuid()->toString(),
             'user_id' => $this->user->id,
             'connector_account_id' => $this->connectorAccount->id,
@@ -118,7 +118,7 @@ class CleanupTest extends TestCase
         ]);
 
         // Create a recent archived session (15 days old)
-        $recentSession = ChatSession::create([
+        $recentSession = ChatSession::forceCreate([
             'id' => Str::uuid()->toString(),
             'user_id' => $this->user->id,
             'connector_account_id' => $this->connectorAccount->id,
@@ -130,7 +130,7 @@ class CleanupTest extends TestCase
         ]);
 
         // Create an active session (should not be pruned regardless of age)
-        $activeSession = ChatSession::create([
+        $activeSession = ChatSession::forceCreate([
             'id' => Str::uuid()->toString(),
             'user_id' => $this->user->id,
             'connector_account_id' => $this->connectorAccount->id,
@@ -158,7 +158,7 @@ class CleanupTest extends TestCase
             ->create();
 
         // Create old message (95 days old)
-        ChatMessage::create([
+        ChatMessage::forceCreate([
             'id' => Str::uuid()->toString(),
             'chat_session_id' => $session->id,
             'connector_account_id' => $this->connectorAccount->id,
@@ -169,7 +169,7 @@ class CleanupTest extends TestCase
         ]);
 
         // Create recent message (30 days old)
-        ChatMessage::create([
+        ChatMessage::forceCreate([
             'id' => Str::uuid()->toString(),
             'chat_session_id' => $session->id,
             'connector_account_id' => $this->connectorAccount->id,
@@ -202,7 +202,7 @@ class CleanupTest extends TestCase
         $storagePath = "messenger/{$this->user->id}/{$session->id}/test_file.pdf";
         Storage::disk('local')->put($storagePath, 'test content');
 
-        ChatAttachment::create([
+        ChatAttachment::forceCreate([
             'id' => Str::uuid()->toString(),
             'chat_message_id' => $message->id,
             'filename' => 'test_file.pdf',
@@ -225,7 +225,7 @@ class CleanupTest extends TestCase
     public function test_dry_run_does_not_delete_records(): void
     {
         $oldTime = now()->subHours(25);
-        MessengerEventDeduplication::create([
+        MessengerEventDeduplication::forceCreate([
             'connector_account_id' => $this->connectorAccount->id,
             'event_id' => 'old_event',
             'expires_at' => $oldTime,
@@ -274,14 +274,14 @@ class CleanupTest extends TestCase
     public function test_combined_options_work_together(): void
     {
         $oldTime = now()->subHours(25);
-        MessengerEventDeduplication::create([
+        MessengerEventDeduplication::forceCreate([
             'connector_account_id' => $this->connectorAccount->id,
             'event_id' => 'old_event',
             'expires_at' => $oldTime,
             'created_at' => $oldTime,
         ]);
 
-        $oldSession = ChatSession::create([
+        $oldSession = ChatSession::forceCreate([
             'id' => Str::uuid()->toString(),
             'user_id' => $this->user->id,
             'connector_account_id' => $this->connectorAccount->id,

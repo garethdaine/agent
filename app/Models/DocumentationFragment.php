@@ -15,7 +15,21 @@ class DocumentationFragment extends Model
     use HasFactory;
     use Searchable;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'ui_key',
+        'locale',
+        'short_text',
+        'long_text',
+        'learn_more_entry_id',
+        'severity',
+        'feature_flag',
+        'status',
+        'route_names',
+        'setting_keys',
+        'source_path',
+        'source_checksum',
+        'published_at',
+    ];
 
     protected function casts(): array
     {

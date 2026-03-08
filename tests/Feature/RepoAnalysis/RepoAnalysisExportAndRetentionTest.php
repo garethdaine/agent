@@ -116,7 +116,7 @@ class RepoAnalysisExportAndRetentionTest extends TestCase
             'metadata_json' => [],
         ]);
 
-        $oldTaskArtifact = RepoAnalysisArtifact::query()->create([
+        $oldTaskArtifact = RepoAnalysisArtifact::query()->forceCreate([
             'repo_analysis_session_id' => $session->id,
             'repo_analysis_task_id' => $task->id,
             'artifact_type' => 'filesystem_manifest',
@@ -138,7 +138,7 @@ class RepoAnalysisExportAndRetentionTest extends TestCase
             'metadata_json' => [],
         ]);
 
-        $oldSessionArtifact = RepoAnalysisArtifact::query()->create([
+        $oldSessionArtifact = RepoAnalysisArtifact::query()->forceCreate([
             'repo_analysis_session_id' => $session->id,
             'repo_analysis_task_id' => null,
             'artifact_type' => 'coverage_validation',

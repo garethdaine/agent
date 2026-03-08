@@ -9,7 +9,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RepoAnalysisArtifact extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'repo_analysis_session_id',
+        'repo_analysis_task_id',
+        'artifact_type',
+        'artifact_key',
+        'content_hash',
+        'schema_version',
+        'analyzer_version',
+        'storage_disk',
+        'storage_path',
+        'payload_json',
+        'metadata_json',
+        'error_code',
+        'error_summary',
+    ];
 
     protected $attributes = [
         'payload_json' => '{}',

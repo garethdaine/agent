@@ -19,7 +19,7 @@ class NlParseCleanupCommandTest extends TestCase
         $user = User::factory()->create();
 
         // Old record (should be deleted)
-        NlParseAttempt::create([
+        NlParseAttempt::forceCreate([
             'user_id' => $user->id,
             'input_text' => 'old record',
             'timezone' => 'UTC',
@@ -29,7 +29,7 @@ class NlParseCleanupCommandTest extends TestCase
         ]);
 
         // Recent record (should be kept)
-        NlParseAttempt::create([
+        NlParseAttempt::forceCreate([
             'user_id' => $user->id,
             'input_text' => 'recent record',
             'timezone' => 'UTC',
@@ -49,7 +49,7 @@ class NlParseCleanupCommandTest extends TestCase
     {
         $user = User::factory()->create();
 
-        NlParseAttempt::create([
+        NlParseAttempt::forceCreate([
             'user_id' => $user->id,
             'input_text' => 'old',
             'timezone' => 'UTC',

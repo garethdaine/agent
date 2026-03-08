@@ -12,7 +12,13 @@ class DocumentationLink extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'documentation_entry_id',
+        'documentation_fragment_id',
+        'route_name',
+        'setting_key',
+        'feature_flag',
+    ];
 
     public function entry(): BelongsTo
     {

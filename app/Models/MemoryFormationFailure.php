@@ -15,7 +15,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class MemoryFormationFailure extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'run_id',
+        'user_id',
+        'failure_type',
+        'error_message',
+        'attempts',
+        'backfilled_at',
+        'payload_json',
+        'created_at',
+    ];
 
     /**
      * The name of the "updated at" column.

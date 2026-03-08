@@ -10,7 +10,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RepoAnalysisEvent extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'repo_analysis_session_id',
+        'sequence',
+        'event_type',
+        'payload_json',
+        'event_ts',
+        'phase',
+        'status',
+        'error_code',
+        'error_summary',
+        'metadata_json',
+    ];
 
     protected $attributes = [
         'payload_json' => '{}',

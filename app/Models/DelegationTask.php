@@ -18,7 +18,20 @@ class DelegationTask extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'delegation_graph_id',
+        'name',
+        'status',
+        'sequence_order',
+        'contract_json',
+        'assigned_delegatee_profile_id',
+        'assignment_reason_json',
+        'metadata_json',
+        'error_code',
+        'error_summary',
+        'started_at',
+        'finished_at',
+    ];
 
     public const STATUS_PENDING = 'pending';
 

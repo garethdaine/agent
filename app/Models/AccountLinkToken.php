@@ -21,7 +21,13 @@ class AccountLinkToken extends Model
 
     protected $keyType = 'string';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'connector_account_id',
+        'provider_user_id',
+        'issued_at',
+        'expires_at',
+        'consumed_at',
+    ];
 
     protected function casts(): array
     {

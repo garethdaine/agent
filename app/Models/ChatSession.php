@@ -19,7 +19,18 @@ class ChatSession extends Model
     use HasFactory;
     use HasUuids;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'connector_account_id',
+        'provider',
+        'channel_id',
+        'thread_id',
+        'status',
+        'compaction_summary',
+        'compaction_message_count',
+        'compaction_at',
+        'compaction_boundary_message_id',
+    ];
 
     public const STATUS_ACTIVE = 'active';
 

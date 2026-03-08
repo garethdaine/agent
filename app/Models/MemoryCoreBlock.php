@@ -19,7 +19,16 @@ class MemoryCoreBlock extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'job_id',
+        'block_type',
+        'block_key',
+        'content_text',
+        'content_json',
+        'classification',
+        'version',
+    ];
 
     /**
      * Block type constants.

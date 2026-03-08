@@ -15,7 +15,12 @@ class DelegationCapability extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'slug',
+        'name',
+        'description',
+        'is_active',
+    ];
 
     protected function casts(): array
     {

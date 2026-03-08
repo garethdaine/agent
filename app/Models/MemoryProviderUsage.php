@@ -20,7 +20,17 @@ class MemoryProviderUsage extends Model
 
     protected $table = 'memory_provider_usage';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'run_id',
+        'provider',
+        'model',
+        'operation',
+        'input_tokens',
+        'output_tokens',
+        'cost_estimate_usd',
+        'created_at',
+    ];
 
     /**
      * The name of the "updated at" column.

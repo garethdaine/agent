@@ -32,7 +32,15 @@ class MessengerDeadLetter extends Model
 {
     protected $table = 'messenger_dead_letters';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'connector_account_id',
+        'original_payload',
+        'error_message',
+        'error_history',
+        'attempts',
+        'failed_at',
+        'retried_at',
+    ];
 
     protected function casts(): array
     {

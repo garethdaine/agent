@@ -19,7 +19,19 @@ class DelegationGraph extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'name',
+        'description',
+        'status',
+        'cancellation_policy',
+        'max_parallel_tasks',
+        'metadata_json',
+        'error_code',
+        'error_summary',
+        'started_at',
+        'finished_at',
+    ];
 
     public const STATUS_DRAFT = 'draft';
 

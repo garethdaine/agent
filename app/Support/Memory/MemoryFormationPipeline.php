@@ -35,13 +35,18 @@ use Illuminate\Support\Facades\Log;
  */
 class MemoryFormationPipeline
 {
+    private EntitySanitizer $entitySanitizer;
+
     public function __construct(
         private WorkingMemoryBuffer $workingMemoryBuffer,
         private ?ExtractionProvider $extractionProvider = null,
         private ?EmbeddingProvider $embeddingProvider = null,
         private ?Neo4jGraphStore $graphStore = null,
         private ?MemoryAdapterFactory $adapterFactory = null,
-    ) {}
+        ?EntitySanitizer $entitySanitizer = null,
+    ) {
+        $this->entitySanitizer = $entitySanitizer ?? new EntitySanitizer();
+    }
 
     /**
      * Resolve user-specific providers via the adapter factory.
@@ -181,6 +186,17 @@ class MemoryFormationPipeline
             Log::warning('MemoryFormationPipeline: Embedding generation failed, continuing in degraded mode', [
                 'run_id' => $run->id,
                 'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Sanitize entities before graph storage
+        $originalCount = count($entities);
+        $entities = $this->entitySanitizer->sanitize($entities);
+        if ($originalCount > 0 && count($entities) < $originalCount) {
+            Log::info('MemoryFormationPipeline: Sanitizer filtered entities', [
+                'run_id' => $run->id,
+                'original' => $originalCount,
+                'remaining' => count($entities),
             ]);
         }
 
@@ -346,6 +362,17 @@ class MemoryFormationPipeline
             Log::warning('MemoryFormationPipeline: Runtime embedding failed, continuing in degraded mode', [
                 'session_id' => $session->id,
                 'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Sanitize entities before graph storage
+        $originalCount = count($entities);
+        $entities = $this->entitySanitizer->sanitize($entities);
+        if ($originalCount > 0 && count($entities) < $originalCount) {
+            Log::info('MemoryFormationPipeline: Sanitizer filtered entities for runtime session', [
+                'session_id' => $session->id,
+                'original' => $originalCount,
+                'remaining' => count($entities),
             ]);
         }
 

@@ -14,7 +14,21 @@ class ApiDocArtifact extends Model
     use HasFactory;
     use Searchable;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'documentation_entry_id',
+        'domain',
+        'operation_id',
+        'http_method',
+        'path',
+        'summary',
+        'description',
+        'section',
+        'tags',
+        'spec_version',
+        'spec_checksum',
+        'linked_doc_slugs',
+        'published_at',
+    ];
 
     protected function casts(): array
     {

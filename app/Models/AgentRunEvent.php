@@ -11,7 +11,14 @@ class AgentRunEvent extends Model
 {
     public const REASONING_STEPS = ['situation', 'task', 'action', 'result'];
 
-    protected $guarded = [];
+    protected $fillable = [
+        'agent_job_run_id',
+        'event_type',
+        'sequence',
+        'payload',
+        'reasoning_step',
+        'event_ts',
+    ];
 
     protected function casts(): array
     {

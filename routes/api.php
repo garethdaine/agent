@@ -78,7 +78,8 @@ Route::middleware([AgentApiVersionHeader::class])
             'ok' => true,
         ]));
 
-        Route::post('/n8n/webhook', \App\Http\Controllers\Api\V1\N8nWebhookController::class);
+        Route::post('/n8n/webhook', \App\Http\Controllers\Api\V1\N8nWebhookController::class)
+            ->middleware(\App\Http\Middleware\VerifyN8nSignature::class);
 
         // OAuth callback route (no auth required — external redirect)
         Route::get('/connectors/callback', Connectors\ConnectorOAuthCallbackController::class)
@@ -212,6 +213,7 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::delete('/interrogation/sessions/{id}/providers/{driver}', [InterrogationTaskProviderController::class, 'disconnect'])->middleware('throttle:interrogation');
             Route::post('/interrogation/sessions/{id}/tech-stacks', [InterrogationTechStackController::class, 'store'])->middleware('throttle:interrogation');
             Route::delete('/interrogation/sessions/{id}/tech-stacks/{stackId}', [InterrogationTechStackController::class, 'destroy'])->middleware('throttle:interrogation');
+            Route::get('/interrogation/sessions/{id}/git-branches', [InterrogationSessionController::class, 'gitBranches'])->middleware('throttle:interrogation');
             Route::patch('/interrogation/sessions/{id}/annotations', [InterrogationSessionController::class, 'updateAnnotation'])->middleware('throttle:interrogation');
             Route::post('/interrogation/sessions/{id}/export-summary', [InterrogationSessionController::class, 'exportSummary'])->middleware('throttle:interrogation');
             Route::post('/interrogation/sessions/{id}/export-plan', [InterrogationSessionController::class, 'exportPlan'])->middleware('throttle:interrogation');

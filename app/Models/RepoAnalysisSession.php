@@ -19,7 +19,23 @@ class RepoAnalysisSession extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'name',
+        'project_directory',
+        'analyzer_profile',
+        'runner_type',
+        'status',
+        'phase',
+        'snapshot_hash',
+        'manifest_stats_json',
+        'report_summary_json',
+        'metadata_json',
+        'error_code',
+        'error_summary',
+        'started_at',
+        'finished_at',
+    ];
 
     protected $attributes = [
         'analyzer_profile' => 'default',

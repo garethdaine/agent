@@ -17,7 +17,14 @@ class MemoryConsolidationLog extends Model
 {
     protected $table = 'memory_consolidation_log';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'consolidation_type',
+        'source_count',
+        'result_summary',
+        'checkpoint_json',
+        'created_at',
+    ];
 
     /**
      * The name of the "updated at" column.

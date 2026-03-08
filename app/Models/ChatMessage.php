@@ -24,7 +24,17 @@ class ChatMessage extends Model
 
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'chat_session_id',
+        'connector_account_id',
+        'direction',
+        'content',
+        'attachment_ids',
+        'idempotency_key',
+        'provider_event_id',
+        'provider_message_id',
+        'provider_timestamp',
+    ];
 
     public const DIRECTION_INBOUND = 'inbound';
 

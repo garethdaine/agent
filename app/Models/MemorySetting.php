@@ -15,7 +15,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class MemorySetting extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'key',
+        'value',
+    ];
 
     protected $hidden = [
         'value',

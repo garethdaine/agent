@@ -24,7 +24,14 @@ class MessengerIdentityLink extends Model
 
     public const STATUS_REVOKED = 'revoked';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'connector_account_id',
+        'provider_user_id',
+        'provider_username',
+        'expires_at',
+        'status',
+    ];
 
     protected function casts(): array
     {

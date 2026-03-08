@@ -20,7 +20,26 @@ class InterrogationSession extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'name',
+        'runner_type',
+        'project_directory',
+        'interrogation_type',
+        'feature_brief',
+        'status',
+        'phase',
+        'cli_session_id',
+        'summary_json',
+        'plan_json',
+        'annotations_json',
+        'metadata_json',
+        'error_code',
+        'error_summary',
+        'started_at',
+        'finished_at',
+        'approved_at',
+    ];
 
     public const STATUS_SETUP = 'setup';
 
@@ -126,5 +145,24 @@ class InterrogationSession extends Model
     public function scopeLatest(Builder $query): void
     {
         $query->orderByDesc('updated_at');
+    }
+
+    /**
+     * @return array{commit_enabled: bool, conventional_commits: bool, worktree_enabled: bool, branching_enabled: bool, branch_prefix: ?string, target_branch: ?string, updated_at: ?string}
+     */
+    public function gitSettings(): array
+    {
+        $metadata = is_array($this->metadata_json) ? $this->metadata_json : [];
+        $git = is_array($metadata['git'] ?? null) ? $metadata['git'] : [];
+
+        return [
+            'commit_enabled' => (bool) ($git['commit_enabled'] ?? false),
+            'conventional_commits' => (bool) ($git['conventional_commits'] ?? false),
+            'worktree_enabled' => (bool) ($git['worktree_enabled'] ?? false),
+            'branching_enabled' => (bool) ($git['branching_enabled'] ?? false),
+            'branch_prefix' => is_string($git['branch_prefix'] ?? null) ? $git['branch_prefix'] : null,
+            'target_branch' => is_string($git['target_branch'] ?? null) ? $git['target_branch'] : null,
+            'updated_at' => $git['updated_at'] ?? null,
+        ];
     }
 }

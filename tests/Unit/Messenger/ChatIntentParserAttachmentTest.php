@@ -44,7 +44,7 @@ class ChatIntentParserAttachmentTest extends TestCase
         $storagePath = "messenger/{$user->id}/{$session->id}/test-file.txt";
         Storage::disk('local')->put($storagePath, 'Hello, this is a test file content.');
 
-        $message = ChatMessage::create([
+        $message = ChatMessage::forceCreate([
             'chat_session_id' => $session->id,
             'connector_account_id' => $account->id,
             'direction' => ChatMessage::DIRECTION_INBOUND,
@@ -53,7 +53,7 @@ class ChatIntentParserAttachmentTest extends TestCase
             'created_at' => now(),
         ]);
 
-        ChatAttachment::create([
+        ChatAttachment::forceCreate([
             'id' => Str::uuid()->toString(),
             'chat_message_id' => $message->id,
             'filename' => 'test-file.txt',
@@ -95,7 +95,7 @@ class ChatIntentParserAttachmentTest extends TestCase
         $storagePath = "messenger/{$user->id}/{$session->id}/image.png";
         Storage::disk('local')->put($storagePath, 'binary-data');
 
-        $message = ChatMessage::create([
+        $message = ChatMessage::forceCreate([
             'chat_session_id' => $session->id,
             'connector_account_id' => $account->id,
             'direction' => ChatMessage::DIRECTION_INBOUND,
@@ -104,7 +104,7 @@ class ChatIntentParserAttachmentTest extends TestCase
             'created_at' => now(),
         ]);
 
-        ChatAttachment::create([
+        ChatAttachment::forceCreate([
             'id' => Str::uuid()->toString(),
             'chat_message_id' => $message->id,
             'filename' => 'image.png',
@@ -142,7 +142,7 @@ class ChatIntentParserAttachmentTest extends TestCase
             'user_id' => $user->id,
         ]);
 
-        $message = ChatMessage::create([
+        $message = ChatMessage::forceCreate([
             'chat_session_id' => $session->id,
             'connector_account_id' => $account->id,
             'direction' => ChatMessage::DIRECTION_INBOUND,
@@ -178,7 +178,7 @@ class ChatIntentParserAttachmentTest extends TestCase
         $storagePath = "messenger/{$user->id}/{$session->id}/config.json";
         Storage::disk('local')->put($storagePath, $jsonContent);
 
-        $message = ChatMessage::create([
+        $message = ChatMessage::forceCreate([
             'chat_session_id' => $session->id,
             'connector_account_id' => $account->id,
             'direction' => ChatMessage::DIRECTION_INBOUND,
@@ -187,7 +187,7 @@ class ChatIntentParserAttachmentTest extends TestCase
             'created_at' => now(),
         ]);
 
-        ChatAttachment::create([
+        ChatAttachment::forceCreate([
             'id' => Str::uuid()->toString(),
             'chat_message_id' => $message->id,
             'filename' => 'config.json',
@@ -228,7 +228,7 @@ class ChatIntentParserAttachmentTest extends TestCase
         $storagePath = "messenger/{$user->id}/{$session->id}/big.txt";
         Storage::disk('local')->put($storagePath, str_repeat('x', 100_000));
 
-        $message = ChatMessage::create([
+        $message = ChatMessage::forceCreate([
             'chat_session_id' => $session->id,
             'connector_account_id' => $account->id,
             'direction' => ChatMessage::DIRECTION_INBOUND,
@@ -237,7 +237,7 @@ class ChatIntentParserAttachmentTest extends TestCase
             'created_at' => now(),
         ]);
 
-        ChatAttachment::create([
+        ChatAttachment::forceCreate([
             'id' => Str::uuid()->toString(),
             'chat_message_id' => $message->id,
             'filename' => 'big.txt',

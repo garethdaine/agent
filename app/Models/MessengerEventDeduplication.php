@@ -17,7 +17,11 @@ class MessengerEventDeduplication extends Model
 
     protected $table = 'messenger_event_deduplication';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'connector_account_id',
+        'event_id',
+        'expires_at',
+    ];
 
     protected function casts(): array
     {

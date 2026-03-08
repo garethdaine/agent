@@ -12,7 +12,19 @@ class NlParseAttempt extends Model
 {
     use HasUuids;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'input_text',
+        'timezone',
+        'parser_path',
+        'confidence',
+        'cron_result',
+        'active_hours_result',
+        'status',
+        'user_confirmed',
+        'error_message',
+        'completed_at',
+    ];
 
     protected function casts(): array
     {

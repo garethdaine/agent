@@ -16,7 +16,19 @@ class DelegationAttempt extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'delegation_task_id',
+        'delegatee_profile_id',
+        'agent_job_run_id',
+        'attempt_number',
+        'status',
+        'started_at',
+        'finished_at',
+        'duration_ms',
+        'error_code',
+        'error_summary',
+        'metadata_json',
+    ];
 
     public const STATUS_RUNNING = 'running';
 

@@ -82,6 +82,56 @@ class DelegateeProfileSoulTest extends TestCase
         $this->assertNull($this->profile->soul_json);
     }
 
+    public function test_set_soul_rejects_api_key_in_personality(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('credential-like content');
+
+        $this->profile->setSoul([
+            'personality' => 'Use this key: sk-abc123def456ghi789jkl012mno345pqr678',
+        ]);
+    }
+
+    public function test_set_soul_rejects_aws_key_in_user_context(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('credential-like content');
+
+        $this->profile->setSoul([
+            'user_context' => 'AWS access: AKIAIOSFODNN7EXAMPLE',
+        ]);
+    }
+
+    public function test_set_soul_rejects_password_in_system_prompt(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('credential-like content');
+
+        $this->profile->setSoul([
+            'system_prompt' => 'DB config: password=s3cret123',
+        ]);
+    }
+
+    public function test_set_soul_rejects_private_key(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('credential-like content');
+
+        $this->profile->setSoul([
+            'personality' => '-----BEGIN RSA PRIVATE KEY----- some key data',
+        ]);
+    }
+
+    public function test_set_soul_rejects_exceeding_max_length(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('exceeds maximum length');
+
+        $this->profile->setSoul([
+            'personality' => str_repeat('a', 10001),
+        ]);
+    }
+
     public function test_round_trip_persistence(): void
     {
         $input = [

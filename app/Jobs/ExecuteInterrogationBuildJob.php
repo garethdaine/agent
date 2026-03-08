@@ -11,6 +11,7 @@ use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationSession;
 use App\Support\Interrogation\BuildExecutionBackupService;
 use App\Support\Interrogation\BuildTaskRunFactory;
+use App\Support\Interrogation\GitOperationsService;
 use App\Support\Interrogation\InterrogationEventWriter;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -96,6 +97,17 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $finalized = $this->finalizeTaskFromRun($session, $activeTask, $run, $writer, $policyService);
 
             if ($finalized) {
+                // Cleanup git worktree after task finalization
+                try {
+                    app(GitOperationsService::class)->cleanupAfterTask($session, $activeTask);
+                } catch (\Throwable $e) {
+                    $writer->appendSystem([
+                        'notice' => 'git_worktree_cleanup_failed',
+                        'task_id' => $activeTask->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 $this->dispatchFollowUpBuildTick((int) $session->id, 1, $writer);
             }
 

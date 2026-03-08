@@ -13,7 +13,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class InterrogationTechStack extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'interrogation_session_id',
+        'sequence',
+        'name',
+        'documentation_url',
+        'metadata_json',
+    ];
 
     protected function casts(): array
     {

@@ -323,7 +323,6 @@ class DelegateeProfileController extends Controller
             'command_template' => $profile->command_template,
             'working_directory' => $profile->working_directory,
             'is_active' => $profile->is_active,
-            'soul' => $profile->getSoul(),
             'trust_score' => $profile->trust_score !== null ? (float) $profile->trust_score : null,
             'trust_updated_at' => optional($profile->trust_updated_at)?->toIso8601String(),
             'deleted_at' => optional($profile->deleted_at)?->toIso8601String(),

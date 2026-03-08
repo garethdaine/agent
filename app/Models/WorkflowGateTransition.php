@@ -9,7 +9,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class WorkflowGateTransition extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'workflow_key',
+        'previous_gate_state',
+        'new_gate_state',
+        'source',
+        'reason_code',
+        'reason',
+        'actor_id',
+        'run_id',
+        'projection_build_id',
+        'metadata_json',
+        'transitioned_at',
+    ];
 
     public function __construct(array $attributes = [])
     {

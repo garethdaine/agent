@@ -21,7 +21,17 @@ class ChatAction extends Model
 
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'chat_message_id',
+        'action_type',
+        'parameters',
+        'status',
+        'result',
+        'error',
+        'requires_confirmation',
+        'confirmed_at',
+        'executed_at',
+    ];
 
     public const STATUS_PENDING = 'pending';
 

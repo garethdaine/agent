@@ -9,7 +9,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RepoAnalysisReport extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'repo_analysis_session_id',
+        'report_version',
+        'report_hash',
+        'status',
+        'payload_json',
+        'metadata_json',
+        'markdown_export_path',
+        'json_export_path',
+        'error_code',
+        'error_summary',
+        'generated_at',
+    ];
 
     protected $attributes = [
         'status' => 'generated',

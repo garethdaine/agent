@@ -16,7 +16,22 @@ class ConnectedProvider extends Model
 {
     protected $table = 'providers';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'providerable_type',
+        'providerable_id',
+        'category',
+        'driver',
+        'provider_user_id',
+        'provider_workspace_id',
+        'provider_workspace_name',
+        'access_token',
+        'refresh_token',
+        'token_type',
+        'expires_at',
+        'scopes_json',
+        'metadata_json',
+    ];
 
     protected $hidden = [
         'access_token',

@@ -16,7 +16,14 @@ class DelegationEvent extends Model
 {
     use HasFactory;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'delegation_graph_id',
+        'delegation_task_id',
+        'event_type',
+        'sequence',
+        'payload_json',
+        'event_ts',
+    ];
 
     protected function casts(): array
     {

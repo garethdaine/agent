@@ -8,7 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class AgentMaintenanceCheckpoint extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'domain',
+        'status',
+        'last_processed_id',
+        'processed_rows',
+        'progress_json',
+        'started_at',
+        'finished_at',
+    ];
 
     protected function casts(): array
     {

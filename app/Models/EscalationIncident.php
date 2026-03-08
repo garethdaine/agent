@@ -9,7 +9,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class EscalationIncident extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'workflow_key',
+        'trigger_type',
+        'status',
+        'reason_code',
+        'reason',
+        'opened_at',
+        'investigating_at',
+        'resolved_at',
+        'last_triggered_at',
+        'projection_build_id',
+        'metadata_json',
+    ];
 
     public function __construct(array $attributes = [])
     {

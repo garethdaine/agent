@@ -9,7 +9,22 @@ use Illuminate\Database\Eloquent\Model;
 
 class RunClassification extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'run_id',
+        'workflow_key',
+        'classification',
+        'weight',
+        'hard_fail',
+        'classification_reason_code',
+        'failure_class',
+        'failure_reason_code',
+        'verification_completed_at',
+        'assisted_sla_expires_at',
+        'classified_at',
+        'reclassified_at',
+        'metadata_json',
+        'projection_build_id',
+    ];
 
     public function __construct(array $attributes = [])
     {

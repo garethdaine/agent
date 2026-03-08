@@ -12,7 +12,25 @@ class AgentAuditLog extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'actor_type',
+        'actor_id',
+        'action',
+        'target_type',
+        'target_id',
+        'changed_fields_json',
+        'before_json',
+        'after_json',
+        'request_id',
+        'ip_address',
+        'user_agent',
+        'hostname',
+        'outcome',
+        'error_code',
+        'error_message',
+        'created_at',
+    ];
 
     protected static function booted(): void
     {

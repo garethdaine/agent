@@ -10,7 +10,26 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RepoAnalysisTask extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'repo_analysis_session_id',
+        'task_key',
+        'task_type',
+        'status',
+        'phase',
+        'depends_on_json',
+        'artifact_ids_json',
+        'input_hash',
+        'output_hash',
+        'analyzer_name',
+        'analyzer_version',
+        'attempt_count',
+        'max_attempts',
+        'error_code',
+        'error_summary',
+        'metadata_json',
+        'started_at',
+        'finished_at',
+    ];
 
     protected $attributes = [
         'status' => 'pending',

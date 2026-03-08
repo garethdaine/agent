@@ -21,7 +21,28 @@ class AgentJob extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'user_id',
+        'name',
+        'workflow_key',
+        'description',
+        'cron_expression',
+        'timezone',
+        'active_hours_config',
+        'star_preamble_enabled',
+        'targeted_retry_enabled',
+        'max_retries',
+        'is_enabled',
+        'max_runtime_seconds',
+        'cooldown_seconds',
+        'runner_type',
+        'command_template',
+        'task_markdown_path',
+        'working_directory',
+        'env_json',
+        'last_validated_executable_path',
+        'scheduled_path_failure_streak',
+    ];
 
     protected static function booted(): void
     {

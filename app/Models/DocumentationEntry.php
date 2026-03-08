@@ -14,7 +14,26 @@ class DocumentationEntry extends Model
     use HasFactory;
     use Searchable;
 
-    protected $guarded = [];
+    protected $fillable = [
+        'domain',
+        'slug',
+        'locale',
+        'title',
+        'summary',
+        'section',
+        'audience',
+        'status',
+        'version',
+        'tags',
+        'owner',
+        'body_markdown',
+        'body_html',
+        'source_path',
+        'source_checksum',
+        'source_commit',
+        'published_at',
+        'last_reviewed_at',
+    ];
 
     protected function casts(): array
     {

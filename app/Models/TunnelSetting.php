@@ -10,7 +10,10 @@ class TunnelSetting extends Model
 {
     protected $table = 'tunnel_settings';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'settings',
+        'status',
+    ];
 
     protected function casts(): array
     {
