@@ -171,7 +171,7 @@ class ConnectorConcurrencyTest extends TestCase
                 $refreshCallCount++;
 
                 return Http::response([
-                    'access_token' => 'new_token_' . $refreshCallCount,
+                    'access_token' => 'new_token_'.$refreshCallCount,
                     'expires_in' => 3600,
                 ], 200);
             }

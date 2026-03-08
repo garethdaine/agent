@@ -15,7 +15,7 @@ class ConnectorVaultEncrypter
         if (empty($vaultKey)) {
             throw new \RuntimeException("Team {$team->id} has no connector vault key configured.");
         }
-        $derivedKey = substr(hash('sha256', $vaultKey . config('app.key')), 0, 32);
+        $derivedKey = substr(hash('sha256', $vaultKey.config('app.key')), 0, 32);
 
         return new Encrypter($derivedKey, 'aes-256-cbc');
     }

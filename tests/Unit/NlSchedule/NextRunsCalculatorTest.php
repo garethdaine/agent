@@ -42,7 +42,7 @@ class NextRunsCalculatorTest extends TestCase
 
     public function test_filters_by_active_hours(): void
     {
-        $activeHours = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]]; // weekdays
+        $activeHours = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]]; // weekdays
         $runs = $this->calculator->calculate(
             '0 9 * * *', // Daily at 9am (includes weekends)
             'UTC',
@@ -53,13 +53,13 @@ class NextRunsCalculatorTest extends TestCase
         // All returned runs should be on weekdays
         foreach ($runs as $run) {
             $dayOfWeek = CarbonImmutable::parse($run['utc'])->dayOfWeekIso;
-            $this->assertContains($dayOfWeek, [1,2,3,4,5]);
+            $this->assertContains($dayOfWeek, [1, 2, 3, 4, 5]);
         }
     }
 
     public function test_shows_true_dispatch_times(): void
     {
-        $activeHours = ['start' => '10:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $activeHours = ['start' => '10:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         $runs = $this->calculator->calculate(
             '0 9 * * *', // 9am is before active hours start
             'UTC',
@@ -74,7 +74,7 @@ class NextRunsCalculatorTest extends TestCase
 
     public function test_shows_runs_within_active_hours(): void
     {
-        $activeHours = ['start' => '08:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $activeHours = ['start' => '08:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         $runs = $this->calculator->calculate(
             '0 9 * * *', // 9am is within active hours (8am-5pm)
             'UTC',
@@ -141,7 +141,7 @@ class NextRunsCalculatorTest extends TestCase
 
     public function test_filters_out_weekend_runs(): void
     {
-        $activeHours = ['start' => '00:00', 'end' => '23:59', 'days' => [1,2,3,4,5]];
+        $activeHours = ['start' => '00:00', 'end' => '23:59', 'days' => [1, 2, 3, 4, 5]];
         $runs = $this->calculator->calculate(
             '0 12 * * *', // Daily at noon
             'UTC',
@@ -162,7 +162,7 @@ class NextRunsCalculatorTest extends TestCase
 
     public function test_handles_hourly_with_active_hours(): void
     {
-        $activeHours = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $activeHours = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         $runs = $this->calculator->calculate(
             '0 * * * *', // Every hour
             'UTC',
@@ -323,7 +323,7 @@ class NextRunsCalculatorTest extends TestCase
     {
         // Active hours 09:00-17:00 EST on weekdays
         // Cron runs at 14:00 UTC = 09:00 EST (just within window)
-        $activeHours = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $activeHours = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         $runs = $this->calculator->calculate(
             '0 14 * * *', // 2pm UTC = 9am EST
             'America/New_York',

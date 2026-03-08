@@ -2,12 +2,10 @@
 
 namespace Tests\Feature\Jobs;
 
-use App\Jobs\ExecuteAgentRunJob;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class ExecuteAgentRunJobStarPreambleTest extends TestCase

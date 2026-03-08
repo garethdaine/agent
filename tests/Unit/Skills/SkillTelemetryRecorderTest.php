@@ -9,7 +9,6 @@ use App\Services\Skills\SkillTelemetryRecorder;
 use App\Services\Telemetry\IngestionService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Mockery;
 use Tests\TestCase;
 

@@ -128,7 +128,7 @@ class SkillComplianceIntegrationTest extends TestCase
         mkdir($projectDir.'/tasks', 0755, true);
 
         try {
-            $manager = new LessonsManager();
+            $manager = new LessonsManager;
             $manager->appendLesson(
                 $projectDir,
                 'Skill execution produced unexpected output format',

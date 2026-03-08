@@ -67,7 +67,7 @@ class WebhookSignatureVerifierTest extends TestCase
         $expected = hash_hmac('sha256', $payload, $secret);
 
         // sha256= prefix (GitHub/Xero pattern)
-        $this->assertTrue($this->verifier->verify($payload, 'sha256=' . $expected, $secret));
+        $this->assertTrue($this->verifier->verify($payload, 'sha256='.$expected, $secret));
 
         // Raw hex (Stripe pattern)
         $this->assertTrue($this->verifier->verify($payload, $expected, $secret));

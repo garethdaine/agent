@@ -170,10 +170,10 @@ class SkillParser
             $errors[] = "Required field 'name' is missing.";
         } elseif (is_string($name)) {
             if (strlen($name) > self::MAX_NAME_LENGTH) {
-                $errors[] = "Name must be ".self::MAX_NAME_LENGTH." characters or fewer (got ".strlen($name).").";
+                $errors[] = 'Name must be '.self::MAX_NAME_LENGTH.' characters or fewer (got '.strlen($name).').';
             }
             if (! preg_match(self::NAME_PATTERN, $name)) {
-                $errors[] = "Name must be lowercase alphanumeric with hyphens (matching pattern: ".self::NAME_PATTERN.").";
+                $errors[] = 'Name must be lowercase alphanumeric with hyphens (matching pattern: '.self::NAME_PATTERN.').';
             }
         }
 
@@ -184,10 +184,10 @@ class SkillParser
         } elseif (is_string($description)) {
             $trimmed = trim($description);
             if (strlen($trimmed) < self::MIN_DESCRIPTION_LENGTH) {
-                $errors[] = "Description must be at least ".self::MIN_DESCRIPTION_LENGTH." characters (got ".strlen($trimmed).").";
+                $errors[] = 'Description must be at least '.self::MIN_DESCRIPTION_LENGTH.' characters (got '.strlen($trimmed).').';
             }
             if (strlen($trimmed) > self::MAX_DESCRIPTION_LENGTH) {
-                $errors[] = "Description must be ".self::MAX_DESCRIPTION_LENGTH." characters or fewer (got ".strlen($trimmed).").";
+                $errors[] = 'Description must be '.self::MAX_DESCRIPTION_LENGTH.' characters or fewer (got '.strlen($trimmed).').';
             }
         }
 

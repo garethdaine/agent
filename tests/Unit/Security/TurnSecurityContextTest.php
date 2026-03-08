@@ -12,14 +12,14 @@ class TurnSecurityContextTest extends TestCase
 {
     public function test_fresh_context_is_not_tainted(): void
     {
-        $context = new TurnSecurityContext();
+        $context = new TurnSecurityContext;
 
         $this->assertFalse($context->isTainted());
     }
 
     public function test_mark_tainted_sets_taint_state(): void
     {
-        $context = new TurnSecurityContext();
+        $context = new TurnSecurityContext;
         $context->markTainted('web.fetch');
 
         $this->assertTrue($context->isTainted());
@@ -28,7 +28,7 @@ class TurnSecurityContextTest extends TestCase
 
     public function test_taint_is_permanent_keeps_first_source(): void
     {
-        $context = new TurnSecurityContext();
+        $context = new TurnSecurityContext;
         $context->markTainted('web.fetch');
         $context->markTainted('mcp.call');
 
@@ -38,7 +38,7 @@ class TurnSecurityContextTest extends TestCase
 
     public function test_increment_and_get_tool_call_count(): void
     {
-        $context = new TurnSecurityContext();
+        $context = new TurnSecurityContext;
 
         $this->assertEquals(0, $context->getToolCallCount());
 
@@ -50,7 +50,7 @@ class TurnSecurityContextTest extends TestCase
 
     public function test_increment_and_get_untrusted_result_count(): void
     {
-        $context = new TurnSecurityContext();
+        $context = new TurnSecurityContext;
 
         $this->assertEquals(0, $context->getUntrustedResultCount());
 
@@ -63,7 +63,7 @@ class TurnSecurityContextTest extends TestCase
 
     public function test_to_array_includes_all_fields(): void
     {
-        $context = new TurnSecurityContext();
+        $context = new TurnSecurityContext;
         $context->markTainted('browser.dom');
         $context->incrementToolCall();
         $context->incrementUntrustedResult();
@@ -83,7 +83,7 @@ class TurnSecurityContextTest extends TestCase
 
     public function test_get_tainted_at_returns_carbon_when_tainted(): void
     {
-        $context = new TurnSecurityContext();
+        $context = new TurnSecurityContext;
         $context->markTainted('web.fetch');
 
         $this->assertInstanceOf(CarbonImmutable::class, $context->getTaintedAt());
@@ -91,7 +91,7 @@ class TurnSecurityContextTest extends TestCase
 
     public function test_get_tainted_at_returns_null_when_not_tainted(): void
     {
-        $context = new TurnSecurityContext();
+        $context = new TurnSecurityContext;
 
         $this->assertNull($context->getTaintedAt());
     }

@@ -35,7 +35,7 @@ class DiscordCredentialValidatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->validator = new DiscordCredentialValidator();
+        $this->validator = new DiscordCredentialValidator;
     }
 
     public function test_local_mode_requires_bot_token_and_application_id(): void

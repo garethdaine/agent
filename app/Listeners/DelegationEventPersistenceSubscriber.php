@@ -6,7 +6,6 @@ use App\Events\DelegationAttemptCompleted;
 use App\Events\DelegationGraphCompleted;
 use App\Events\DelegationGraphStarted;
 use App\Events\DelegationTaskVerified;
-use App\Models\DelegationGraph;
 use App\Support\Agent\FeatureFlagManager;
 use App\Support\Delegation\DelegationEventWriter;
 use Illuminate\Contracts\Events\Dispatcher;

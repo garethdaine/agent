@@ -16,7 +16,7 @@ class ConnectorHttpClient
         $action = $this->findAction($request);
         $method = strtoupper($action['method'] ?? 'GET');
         $path = $action['path'] ?? '/';
-        $url = rtrim($request->connector->base_url, '/') . '/' . ltrim($path, '/');
+        $url = rtrim($request->connector->base_url, '/').'/'.ltrim($path, '/');
         $timeout = $action['timeout_seconds'] ?? config('connectors.default_action_timeout_seconds', 30);
 
         $authHeaders = $request->connection->getAttribute('_auth_headers') ?? [];

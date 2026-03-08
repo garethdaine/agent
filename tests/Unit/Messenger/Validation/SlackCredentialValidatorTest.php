@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Messenger\Validation;
 
 use App\Messenger\Validation\SlackCredentialValidator;
-use App\Messenger\Validation\ValidationResult;
 use App\Models\ConnectorAccount;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -35,7 +34,7 @@ class SlackCredentialValidatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->validator = new SlackCredentialValidator();
+        $this->validator = new SlackCredentialValidator;
     }
 
     public function test_local_mode_requires_app_token_xapp_and_bot_token_xoxb(): void

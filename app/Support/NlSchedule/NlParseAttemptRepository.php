@@ -41,10 +41,10 @@ final class NlParseAttemptRepository
     /**
      * Create a new parse attempt record.
      *
-     * @param User $user The user making the request
-     * @param string $input Raw natural language input (stored in full)
-     * @param string $timezone IANA timezone
-     * @param string $status Initial status: queued, running, completed, failed
+     * @param  User  $user  The user making the request
+     * @param  string  $input  Raw natural language input (stored in full)
+     * @param  string  $timezone  IANA timezone
+     * @param  string  $status  Initial status: queued, running, completed, failed
      */
     public function create(
         User $user,

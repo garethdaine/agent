@@ -24,9 +24,9 @@ final class ActiveHoursEvaluator
     /**
      * Check if a timestamp falls within the active hours window.
      *
-     * @param CarbonImmutable $timestamp The timestamp to check
-     * @param array|null $config Active hours configuration (null = no restriction)
-     * @param string $timezone IANA timezone to evaluate the window in
+     * @param  CarbonImmutable  $timestamp  The timestamp to check
+     * @param  array|null  $config  Active hours configuration (null = no restriction)
+     * @param  string  $timezone  IANA timezone to evaluate the window in
      * @return bool True if within active hours, false otherwise
      */
     public function isWithinActiveHours(
@@ -46,7 +46,7 @@ final class ActiveHoursEvaluator
         $dayOfWeek = $zoned->dayOfWeekIso;
         $allowedDays = $config['days'] ?? [];
 
-        if (!in_array($dayOfWeek, $allowedDays, true)) {
+        if (! in_array($dayOfWeek, $allowedDays, true)) {
             return false;
         }
 
@@ -61,9 +61,9 @@ final class ActiveHoursEvaluator
     /**
      * Generate structured metadata for a skipped run due to active hours.
      *
-     * @param CarbonImmutable $timestamp The scheduled timestamp that was skipped
-     * @param array $config The active hours configuration
-     * @param string $jobId The job identifier
+     * @param  CarbonImmutable  $timestamp  The scheduled timestamp that was skipped
+     * @param  array  $config  The active hours configuration
+     * @param  string  $jobId  The job identifier
      * @return array Structured skip metadata
      */
     public function getSkipMetadata(

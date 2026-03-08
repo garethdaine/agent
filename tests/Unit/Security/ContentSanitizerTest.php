@@ -37,7 +37,7 @@ class ContentSanitizerTest extends TestCase
 
         $this->sanitizer = new ContentSanitizer(
             $this->configProvider,
-            new TokenEstimator(),
+            new TokenEstimator,
         );
     }
 

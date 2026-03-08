@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Messenger\Gateway\Workers;
 
 use App\Jobs\Messenger\ProcessInboundMessage;
-use App\Messenger\Gateway\DTOs\WorkerHealthMetadata;
 use App\Messenger\Gateway\Enums\WorkerHealthStatus;
 use App\Messenger\Gateway\ReconnectionStrategy;
 use App\Messenger\Gateway\Workers\TelegramPollingWorker;

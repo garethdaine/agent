@@ -89,7 +89,7 @@ class SkillFullFlowTest extends TestCase
         $this->assertContains('financial-compliance-check', $resolvedNames);
 
         // 3. Inject metadata into task markdown
-        $injector = new SkillContextInjector();
+        $injector = new SkillContextInjector;
         $enhanced = $injector->injectMetadata($resolved, 'Original task content');
         $this->assertStringContainsString('financial-compliance-check', $enhanced);
         $this->assertStringContainsString('Available Skills', $enhanced);

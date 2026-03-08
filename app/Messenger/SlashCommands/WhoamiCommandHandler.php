@@ -18,7 +18,7 @@ final class WhoamiCommandHandler implements SlashCommandHandlerInterface
     {
         $lines = [
             "User ID: {$user->id}",
-            "Email: ".($user->email ?? '(none)'),
+            'Email: '.($user->email ?? '(none)'),
         ];
         if ($connectorAccountId !== null && $connectorAccountId !== '') {
             $account = ConnectorAccount::find($connectorAccountId);

@@ -6,7 +6,6 @@ namespace Tests\Unit\Security;
 
 use App\Enums\Runtime\RuntimeMode;
 use App\Services\Security\SecurityConfigProvider;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
 
@@ -17,7 +16,7 @@ class SecurityConfigProviderTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->provider = new SecurityConfigProvider();
+        $this->provider = new SecurityConfigProvider;
     }
 
     public function test_immutable_key_content_trust_enabled_always_returns_true(): void

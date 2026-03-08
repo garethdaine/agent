@@ -32,7 +32,7 @@ class TelegramCredentialValidatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->validator = new TelegramCredentialValidator();
+        $this->validator = new TelegramCredentialValidator;
     }
 
     public function test_local_mode_requires_only_bot_token(): void

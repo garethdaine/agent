@@ -20,7 +20,7 @@ final class ParseResult implements Arrayable, JsonSerializable
         if ($confidence < 0.0 || $confidence > 1.0) {
             throw new \InvalidArgumentException('Confidence must be between 0.0 and 1.0');
         }
-        if (!in_array($parserPath, ['rule_based', 'llm_fallback'], true)) {
+        if (! in_array($parserPath, ['rule_based', 'llm_fallback'], true)) {
             throw new \InvalidArgumentException('Invalid parser path');
         }
     }

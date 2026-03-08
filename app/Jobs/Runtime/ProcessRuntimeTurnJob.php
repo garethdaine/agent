@@ -4,12 +4,12 @@ namespace App\Jobs\Runtime;
 
 use App\DTOs\Messenger\OutboundPayload;
 use App\Enums\Messenger\ApprovalMode;
+use App\Jobs\Compliance\LessonExtractionJob;
 use App\Jobs\Messenger\CompactionJob;
 use App\Models\ChatMessage;
 use App\Models\ConnectorAccount;
 use App\Models\Runtime\RuntimeSession;
 use App\Services\Messenger\CompactionService;
-use App\Jobs\Compliance\LessonExtractionJob;
 use App\Services\Runtime\MessengerRuntimeOrchestrator;
 use App\Support\Agent\FeatureFlagManager;
 use App\Support\Messenger\ConnectorManager;

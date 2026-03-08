@@ -14,7 +14,7 @@ class OrgMigrationTest extends TestCase
             'id', 'user_id', 'name', 'role_slug', 'role_description',
             'delegatee_profile_id', 'capability_bindings', 'authority_overrides',
             'default_output_schema', 'parent_agent_id', 'archived_at',
-            'created_at', 'updated_at'
+            'created_at', 'updated_at',
         ]));
     }
 
@@ -23,7 +23,7 @@ class OrgMigrationTest extends TestCase
         $this->assertTrue(Schema::hasTable('org_reporting_edges'));
         $this->assertTrue(Schema::hasColumns('org_reporting_edges', [
             'id', 'subordinate_agent_id', 'manager_agent_id', 'user_id',
-            'created_at', 'updated_at'
+            'created_at', 'updated_at',
         ]));
     }
 

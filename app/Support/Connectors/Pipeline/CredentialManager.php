@@ -49,7 +49,7 @@ class CredentialManager
     {
         return match ($authType) {
             'oauth2_authorization_code', 'oauth2_client_credentials' => [
-                'Authorization' => 'Bearer ' . ($credentials['access_token'] ?? ''),
+                'Authorization' => 'Bearer '.($credentials['access_token'] ?? ''),
             ],
             'api_key' => [
                 ($credentials['header_name'] ?? 'X-API-Key') => $credentials['api_key'] ?? '',
@@ -59,8 +59,8 @@ class CredentialManager
                 ($credentials['secret_header_name'] ?? 'X-API-Secret') => $credentials['api_secret'] ?? '',
             ],
             'basic' => [
-                'Authorization' => 'Basic ' . base64_encode(
-                    ($credentials['username'] ?? '') . ':' . ($credentials['password'] ?? '')
+                'Authorization' => 'Basic '.base64_encode(
+                    ($credentials['username'] ?? '').':'.($credentials['password'] ?? '')
                 ),
             ],
             'custom_header' => [

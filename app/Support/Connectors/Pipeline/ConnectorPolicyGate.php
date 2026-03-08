@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Support\Connectors\Pipeline;
 
 use App\Support\Connectors\ActionRequest;
-use App\Support\Connectors\Exceptions\ConnectorNotConnectedException;
 use Closure;
 use RuntimeException;
 

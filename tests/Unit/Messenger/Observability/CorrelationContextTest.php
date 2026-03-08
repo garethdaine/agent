@@ -18,7 +18,7 @@ class CorrelationContextTest extends TestCase
         // Clear any existing context
         Context::flush();
 
-        $this->correlationContext = new CorrelationContext();
+        $this->correlationContext = new CorrelationContext;
     }
 
     protected function tearDown(): void

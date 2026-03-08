@@ -11,7 +11,7 @@ class CodeSafetyValidator
 {
     private const BINARY_HEADERS = [
         "\x7FELF",     // ELF
-        "MZ",          // PE/COFF (Windows)
+        'MZ',          // PE/COFF (Windows)
         "\xFE\xED\xFA", // Mach-O
         "\xCA\xFE\xBA\xBE", // Java class / Mach-O fat
     ];

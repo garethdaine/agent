@@ -12,9 +12,7 @@ use App\Services\Connectors\ConnectionLifecycleService;
 use App\Support\Agent\FeatureFlagManager;
 use App\Support\Connectors\ConnectorVaultEncrypter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ConnectorLifecycleIntegrationTest extends TestCase

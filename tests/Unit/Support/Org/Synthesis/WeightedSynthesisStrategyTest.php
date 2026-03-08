@@ -12,7 +12,7 @@ class WeightedSynthesisStrategyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new WeightedSynthesisStrategy();
+        $this->strategy = new WeightedSynthesisStrategy;
     }
 
     public function test_returns_decision_with_highest_weight(): void

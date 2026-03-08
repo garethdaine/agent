@@ -19,7 +19,7 @@ class SecurityEventLoggerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->logger = new SecurityEventLogger();
+        $this->logger = new SecurityEventLogger;
     }
 
     public function test_log_injection_detected_creates_event(): void

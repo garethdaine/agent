@@ -40,7 +40,7 @@ MD;
 
         // Enrich with lessons if available
         $lessons = $this->getRelevantLessons($job);
-        if (!empty($lessons)) {
+        if (! empty($lessons)) {
             $lessonsText = $this->formatLessons($lessons);
             $preamble = $this->injectLessonsIntoTemplate($preamble, $lessonsText);
         }
@@ -61,7 +61,7 @@ MD;
 
     public function assignAbGroup(AgentJob $job): ?string
     {
-        if (!config('agent.star_preamble.ab_test_enabled', false)) {
+        if (! config('agent.star_preamble.ab_test_enabled', false)) {
             return null;
         }
 
@@ -92,8 +92,9 @@ MD;
         foreach ($lessons as $lesson) {
             $content = trim($lesson['content']);
             // Extract just the main lesson text, not the metadata
-            $lines[] = '- ' . $this->extractLessonCore($content);
+            $lines[] = '- '.$this->extractLessonCore($content);
         }
+
         return implode("\n", $lines);
     }
 
@@ -101,6 +102,7 @@ MD;
     {
         // Remove metadata lines (starting with **Context:**)
         $parts = explode('**Context:**', $content);
+
         return trim($parts[0]);
     }
 
@@ -108,9 +110,10 @@ MD;
     {
         // Insert lessons after ACTION section
         $marker = '### RESULT';
+
         return str_replace(
             $marker,
-            $lessonsText . "\n\n" . $marker,
+            $lessonsText."\n\n".$marker,
             $preamble
         );
     }

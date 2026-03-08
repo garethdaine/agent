@@ -26,10 +26,10 @@ class ConnectorRegistryLoader
             return new RegistrySyncResult($created, $updated, $skipped, $deprecated, $errors);
         }
 
-        $directories = glob($path . '/*', GLOB_ONLYDIR);
+        $directories = glob($path.'/*', GLOB_ONLYDIR);
 
         foreach ($directories as $directory) {
-            $manifestFile = $directory . '/connector.json';
+            $manifestFile = $directory.'/connector.json';
 
             if (! file_exists($manifestFile)) {
                 continue;

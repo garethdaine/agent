@@ -731,7 +731,7 @@ class RunEventWriter
      * the process actually died, plain-text rate-limit phrases in the final
      * output are a reliable signal rather than noise from code/docs.
      *
-     * @return array<string, mixed>|null  Metadata entries to merge, or null.
+     * @return array<string, mixed>|null Metadata entries to merge, or null.
      */
     public function scanRecentOutputForRateLimit(): ?array
     {

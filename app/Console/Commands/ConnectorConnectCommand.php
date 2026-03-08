@@ -6,7 +6,6 @@ namespace App\Console\Commands;
 
 use App\Models\AgentConnector;
 use App\Models\Team;
-use App\Models\User;
 use App\Services\Connectors\ConnectionLifecycleService;
 use Illuminate\Console\Command;
 

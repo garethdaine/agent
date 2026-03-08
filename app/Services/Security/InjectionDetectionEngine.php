@@ -8,7 +8,6 @@ use App\DTOs\Security\InjectionDetectionResult;
 use App\Enums\Runtime\RuntimeMode;
 use App\Enums\Security\DetectionPatternType;
 use App\Enums\Security\InjectionAction;
-use App\Enums\Security\InjectionSeverity;
 use App\Models\Security\SecurityDetectionRule;
 use Illuminate\Support\Collection;
 

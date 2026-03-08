@@ -12,7 +12,7 @@ class MajoritySynthesisStrategyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new MajoritySynthesisStrategy();
+        $this->strategy = new MajoritySynthesisStrategy;
     }
 
     public function test_returns_majority_decision(): void

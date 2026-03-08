@@ -132,7 +132,7 @@ class ConnectorManifestValidatorTest extends TestCase
 
             $result = $this->validator->validate($manifest);
 
-            $this->assertTrue($result->valid, "Auth type '{$authType}' should be valid but got errors: " . implode(', ', $result->errors));
+            $this->assertTrue($result->valid, "Auth type '{$authType}' should be valid but got errors: ".implode(', ', $result->errors));
         }
     }
 

@@ -16,7 +16,7 @@ class AgentConnectorFactory extends Factory
     {
         return [
             'name' => fake()->unique()->slug(2),
-            'display_name' => fake()->company() . ' Connector',
+            'display_name' => fake()->company().' Connector',
             'description' => fake()->sentence(10),
             'category' => fake()->randomElement(['crm', 'accounting', 'hr', 'marketing', 'communications']),
             'industries' => [],

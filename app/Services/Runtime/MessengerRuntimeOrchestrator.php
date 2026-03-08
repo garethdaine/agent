@@ -105,7 +105,7 @@ class MessengerRuntimeOrchestrator
         $systemPrompt = $this->buildSystemPrompt($context);
         $totalInputTokens = 0;
         $totalOutputTokens = 0;
-        $turnSecurityContext = new TurnSecurityContext();
+        $turnSecurityContext = new TurnSecurityContext;
 
         try {
             for ($iter = 0; $iter < self::MAX_TOOL_ITERATIONS; $iter++) {

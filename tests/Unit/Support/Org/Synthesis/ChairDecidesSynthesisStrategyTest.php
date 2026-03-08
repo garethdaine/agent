@@ -12,7 +12,7 @@ class ChairDecidesSynthesisStrategyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->strategy = new ChairDecidesSynthesisStrategy();
+        $this->strategy = new ChairDecidesSynthesisStrategy;
     }
 
     public function test_returns_chair_decision(): void

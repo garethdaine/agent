@@ -11,6 +11,7 @@ use Tests\TestCase;
 class OrgRitualTemplateTest extends TestCase
 {
     use RefreshDatabase;
+
     public function test_scheduled_scope_excludes_paused_and_archived(): void
     {
         $user = User::factory()->create();
@@ -27,7 +28,7 @@ class OrgRitualTemplateTest extends TestCase
     {
         $validStates = [
             'draft', 'scheduled', 'queued', 'running', 'waiting_approval',
-            'reviewing', 'succeeded', 'failed', 'cancelled', 'partial'
+            'reviewing', 'succeeded', 'failed', 'cancelled', 'partial',
         ];
 
         foreach ($validStates as $state) {

@@ -56,7 +56,7 @@ class ExfiltrationDetector
         }
 
         $patternNames = array_map(fn (ExfiltrationPattern $p) => $p->value, $matched);
-        $reason = 'Exfiltration patterns detected: ' . implode(', ', $patternNames);
+        $reason = 'Exfiltration patterns detected: '.implode(', ', $patternNames);
 
         $this->logger->logExfiltrationAttempt(
             pattern: implode(', ', $patternNames),

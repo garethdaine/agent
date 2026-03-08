@@ -16,7 +16,7 @@ class PatternMatchAnalyzer
             foreach ($categoryPatterns as $pattern) {
                 // Check if pattern contains regex metacharacters
                 if ($this->isRegexPattern($pattern)) {
-                    if (@preg_match('/' . $pattern . '/i', $content)) {
+                    if (@preg_match('/'.$pattern.'/i', $content)) {
                         $matchedCount++;
                     }
                 } else {

@@ -13,7 +13,7 @@ class FailureModeClassifierTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->classifier = new FailureModeClassifier();
+        $this->classifier = new FailureModeClassifier;
     }
 
     public function test_classifies_type_1_missing_subject(): void

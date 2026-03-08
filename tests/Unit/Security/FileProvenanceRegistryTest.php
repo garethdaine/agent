@@ -20,7 +20,7 @@ class FileProvenanceRegistryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->registry = new FileProvenanceRegistry();
+        $this->registry = new FileProvenanceRegistry;
     }
 
     public function test_record_then_lookup_returns_correct_trust_level(): void

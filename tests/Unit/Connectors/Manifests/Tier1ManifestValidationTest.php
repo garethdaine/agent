@@ -37,7 +37,7 @@ class Tier1ManifestValidationTest extends TestCase
     public function test_all_tier1_manifests_pass_validation(): void
     {
         foreach (self::TIER1_CONNECTORS as $connector) {
-            $manifestFile = $this->manifestsPath . '/' . $connector . '/connector.json';
+            $manifestFile = $this->manifestsPath.'/'.$connector.'/connector.json';
             $this->assertFileExists($manifestFile, "Manifest file missing for connector: {$connector}");
 
             $manifest = json_decode(file_get_contents($manifestFile), true);
@@ -46,7 +46,7 @@ class Tier1ManifestValidationTest extends TestCase
             $result = $this->validator->validate($manifest);
             $this->assertTrue(
                 $result->valid,
-                "Manifest validation failed for {$connector}: " . implode(', ', $result->errors)
+                "Manifest validation failed for {$connector}: ".implode(', ', $result->errors)
             );
         }
     }
@@ -66,10 +66,10 @@ class Tier1ManifestValidationTest extends TestCase
     public function test_all_tier1_action_schemas_are_valid_json(): void
     {
         foreach (self::TIER1_CONNECTORS as $connector) {
-            $actionsDir = $this->manifestsPath . '/' . $connector . '/actions';
+            $actionsDir = $this->manifestsPath.'/'.$connector.'/actions';
             $this->assertDirectoryExists($actionsDir, "Actions directory missing for connector: {$connector}");
 
-            $actionFiles = glob($actionsDir . '/*.json');
+            $actionFiles = glob($actionsDir.'/*.json');
             $this->assertNotEmpty($actionFiles, "No action schema files found for connector: {$connector}");
 
             foreach ($actionFiles as $actionFile) {
@@ -194,7 +194,7 @@ class Tier1ManifestValidationTest extends TestCase
 
     private function loadManifest(string $connector): array
     {
-        $manifestFile = $this->manifestsPath . '/' . $connector . '/connector.json';
+        $manifestFile = $this->manifestsPath.'/'.$connector.'/connector.json';
         $this->assertFileExists($manifestFile, "Manifest file missing for connector: {$connector}");
 
         $manifest = json_decode(file_get_contents($manifestFile), true);

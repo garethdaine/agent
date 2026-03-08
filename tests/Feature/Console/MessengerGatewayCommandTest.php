@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
-use App\Messenger\Gateway\Contracts\GatewayWorkerInterface;
-use App\Messenger\Gateway\DTOs\WorkerHealthMetadata;
-use App\Messenger\Gateway\Enums\WorkerHealthStatus;
 use App\Messenger\Gateway\MessengerGatewayManager;
 use App\Models\ConnectorAccount;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\App;
 use Mockery;

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Skills;
 
 use App\Models\AgentSkillValidation;
-use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

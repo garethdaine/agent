@@ -9,8 +9,8 @@ use App\Models\RepoAnalysisArtifact;
 use App\Models\RepoAnalysisSession;
 use App\Models\RepoAnalysisTask;
 use App\Support\Agent\FeatureFlagManager;
-use App\Support\RepoAnalysis\Analyzers\AnalyzerRegistry;
 use App\Support\RepoAnalysis\AiTaskRunner;
+use App\Support\RepoAnalysis\Analyzers\AnalyzerRegistry;
 use App\Support\RepoAnalysis\EventWriter;
 use App\Support\RepoAnalysis\RepoAnalysisExecutionOrchestrator;
 use App\Support\RepoAnalysis\SessionStateTransitionService;
@@ -417,7 +417,6 @@ class ExecuteRepoAnalysisTaskJob implements ShouldQueue
     }
 
     /**
-     * @param  mixed  $manifestFiles
      * @return array<string, string>
      */
     private function manifestFileHashes(mixed $manifestFiles): array

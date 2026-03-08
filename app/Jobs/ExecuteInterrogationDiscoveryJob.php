@@ -10,9 +10,9 @@ use App\Support\Interrogation\InterrogationEventWriter;
 use App\Support\Interrogation\SessionStateTransitionService;
 use App\Support\Interrogation\SystemPromptResolver;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
 class ExecuteInterrogationDiscoveryJob implements ShouldQueue

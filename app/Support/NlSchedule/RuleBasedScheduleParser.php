@@ -42,9 +42,9 @@ final class RuleBasedScheduleParser
     /**
      * Parse a natural language schedule description into a ParseResult.
      *
-     * @param string $input Natural language schedule description
-     * @param string $timezone IANA timezone string
-     * @return ParseResult
+     * @param  string  $input  Natural language schedule description
+     * @param  string  $timezone  IANA timezone string
+     *
      * @throws \InvalidArgumentException If input is invalid or contains sub-minute intervals
      */
     public function parse(string $input, string $timezone): ParseResult
@@ -92,7 +92,7 @@ final class RuleBasedScheduleParser
      */
     private function tryEveryXMinutes(string $input, string $timezone): ?ParseResult
     {
-        if (!preg_match('/every\s+(\d+)\s*minutes?$/i', $input, $matches)) {
+        if (! preg_match('/every\s+(\d+)\s*minutes?$/i', $input, $matches)) {
             return null;
         }
 
@@ -105,7 +105,7 @@ final class RuleBasedScheduleParser
         return new ParseResult(
             cronExpression: $cron,
             timezone: $timezone,
-            explanation: "Every {$minutes} minute" . ($minutes !== 1 ? 's' : ''),
+            explanation: "Every {$minutes} minute".($minutes !== 1 ? 's' : ''),
             activeHours: null,
             nextRuns: $this->calculateNextRuns($cron, $timezone, null),
             confidence: 0.95,
@@ -119,7 +119,7 @@ final class RuleBasedScheduleParser
      */
     private function tryEveryXHours(string $input, string $timezone): ?ParseResult
     {
-        if (!preg_match('/^every\s+(\d+)\s*hours?$/i', $input, $matches)) {
+        if (! preg_match('/^every\s+(\d+)\s*hours?$/i', $input, $matches)) {
             return null;
         }
 
@@ -134,7 +134,7 @@ final class RuleBasedScheduleParser
         return new ParseResult(
             cronExpression: $cron,
             timezone: $timezone,
-            explanation: "Every {$hours} hour" . ($hours !== 1 ? 's' : '') . ' at minute 0',
+            explanation: "Every {$hours} hour".($hours !== 1 ? 's' : '').' at minute 0',
             activeHours: null,
             nextRuns: $this->calculateNextRuns($cron, $timezone, null),
             confidence: 0.95,
@@ -148,7 +148,7 @@ final class RuleBasedScheduleParser
      */
     private function tryEveryXHoursStartingAt(string $input, string $timezone): ?ParseResult
     {
-        if (!preg_match('/every\s+(\d+)\s*hours?\s+starting\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i', $input, $matches)) {
+        if (! preg_match('/every\s+(\d+)\s*hours?\s+starting\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i', $input, $matches)) {
             return null;
         }
 
@@ -171,7 +171,7 @@ final class RuleBasedScheduleParser
         return new ParseResult(
             cronExpression: $cron,
             timezone: $timezone,
-            explanation: "Every {$hours} hour" . ($hours !== 1 ? 's' : '') . " starting at " . sprintf('%02d:%02d', $startHour, $startMinute),
+            explanation: "Every {$hours} hour".($hours !== 1 ? 's' : '').' starting at '.sprintf('%02d:%02d', $startHour, $startMinute),
             activeHours: $activeHours,
             nextRuns: $this->calculateNextRuns($cron, $timezone, $activeHours),
             confidence: 0.85,
@@ -185,7 +185,7 @@ final class RuleBasedScheduleParser
      */
     private function tryEveryDayBetween(string $input, string $timezone): ?ParseResult
     {
-        if (!preg_match('/every\s+day\s+between\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s+and\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i', $input, $matches)) {
+        if (! preg_match('/every\s+day\s+between\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s+and\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i', $input, $matches)) {
             return null;
         }
 
@@ -210,7 +210,7 @@ final class RuleBasedScheduleParser
         return new ParseResult(
             cronExpression: $cron,
             timezone: $timezone,
-            explanation: "Every day between " . sprintf('%02d:%02d', $startHour, $startMinute) . " and " . sprintf('%02d:%02d', $endHour, $endMinute),
+            explanation: 'Every day between '.sprintf('%02d:%02d', $startHour, $startMinute).' and '.sprintf('%02d:%02d', $endHour, $endMinute),
             activeHours: $activeHours,
             nextRuns: $this->calculateNextRuns($cron, $timezone, $activeHours),
             confidence: 0.85,
@@ -224,7 +224,7 @@ final class RuleBasedScheduleParser
      */
     private function tryDailyAt(string $input, string $timezone): ?ParseResult
     {
-        if (!preg_match('/daily\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i', $input, $matches)) {
+        if (! preg_match('/daily\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i', $input, $matches)) {
             return null;
         }
 
@@ -238,7 +238,7 @@ final class RuleBasedScheduleParser
         return new ParseResult(
             cronExpression: $cron,
             timezone: $timezone,
-            explanation: "Daily at " . sprintf('%d:%02d %s', $hour > 12 ? $hour - 12 : ($hour === 0 ? 12 : $hour), $minute, $hour >= 12 ? 'PM' : 'AM'),
+            explanation: 'Daily at '.sprintf('%d:%02d %s', $hour > 12 ? $hour - 12 : ($hour === 0 ? 12 : $hour), $minute, $hour >= 12 ? 'PM' : 'AM'),
             activeHours: null,
             nextRuns: $this->calculateNextRuns($cron, $timezone, null),
             confidence: 0.95,
@@ -252,7 +252,7 @@ final class RuleBasedScheduleParser
      */
     private function tryBareTimeWithoutAmPm(string $input, string $timezone): ?ParseResult
     {
-        if (!preg_match('/daily\s+at\s+(\d{1,2})(?::(\d{2}))?$/i', $input, $matches)) {
+        if (! preg_match('/daily\s+at\s+(\d{1,2})(?::(\d{2}))?$/i', $input, $matches)) {
             return null;
         }
 
@@ -266,7 +266,7 @@ final class RuleBasedScheduleParser
         return new ParseResult(
             cronExpression: $cron,
             timezone: $timezone,
-            explanation: "Ambiguous time: {$hour}" . ($minute > 0 ? sprintf(':%02d', $minute) : '') . " - could be AM or PM. Please specify AM/PM.",
+            explanation: "Ambiguous time: {$hour}".($minute > 0 ? sprintf(':%02d', $minute) : '').' - could be AM or PM. Please specify AM/PM.',
             activeHours: null,
             nextRuns: $this->calculateNextRuns($cron, $timezone, null),
             confidence: 0.5,
@@ -280,7 +280,7 @@ final class RuleBasedScheduleParser
      */
     private function tryWeekdaysAt(string $input, string $timezone): ?ParseResult
     {
-        if (!preg_match('/weekdays?\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i', $input, $matches)) {
+        if (! preg_match('/weekdays?\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i', $input, $matches)) {
             return null;
         }
 
@@ -295,7 +295,7 @@ final class RuleBasedScheduleParser
         return new ParseResult(
             cronExpression: $cron,
             timezone: $timezone,
-            explanation: "Weekdays (Monday-Friday) at " . sprintf('%d:%02d %s', $hour > 12 ? $hour - 12 : ($hour === 0 ? 12 : $hour), $minute, $hour >= 12 ? 'PM' : 'AM'),
+            explanation: 'Weekdays (Monday-Friday) at '.sprintf('%d:%02d %s', $hour > 12 ? $hour - 12 : ($hour === 0 ? 12 : $hour), $minute, $hour >= 12 ? 'PM' : 'AM'),
             activeHours: null,
             nextRuns: $this->calculateNextRuns($cron, $timezone, null),
             confidence: 0.95,
@@ -309,7 +309,7 @@ final class RuleBasedScheduleParser
      */
     private function tryWeekendsAt(string $input, string $timezone): ?ParseResult
     {
-        if (!preg_match('/weekends?\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i', $input, $matches)) {
+        if (! preg_match('/weekends?\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i', $input, $matches)) {
             return null;
         }
 
@@ -324,7 +324,7 @@ final class RuleBasedScheduleParser
         return new ParseResult(
             cronExpression: $cron,
             timezone: $timezone,
-            explanation: "Weekends (Saturday-Sunday) at " . sprintf('%d:%02d %s', $hour > 12 ? $hour - 12 : ($hour === 0 ? 12 : $hour), $minute, $hour >= 12 ? 'PM' : 'AM'),
+            explanation: 'Weekends (Saturday-Sunday) at '.sprintf('%d:%02d %s', $hour > 12 ? $hour - 12 : ($hour === 0 ? 12 : $hour), $minute, $hour >= 12 ? 'PM' : 'AM'),
             activeHours: null,
             nextRuns: $this->calculateNextRuns($cron, $timezone, null),
             confidence: 0.95,
@@ -340,7 +340,7 @@ final class RuleBasedScheduleParser
     {
         $daysPattern = implode('|', array_keys(self::DAY_MAP));
 
-        if (!preg_match("/every\s+({$daysPattern})\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i", $input, $matches)) {
+        if (! preg_match("/every\s+({$daysPattern})\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i", $input, $matches)) {
             return null;
         }
 
@@ -360,7 +360,7 @@ final class RuleBasedScheduleParser
         return new ParseResult(
             cronExpression: $cron,
             timezone: $timezone,
-            explanation: "Every " . ucfirst($dayName) . " at " . sprintf('%d:%02d', $hour > 12 ? $hour - 12 : ($hour === 0 ? 12 : $hour), $minute) . ($ampm ? ' ' . strtoupper($ampm) : ''),
+            explanation: 'Every '.ucfirst($dayName).' at '.sprintf('%d:%02d', $hour > 12 ? $hour - 12 : ($hour === 0 ? 12 : $hour), $minute).($ampm ? ' '.strtoupper($ampm) : ''),
             activeHours: null,
             nextRuns: $this->calculateNextRuns($cron, $timezone, null),
             confidence: $confidence,
@@ -374,7 +374,7 @@ final class RuleBasedScheduleParser
      */
     private function tryHourly(string $input, string $timezone): ?ParseResult
     {
-        if (!preg_match('/^hourly$/i', $input)) {
+        if (! preg_match('/^hourly$/i', $input)) {
             return null;
         }
 
@@ -397,7 +397,7 @@ final class RuleBasedScheduleParser
      */
     private function tryTwiceADay(string $input, string $timezone): ?ParseResult
     {
-        if (!preg_match('/twice\s+a\s+day/i', $input)) {
+        if (! preg_match('/twice\s+a\s+day/i', $input)) {
             return null;
         }
 
@@ -457,9 +457,9 @@ final class RuleBasedScheduleParser
     /**
      * Calculate the next N runs for the cron expression.
      *
-     * @param string $cronExpression 5-part cron expression
-     * @param string $timezone IANA timezone
-     * @param array|null $activeHours Active hours configuration (not used for filtering in this basic implementation)
+     * @param  string  $cronExpression  5-part cron expression
+     * @param  string  $timezone  IANA timezone
+     * @param  array|null  $activeHours  Active hours configuration (not used for filtering in this basic implementation)
      * @return array Array of {local, utc} timestamp pairs
      */
     private function calculateNextRuns(string $cronExpression, string $timezone, ?array $activeHours): array

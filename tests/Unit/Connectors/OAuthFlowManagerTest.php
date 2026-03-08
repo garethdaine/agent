@@ -59,7 +59,7 @@ class OAuthFlowManagerTest extends TestCase
         $this->assertEquals('S256', $params['code_challenge_method']);
         $this->assertArrayHasKey('state', $params);
         $this->assertStringContainsString('read', $params['scope']);
-        $this->assertStringContainsString(config('app.url') . '/agent/api/v1/connectors/callback', $params['redirect_uri']);
+        $this->assertStringContainsString(config('app.url').'/agent/api/v1/connectors/callback', $params['redirect_uri']);
     }
 
     public function test_stores_state_in_cache_with_ttl(): void

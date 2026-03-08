@@ -50,7 +50,7 @@ class WhatsAppAdapterTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->adapter = new WhatsAppAdapter();
+        $this->adapter = new WhatsAppAdapter;
         $this->account = ConnectorAccount::factory()->create([
             'provider' => ConnectorAccount::PROVIDER_WHATSAPP,
             'connection_mode' => ConnectorAccount::MODE_WEBHOOK, // WhatsApp is webhook-only
@@ -269,7 +269,7 @@ class WhatsAppAdapterTest extends TestCase
 
     public function test_identity_mapping_creates_messenger_identity_link_with_phone(): void
     {
-        $request = new Request();
+        $request = new Request;
         $request->attributes->set('connector_account', $this->account);
         $request->merge([
             'entry' => [
@@ -318,7 +318,7 @@ class WhatsAppAdapterTest extends TestCase
     {
         $body = '{"entry":[{"id":"123","changes":[]}]}';
         $appSecret = 'abcdef0123456789abcdef0123456789';
-        $expectedSignature = 'sha256=' . hash_hmac('sha256', $body, $appSecret);
+        $expectedSignature = 'sha256='.hash_hmac('sha256', $body, $appSecret);
 
         $request = new Request([], [], [], [], [], [], $body);
         $request->headers->set('X-Hub-Signature-256', $expectedSignature);
@@ -395,7 +395,7 @@ class WhatsAppAdapterTest extends TestCase
 
     public function test_parse_status_update_does_not_error(): void
     {
-        $request = new Request();
+        $request = new Request;
         $request->attributes->set('connector_account', $this->account);
         $request->merge([
             'entry' => [
@@ -434,7 +434,7 @@ class WhatsAppAdapterTest extends TestCase
 
     public function test_parse_inbound_message_extracts_media_message(): void
     {
-        $request = new Request();
+        $request = new Request;
         $request->attributes->set('connector_account', $this->account);
         $request->merge([
             'entry' => [

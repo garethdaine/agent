@@ -183,14 +183,14 @@ class AiTaskRunner
 
             $writer->append('task_progress', [
                 'task_key' => (string) $task->task_key,
-                    'message' => mb_substr($message, 0, $maxLength),
-                    'stream_type' => (string) ($parsed['type'] ?? 'message'),
-                    'source' => (string) ($payload['source'] ?? 'ai_runner'),
-                    'cli_session_id' => $latestCliSessionId,
-                ], [
-                    'phase' => 3,
-                    'status' => SessionStateTransitionService::STATUS_EXECUTING,
-                ]);
+                'message' => mb_substr($message, 0, $maxLength),
+                'stream_type' => (string) ($parsed['type'] ?? 'message'),
+                'source' => (string) ($payload['source'] ?? 'ai_runner'),
+                'cli_session_id' => $latestCliSessionId,
+            ], [
+                'phase' => 3,
+                'status' => SessionStateTransitionService::STATUS_EXECUTING,
+            ]);
         }
 
         return $buffer;

@@ -6,6 +6,4 @@ namespace App\Support\RepoAnalysis\Exceptions;
 
 use RuntimeException;
 
-class QueueMisroutingException extends RuntimeException
-{
-}
+class QueueMisroutingException extends RuntimeException {}

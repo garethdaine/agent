@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Connectors;
 
-use App\Models\AgentConnectorConnection;
 use App\Models\AgentConnector;
+use App\Models\AgentConnectorConnection;
 use App\Models\Team;
 use App\Models\User;
 use App\Policies\ConnectorPolicy;

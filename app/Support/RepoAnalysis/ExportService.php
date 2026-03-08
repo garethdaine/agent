@@ -563,7 +563,6 @@ class ExportService
     }
 
     /**
-     * @param  mixed  $values
      * @return array<int, string>
      */
     private function stringList(mixed $values): array
@@ -593,7 +592,6 @@ class ExportService
     }
 
     /**
-     * @param  mixed  $pairs
      * @return array<int, string>
      */
     private function dependencyPairs(mixed $pairs, int $limit): array

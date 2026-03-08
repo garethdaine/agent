@@ -79,7 +79,7 @@ final class BrowserCommandHandler implements SlashCommandHandlerInterface
         }
 
         return CommandResult::success(
-            "Browser sidecar is ready. You can ask me to use the browser (e.g. “navigate to x.com” or “check example.com”) and I’ll use the browser tool.",
+            'Browser sidecar is ready. You can ask me to use the browser (e.g. “navigate to x.com” or “check example.com”) and I’ll use the browser tool.',
             ['action' => 'start', 'status' => 'ready']
         );
     }

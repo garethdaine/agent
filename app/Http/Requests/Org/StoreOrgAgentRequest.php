@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Org;
 
 use App\Models\DelegateeProfile;
-use App\Support\Org\Exceptions\AuthorityWideningException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 

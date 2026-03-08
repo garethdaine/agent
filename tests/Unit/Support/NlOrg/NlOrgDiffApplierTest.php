@@ -25,10 +25,15 @@ class NlOrgDiffApplierTest extends TestCase
     use RefreshDatabase;
 
     private MockInterface $profileService;
+
     private MockInterface $edgeService;
+
     private MockInterface $ritualService;
+
     private MockInterface $councilService;
+
     private NlOrgDiffApplier $applier;
+
     private User $user;
 
     protected function setUp(): void

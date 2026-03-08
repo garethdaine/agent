@@ -6,7 +6,6 @@ namespace Tests\Unit\Skills;
 
 use App\Models\AgentSkill;
 use App\Models\OrgAgentProfile;
-use App\Models\OrgCouncilTemplate;
 use App\Models\OrgRitualTemplate;
 use App\Models\Team;
 use App\Models\User;

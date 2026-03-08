@@ -97,7 +97,7 @@ class ConnectorRateLimiterTest extends TestCase
         $this->limiter->handle($request, fn () => null);
 
         // Clear the minute key to simulate time passing
-        Redis::del("connector_rate:test-conn-rate-3:minute");
+        Redis::del('connector_rate:test-conn-rate-3:minute');
 
         // Should now allow again
         $called = false;
@@ -127,7 +127,7 @@ class ConnectorRateLimiterTest extends TestCase
         );
 
         // Simulate a concurrent request in progress
-        Redis::set("connector_rate:test-conn-rate-4:concurrent", 1);
+        Redis::set('connector_rate:test-conn-rate-4:concurrent', 1);
 
         $this->expectException(RateLimitExceededException::class);
         $this->expectExceptionMessage('Concurrent');

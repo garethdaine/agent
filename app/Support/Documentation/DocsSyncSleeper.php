@@ -8,4 +8,3 @@ interface DocsSyncSleeper
 {
     public function sleep(int $seconds): void;
 }
-

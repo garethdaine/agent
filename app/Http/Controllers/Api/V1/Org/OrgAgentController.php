@@ -17,6 +17,7 @@ use Throwable;
 class OrgAgentController extends Controller
 {
     use AuthorizesRequests;
+
     public function __construct(
         private readonly OrgAgentProfileService $service
     ) {}

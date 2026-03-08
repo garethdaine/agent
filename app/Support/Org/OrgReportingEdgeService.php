@@ -95,7 +95,7 @@ class OrgReportingEdgeService
         // The hierarchy depth counts levels, so we check if the total chain exceeds MAX_DEPTH
         if ($managerDepth + $subordinateDepth + 2 > self::MAX_DEPTH) {
             throw new HierarchyDepthExceededException(
-                'Maximum hierarchy depth of ' . self::MAX_DEPTH . ' levels exceeded',
+                'Maximum hierarchy depth of '.self::MAX_DEPTH.' levels exceeded',
                 self::MAX_DEPTH
             );
         }

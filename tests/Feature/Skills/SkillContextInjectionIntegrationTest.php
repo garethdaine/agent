@@ -9,7 +9,6 @@ use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentSkill;
 use App\Models\User;
-use App\Services\Skills\SkillContextInjector;
 use App\Services\Skills\SkillResolver;
 use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;

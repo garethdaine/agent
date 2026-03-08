@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Compliance;
 
-use App\Events\AgentJobRunFinished;
 use App\Jobs\Compliance\LessonExtractionJob;
-use App\Listeners\Compliance\LessonExtractionListener;
 use App\Models\AgentJobRun;
 use App\Support\Compliance\LessonsManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;

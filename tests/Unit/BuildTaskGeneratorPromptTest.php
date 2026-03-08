@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Models\InterrogationSession;
 use App\Models\InterrogationBuildTask;
+use App\Models\InterrogationSession;
 use App\Models\User;
 use App\Support\Interrogation\AdapterFactory;
 use App\Support\Interrogation\BuildTaskGenerator;

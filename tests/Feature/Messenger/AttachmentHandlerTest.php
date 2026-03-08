@@ -59,7 +59,7 @@ class AttachmentHandlerTest extends TestCase
         // Clean up any stale temp files from previous runs
         $tempDir = storage_path('app/messenger/temp');
         if (is_dir($tempDir)) {
-            foreach (glob($tempDir . '/*') as $file) {
+            foreach (glob($tempDir.'/*') as $file) {
                 if (is_file($file)) {
                     @unlink($file);
                 }

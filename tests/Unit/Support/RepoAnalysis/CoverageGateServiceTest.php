@@ -134,4 +134,3 @@ class CoverageGateServiceTest extends TestCase
         ]);
     }
 }
-

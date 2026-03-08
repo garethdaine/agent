@@ -110,7 +110,7 @@ class ChatIntentParserSecurityTest extends TestCase
     public function test_no_attachments_returns_empty_string(): void
     {
         $attachmentsRelation = Mockery::mock(HasMany::class);
-        $attachmentsRelation->shouldReceive('get')->once()->andReturn(new EloquentCollection());
+        $attachmentsRelation->shouldReceive('get')->once()->andReturn(new EloquentCollection);
 
         $message = Mockery::mock(ChatMessage::class);
         $message->shouldReceive('attachments')->once()->andReturn($attachmentsRelation);

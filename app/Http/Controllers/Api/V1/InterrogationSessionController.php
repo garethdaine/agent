@@ -1385,12 +1385,12 @@ class InterrogationSessionController extends Controller
 
         $metadata = is_array($task->metadata_json) ? $task->metadata_json : [];
         $metadata['regeneration'] = [
-                'status' => 'queued',
-                'requested_at' => CarbonImmutable::now('UTC')->toIso8601String(),
-                'requested_by_user_id' => (int) $request->user()->id,
-                'amend_notes' => $amendNotes,
-                'additional_context' => $additionalContext,
-            ];
+            'status' => 'queued',
+            'requested_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            'requested_by_user_id' => (int) $request->user()->id,
+            'amend_notes' => $amendNotes,
+            'additional_context' => $additionalContext,
+        ];
         $task->metadata_json = $metadata;
         $task->save();
 
@@ -3126,6 +3126,7 @@ class InterrogationSessionController extends Controller
     {
         if (is_string($payload)) {
             $value = trim($payload);
+
             return $value === '' ? null : $value;
         }
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Jobs\Compliance;
 
 use App\Jobs\Compliance\LessonExtractionJob;
-use App\Support\Agent\FeatureFlagManager;
 use App\Support\Compliance\LessonsManager;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;

@@ -14,7 +14,7 @@ class ParseScheduleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'input' => ['required', 'string', 'max:' . config('agent.nl_parse.max_input_length', 200)],
+            'input' => ['required', 'string', 'max:'.config('agent.nl_parse.max_input_length', 200)],
             'timezone' => ['required', 'string', 'timezone:all'],
         ];
     }

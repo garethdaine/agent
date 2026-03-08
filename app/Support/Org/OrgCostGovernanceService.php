@@ -6,7 +6,6 @@ use App\Models\OrgAgentProfile;
 use App\Models\OrgCostLedger;
 use App\Models\OrgRitualRun;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 
 class OrgCostGovernanceService
 {

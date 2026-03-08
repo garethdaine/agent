@@ -6,7 +6,6 @@ use App\Messenger\Gateway\Contracts\GatewayWorkerInterface;
 use App\Messenger\Gateway\DTOs\WorkerHealthMetadata;
 use App\Messenger\Gateway\Enums\WorkerHealthStatus;
 use App\Messenger\Gateway\MessengerGatewayManager;
-use App\Messenger\Gateway\ReconnectionStrategy;
 use App\Models\ConnectorAccount;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;

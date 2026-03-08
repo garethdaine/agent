@@ -168,9 +168,6 @@ abstract class AbstractAnalyzer implements AnalyzerInterface
         return array_keys($value) === range(0, count($value) - 1);
     }
 
-    /**
-     * @return mixed
-     */
     private function normalizeForHash(mixed $value): mixed
     {
         if (! is_array($value)) {

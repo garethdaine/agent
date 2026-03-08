@@ -21,7 +21,7 @@ class ConnectorRegistryLoaderTest extends TestCase
     {
         parent::setUp();
         $this->loader = new ConnectorRegistryLoader(new ConnectorManifestValidator);
-        $this->fixturesPath = sys_get_temp_dir() . '/connector-test-' . uniqid();
+        $this->fixturesPath = sys_get_temp_dir().'/connector-test-'.uniqid();
         mkdir($this->fixturesPath, 0755, true);
     }
 
@@ -116,9 +116,9 @@ class ConnectorRegistryLoaderTest extends TestCase
     public function test_sync_handles_invalid_manifest_gracefully(): void
     {
         // Write invalid JSON
-        $dir = $this->fixturesPath . '/bad-connector';
+        $dir = $this->fixturesPath.'/bad-connector';
         mkdir($dir, 0755, true);
-        file_put_contents($dir . '/connector.json', '{invalid json!!!}');
+        file_put_contents($dir.'/connector.json', '{invalid json!!!}');
 
         Log::shouldReceive('warning')
             ->once()
@@ -168,9 +168,9 @@ class ConnectorRegistryLoaderTest extends TestCase
 
     private function writeManifest(string $name, array $manifest): void
     {
-        $dir = $this->fixturesPath . '/' . $name;
+        $dir = $this->fixturesPath.'/'.$name;
         mkdir($dir, 0755, true);
-        file_put_contents($dir . '/connector.json', json_encode($manifest, JSON_PRETTY_PRINT));
+        file_put_contents($dir.'/connector.json', json_encode($manifest, JSON_PRETTY_PRINT));
     }
 
     private function cleanupFixtures(string $path): void

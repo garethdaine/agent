@@ -28,17 +28,16 @@ final class NextRunsCalculator
 
     public function __construct(
         private readonly ActiveHoursEvaluator $evaluator
-    ) {
-    }
+    ) {}
 
     /**
      * Calculate the next N runs for a cron expression, filtered by active hours.
      *
-     * @param string $cronExpression 5-part cron expression
-     * @param string $timezone IANA timezone for the schedule
-     * @param array|null $activeHours Active hours configuration (null = no filtering)
-     * @param CarbonImmutable|null $from Starting point for calculation (defaults to now)
-     * @param int $count Number of runs to return (default 5)
+     * @param  string  $cronExpression  5-part cron expression
+     * @param  string  $timezone  IANA timezone for the schedule
+     * @param  array|null  $activeHours  Active hours configuration (null = no filtering)
+     * @param  CarbonImmutable|null  $from  Starting point for calculation (defaults to now)
+     * @param  int  $count  Number of runs to return (default 5)
      * @return array<int, array{local: string, utc: string}> Array of timestamp pairs
      */
     public function calculate(

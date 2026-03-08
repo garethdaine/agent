@@ -173,6 +173,7 @@ class CoverageAuditService
             $fragment = $fragmentsByUiKey[$uiKey] ?? null;
             if ($fragment === null) {
                 $missingTooltipUiKeys[] = $uiKey;
+
                 continue;
             }
 
@@ -183,6 +184,7 @@ class CoverageAuditService
                     $label,
                     $uiKey
                 );
+
                 continue;
             }
 
@@ -194,6 +196,7 @@ class CoverageAuditService
                     $uiKey,
                     $learnMoreSlug
                 );
+
                 continue;
             }
 
@@ -429,6 +432,7 @@ class CoverageAuditService
                     $uiKey,
                     $learnMoreSlug
                 );
+
                 continue;
             }
 
@@ -438,6 +442,7 @@ class CoverageAuditService
                     $uiKey,
                     $learnMoreSlug
                 );
+
                 continue;
             }
 

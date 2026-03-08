@@ -18,7 +18,7 @@ class LessonsManagerRunnerTypeTest extends TestCase
         parent::setUp();
         $this->testDir = sys_get_temp_dir().'/lessons_test_'.uniqid();
         mkdir($this->testDir.'/tasks', 0755, true);
-        $this->manager = new LessonsManager();
+        $this->manager = new LessonsManager;
     }
 
     protected function tearDown(): void

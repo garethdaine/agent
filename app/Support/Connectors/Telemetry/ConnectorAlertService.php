@@ -99,7 +99,7 @@ class ConnectorAlertService
                 userId: (int) ($connection->connected_by ?? 0),
                 severity: SystemNotificationPayload::SEVERITY_WARNING,
                 title: "{$connectorName} approaching rate limit",
-                body: "The daily API quota for **{$connectorName}** is at " . round($utilization * 100, 1) . "% ({$used}/{$dailyLimit} requests).",
+                body: "The daily API quota for **{$connectorName}** is at ".round($utilization * 100, 1)."% ({$used}/{$dailyLimit} requests).",
                 context: [
                     'connection_id' => $connection->id,
                     'connector_id' => $connection->connector_id,
@@ -130,7 +130,7 @@ class ConnectorAlertService
             userId: (int) ($connection->connected_by ?? 0),
             severity: SystemNotificationPayload::SEVERITY_WARNING,
             title: "{$connectorName} health degraded",
-            body: "The health score for **{$connectorName}** has dropped to " . round($healthScore * 100, 1) . "%. Investigate recent failures and consider reconnecting if issues persist.",
+            body: "The health score for **{$connectorName}** has dropped to ".round($healthScore * 100, 1).'%. Investigate recent failures and consider reconnecting if issues persist.',
             context: [
                 'connection_id' => $connection->id,
                 'connector_id' => $connection->connector_id,

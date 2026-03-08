@@ -15,7 +15,7 @@ class ConnectorCommandsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->fixturesPath = sys_get_temp_dir() . '/connector-cmd-test-' . uniqid();
+        $this->fixturesPath = sys_get_temp_dir().'/connector-cmd-test-'.uniqid();
         mkdir($this->fixturesPath, 0755, true);
     }
 
@@ -79,9 +79,9 @@ class ConnectorCommandsTest extends TestCase
 
     private function writeManifest(string $name, array $manifest): void
     {
-        $dir = $this->fixturesPath . '/' . $name;
+        $dir = $this->fixturesPath.'/'.$name;
         mkdir($dir, 0755, true);
-        file_put_contents($dir . '/connector.json', json_encode($manifest, JSON_PRETTY_PRINT));
+        file_put_contents($dir.'/connector.json', json_encode($manifest, JSON_PRETTY_PRINT));
     }
 
     private function cleanupFixtures(string $path): void

@@ -9,7 +9,7 @@ class ExecuteAgentRunJobReasoningCaptureTest extends TestCase
 {
     public function test_reasoning_step_events_tagged_correctly(): void
     {
-        $parser = new ReasoningStepParser();
+        $parser = new ReasoningStepParser;
 
         $step = $parser->parse("### SITUATION\nThe codebase is...");
         $this->assertEquals('situation', $step);
@@ -20,7 +20,7 @@ class ExecuteAgentRunJobReasoningCaptureTest extends TestCase
 
     public function test_reasoning_summary_extracted_from_parser(): void
     {
-        $parser = new ReasoningStepParser();
+        $parser = new ReasoningStepParser;
         $parser->parse("### SITUATION\nState");
         $parser->parse("### TASK\nGoal");
         $parser->parse("### ACTION\nSteps");

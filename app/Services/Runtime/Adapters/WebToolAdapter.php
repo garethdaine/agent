@@ -16,6 +16,7 @@ class WebToolAdapter extends AbstractToolAdapter
     {
         $this->exfiltrationDetector = $detector;
     }
+
     public function name(): string
     {
         return 'web';

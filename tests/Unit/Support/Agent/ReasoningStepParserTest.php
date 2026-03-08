@@ -12,7 +12,7 @@ class ReasoningStepParserTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->parser = new ReasoningStepParser();
+        $this->parser = new ReasoningStepParser;
     }
 
     public function test_parses_situation_header(): void

@@ -3,12 +3,8 @@
 namespace Tests\Unit\Connectors;
 
 use App\Models\AgentConnector;
-use App\Models\AgentConnectorApproval;
 use App\Models\AgentConnectorConnection;
 use App\Models\AgentConnectorCredential;
-use App\Models\AgentConnectorCredentialEvent;
-use App\Models\AgentConnectorInvocation;
-use App\Models\AgentConnectorWebhookEvent;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;

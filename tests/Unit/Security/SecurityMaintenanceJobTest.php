@@ -9,9 +9,7 @@ use App\Jobs\Security\SecurityMaintenanceJob;
 use App\Models\Runtime\RuntimeSession;
 use App\Models\Security\SecurityEvent;
 use App\Services\Security\SecurityConfigProvider;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class SecurityMaintenanceJobTest extends TestCase
@@ -43,7 +41,7 @@ class SecurityMaintenanceJobTest extends TestCase
             'created_at' => now()->subDays(5),
         ]);
 
-        $job = new SecurityMaintenanceJob();
+        $job = new SecurityMaintenanceJob;
         $job->handle(app(SecurityConfigProvider::class));
 
         // Old events should be purged (2 deleted), recent event kept
@@ -68,7 +66,7 @@ class SecurityMaintenanceJobTest extends TestCase
             'created_at' => now()->subDays(20),
         ]);
 
-        $job = new SecurityMaintenanceJob();
+        $job = new SecurityMaintenanceJob;
         $job->handle(app(SecurityConfigProvider::class));
 
         $remaining = SecurityEvent::where('event_type', '!=', SecurityEventType::RulePurged)->count();
@@ -88,7 +86,7 @@ class SecurityMaintenanceJobTest extends TestCase
             ]);
         }
 
-        $job = new SecurityMaintenanceJob();
+        $job = new SecurityMaintenanceJob;
         $job->handle(app(SecurityConfigProvider::class));
 
         $remaining = SecurityEvent::where('event_type', '!=', SecurityEventType::RulePurged)->count();
@@ -104,7 +102,7 @@ class SecurityMaintenanceJobTest extends TestCase
             'created_at' => now()->subDays(35),
         ]);
 
-        $job = new SecurityMaintenanceJob();
+        $job = new SecurityMaintenanceJob;
         $job->handle(app(SecurityConfigProvider::class));
 
         $purgeEvent = SecurityEvent::where('event_type', SecurityEventType::RulePurged)->first();
@@ -135,7 +133,7 @@ class SecurityMaintenanceJobTest extends TestCase
             ],
         ]);
 
-        $job = new SecurityMaintenanceJob();
+        $job = new SecurityMaintenanceJob;
         $job->handle(app(SecurityConfigProvider::class));
 
         $session->refresh();
@@ -147,13 +145,13 @@ class SecurityMaintenanceJobTest extends TestCase
 
     public function test_job_dispatches_to_memory_formation_queue(): void
     {
-        $job = new SecurityMaintenanceJob();
+        $job = new SecurityMaintenanceJob;
         $this->assertEquals('memory-formation', $job->queue);
     }
 
     public function test_job_has_correct_retry_config(): void
     {
-        $job = new SecurityMaintenanceJob();
+        $job = new SecurityMaintenanceJob;
         $this->assertEquals(5, $job->tries);
         $this->assertEquals([30, 60, 120, 300, 600], $job->backoff());
     }

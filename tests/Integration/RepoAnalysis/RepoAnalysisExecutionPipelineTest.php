@@ -5,14 +5,10 @@ declare(strict_types=1);
 namespace Tests\Integration\RepoAnalysis;
 
 use App\Jobs\RepoAnalysis\ExecuteRepoAnalysisTaskJob;
-use App\Jobs\RepoAnalysis\GenerateRepoAnalysisReportJob;
 use App\Jobs\RepoAnalysis\GenerateRepoSnapshotJob;
 use App\Jobs\RepoAnalysis\PlanRepoAnalysisTasksJob;
-use App\Jobs\RepoAnalysis\ValidateRepoAnalysisCoverageJob;
 use App\Models\RepoAnalysisArtifact;
-use App\Models\RepoAnalysisReport;
 use App\Models\RepoAnalysisSession;
-use App\Models\RepoAnalysisTask;
 use App\Models\User;
 use App\Support\RepoAnalysis\AiTaskRunner;
 use Carbon\CarbonImmutable;

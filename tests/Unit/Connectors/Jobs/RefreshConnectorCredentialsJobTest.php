@@ -6,7 +6,6 @@ use App\Jobs\Connectors\RefreshConnectorCredentialsJob;
 use App\Models\AgentConnector;
 use App\Models\AgentConnectorConnection;
 use App\Models\AgentConnectorCredential;
-use App\Models\AgentConnectorCredentialEvent;
 use App\Models\Team;
 use App\Support\Connectors\ConnectorVaultEncrypter;
 use Illuminate\Foundation\Testing\RefreshDatabase;

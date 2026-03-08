@@ -19,7 +19,7 @@ class TokenEstimator
             return 0;
         }
 
-        $provider = new EncoderProvider();
+        $provider = new EncoderProvider;
         $encoder = $provider->getForModel('gpt-4');
 
         return count($encoder->encode($content));
@@ -40,7 +40,7 @@ class TokenEstimator
             ];
         }
 
-        $provider = new EncoderProvider();
+        $provider = new EncoderProvider;
         $encoder = $provider->getForModel('gpt-4');
 
         $tokens = $encoder->encode($content);

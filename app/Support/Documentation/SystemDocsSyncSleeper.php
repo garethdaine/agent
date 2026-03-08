@@ -15,4 +15,3 @@ class SystemDocsSyncSleeper implements DocsSyncSleeper
         sleep($seconds);
     }
 }
-

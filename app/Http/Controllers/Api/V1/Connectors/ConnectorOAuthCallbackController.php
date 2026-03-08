@@ -41,6 +41,6 @@ class ConnectorOAuthCallbackController extends Controller
             ], 400);
         }
 
-        return redirect(config('app.url') . '/connectors');
+        return redirect(config('app.url').'/connectors');
     }
 }

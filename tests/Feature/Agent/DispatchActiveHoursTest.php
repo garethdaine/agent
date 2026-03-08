@@ -14,6 +14,7 @@ class DispatchActiveHoursTest extends TestCase
     use RefreshDatabase;
 
     private DispatchDueService $service;
+
     private User $user;
 
     protected function setUp(): void
@@ -51,7 +52,7 @@ class DispatchActiveHoursTest extends TestCase
             'active_hours_config' => [
                 'start' => '09:00',
                 'end' => '17:00',
-                'days' => [1,2,3,4,5], // Weekdays
+                'days' => [1, 2, 3, 4, 5], // Weekdays
             ],
         ]);
 
@@ -72,7 +73,7 @@ class DispatchActiveHoursTest extends TestCase
             'active_hours_config' => [
                 'start' => '09:00',
                 'end' => '17:00',
-                'days' => [1,2,3,4,5],
+                'days' => [1, 2, 3, 4, 5],
             ],
         ]);
 
@@ -94,7 +95,7 @@ class DispatchActiveHoursTest extends TestCase
             'active_hours_config' => [
                 'start' => '09:00',
                 'end' => '17:00',
-                'days' => [1,2,3,4,5], // Weekdays only
+                'days' => [1, 2, 3, 4, 5], // Weekdays only
             ],
         ]);
 
@@ -115,7 +116,7 @@ class DispatchActiveHoursTest extends TestCase
             'active_hours_config' => [
                 'start' => '09:00',
                 'end' => '17:00',
-                'days' => [1,2,3,4,5],
+                'days' => [1, 2, 3, 4, 5],
             ],
         ]);
 

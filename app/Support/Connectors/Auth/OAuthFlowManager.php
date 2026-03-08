@@ -40,7 +40,7 @@ class OAuthFlowManager
 
         $params = [
             'client_id' => $authConfig['client_id'],
-            'redirect_uri' => config('app.url') . '/agent/api/v1/connectors/callback',
+            'redirect_uri' => config('app.url').'/agent/api/v1/connectors/callback',
             'response_type' => 'code',
             'scope' => implode(' ', $authConfig['scopes'] ?? []),
             'state' => $state,
@@ -48,7 +48,7 @@ class OAuthFlowManager
             'code_challenge_method' => 'S256',
         ];
 
-        return $authConfig['authorize_url'] . '?' . http_build_query($params);
+        return $authConfig['authorize_url'].'?'.http_build_query($params);
     }
 
     public function handleCallback(string $state, string $code): AgentConnectorConnection
@@ -66,14 +66,14 @@ class OAuthFlowManager
         $response = Http::asForm()->post($authConfig['token_url'], [
             'grant_type' => 'authorization_code',
             'code' => $code,
-            'redirect_uri' => config('app.url') . '/agent/api/v1/connectors/callback',
+            'redirect_uri' => config('app.url').'/agent/api/v1/connectors/callback',
             'code_verifier' => $stateData['code_verifier'],
             'client_id' => $authConfig['client_id'],
             'client_secret' => $authConfig['client_secret'],
         ]);
 
         if (! $response->successful()) {
-            throw new \RuntimeException('Token exchange failed: ' . $response->body());
+            throw new \RuntimeException('Token exchange failed: '.$response->body());
         }
 
         $tokens = $response->json();

@@ -42,7 +42,7 @@ class WhatsAppCredentialValidatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->validator = new WhatsAppCredentialValidator();
+        $this->validator = new WhatsAppCredentialValidator;
     }
 
     public function test_requires_access_token(): void

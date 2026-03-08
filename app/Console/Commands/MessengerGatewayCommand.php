@@ -95,7 +95,7 @@ class MessengerGatewayCommand extends Command
                 'pid' => getmypid(),
             ]);
         } catch (\Throwable $e) {
-            $this->error('Failed to boot workers: ' . $e->getMessage());
+            $this->error('Failed to boot workers: '.$e->getMessage());
             Log::error('Messenger Gateway failed to start', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -195,7 +195,7 @@ class MessengerGatewayCommand extends Command
             $this->info('All workers drained successfully');
             $this->shutdownClean = true;
         } catch (\Throwable $e) {
-            $this->error('Error during shutdown: ' . $e->getMessage());
+            $this->error('Error during shutdown: '.$e->getMessage());
             Log::error('Messenger Gateway shutdown error', [
                 'error' => $e->getMessage(),
             ]);

@@ -69,7 +69,7 @@ class ConnectorManifestValidator
     private function validateAuthType(string $authType, array &$errors): void
     {
         if (! in_array($authType, self::VALID_AUTH_TYPES, true)) {
-            $errors[] = "Invalid auth_type: {$authType}. Must be one of: " . implode(', ', self::VALID_AUTH_TYPES);
+            $errors[] = "Invalid auth_type: {$authType}. Must be one of: ".implode(', ', self::VALID_AUTH_TYPES);
         }
     }
 
@@ -137,7 +137,7 @@ class ConnectorManifestValidator
             if (empty($action['method'])) {
                 $errors[] = "Action at index {$index} is missing required field: method.";
             } elseif (! in_array($action['method'], self::VALID_ACTION_METHODS, true)) {
-                $errors[] = "Action '{$action['name']}' has invalid method: {$action['method']}. Must be one of: " . implode(', ', self::VALID_ACTION_METHODS);
+                $errors[] = "Action '{$action['name']}' has invalid method: {$action['method']}. Must be one of: ".implode(', ', self::VALID_ACTION_METHODS);
             }
 
             if (empty($action['path'])) {

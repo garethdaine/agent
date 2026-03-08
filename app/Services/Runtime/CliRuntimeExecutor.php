@@ -8,8 +8,8 @@ use App\Enums\Security\InjectionAction;
 use App\Models\Runtime\RuntimeSession;
 use App\Services\Credentials\CredentialsManager;
 use App\Services\Security\InjectionDetectionEngine;
-use App\Support\Agent\EngineeringRulesInjector;
 use App\Services\Security\SecurityEventLogger;
+use App\Support\Agent\EngineeringRulesInjector;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Security;
 
 use App\DTOs\Runtime\RuntimeContext;
-use App\DTOs\Runtime\ToolResult;
 use App\DTOs\Security\ExfiltrationInspectionResult;
 use App\Enums\Runtime\RuntimeMode;
 use App\Enums\Security\ExfiltrationPattern;
@@ -30,7 +29,7 @@ class WebToolAdapterExfiltrationTest extends TestCase
 
     private function makeAdapter(?ExfiltrationDetector $detector = null): WebToolAdapter
     {
-        $adapter = new WebToolAdapter();
+        $adapter = new WebToolAdapter;
         if ($detector !== null) {
             $adapter->setExfiltrationDetector($detector);
         }

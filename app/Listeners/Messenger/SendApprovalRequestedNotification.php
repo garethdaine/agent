@@ -24,7 +24,7 @@ class SendApprovalRequestedNotification
         $body = "**Tool:** `{$event->toolName}`\n"
             ."**Session:** #{$event->sessionId}\n"
             ."**Approval ID:** #{$event->approvalId}\n\n"
-            ."Action required — approve or reject in the UI.";
+            .'Action required — approve or reject in the UI.';
 
         $this->dispatcher->dispatch(new SystemNotificationPayload(
             type: 'runtime.approval_requested',

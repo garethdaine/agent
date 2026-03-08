@@ -13,4 +13,3 @@ interface DocsReindexExecutor
      */
     public function execute(array $entryIds, array $fragmentIds, array $apiArtifactIds = []): void;
 }
-

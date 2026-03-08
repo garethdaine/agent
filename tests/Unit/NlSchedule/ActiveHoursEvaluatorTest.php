@@ -13,7 +13,7 @@ class ActiveHoursEvaluatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->evaluator = new ActiveHoursEvaluator();
+        $this->evaluator = new ActiveHoursEvaluator;
     }
 
     public function test_null_config_returns_true(): void
@@ -28,7 +28,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_within_time_window_returns_true(): void
     {
-        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         // Monday 10am
         $result = $this->evaluator->isWithinActiveHours(
             CarbonImmutable::parse('2024-01-15 10:00:00', 'UTC'), // Monday
@@ -40,7 +40,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_outside_time_window_returns_false(): void
     {
-        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         // Monday 8am (before start)
         $result = $this->evaluator->isWithinActiveHours(
             CarbonImmutable::parse('2024-01-15 08:00:00', 'UTC'),
@@ -52,7 +52,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_wrong_day_returns_false(): void
     {
-        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]]; // weekdays
+        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]]; // weekdays
         // Saturday 10am
         $result = $this->evaluator->isWithinActiveHours(
             CarbonImmutable::parse('2024-01-20 10:00:00', 'UTC'), // Saturday
@@ -74,7 +74,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_respects_timezone(): void
     {
-        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         // 14:00 UTC = 09:00 EST (within window for EST)
         $result = $this->evaluator->isWithinActiveHours(
             CarbonImmutable::parse('2024-01-15 14:00:00', 'UTC'),
@@ -88,7 +88,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_at_exact_start_time_returns_true(): void
     {
-        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         $result = $this->evaluator->isWithinActiveHours(
             CarbonImmutable::parse('2024-01-15 09:00:00', 'UTC'), // Monday
             $config,
@@ -99,7 +99,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_at_exact_end_time_returns_true(): void
     {
-        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         $result = $this->evaluator->isWithinActiveHours(
             CarbonImmutable::parse('2024-01-15 17:00:00', 'UTC'), // Monday
             $config,
@@ -110,7 +110,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_one_minute_after_end_returns_false(): void
     {
-        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         $result = $this->evaluator->isWithinActiveHours(
             CarbonImmutable::parse('2024-01-15 17:01:00', 'UTC'), // Monday
             $config,
@@ -121,7 +121,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_one_minute_before_start_returns_false(): void
     {
-        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         $result = $this->evaluator->isWithinActiveHours(
             CarbonImmutable::parse('2024-01-15 08:59:00', 'UTC'), // Monday
             $config,
@@ -142,7 +142,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_all_weekdays(): void
     {
-        $config = ['start' => '00:00', 'end' => '23:59', 'days' => [1,2,3,4,5]];
+        $config = ['start' => '00:00', 'end' => '23:59', 'days' => [1, 2, 3, 4, 5]];
 
         // Test each weekday
         $monday = CarbonImmutable::parse('2024-01-15 12:00:00', 'UTC');
@@ -195,7 +195,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_config_with_only_start_uses_2359_as_end(): void
     {
-        $config = ['start' => '09:00', 'days' => [1,2,3,4,5]];
+        $config = ['start' => '09:00', 'days' => [1, 2, 3, 4, 5]];
         // Monday 10pm - should be within if end defaults to 23:59
         $result = $this->evaluator->isWithinActiveHours(
             CarbonImmutable::parse('2024-01-15 22:00:00', 'UTC'),
@@ -207,7 +207,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_config_with_only_end_uses_0000_as_start(): void
     {
-        $config = ['end' => '17:00', 'days' => [1,2,3,4,5]];
+        $config = ['end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         // Monday 1am - should be within if start defaults to 00:00
         $result = $this->evaluator->isWithinActiveHours(
             CarbonImmutable::parse('2024-01-15 01:00:00', 'UTC'),
@@ -219,7 +219,7 @@ class ActiveHoursEvaluatorTest extends TestCase
 
     public function test_get_skip_metadata_returns_expected_structure(): void
     {
-        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1,2,3,4,5]];
+        $config = ['start' => '09:00', 'end' => '17:00', 'days' => [1, 2, 3, 4, 5]];
         $timestamp = CarbonImmutable::parse('2024-01-15 08:00:00', 'UTC');
         $jobId = 'test-job-uuid';
 
@@ -248,7 +248,7 @@ class ActiveHoursEvaluatorTest extends TestCase
     {
         // 1am Monday UTC = 8pm Sunday EST (winter time)
         // If active hours are weekdays only, this should be outside for EST
-        $config = ['start' => '00:00', 'end' => '23:59', 'days' => [1,2,3,4,5]]; // Weekdays only
+        $config = ['start' => '00:00', 'end' => '23:59', 'days' => [1, 2, 3, 4, 5]]; // Weekdays only
         $result = $this->evaluator->isWithinActiveHours(
             CarbonImmutable::parse('2024-01-15 01:00:00', 'UTC'), // Monday 1am UTC
             $config,

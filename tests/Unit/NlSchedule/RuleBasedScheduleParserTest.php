@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\NlSchedule;
 
-use App\Support\NlSchedule\RuleBasedScheduleParser;
 use App\Support\NlSchedule\ParseResult;
+use App\Support\NlSchedule\RuleBasedScheduleParser;
 use Tests\TestCase;
 
 class RuleBasedScheduleParserTest extends TestCase
@@ -13,7 +13,7 @@ class RuleBasedScheduleParserTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->parser = new RuleBasedScheduleParser();
+        $this->parser = new RuleBasedScheduleParser;
     }
 
     // High-confidence patterns

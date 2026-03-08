@@ -77,4 +77,3 @@ class PruneRepoAnalysisArtifactsJob implements ShouldQueue
         ];
     }
 }
-

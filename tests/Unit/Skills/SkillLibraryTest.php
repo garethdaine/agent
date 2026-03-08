@@ -230,7 +230,7 @@ class SkillLibraryTest extends TestCase
         $entries = $library->browse();
 
         foreach ($entries as $entry) {
-            $this->assertNotEmpty($entry->slug, "Entry missing slug");
+            $this->assertNotEmpty($entry->slug, 'Entry missing slug');
             $this->assertNotEmpty($entry->name, "Entry {$entry->slug} missing name");
             $this->assertNotEmpty($entry->description, "Entry {$entry->slug} missing description");
             $this->assertNotEmpty($entry->version, "Entry {$entry->slug} missing version");

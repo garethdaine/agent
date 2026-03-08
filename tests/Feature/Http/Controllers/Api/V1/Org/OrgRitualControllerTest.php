@@ -3,7 +3,6 @@
 namespace Tests\Feature\Http\Controllers\Api\V1\Org;
 
 use App\Models\OrgAgentProfile;
-use App\Models\OrgRitualRun;
 use App\Models\OrgRitualTemplate;
 use App\Models\User;
 use Tests\TestCase;

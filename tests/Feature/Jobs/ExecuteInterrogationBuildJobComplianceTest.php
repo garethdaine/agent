@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Jobs;
 
-use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Enums\TaskCategory;
 use App\Jobs\ExecuteInterrogationBuildJob;
 use App\Jobs\SyncInterrogationTaskStatusToTaskProviderJob;
@@ -11,14 +10,9 @@ use App\Models\AgentJobRun;
 use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationSession;
 use App\Models\User;
-use App\Support\Compliance\DTOs\CompletionGateResult;
-use App\Support\Compliance\DTOs\GateResult;
-use App\Support\Compliance\DTOs\PolicyEvaluationResult;
-use App\Support\Compliance\OrchestrationPolicyService;
 use App\Support\Interrogation\BuildTaskRunFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use Mockery;
 use Tests\TestCase;
 
 /**

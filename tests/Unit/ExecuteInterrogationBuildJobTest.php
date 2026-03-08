@@ -1031,6 +1031,76 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         $this->assertFalse($failureEventExists);
     }
 
+    public function test_build_pauses_when_pre_task_backup_fails(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 2,
+            'title' => 'Task after backup failure',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+            'attempt_count' => 0,
+        ]);
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_QUEUED);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        // Build-start backup succeeds, but per-task backup fails.
+        $backupService = $this->mock(BuildExecutionBackupService::class);
+        $backupService->shouldReceive('backupBeforeBuildStart')
+            ->once()
+            ->andReturn([
+                'ok' => true,
+                'attempted_at' => now('UTC')->toIso8601String(),
+                'message' => 'Backup completed.',
+                'output' => null,
+                'skipped' => false,
+            ]);
+        $backupService->shouldReceive('backupBeforeTaskStart')
+            ->once()
+            ->andReturn([
+                'ok' => false,
+                'attempted_at' => now('UTC')->toIso8601String(),
+                'message' => 'agent:backup-database returned a non-zero exit code.',
+                'output' => null,
+                'skipped' => false,
+            ]);
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        // Build must be paused with backup_failed reason.
+        $this->assertSame('paused', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame('backup_failed', data_get($session->metadata_json, 'build.pause_reason'));
+        $this->assertStringContainsString(
+            'Database backup failed before starting task 2',
+            (string) data_get($session->metadata_json, 'build.error')
+        );
+
+        // Task must NOT have been started.
+        $this->assertSame(InterrogationBuildTask::STATUS_PENDING, (string) $task->status);
+        $this->assertNull($task->agent_job_run_id);
+
+        // The backup failure should be recorded in metadata.
+        $taskBackups = data_get($session->metadata_json, 'build.execution_backup.task_starts', []);
+        $this->assertCount(1, $taskBackups);
+        $this->assertSame('failed', $taskBackups[0]['status']);
+
+        // No follow-up tick should be dispatched (build is paused).
+        Queue::assertNotPushed(ExecuteInterrogationBuildJob::class);
+    }
+
     /**
      * @param  array<string, mixed>  $build
      */

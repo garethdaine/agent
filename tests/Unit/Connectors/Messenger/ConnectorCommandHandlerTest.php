@@ -2,10 +2,8 @@
 
 namespace Tests\Unit\Connectors\Messenger;
 
-use App\DTOs\Messenger\CommandResult;
 use App\Models\AgentConnector;
 use App\Models\AgentConnectorConnection;
-use App\Models\AgentConnectorCredential;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\Connectors\ConnectionLifecycleService;

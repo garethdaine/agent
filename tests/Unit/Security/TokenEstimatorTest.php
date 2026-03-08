@@ -14,7 +14,7 @@ class TokenEstimatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->estimator = new TokenEstimator();
+        $this->estimator = new TokenEstimator;
     }
 
     public function test_fast_estimate_400_char_string_returns_100_tokens(): void

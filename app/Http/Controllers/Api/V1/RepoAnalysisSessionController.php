@@ -224,6 +224,7 @@ class RepoAnalysisSessionController extends Controller
             $deleted = $this->deletePathIfAllowed($path, $allowedRoots);
             if ($deleted) {
                 $deletedFileCount++;
+
                 continue;
             }
 

@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Team;
-use App\Models\User;
 use App\Support\Agent\WorkflowKey;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

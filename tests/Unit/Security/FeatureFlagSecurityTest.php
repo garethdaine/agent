@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Security;
 
-use App\Models\AgentFeatureSetting;
 use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

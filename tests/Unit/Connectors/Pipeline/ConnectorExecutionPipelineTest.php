@@ -9,8 +9,6 @@ use App\Models\AgentConnectorInvocation;
 use App\Models\Team;
 use App\Support\Connectors\ActionRequest;
 use App\Support\Connectors\ActionResponse;
-use App\Support\Connectors\CircuitBreaker;
-use App\Support\Connectors\ConnectorHealthScorer;
 use App\Support\Connectors\ConnectorVaultEncrypter;
 use App\Support\Connectors\Pipeline\ConnectorExecutionPipeline;
 use Illuminate\Foundation\Testing\RefreshDatabase;

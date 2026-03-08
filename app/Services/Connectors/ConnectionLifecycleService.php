@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Connectors;
 
-use App\DTOs\Connectors\ConnectResult;
 use App\DTOs\Connectors\ConnectionTestResult;
+use App\DTOs\Connectors\ConnectResult;
 use App\Models\AgentConnector;
 use App\Models\AgentConnectorConnection;
 use App\Models\AgentConnectorCredential;
@@ -118,7 +118,7 @@ class ConnectionLifecycleService
         $decrypted = json_decode($this->encrypter->decrypt($team, $encryptedData), true);
 
         $action = $this->findTestAction($connector);
-        $url = rtrim($connector->base_url, '/') . '/' . ltrim($action['path'], '/');
+        $url = rtrim($connector->base_url, '/').'/'.ltrim($action['path'], '/');
 
         $headers = $this->buildAuthHeaders($connector, $decrypted);
 

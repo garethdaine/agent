@@ -5,7 +5,6 @@ namespace Tests\Unit\Support\Agent;
 use App\Support\Agent\EngineeringRulesInjector;
 use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class EngineeringRulesInjectorTest extends TestCase

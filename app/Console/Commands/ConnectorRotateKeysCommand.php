@@ -67,7 +67,7 @@ class ConnectorRotateKeysCommand extends Command
         foreach ($credentials as $credential) {
             $credential->update([
                 'encrypted_data' => $vault->encrypt($team, $decrypted[$credential->id]),
-                'encryption_key_id' => 'v' . ($credential->rotation_count + 1),
+                'encryption_key_id' => 'v'.($credential->rotation_count + 1),
                 'rotation_count' => $credential->rotation_count + 1,
             ]);
 

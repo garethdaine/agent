@@ -25,9 +25,9 @@ class AgentRunControllerRetryTest extends TestCase
                     'steps' => [
                         'situation' => ['completed' => true, 'content' => 'State'],
                         'task' => ['completed' => true, 'content' => 'Goal'],
-                    ]
-                ]
-            ]
+                    ],
+                ],
+            ],
         ]);
 
         $response = $this->actingAs($user, 'sanctum')
@@ -45,14 +45,14 @@ class AgentRunControllerRetryTest extends TestCase
             'agent_job_id' => $job->id,
             'user_id' => $user->id,
             'status' => 'failed',
-            'metadata_json' => ['reasoning_summary' => ['steps' => ['task' => ['completed' => true]]]]
+            'metadata_json' => ['reasoning_summary' => ['steps' => ['task' => ['completed' => true]]]],
         ]);
 
         $customPrompt = 'Custom retry instructions here';
 
         $response = $this->actingAs($user, 'sanctum')
             ->postJson("/agent/api/v1/runs/{$run->id}/retry", [
-                'retry_prompt' => $customPrompt
+                'retry_prompt' => $customPrompt,
             ]);
 
         $response->assertStatus(201);
