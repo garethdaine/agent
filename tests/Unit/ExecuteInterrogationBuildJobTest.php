@@ -541,7 +541,7 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         });
     }
 
-    public function test_job_pauses_build_when_run_requests_clarification_even_if_run_succeeded(): void
+    public function test_job_does_not_pause_on_clarification_metadata_when_run_succeeded(): void
     {
         Queue::fake();
 
@@ -551,6 +551,49 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         ]);
 
         $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'clarification_required' => true,
+                'clarification_excerpt' => 'Could you clarify whether we should use existing event names?',
+            ],
+        ]);
+
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 3,
+            'title' => 'Clarify task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        $this->assertSame(InterrogationBuildTask::STATUS_COMPLETED, (string) $task->status);
+        $this->assertNotSame('paused', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame(null, data_get($session->metadata_json, 'build.pause_reason'));
+        Queue::assertPushed(SyncInterrogationTaskStatusToTaskProviderJob::class, function (SyncInterrogationTaskStatusToTaskProviderJob $job) use ($session, $task): bool {
+            return (int) $job->sessionId === (int) $session->id
+                && (int) $job->taskId === (int) $task->id;
+        });
+    }
+
+    public function test_job_pauses_build_when_failed_run_requests_clarification(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ]);
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_FAILED, [
             'metadata_json' => [
                 'clarification_required' => true,
                 'clarification_excerpt' => 'Could you clarify whether we should use existing event names?',

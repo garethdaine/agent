@@ -315,7 +315,7 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             return false;
         }
 
-        if ($clarificationRequired) {
+        if ($runStatus !== AgentJobRun::STATUS_SUCCEEDED && $clarificationRequired) {
             $task->status = InterrogationBuildTask::STATUS_BLOCKED;
             $task->last_error = trim((string) ($run->error_summary ?? 'Clarification required before continuing this task.'));
             $task->finished_at = CarbonImmutable::now('UTC');

@@ -272,6 +272,30 @@ const saveProviderProjectSettings = async () => {
     }
 };
 
+const autoSaveTeamAndReloadProjects = async (teamId) => {
+    if (!linearProvider.value || providerSettingsSaving.value) {
+        return;
+    }
+
+    providerSettingsSaving.value = true;
+    error.value = '';
+
+    try {
+        await axios.patch(`/agent/api/v1/interrogation/sessions/${props.sessionId}/providers/linear/settings`, {
+            team_id: teamId || null,
+            project_mode: providerProjectForm.project_mode,
+            existing_project_id: null,
+        });
+
+        await loadSession();
+        await loadLinearProjects({ force: true });
+    } catch (e) {
+        error.value = e?.response?.data?.error?.message ?? 'Failed to update Linear team.';
+    } finally {
+        providerSettingsSaving.value = false;
+    }
+};
+
 const addTechStack = async () => {
     const name = String(techStackDraft.name ?? '').trim();
     const documentationUrl = String(techStackDraft.documentation_url ?? '').trim();
@@ -359,16 +383,16 @@ watch(() => providerProjectForm.project_mode, async (mode) => {
     }
 });
 
-watch(() => providerTeamForm.team_id, (nextTeamId) => {
+watch(() => providerTeamForm.team_id, async (nextTeamId) => {
+    const nextId = String(nextTeamId ?? '').trim();
     const currentTeamId = String(linearProvider.value?.team_id ?? '').trim();
-    if (String(nextTeamId ?? '').trim() === currentTeamId) {
+    if (nextId === currentTeamId || nextId === '') {
         return;
     }
 
-    if (providerProjectForm.project_mode === 'existing') {
-        providerProjectForm.project_mode = 'create_new';
-        providerProjectForm.existing_project_id = '';
-    }
+    providerProjectForm.existing_project_id = '';
+
+    await autoSaveTeamAndReloadProjects(nextId);
 });
 </script>
 

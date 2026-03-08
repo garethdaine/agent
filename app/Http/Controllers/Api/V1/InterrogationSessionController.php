@@ -32,6 +32,7 @@ use App\Support\Interrogation\PlanPayloadGuard;
 use App\Support\Interrogation\PlanPayloadNormalizer;
 use App\Support\Interrogation\QuestionPayloadGuard;
 use App\Support\Interrogation\SessionStateTransitionService;
+use App\Support\Interrogation\SummaryOpenQuestionQueueService;
 use App\Support\Interrogation\SummaryPayloadNormalizer;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -3583,34 +3584,7 @@ class InterrogationSessionController extends Controller
      */
     private function normalizeOpenQuestionList(array $openQuestions): array
     {
-        $normalized = [];
-        $guard = new QuestionPayloadGuard;
-
-        foreach ($openQuestions as $question) {
-            if (! is_string($question)) {
-                continue;
-            }
-
-            $text = trim($question);
-            if ($text === '') {
-                continue;
-            }
-
-            $validation = $guard->validate([
-                'question_text' => $text,
-                'answer_type' => 'freetext',
-                'options' => [],
-                'progress_estimate' => 0,
-                'is_complete' => false,
-            ]);
-            if (! (bool) ($validation['valid'] ?? false)) {
-                continue;
-            }
-
-            $normalized[] = $text;
-        }
-
-        return array_values(array_unique($normalized));
+        return app(SummaryOpenQuestionQueueService::class)->normalizeOpenQuestionList($openQuestions);
     }
 
     /**
@@ -3619,17 +3593,7 @@ class InterrogationSessionController extends Controller
      */
     private function buildSummaryOpenQuestionQueue(array $openQuestions, string $focus): array
     {
-        $timestamp = CarbonImmutable::now('UTC')->toIso8601String();
-
-        return [
-            'active' => true,
-            'total' => count($openQuestions),
-            'pending_questions' => array_values($openQuestions),
-            'asked_questions' => [],
-            'focus' => $focus,
-            'created_at' => $timestamp,
-            'updated_at' => $timestamp,
-        ];
+        return app(SummaryOpenQuestionQueueService::class)->buildQueue($openQuestions, $focus);
     }
 
     /**
@@ -3637,30 +3601,7 @@ class InterrogationSessionController extends Controller
      */
     private function summaryOpenQuestionQueue(InterrogationSession $session): ?array
     {
-        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
-        $queue = is_array($metadata['summary_open_question_queue'] ?? null)
-            ? $metadata['summary_open_question_queue']
-            : null;
-
-        if ($queue === null || (bool) ($queue['active'] ?? false) !== true) {
-            return null;
-        }
-
-        $pending = $this->normalizeOpenQuestionList((array) ($queue['pending_questions'] ?? []));
-        $asked = array_values(array_filter(
-            (array) ($queue['asked_questions'] ?? []),
-            static fn ($item): bool => is_array($item)
-        ));
-        $active = is_array($queue['active_open_question'] ?? null) ? $queue['active_open_question'] : null;
-
-        return [
-            ...$queue,
-            'active' => true,
-            'total' => max(1, (int) ($queue['total'] ?? (count($pending) + count($asked)))),
-            'pending_questions' => $pending,
-            'asked_questions' => $asked,
-            'active_open_question' => $active,
-        ];
+        return app(SummaryOpenQuestionQueueService::class)->getQueue($session);
     }
 
     /**
@@ -3668,65 +3609,17 @@ class InterrogationSessionController extends Controller
      */
     private function persistSummaryOpenQuestionQueue(InterrogationSession $session, array $queue): void
     {
-        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
-        $metadata['summary_open_question_queue'] = $queue;
-        $session->metadata_json = $metadata;
-        $session->save();
+        app(SummaryOpenQuestionQueueService::class)->persistQueue($session, $queue);
     }
 
     private function clearSummaryOpenQuestionQueue(InterrogationSession $session): void
     {
-        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
-        if (! array_key_exists('summary_open_question_queue', $metadata)) {
-            return;
-        }
-
-        unset($metadata['summary_open_question_queue']);
-        $session->metadata_json = $metadata;
-        $session->save();
+        app(SummaryOpenQuestionQueueService::class)->clearQueue($session);
     }
 
     private function dispatchNextSummaryOpenQuestionFromQueue(InterrogationSession $session): bool
     {
-        $queue = $this->summaryOpenQuestionQueue($session);
-        if ($queue === null) {
-            return false;
-        }
-
-        $pending = $this->normalizeOpenQuestionList((array) ($queue['pending_questions'] ?? []));
-        if ($pending === []) {
-            return false;
-        }
-
-        $nextQuestion = array_shift($pending);
-        if (! is_string($nextQuestion) || trim($nextQuestion) === '') {
-            return false;
-        }
-
-        $asked = array_values(array_filter(
-            (array) ($queue['asked_questions'] ?? []),
-            static fn ($item): bool => is_array($item)
-        ));
-        $total = max(1, (int) ($queue['total'] ?? (count($pending) + count($asked) + 1)));
-        $ordinal = count($asked) + 1;
-        $queue['pending_questions'] = array_values($pending);
-        $queue['active_open_question'] = [
-            'question_text' => $nextQuestion,
-            'ordinal' => $ordinal,
-            'total' => $total,
-            'dispatched_at' => CarbonImmutable::now('UTC')->toIso8601String(),
-        ];
-        $queue['total'] = $total;
-        $queue['updated_at'] = CarbonImmutable::now('UTC')->toIso8601String();
-
-        $this->persistSummaryOpenQuestionQueue($session, $queue);
-
-        $focus = trim((string) ($queue['focus'] ?? ''));
-        $prompt = $this->summaryOpenQuestionPrompt($nextQuestion, $ordinal, $total, $focus);
-
-        ExecuteInterrogationRoundJob::dispatch((int) $session->id, $prompt, true);
-
-        return true;
+        return app(SummaryOpenQuestionQueueService::class)->dispatchNextFromQueue($session);
     }
 
     /**
@@ -3774,7 +3667,12 @@ class InterrogationSessionController extends Controller
             return true;
         }
 
+        $focus = trim((string) ($queue['focus'] ?? ''));
         $this->clearSummaryOpenQuestionQueue($session);
+
+        // Mark auto-continue so the summary job will automatically re-queue
+        // any remaining open questions without requiring user intervention.
+        app(SummaryOpenQuestionQueueService::class)->markAutoReinterrogation($session, $focus);
 
         $moved = $transitions->transitionPhase(
             (int) $session->id,
@@ -3802,19 +3700,7 @@ class InterrogationSessionController extends Controller
 
     private function summaryOpenQuestionPrompt(string $openQuestion, int $ordinal, int $total, string $focus): string
     {
-        $prompt = 'Summary re-interrogation queue item '.$ordinal.' of '.$total.'. '
-            .'Resolve this unresolved open question: "'.$openQuestion."\".\n"
-            .'Ask exactly one high-signal question that resolves this item.\n'
-            .'Prefer answer_type="choice" with 2-5 concrete options when there is a clear decision to make; otherwise use answer_type="freetext". '
-            .'When using choice, options must be provided as a structured options[] array (not embedded in question_text). '
-            .'Set category to "open-question". '
-            .'Do not batch questions. Do not mark completion (is_complete must be false and progress_estimate must be < 100).';
-
-        if ($focus !== '') {
-            $prompt .= "\nAdditional user focus for this queue: ".$focus;
-        }
-
-        return $prompt;
+        return app(SummaryOpenQuestionQueueService::class)->buildPrompt($openQuestion, $ordinal, $total, $focus);
     }
 
     /**

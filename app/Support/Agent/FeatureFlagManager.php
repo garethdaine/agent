@@ -543,6 +543,17 @@ class FeatureFlagManager
             ])->all();
     }
 
+    /**
+     * Enable a feature flag by key. Primarily intended for testing.
+     */
+    public static function enable(string $key): void
+    {
+        AgentFeatureSetting::query()->updateOrCreate(
+            ['key' => $key],
+            ['is_enabled' => true],
+        );
+    }
+
     private function isStoreAvailable(): bool
     {
         if ($this->storeAvailable !== null) {

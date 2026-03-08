@@ -45,6 +45,7 @@ use App\Policies\NlParseAttemptPolicy;
 use App\Policies\OrgAgentProfilePolicy;
 use App\Policies\OrgRitualRunPolicy;
 use App\Policies\OrgRitualTemplatePolicy;
+use App\Policies\ConnectorPolicy;
 use App\Policies\RepoAnalysisSessionPolicy;
 use App\Policies\WorkflowGovernancePolicy;
 use App\Repositories\TunnelSettingsRepository;
@@ -191,6 +192,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(OrgRitualTemplate::class, OrgRitualTemplatePolicy::class);
         Gate::policy(OrgRitualRun::class, OrgRitualRunPolicy::class);
         Gate::policy(RepoAnalysisSession::class, RepoAnalysisSessionPolicy::class);
+        Gate::policy(\App\Models\AgentConnectorConnection::class, ConnectorPolicy::class);
 
         Gate::define('view-nl-parse-telemetry', function ($user) {
             return $user->hasRole(['admin', 'analytics']);

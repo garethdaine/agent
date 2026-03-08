@@ -10,6 +10,7 @@ use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 use App\Support\Interrogation\ConversationReconstructor;
 use App\Support\Interrogation\InterrogationEventWriter;
 use App\Support\Interrogation\SessionStateTransitionService;
+use App\Support\Interrogation\SummaryOpenQuestionQueueService;
 use App\Support\Interrogation\SummaryPayloadNormalizer;
 use App\Support\Interrogation\SystemPromptResolver;
 use Carbon\CarbonImmutable;
@@ -230,6 +231,12 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
                 return;
             }
 
+            // Auto-continue interrogation if the queue-based re-interrogation
+            // produced a summary that still contains open questions.
+            if ($this->autoReinterrogateIfNeeded($session, $summary, $transitions, $writer)) {
+                return;
+            }
+
             $writer->appendSystem([
                 'notice' => 'summary_ready',
                 'message' => 'Summary generated. Awaiting user confirmation.',
@@ -261,6 +268,74 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
                 'message' => $throwable->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * If the auto-continue flag is set and the freshly generated summary still
+     * contains open questions, automatically re-queue them and transition back
+     * to interrogation without requiring user intervention.
+     *
+     * @param  array<string, mixed>  $summary
+     */
+    private function autoReinterrogateIfNeeded(
+        InterrogationSession $session,
+        array $summary,
+        SessionStateTransitionService $transitions,
+        InterrogationEventWriter $writer,
+    ): bool {
+        $queueService = app(SummaryOpenQuestionQueueService::class);
+        $flag = $queueService->consumeAutoReinterrogationFlag($session);
+
+        if (! $flag['active']) {
+            return false;
+        }
+
+        $openQuestions = is_array($summary['open_questions'] ?? null)
+            ? array_values($summary['open_questions'])
+            : [];
+        $normalized = $queueService->normalizeOpenQuestionList($openQuestions);
+
+        if ($normalized === []) {
+            return false;
+        }
+
+        // Transition back to interrogation and queue remaining open questions.
+        $moved = $transitions->transitionPhase(
+            (int) $session->id,
+            InterrogationSession::PHASE_SUMMARY,
+            InterrogationSession::PHASE_INTERROGATION,
+            InterrogationSession::STATUS_INTERROGATING,
+            [InterrogationSession::STATUS_SUMMARIZING, InterrogationSession::STATUS_PAUSED],
+        );
+
+        if (! $moved) {
+            return false;
+        }
+
+        $session->refresh();
+
+        $writer = new InterrogationEventWriter($session);
+        $writer->appendPhaseTransition(
+            InterrogationSession::PHASE_SUMMARY,
+            InterrogationSession::PHASE_INTERROGATION,
+            (string) $session->status,
+            [
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                'source' => 'auto_continue_open_questions',
+                'remaining_open_questions' => count($normalized),
+            ]
+        );
+
+        $writer->appendSystem([
+            'notice' => 'auto_continue_interrogation',
+            'message' => count($normalized).' open question(s) remain after summary regeneration. Automatically continuing interrogation.',
+        ]);
+
+        $queue = $queueService->buildQueue($normalized, $flag['focus']);
+        $queueService->persistQueue($session, $queue);
+        $queueService->dispatchNextFromQueue($session);
+
+        return true;
     }
 
     /**

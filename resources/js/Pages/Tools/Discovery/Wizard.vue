@@ -61,6 +61,7 @@ const notice = ref('');
 const pollingTimer = ref(null);
 const selectedQuestionId = ref('');
 const awaitingNextQuestion = ref(false);
+const continuingInterrogation = ref(false);
 const submittedQuestionCount = ref(0);
 const localPlanGenerationPending = ref(false);
 const localPlanRevisionPending = ref(false);
@@ -434,11 +435,13 @@ watch(
 
         if (phase !== PHASE.INTERROGATION || status !== 'interrogating') {
             awaitingNextQuestion.value = false;
+            continuingInterrogation.value = false;
             return;
         }
 
         if (Number(count) > submittedQuestionCount.value) {
             awaitingNextQuestion.value = false;
+            continuingInterrogation.value = false;
         }
     }
 );
@@ -732,6 +735,16 @@ const saveLinearTeamSelection = async () => {
     }
 };
 
+watch(providerTeamId, async (nextTeamId) => {
+    const nextId = String(nextTeamId ?? '').trim();
+    const currentTeamId = String(linearProvider.value?.team_id ?? '').trim();
+    if (nextId === '' || nextId === currentTeamId) {
+        return;
+    }
+
+    await saveLinearTeamSelection();
+});
+
 const advancePreDiscovery = async () => {
     busy.value = true;
     error.value = '';
@@ -877,9 +890,11 @@ const continueInterrogation = async (payload) => {
         await axios.post(`/agent/api/v1/interrogation/sessions/${props.sessionId}/continue-interrogation`, payload ?? {});
         selectedQuestionId.value = '';
         submittedQuestionCount.value = questionEventCount.value;
+        continuingInterrogation.value = true;
         awaitingNextQuestion.value = true;
         await loadSession(false);
     } catch (e) {
+        continuingInterrogation.value = false;
         awaitingNextQuestion.value = false;
         error.value = e?.response?.data?.error?.message ?? 'Failed to continue interrogation.';
     } finally {
@@ -1726,14 +1741,14 @@ onBeforeUnmount(() => {
                                 >
                                     <div class="flex items-center gap-2 text-sm text-primary">
                                         <Spinner size="sm" />
-                                        <span>Answer submitted. Generating next question...</span>
+                                        <span>{{ continuingInterrogation ? 'Generating next question...' : 'Answer submitted. Generating next question...' }}</span>
                                     </div>
                                 </Card>
                                 <StatusCard
                                     v-if="awaitingNextQuestion || !activeQuestion"
                                     :session="session"
                                     phase-label="Interrogation"
-                                    :activity-events="interrogationActivityEvents"
+                                    :activity-events="continuingInterrogation ? [] : interrogationActivityEvents"
                                 />
                                 <Card
                                     v-if="selectedQuestion && latestQuestion && selectedQuestion.question_id !== latestQuestion.question_id"

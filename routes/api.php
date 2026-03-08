@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\ChatActionController;
 use App\Http\Controllers\Api\V1\ChatSessionController;
 use App\Http\Controllers\Api\V1\ComplianceController;
 use App\Http\Controllers\Api\V1\ConfigurationController;
+use App\Http\Controllers\Api\V1\Connectors;
 use App\Http\Controllers\Api\V1\ConnectorPolicyController;
 use App\Http\Controllers\Api\V1\CredentialsController;
 use App\Http\Controllers\Api\V1\DebugPanelController;
@@ -412,6 +413,21 @@ Route::middleware([AgentApiVersionHeader::class])
                         ->middleware('throttle:agent-mutations');
                 });
 
+            // Connector routes
+            Route::prefix('connectors')->group(function (): void {
+                Route::get('/', [Connectors\ConnectorLibraryController::class, 'index']);
+                Route::get('/{id}', [Connectors\ConnectorLibraryController::class, 'show']);
+                Route::get('/{id}/actions', [Connectors\ConnectorLibraryController::class, 'actions']);
+                Route::post('/{id}/connect', [Connectors\ConnectorConnectionController::class, 'connect'])
+                    ->middleware('throttle:agent-mutations');
+                Route::delete('/{id}/disconnect', [Connectors\ConnectorConnectionController::class, 'disconnect'])
+                    ->middleware('throttle:agent-mutations');
+                Route::post('/{id}/test', [Connectors\ConnectorConnectionController::class, 'test'])
+                    ->middleware('throttle:agent-mutations');
+                Route::get('/{id}/health', [Connectors\ConnectorConnectionController::class, 'health']);
+                Route::get('/{id}/telemetry', [Connectors\ConnectorTelemetryController::class, 'index']);
+            });
+
             // Delegation routes (gated by feature flag)
             Route::prefix('delegation')->middleware(['delegation'])->group(function (): void {
                 // Graphs - CRUD
@@ -446,6 +462,10 @@ Route::middleware([AgentApiVersionHeader::class])
                 Route::get('/delegatee-profiles/{id}/trust', [DelegateeProfileController::class, 'trust']);
             });
         });
+
+        // OAuth callback route (no auth required — external redirect)
+        Route::get('/connectors/callback', Connectors\ConnectorOAuthCallbackController::class)
+            ->name('connectors.oauth.callback');
 
         // Messenger webhook routes (no auth required, signature verified by middleware)
         Route::middleware([CorrelationId::class, VerifyWebhookSignature::class, ReplayProtection::class])

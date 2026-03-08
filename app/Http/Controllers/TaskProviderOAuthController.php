@@ -124,8 +124,8 @@ class TaskProviderOAuthController extends Controller
                 ],
             );
 
-            if ((int) $session->phase <= InterrogationSession::PHASE_PROVIDER_SETUP) {
-                $session->phase = InterrogationSession::PHASE_TECH_STACK_SETUP;
+            if ((int) $session->phase < InterrogationSession::PHASE_PROVIDER_SETUP) {
+                $session->phase = InterrogationSession::PHASE_PROVIDER_SETUP;
                 $session->status = InterrogationSession::STATUS_SETUP;
                 $session->save();
             }
