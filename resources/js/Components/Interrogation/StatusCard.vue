@@ -98,11 +98,13 @@ const displayMessage = computed(() => {
         : 'Analyzing repository and gathering context...';
     const raw = String(latest?.message ?? fallback).trim();
 
-    if (raw.length <= 1200) {
+    const limit = props.phaseLabel.toLowerCase() === 'interrogation' ? 4000 : 1200;
+
+    if (raw.length <= limit) {
         return raw;
     }
 
-    return `${raw.slice(0, 1200).trimEnd()}\n\n… [truncated]`;
+    return `${raw.slice(0, limit).trimEnd()}\n\n… [truncated]`;
 });
 
 const statusLabel = computed(() => humanizeDisplayValue(props.session?.status ?? '', 'Unknown'));

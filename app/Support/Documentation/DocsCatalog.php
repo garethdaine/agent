@@ -45,6 +45,71 @@ class DocsCatalog
             'severity' => 'info',
             'learn_more_slug' => 'overview',
         ],
+        'connectors.overview' => [
+            'ui_key' => 'connectors.overview',
+            'short_text' => 'Browse and manage connected third-party services.',
+            'severity' => 'info',
+        ],
+        'deployments.overview' => [
+            'ui_key' => 'deployments.overview',
+            'short_text' => 'Deployment history and release status tracking.',
+            'severity' => 'info',
+        ],
+        'sessions.overview' => [
+            'ui_key' => 'sessions.overview',
+            'short_text' => 'Active runtime sessions and connection status.',
+            'severity' => 'info',
+        ],
+        'code-analysis.overview' => [
+            'ui_key' => 'code-analysis.overview',
+            'short_text' => 'Code analysis runs, findings, and quality metrics.',
+            'severity' => 'info',
+        ],
+        'security.audit' => [
+            'ui_key' => 'security.audit',
+            'short_text' => 'Security audit findings and compliance status.',
+            'severity' => 'info',
+        ],
+        'diagnostics' => [
+            'ui_key' => 'diagnostics',
+            'short_text' => 'System diagnostics and health check results.',
+            'severity' => 'info',
+        ],
+        'services' => [
+            'ui_key' => 'services',
+            'short_text' => 'Registered services and their operational status.',
+            'severity' => 'info',
+        ],
+        'logs' => [
+            'ui_key' => 'logs',
+            'short_text' => 'Application log stream and filtering controls.',
+            'severity' => 'info',
+        ],
+        'audit.log' => [
+            'ui_key' => 'audit.log',
+            'short_text' => 'Audit trail of user and system actions.',
+            'severity' => 'info',
+        ],
+        'memory.settings' => [
+            'ui_key' => 'memory.settings',
+            'short_text' => 'Memory system configuration and storage settings.',
+            'severity' => 'info',
+        ],
+        'settings.tunnel' => [
+            'ui_key' => 'settings.tunnel',
+            'short_text' => 'Tunnel configuration for secure remote access.',
+            'severity' => 'info',
+        ],
+        'settings.configuration' => [
+            'ui_key' => 'settings.configuration',
+            'short_text' => 'Application configuration and environment settings.',
+            'severity' => 'info',
+        ],
+        'credentials' => [
+            'ui_key' => 'credentials',
+            'short_text' => 'Secret and credential management for integrations.',
+            'severity' => 'info',
+        ],
     ];
 
     /**

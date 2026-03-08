@@ -39,6 +39,7 @@ class AgentBackupDatabaseCommand extends Command
         }
 
         try {
+            $this->ensureBackupDirectoriesExist();
             $this->configureRuntimeBackupPolicy($settings);
 
             $backupExit = Artisan::call('backup:run', [
@@ -140,6 +141,19 @@ class AgentBackupDatabaseCommand extends Command
         config()->set('backup.cleanup.default_strategy.keep_weekly_backups_for_weeks', 0);
         config()->set('backup.cleanup.default_strategy.keep_monthly_backups_for_months', 0);
         config()->set('backup.cleanup.default_strategy.keep_yearly_backups_for_years', 0);
+    }
+
+    private function ensureBackupDirectoriesExist(): void
+    {
+        $tempPath = (string) config('backup.backup.temporary_directory', storage_path('app/backup-temp'));
+        if (! is_dir($tempPath)) {
+            mkdir($tempPath, 0755, true);
+        }
+
+        $destinationPath = storage_path('app/private');
+        if (! is_dir($destinationPath)) {
+            mkdir($destinationPath, 0755, true);
+        }
     }
 
     private function configureDumpBinaryPath(): void
