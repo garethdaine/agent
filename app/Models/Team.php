@@ -16,6 +16,7 @@ class Team extends JetstreamTeam
     protected $fillable = [
         'name',
         'personal_team',
+        'connector_vault_key',
     ];
 
     protected function casts(): array
