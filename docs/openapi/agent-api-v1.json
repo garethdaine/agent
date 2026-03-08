@@ -6052,6 +6052,522 @@
                 }
             }
         },
+        "\/agent\/api\/v1\/connectors\/{id}\/connect": {
+            "post": {
+                "operationId": "connectorConnection.connect",
+                "tags": [
+                    "ConnectorConnection"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "$ref": "#\/components\/schemas\/ConnectRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`ConnectionResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#\/components\/schemas\/ConnectionResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "authorization_url": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "authorization_url"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#\/components\/responses\/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#\/components\/responses\/ValidationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/connectors\/{id}\/disconnect": {
+            "delete": {
+                "operationId": "connectorConnection.disconnect",
+                "tags": [
+                    "ConnectorConnection"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "403": {
+                        "$ref": "#\/components\/responses\/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/connectors\/{id}\/test": {
+            "post": {
+                "operationId": "connectorConnection.test",
+                "tags": [
+                    "ConnectorConnection"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "connected": {
+                                                    "type": "boolean"
+                                                },
+                                                "latency_ms": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "connected",
+                                                "latency_ms"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": "No current team selected."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/connectors\/{id}\/health": {
+            "get": {
+                "operationId": "connectorConnection.health",
+                "tags": [
+                    "ConnectorConnection"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ConnectionHealthResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#\/components\/schemas\/ConnectionHealthResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": "No current team selected."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/connectors": {
+            "get": {
+                "operationId": "connectorLibrary.index",
+                "tags": [
+                    "ConnectorLibrary"
+                ],
+                "parameters": [
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "industry",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "available",
+                                "deprecated"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `ConnectorResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#\/components\/schemas\/ConnectorResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#\/components\/responses\/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#\/components\/responses\/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/connectors\/{id}": {
+            "get": {
+                "operationId": "connectorLibrary.show",
+                "tags": [
+                    "ConnectorLibrary"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`ConnectorDetailResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#\/components\/schemas\/ConnectorDetailResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "const": "NOT_FOUND"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Connector not found."
+                                                }
+                                            },
+                                            "required": [
+                                                "code",
+                                                "message"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/connectors\/{id}\/actions": {
+            "get": {
+                "operationId": "connectorLibrary.actions",
+                "tags": [
+                    "ConnectorLibrary"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "string"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "minItems": 0,
+                                                    "maxItems": 0,
+                                                    "additionalItems": false
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "const": "NOT_FOUND"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Connector not found."
+                                                }
+                                            },
+                                            "required": [
+                                                "code",
+                                                "message"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/connectors\/callback": {
+            "get": {
+                "operationId": "connectors.oauth.callback",
+                "tags": [
+                    "ConnectorOAuthCallback"
+                ],
+                "parameters": [
+                    {
+                        "name": "state",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "code",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "\/agent\/api\/v1\/messenger\/connectors\/{id}\/policy": {
             "get": {
                 "operationId": "connectorPolicy.show",
@@ -6275,6 +6791,53 @@
                     },
                     "422": {
                         "$ref": "#\/components\/responses\/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/connectors\/{id}\/telemetry": {
+            "get": {
+                "operationId": "connectorTelemetry.index",
+                "tags": [
+                    "ConnectorTelemetry"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `InvocationResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#\/components\/schemas\/InvocationResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#\/components\/responses\/AuthorizationException"
                     },
                     "401": {
                         "$ref": "#\/components\/responses\/AuthenticationException"
@@ -31244,6 +31807,225 @@
                 ],
                 "title": "ChatActionResource"
             },
+            "ConnectRequest": {
+                "type": "object",
+                "properties": {
+                    "api_key": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "api_secret": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "alias": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 128
+                    }
+                },
+                "title": "ConnectRequest"
+            },
+            "ConnectionHealthResource": {
+                "type": "object",
+                "properties": {
+                    "health_score": {
+                        "type": "number"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "healthy",
+                            "degraded",
+                            "unhealthy"
+                        ]
+                    },
+                    "last_check_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "health_score",
+                    "status",
+                    "last_check_at"
+                ],
+                "title": "ConnectionHealthResource"
+            },
+            "ConnectionResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "connector": {
+                        "$ref": "#\/components\/schemas\/ConnectorResource"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "health_score": {
+                        "type": "number"
+                    },
+                    "connected_at": {
+                        "type": "string"
+                    },
+                    "last_action_at": {
+                        "type": "string"
+                    },
+                    "action_count_24h": {
+                        "type": "string"
+                    },
+                    "error_count_24h": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "status",
+                    "health_score",
+                    "connected_at",
+                    "last_action_at",
+                    "action_count_24h",
+                    "error_count_24h"
+                ],
+                "title": "ConnectionResource"
+            },
+            "ConnectorDetailResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "display_name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string"
+                    },
+                    "industries": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "auth_type": {
+                        "type": "string"
+                    },
+                    "cost_model": {
+                        "type": "string"
+                    },
+                    "risk_level": {
+                        "type": "string"
+                    },
+                    "actions": {
+                        "type": "string"
+                    },
+                    "webhooks": {
+                        "type": "string"
+                    },
+                    "rate_limits": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "display_name",
+                    "description",
+                    "category",
+                    "industries",
+                    "version",
+                    "auth_type",
+                    "cost_model",
+                    "risk_level",
+                    "actions",
+                    "webhooks",
+                    "rate_limits",
+                    "status"
+                ],
+                "title": "ConnectorDetailResource"
+            },
+            "ConnectorResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "display_name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string"
+                    },
+                    "industries": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "auth_type": {
+                        "type": "string"
+                    },
+                    "cost_model": {
+                        "type": "string"
+                    },
+                    "risk_level": {
+                        "type": "string"
+                    },
+                    "actions_count": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "integer",
+                                "enum": [
+                                    0
+                                ]
+                            }
+                        ]
+                    },
+                    "status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "display_name",
+                    "description",
+                    "category",
+                    "industries",
+                    "version",
+                    "auth_type",
+                    "cost_model",
+                    "risk_level",
+                    "actions_count",
+                    "status"
+                ],
+                "title": "ConnectorResource"
+            },
             "ContentTrustLevel": {
                 "type": "string",
                 "enum": [
@@ -31312,6 +32094,42 @@
                     "updated_at"
                 ],
                 "title": "InterrogationSetting"
+            },
+            "InvocationResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "action_name": {
+                        "type": "string"
+                    },
+                    "http_method": {
+                        "type": "string"
+                    },
+                    "http_status": {
+                        "type": "string"
+                    },
+                    "duration_ms": {
+                        "type": "string"
+                    },
+                    "outcome": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "action_name",
+                    "http_method",
+                    "http_status",
+                    "duration_ms",
+                    "outcome",
+                    "created_at"
+                ],
+                "title": "InvocationResource"
             },
             "MessengerConnectorResource": {
                 "type": "object",

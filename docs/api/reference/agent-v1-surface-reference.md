@@ -135,14 +135,23 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ### Connectors
 
-**4 endpoint(s)** registered under `/agent/api/v1/connectors`.
+**13 endpoint(s)** registered under `/agent/api/v1/connectors`.
 
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/connectors` | `-` | `ConnectorLibraryController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/connectors/callback` | `connectors.oauth.callback` | `ConnectorOAuthCallbackController` | - |
 | POST | `agent/api/v1/connectors/discord/webhook` | `agent.api.connectors.discord.webhook` | `WebhookController@handleDiscord` | - |
 | POST | `agent/api/v1/connectors/slack/webhook` | `agent.api.connectors.slack.webhook` | `WebhookController@handleSlack` | - |
 | POST | `agent/api/v1/connectors/telegram/webhook/{accountKey}` | `agent.api.connectors.telegram.webhook` | `WebhookController@handleTelegram` | - |
 | GET,POST | `agent/api/v1/connectors/whatsapp/webhook` | `agent.api.connectors.whatsapp.webhook` | `WebhookController@handleWhatsApp` | - |
+| GET | `agent/api/v1/connectors/{id}` | `-` | `ConnectorLibraryController@show` | `auth:sanctum` |
+| GET | `agent/api/v1/connectors/{id}/actions` | `-` | `ConnectorLibraryController@actions` | `auth:sanctum` |
+| POST | `agent/api/v1/connectors/{id}/connect` | `-` | `ConnectorConnectionController@connect` | `auth:sanctum` |
+| DELETE | `agent/api/v1/connectors/{id}/disconnect` | `-` | `ConnectorConnectionController@disconnect` | `auth:sanctum` |
+| GET | `agent/api/v1/connectors/{id}/health` | `-` | `ConnectorConnectionController@health` | `auth:sanctum` |
+| GET | `agent/api/v1/connectors/{id}/telemetry` | `-` | `ConnectorTelemetryController@index` | `auth:sanctum` |
+| POST | `agent/api/v1/connectors/{id}/test` | `-` | `ConnectorConnectionController@test` | `auth:sanctum` |
 
 ### Credentials
 
@@ -529,6 +538,11 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 The following API endpoints are available for this feature:
 
+- **`GET agent/api/v1/connectors`**
+  - Controller: `ConnectorLibraryController@index`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/connectors/callback`**
+  - Controller: `ConnectorOAuthCallbackController`
 - **`POST agent/api/v1/connectors/discord/webhook`**
   - Controller: `WebhookController@handleDiscord`
 - **`POST agent/api/v1/connectors/slack/webhook`**
@@ -537,6 +551,30 @@ The following API endpoints are available for this feature:
   - Controller: `WebhookController@handleTelegram`
 - **`GET,POST agent/api/v1/connectors/whatsapp/webhook`**
   - Controller: `WebhookController@handleWhatsApp`
+- **`GET agent/api/v1/connectors/{id}`**
+  - Controller: `ConnectorLibraryController@show`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/connectors/{id}/actions`**
+  - Controller: `ConnectorLibraryController@actions`
+  - Auth: `auth:sanctum`
+- **`POST agent/api/v1/connectors/{id}/connect`**
+  - Controller: `ConnectorConnectionController@connect`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`DELETE agent/api/v1/connectors/{id}/disconnect`**
+  - Controller: `ConnectorConnectionController@disconnect`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`GET agent/api/v1/connectors/{id}/health`**
+  - Controller: `ConnectorConnectionController@health`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/connectors/{id}/telemetry`**
+  - Controller: `ConnectorTelemetryController@index`
+  - Auth: `auth:sanctum`
+- **`POST agent/api/v1/connectors/{id}/test`**
+  - Controller: `ConnectorConnectionController@test`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
 
 ### Configuration Reference
 

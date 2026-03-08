@@ -87,10 +87,19 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/compliance/status` | `-` | `ComplianceController@status` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/configuration` | `-` | `ConfigurationController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | PUT | `agent/api/v1/configuration` | `-` | `ConfigurationController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
+| GET | `agent/api/v1/connectors` | `-` | `ConnectorLibraryController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| GET | `agent/api/v1/connectors/callback` | `connectors.oauth.callback` | `ConnectorOAuthCallbackController` | `api, App\Http\Middleware\AgentApiVersionHeader` |
 | POST | `agent/api/v1/connectors/discord/webhook` | `agent.api.connectors.discord.webhook` | `WebhookController@handleDiscord` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
 | POST | `agent/api/v1/connectors/slack/webhook` | `agent.api.connectors.slack.webhook` | `WebhookController@handleSlack` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
 | POST | `agent/api/v1/connectors/telegram/webhook/{accountKey}` | `agent.api.connectors.telegram.webhook` | `WebhookController@handleTelegram` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
 | GET,POST | `agent/api/v1/connectors/whatsapp/webhook` | `agent.api.connectors.whatsapp.webhook` | `WebhookController@handleWhatsApp` | `api, App\Http\Middleware\AgentApiVersionHeader, App\Http\Middleware\Messenger\CorrelationId, App\Http\Middleware\Messenger\VerifyWebhookSignature, App\Http\Middleware\Messenger\ReplayProtection` |
+| GET | `agent/api/v1/connectors/{id}` | `-` | `ConnectorLibraryController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| GET | `agent/api/v1/connectors/{id}/actions` | `-` | `ConnectorLibraryController@actions` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| POST | `agent/api/v1/connectors/{id}/connect` | `-` | `ConnectorConnectionController@connect` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
+| DELETE | `agent/api/v1/connectors/{id}/disconnect` | `-` | `ConnectorConnectionController@disconnect` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
+| GET | `agent/api/v1/connectors/{id}/health` | `-` | `ConnectorConnectionController@health` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| GET | `agent/api/v1/connectors/{id}/telemetry` | `-` | `ConnectorTelemetryController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| POST | `agent/api/v1/connectors/{id}/test` | `-` | `ConnectorConnectionController@test` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | GET | `agent/api/v1/credentials` | `-` | `CredentialsController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | POST | `agent/api/v1/credentials` | `-` | `CredentialsController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | DELETE | `agent/api/v1/credentials` | `-` | `CredentialsController@destroy` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
@@ -297,6 +306,11 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 
 The following API endpoints are available for this feature:
 
+- **`GET agent/api/v1/connectors`**
+  - Controller: `ConnectorLibraryController@index`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/connectors/callback`**
+  - Controller: `ConnectorOAuthCallbackController`
 - **`POST agent/api/v1/connectors/discord/webhook`**
   - Controller: `WebhookController@handleDiscord`
 - **`POST agent/api/v1/connectors/slack/webhook`**
@@ -305,6 +319,30 @@ The following API endpoints are available for this feature:
   - Controller: `WebhookController@handleTelegram`
 - **`GET,POST agent/api/v1/connectors/whatsapp/webhook`**
   - Controller: `WebhookController@handleWhatsApp`
+- **`GET agent/api/v1/connectors/{id}`**
+  - Controller: `ConnectorLibraryController@show`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/connectors/{id}/actions`**
+  - Controller: `ConnectorLibraryController@actions`
+  - Auth: `auth:sanctum`
+- **`POST agent/api/v1/connectors/{id}/connect`**
+  - Controller: `ConnectorConnectionController@connect`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`DELETE agent/api/v1/connectors/{id}/disconnect`**
+  - Controller: `ConnectorConnectionController@disconnect`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`GET agent/api/v1/connectors/{id}/health`**
+  - Controller: `ConnectorConnectionController@health`
+  - Auth: `auth:sanctum`
+- **`GET agent/api/v1/connectors/{id}/telemetry`**
+  - Controller: `ConnectorTelemetryController@index`
+  - Auth: `auth:sanctum`
+- **`POST agent/api/v1/connectors/{id}/test`**
+  - Controller: `ConnectorConnectionController@test`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
 
 ### Configuration Reference
 

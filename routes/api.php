@@ -77,6 +77,10 @@ Route::middleware([AgentApiVersionHeader::class])
 
         Route::post('/n8n/webhook', \App\Http\Controllers\Api\V1\N8nWebhookController::class);
 
+        // OAuth callback route (no auth required — external redirect)
+        Route::get('/connectors/callback', Connectors\ConnectorOAuthCallbackController::class)
+            ->name('connectors.oauth.callback');
+
         Route::middleware(['auth:sanctum', 'license'])->group(function (): void {
             Route::get('/jobs', [AgentJobController::class, 'index']);
             Route::get('/jobs/{id}', [AgentJobController::class, 'show']);
@@ -462,10 +466,6 @@ Route::middleware([AgentApiVersionHeader::class])
                 Route::get('/delegatee-profiles/{id}/trust', [DelegateeProfileController::class, 'trust']);
             });
         });
-
-        // OAuth callback route (no auth required — external redirect)
-        Route::get('/connectors/callback', Connectors\ConnectorOAuthCallbackController::class)
-            ->name('connectors.oauth.callback');
 
         // Messenger webhook routes (no auth required, signature verified by middleware)
         Route::middleware([CorrelationId::class, VerifyWebhookSignature::class, ReplayProtection::class])
