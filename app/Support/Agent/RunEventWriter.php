@@ -41,7 +41,7 @@ class RunEventWriter
 
     private const RATE_LIMIT_PATTERN = '/\bhit(?:ting)?\s+(?:your\s+)?limit\b|\brate[-\s]?limited\b|\btoo many requests\b|\bquota exceeded\b|\b(?:status|code|error|http)\s*[:=]?\s*429\b|\bretry[-\s]?after\b/i';
 
-    private const RATE_LIMIT_FALSE_POSITIVE_PATTERN = '/\brate limit handling\b|\brate limits? handling\b|\berror handling\s*\([^)]*rate limits?[^)]*\)/i';
+    private const RATE_LIMIT_FALSE_POSITIVE_PATTERN = '/\brate limit handling\b|\brate limits? handling\b|\berror handling\s*\([^)]*rate limits?[^)]*\)|\b(?:parent::)?__construct\s*\(.*(?:rate.?limit|retry.?after)|\bclass\s+\w*(?:RateLimit|Throttle)\w*\b|\b(?:throw\s+new|catch\s*\()\s*\w*(?:RateLimit|Throttle)\w*|\$\w*(?:retryAfter|rate_limit)\w*\b|\bextends\s+\w*Exception\b.*(?:rate.?limit|retry.?after)/is';
 
     private const LINE_NUMBERED_SNIPPET_PATTERN = '/(?:^|\n|(?:\\\\)+n)\s*\d+\s*(?:→|->|=>)/u';
 
@@ -728,7 +728,50 @@ class RunEventWriter
             return false;
         }
 
+        if ($this->looksLikeSourceCodeWithRateLimitString($chunk)) {
+            return false;
+        }
+
         return true;
+    }
+
+    private function looksLikeSourceCodeWithRateLimitString(string $chunk): bool
+    {
+        $codeSignals = 0;
+
+        // PHP class/method signatures and constructs
+        if (preg_match('/\b(?:parent::)?__construct\s*\(/', $chunk) === 1) {
+            $codeSignals += 2;
+        }
+
+        if (preg_match('/\b(?:public|protected|private)\s+(?:static\s+)?function\b/', $chunk) === 1) {
+            $codeSignals += 2;
+        }
+
+        if (preg_match('/\bclass\s+\w+/', $chunk) === 1) {
+            $codeSignals++;
+        }
+
+        if (preg_match('/\bextends\s+\w+/', $chunk) === 1) {
+            $codeSignals++;
+        }
+
+        // PHP variables alongside the rate limit phrase
+        if (preg_match('/\$\w*(?:retry|message|seconds|exception)\w*\b/i', $chunk) === 1) {
+            $codeSignals++;
+        }
+
+        // throw/catch exception patterns
+        if (preg_match('/\b(?:throw\s+new|catch\s*\()\s*\w*Exception/', $chunk) === 1) {
+            $codeSignals += 2;
+        }
+
+        // String interpolation or concatenation around the match
+        if (preg_match('/[\'"].*(?:rate.?limit|retry.?after).*[\'"]\s*[.;)]/i', $chunk) === 1) {
+            $codeSignals++;
+        }
+
+        return $codeSignals >= 2;
     }
 
     private function isStructuredStreamEvent(string $chunk): bool

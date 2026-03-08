@@ -11,7 +11,7 @@
 **TASK**: Produce a complete, evidence-based discovery report that:
 1. Maps the current architecture.
 2. Identifies code quality issues, gaps, and security concerns.
-3. Flags deviations from the standards defined in `agent-ops-engineering-rules.md` v2.0.
+3. Flags deviations from the standards defined in `/Users/garethdaine/Code/agent/docs/refactoring/agent-ops-engineering-rules.md` v2.0.
 4. Prioritises refactoring candidates by impact and risk.
 5. Defines a clear, actionable backlog of improvements.
 
@@ -306,7 +306,7 @@ Using the Refactoring Guru taxonomy, identify instances of:
 
 ### 6.4 General
 
-- No `TODO` or `FIXME` without an associated ticket
+- No `TODO` or `FIXME` without an associated ticket in the Agent Orchestration Team and AgentOps project.
 - README accurate and current
 - Environment variables documented in `.env.example`
 - Conventional commit messages enforced (`@commitlint/cli` or equivalent)
@@ -487,12 +487,12 @@ Priority: P0 (do now) / P1 (next sprint) / P2 (backlog) / P3 (nice-to-have)
 
 ---
 
-## Running This Discovery
+## Running This Discovery (Ignore if Running in Requirements Discovery)
 
 ### Option A: Manual (single session)
 
 1. Load this brief into context.
-2. Load `agent-ops-engineering-rules.md` v2.0 into context.
+2. Load `docs/refactoring/agent-ops-engineering-rules.md` v2.0 into context.
 3. Execute phases 1–8 against the codebase at `/Users/garethdaine/Code/agent`.
 4. Write findings to `tasks/DISCOVERY_REPORT.md`.
 
@@ -504,7 +504,7 @@ Dispatch as an AgentOps job with:
 {
   "type": "discovery",
   "brief": "tasks/DISCOVERY_BRIEF.md",
-  "rules": "agent-ops-engineering-rules.md",
+  "rules": "docs/refactoring/agent-ops-engineering-rules.md",
   "target": "/Users/garethdaine/Code/agent",
   "output": "tasks/DISCOVERY_REPORT.md",
   "star": {
@@ -522,11 +522,11 @@ Dispatch as an AgentOps job with:
 
 1. **Triage** the issue register — assign severity and owner to every P0/P1.
 2. **Create Linear issues** for every P0 and P1 finding.
-3. **Update** `agent-ops-engineering-rules.md` if gaps reveal missing rules.
+3. **Update** `/Users/garethdaine/Code/agent/docs/refactoring/agent-ops-engineering-rules.md` if gaps reveal missing rules.
 4. **Install missing skills** identified during the audit.
 5. **Schedule re-discovery** quarterly, or after any major architectural change.
 6. **Set baseline metrics** — track coverage %, mutation score, linter violations, AI costs, and critical issues over time.
 
 ---
 
-*Brief version: 2.0 — March 2026. Aligned with `agent-ops-engineering-rules.md` v2.0. Revise after each quarterly discovery cycle.*
+*Brief version: 2.0 — March 2026. Aligned with `/Users/garethdaine/Code/agent/docs/refactoring/agent-ops-engineering-rules.md` v2.0. Revise after each quarterly discovery cycle.*

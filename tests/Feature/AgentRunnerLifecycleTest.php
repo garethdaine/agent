@@ -1916,6 +1916,74 @@ SH;
         $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
     }
 
+    public function test_rate_limit_phrase_inside_exception_constructor_source_code_does_not_trigger_detection(): void
+    {
+        $snippetExec = $this->sandboxBase.'/bin/rate-limit-exception-constructor-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+string $message = '\n  ) {\n    parent::__construct($message ?: 'Rate limit exceeded. Retry after {$retryAfterSeconds} seconds.');\n  }\n}
+OUT
+exit 0
+SH;
+        file_put_contents($snippetExec, $script);
+        chmod($snippetExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $snippetExec,
+            'codex' => $snippetExec,
+            'custom' => $snippetExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $snippetExec.' -p {{task_markdown_path}}',
+            'codex' => $snippetExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limit-exception-constructor.md';
+        file_put_contents($taskFile, "# Rate Limit Exception Constructor\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Rate Limit Exception Constructor Job',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
+    }
+
     private function runExecuteAgentRunJob(int $runId): void
     {
         $job = new ExecuteAgentRunJob($runId);
