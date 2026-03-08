@@ -2,7 +2,7 @@
 
 // odsl-/Users/garethdaine/Code/agent/app/Listeners/DispatchBuildTickOnRunFinished.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Listeners\DispatchBuildTickOnRunFinished
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.65.0.9-8.4.18-cc43ca5c3fce8cf5996850b98a00a5f29b150543654985917748e7575e175a9d',
+   'variableKey' => 'v2-6.65.0.9-8.4.18-cbd2d30f4d2d1617857a18cd8c3217054aa2d774633e6f3028bc50f445247abe',
    'data' => 
   array (
     'locatedSource' => 
@@ -27,7 +27,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     array (
     ),
     'startLine' => 12,
-    'endLine' => 50,
+    'endLine' => 60,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => NULL,
@@ -66,9 +66,9 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'startLine' => 14,
             'endLine' => 14,
             'startTokenPos' => 53,
-            'startFilePos' => 316,
+            'startFilePos' => 314,
             'endTokenPos' => 53,
-            'endFilePos' => 322,
+            'endFilePos' => 320,
           ),
         ),
         'docComment' => NULL,
@@ -109,9 +109,9 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'startLine' => 16,
             'endLine' => 16,
             'startTokenPos' => 64,
-            'startFilePos' => 353,
+            'startFilePos' => 351,
             'endTokenPos' => 64,
-            'endFilePos' => 361,
+            'endFilePos' => 359,
           ),
         ),
         'docComment' => NULL,
@@ -179,7 +179,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         ),
         'docComment' => NULL,
         'startLine' => 18,
-        'endLine' => 49,
+        'endLine' => 59,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

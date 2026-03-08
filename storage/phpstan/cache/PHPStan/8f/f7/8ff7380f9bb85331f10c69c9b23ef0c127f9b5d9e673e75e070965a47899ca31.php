@@ -199,7 +199,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Console/Commands/AgentBackupDatabaseCommand.php' => 
     array (
-      0 => 'b616d9c511b8b6b61b1925fe2dcf8b974bbfd98fbaa545c1a8839c890daafd22',
+      0 => 'a18bed9ee006594f0c053d37e795f60cec5ec19e0c1c32996a2ce93db4547223',
       1 => 
       array (
         0 => 'app\\console\\commands\\agentbackupdatabasecommand',
@@ -210,9 +210,10 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         1 => 'app\\console\\commands\\isduenow',
         2 => 'app\\console\\commands\\alreadyrantoday',
         3 => 'app\\console\\commands\\configureruntimebackuppolicy',
-        4 => 'app\\console\\commands\\configuredumpbinarypath',
-        5 => 'app\\console\\commands\\pgdumpcandidatedirectories',
-        6 => 'app\\console\\commands\\binaryexistsonpath',
+        4 => 'app\\console\\commands\\ensurebackupdirectoriesexist',
+        5 => 'app\\console\\commands\\configuredumpbinarypath',
+        6 => 'app\\console\\commands\\pgdumpcandidatedirectories',
+        7 => 'app\\console\\commands\\binaryexistsonpath',
       ),
       3 => 
       array (
@@ -2696,7 +2697,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorLibraryController.php' => 
     array (
-      0 => '2e442f8a9a2b56cf369f30a2cd7694cc5f400ca4ad7a64b5d17551e49cb73e86',
+      0 => '4051fa71f414e223e733e54aa24077dd733ec4e5831c322781f31c1a05fef725',
       1 => 
       array (
         0 => 'app\\http\\controllers\\api\\v1\\connectors\\connectorlibrarycontroller',
@@ -3690,7 +3691,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php' => 
     array (
-      0 => 'f32a9633aad010517fb0cc108787a10afe2889a15b1069093ee5edcf80b107b7',
+      0 => '9965e84a43ff9392efa1629b744948d8b1a8c00e22aba2e210a1231503c087e5',
       1 => 
       array (
         0 => 'app\\http\\controllers\\api\\v1\\skills\\skillcontroller',
@@ -3716,7 +3717,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillDashboardController.php' => 
     array (
-      0 => 'c2db668bb033f7e7a83da09255109eabd1247ac43496d889edae71cf85c42919',
+      0 => '4fd8359dc49bbe70c02ca2ec5b27ac6b29faefcc66e312cc21d55398e6e733ad',
       1 => 
       array (
         0 => 'app\\http\\controllers\\api\\v1\\skills\\skilldashboardcontroller',
@@ -4590,7 +4591,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Http/Requests/Connectors/ListConnectorsRequest.php' => 
     array (
-      0 => '74c985b59974b5fd976039dec2b0cb23666942c4f7f39e2da238a6e63303b0da',
+      0 => '4e5949bec496d67d2959726063de1df6d528a0b2fd737e1a7db8eff3b16a4135',
       1 => 
       array (
         0 => 'app\\http\\requests\\connectors\\listconnectorsrequest',
@@ -5319,7 +5320,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php' => 
     array (
-      0 => '34a288adb3f7c238c542c91cc3e8134e16dc351b780e191011cb9b3b57550692',
+      0 => 'fb8839573179a86e83c57973ee1c3215cee1ea37b2bbbc33174d2d2a57fa94b7',
       1 => 
       array (
         0 => 'app\\jobs\\executeagentrunjob',
@@ -5352,7 +5353,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php' => 
     array (
-      0 => '4822598f0f02e6b04d3e2bfce6bd7c62b20105972c755bb722f6627f65eb8c8e',
+      0 => 'c200300ae6ee074b10b647f8565d9668e971d9b9e3091cca41f4cba087c54ed6',
       1 => 
       array (
         0 => 'app\\jobs\\executeinterrogationbuildjob',
@@ -6248,7 +6249,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Listeners/DispatchBuildTickOnRunFinished.php' => 
     array (
-      0 => 'cc43ca5c3fce8cf5996850b98a00a5f29b150543654985917748e7575e175a9d',
+      0 => 'cbd2d30f4d2d1617857a18cd8c3217054aa2d774633e6f3028bc50f445247abe',
       1 => 
       array (
         0 => 'app\\listeners\\dispatchbuildtickonrunfinished',
@@ -7766,7 +7767,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Models/AgentConnectorInvocation.php' => 
     array (
-      0 => '5475285585726f1b4b6b22d98e98c0f1d444907c9f602f7bb595626e43f8ea8f',
+      0 => '15ce0cc0c9b95e7b00d1dbf60ce8c15122b7239e68f2d753b080373065689df1',
       1 => 
       array (
         0 => 'app\\models\\agentconnectorinvocation',
@@ -7775,6 +7776,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       array (
         0 => 'app\\models\\casts',
         1 => 'app\\models\\connection',
+        2 => 'app\\models\\connector',
       ),
       3 => 
       array (
@@ -10469,7 +10471,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Services/Messenger/CommandRouter.php' => 
     array (
-      0 => 'aeda3c693ad75b874d96fbdeeacf014b4635d73ed4a67c00e72e04a4c7ce86f9',
+      0 => '8b1970266a204636c9f3dd09d2db8b8846b9ba8bf70a5cc4caf8998fedfd3af4',
       1 => 
       array (
         0 => 'app\\services\\messenger\\commandrouter',
@@ -11048,7 +11050,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Services/Runtime/CliRuntimeExecutor.php' => 
     array (
-      0 => '2a125f30e3e4a9a73d86360ba754ee3eef0366bfb762b68f68e11b68e9c9ef63',
+      0 => '0b4f4b23aca0dd1086db9dde3be220a55ed0cfb048d14d457d69e233e3e04bb8',
       1 => 
       array (
         0 => 'app\\services\\runtime\\cliruntimeexecutor',
@@ -12433,7 +12435,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Support/Agent/FeatureFlagManager.php' => 
     array (
-      0 => '0d01847236150b8eeb3fe270ad43bc38e391cef39f6d43f578265060fa94b8d0',
+      0 => '81a380ab668bd578bcf945c50ab069f7d24b7110b01507d5c7ff990a8607e840',
       1 => 
       array (
         0 => 'app\\support\\agent\\featureflagmanager',
@@ -12625,7 +12627,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php' => 
     array (
-      0 => '8147336afa71bbcefe2c275fa4a3777405fe62aaff860334f1106f1fce5ccf9c',
+      0 => 'f6f56fd83436db99ec9f679d49b55b30c19939101076e5c8c494ab328afebee8',
       1 => 
       array (
         0 => 'app\\support\\agent\\runeventwriter',
@@ -12660,7 +12662,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         25 => 'app\\support\\agent\\markmcpserverunavailable',
         26 => 'app\\support\\agent\\shouldmarkapprovalrequired',
         27 => 'app\\support\\agent\\shouldmarkratelimitdetected',
-        28 => 'app\\support\\agent\\lookslikesourcecodewithratelimitstring',
+        28 => 'app\\support\\agent\\scanrecentoutputforratelimit',
         29 => 'app\\support\\agent\\isstructuredstreamevent',
         30 => 'app\\support\\agent\\extractmcpunavailableendpoints',
         31 => 'app\\support\\agent\\islinenumberedsnippet',
@@ -12787,7 +12789,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php' => 
     array (
-      0 => '840833e4940efcba3ee495f4a63d110197b024f23ef4da534e8a00d6defd3280',
+      0 => '21f8cf6984d3eb54495bfb217310c0f1596c81c5b25c357b8d5f3eeecbb599ce',
       1 => 
       array (
         0 => 'app\\support\\agent\\targetedretryservice',
@@ -13305,15 +13307,16 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php' => 
     array (
-      0 => '509c589866740b2ef7c1572165dd03339bed69b24505cd5d4231acf3e482230d',
+      0 => 'd05a211315124228955a3dab789bfd328d21307afedc483fda12e3f0e977a19f',
       1 => 
       array (
         0 => 'app\\support\\connectors\\pipeline\\approvalgate',
       ),
       2 => 
       array (
-        0 => 'app\\support\\connectors\\pipeline\\handle',
-        1 => 'app\\support\\connectors\\pipeline\\requiresapproval',
+        0 => 'app\\support\\connectors\\pipeline\\__construct',
+        1 => 'app\\support\\connectors\\pipeline\\handle',
+        2 => 'app\\support\\connectors\\pipeline\\requiresapproval',
       ),
       3 => 
       array (
@@ -13957,7 +13960,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Support/Documentation/DocsCatalog.php' => 
     array (
-      0 => '0a754bcb46de9a104448a7c1fc54157b331536cf0998c9ad5fa8a73c6b5229b1',
+      0 => '4bfe3fa324159c4bcbc65f45793792d3ab677591f7ca9c7e0da4dab7fc8b1441',
       1 => 
       array (
         0 => 'app\\support\\documentation\\docscatalog',
@@ -14964,7 +14967,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php' => 
     array (
-      0 => '30df4940256ddb51b33973cf2cc8e31fad5bab78ab672e8b612eac3fe4ddc0f4',
+      0 => '8963a10588608f6341fda4c317b42b2c5624d656147eed077003397ee5bbf7c1',
       1 => 
       array (
         0 => 'app\\support\\interrogation\\systempromptresolver',
@@ -17282,6 +17285,171 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
       2 => 
       array (
         0 => 'app\\support\\time\\nowutc',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/garethdaine/Code/agent/app/Jobs/Connectors/ExpireConnectorApprovalsJob.php' => 
+    array (
+      0 => '052f32da10cbc98c92dd4bec6da45452abb0fa30258ed27be1cde3f096705305',
+      1 => 
+      array (
+        0 => 'app\\jobs\\connectors\\expireconnectorapprovalsjob',
+      ),
+      2 => 
+      array (
+        0 => 'app\\jobs\\connectors\\__construct',
+        1 => 'app\\jobs\\connectors\\handle',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ConnectorCommandHandler.php' => 
+    array (
+      0 => 'b6e71a4e5ae7fda21e6f5311b668682f750ff0da149cf475c4cecb520d6f586d',
+      1 => 
+      array (
+        0 => 'app\\messenger\\slashcommands\\connectorcommandhandler',
+      ),
+      2 => 
+      array (
+        0 => 'app\\messenger\\slashcommands\\__construct',
+        1 => 'app\\messenger\\slashcommands\\handle',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php' => 
+    array (
+      0 => '5e8015330fbb57ab50650672c5cefebe4279277ce4a578c5f3c3403989d087a2',
+      1 => 
+      array (
+        0 => 'app\\services\\connectors\\dualchannelapprovalservice',
+      ),
+      2 => 
+      array (
+        0 => 'app\\services\\connectors\\__construct',
+        1 => 'app\\services\\connectors\\requestapproval',
+        2 => 'app\\services\\connectors\\resolveapproval',
+        3 => 'app\\services\\connectors\\isapproved',
+        4 => 'app\\services\\connectors\\ispending',
+        5 => 'app\\services\\connectors\\sendmessengernotification',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/garethdaine/Code/agent/app/Support/Agent/EngineeringRulesInjector.php' => 
+    array (
+      0 => 'f4dd6b6e7edfb0cd01df9ebb1610bf10ba6caa32dacbb309054f4bd852bbe8ca',
+      1 => 
+      array (
+        0 => 'app\\support\\agent\\engineeringrulesinjector',
+      ),
+      2 => 
+      array (
+        0 => 'app\\support\\agent\\isenabled',
+        1 => 'app\\support\\agent\\getcompiledrules',
+        2 => 'app\\support\\agent\\inject',
+        3 => 'app\\support\\agent\\injectintosystemprompt',
+        4 => 'app\\support\\agent\\compile',
+        5 => 'app\\support\\agent\\truncatetotokenbudget',
+        6 => 'app\\support\\agent\\strippreamble',
+        7 => 'app\\support\\agent\\extractsections',
+        8 => 'app\\support\\agent\\parsesections',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/garethdaine/Code/agent/app/Support/Connectors/Mcp/ConnectorMcpRegistrar.php' => 
+    array (
+      0 => 'afa6bd1391399e430d33f3eb0919dc19d5be6ff3d7a1fb935ed833e69e45ef83',
+      1 => 
+      array (
+        0 => 'app\\support\\connectors\\mcp\\connectormcpregistrar',
+      ),
+      2 => 
+      array (
+        0 => 'app\\support\\connectors\\mcp\\getregisteredtools',
+        1 => 'app\\support\\connectors\\mcp\\builddescription',
+        2 => 'app\\support\\connectors\\mcp\\buildinputschema',
+        3 => 'app\\support\\connectors\\mcp\\defaultstability',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php' => 
+    array (
+      0 => '6d9915f2ec77edb0181e59a2a5a20cca99e3f752a49e638b5f24e6cb908f2a98',
+      1 => 
+      array (
+        0 => 'app\\support\\connectors\\messenger\\connectorcommandhandler',
+      ),
+      2 => 
+      array (
+        0 => 'app\\support\\connectors\\messenger\\__construct',
+        1 => 'app\\support\\connectors\\messenger\\handlecommand',
+        2 => 'app\\support\\connectors\\messenger\\handleconnect',
+        3 => 'app\\support\\connectors\\messenger\\handlelist',
+        4 => 'app\\support\\connectors\\messenger\\handletest',
+        5 => 'app\\support\\connectors\\messenger\\handledisconnect',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php' => 
+    array (
+      0 => '75678075627796624ae15e219e9467db8ee39f5dedb36173fb6f54a151bad181',
+      1 => 
+      array (
+        0 => 'app\\support\\connectors\\telemetry\\connectoralertservice',
+      ),
+      2 => 
+      array (
+        0 => 'app\\support\\connectors\\telemetry\\__construct',
+        1 => 'app\\support\\connectors\\telemetry\\checkcredentialexpiry',
+        2 => 'app\\support\\connectors\\telemetry\\checkratelimitutilization',
+        3 => 'app\\support\\connectors\\telemetry\\checkhealthscore',
+        4 => 'app\\support\\connectors\\telemetry\\getconnectordisplayname',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php' => 
+    array (
+      0 => '685e8854a9a166be61e02972ff062eb493d3042c615840d2d98e0ab19671ba85',
+      1 => 
+      array (
+        0 => 'app\\support\\connectors\\telemetry\\connectorcostattributor',
+      ),
+      2 => 
+      array (
+        0 => 'app\\support\\connectors\\telemetry\\attributecost',
+        1 => 'app\\support\\connectors\\telemetry\\getremainingquota',
+        2 => 'app\\support\\connectors\\telemetry\\resolveconnector',
+        3 => 'app\\support\\connectors\\telemetry\\resolveconnection',
+      ),
+      3 => 
+      array (
+      ),
+    ),
+    '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorReliabilityContributor.php' => 
+    array (
+      0 => '7bb9887b43651998298cb89ae56b664b808d78e0438503a22cd6d9af176bf7f7',
+      1 => 
+      array (
+        0 => 'app\\support\\connectors\\telemetry\\connectorreliabilitycontributor',
+      ),
+      2 => 
+      array (
+        0 => 'app\\support\\connectors\\telemetry\\getreliabilitycontribution',
       ),
       3 => 
       array (

@@ -120,7 +120,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     1 => 
     array (
-      '/Users/garethdaine/Code/agent/app/Support/Documentation/DocsCatalog.php' => '0a754bcb46de9a104448a7c1fc54157b331536cf0998c9ad5fa8a73c6b5229b1',
+      '/Users/garethdaine/Code/agent/app/Support/Documentation/DocsCatalog.php' => '4bfe3fa324159c4bcbc65f45793792d3ab677591f7ca9c7e0da4dab7fc8b1441',
     ),
   ),
 ));

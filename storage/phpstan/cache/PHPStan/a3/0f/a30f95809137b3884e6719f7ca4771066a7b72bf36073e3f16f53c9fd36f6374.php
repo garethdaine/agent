@@ -2,7 +2,7 @@
 
 // odsl-/Users/garethdaine/Code/agent/app/Models/AgentConnectorInvocation.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Models\AgentConnectorInvocation
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.65.0.9-8.4.18-5475285585726f1b4b6b22d98e98c0f1d444907c9f602f7bb595626e43f8ea8f',
+   'variableKey' => 'v2-6.65.0.9-8.4.18-15ce0cc0c9b95e7b00d1dbf60ce8c15122b7239e68f2d753b080373065689df1',
    'data' => 
   array (
     'locatedSource' => 
@@ -29,7 +29,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     array (
     ),
     'startLine' => 14,
-    'endLine' => 60,
+    'endLine' => 65,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => 'Illuminate\\Database\\Eloquent\\Model',
@@ -321,6 +321,41 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         'docComment' => NULL,
         'startLine' => 56,
         'endLine' => 59,
+        'startColumn' => 5,
+        'endColumn' => 5,
+        'couldThrow' => false,
+        'isClosure' => false,
+        'isGenerator' => false,
+        'isVariadic' => false,
+        'modifiers' => 1,
+        'namespace' => 'App\\Models',
+        'declaringClassName' => 'App\\Models\\AgentConnectorInvocation',
+        'implementingClassName' => 'App\\Models\\AgentConnectorInvocation',
+        'currentClassName' => 'App\\Models\\AgentConnectorInvocation',
+        'aliasName' => NULL,
+      ),
+      'connector' => 
+      array (
+        'name' => 'connector',
+        'parameters' => 
+        array (
+        ),
+        'returnsReference' => false,
+        'returnType' => 
+        array (
+          'class' => 'PHPStan\\BetterReflection\\Reflection\\ReflectionNamedType',
+          'data' => 
+          array (
+            'name' => 'Illuminate\\Database\\Eloquent\\Relations\\BelongsTo',
+            'isIdentifier' => false,
+          ),
+        ),
+        'attributes' => 
+        array (
+        ),
+        'docComment' => NULL,
+        'startLine' => 61,
+        'endLine' => 64,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

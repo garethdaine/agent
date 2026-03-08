@@ -147,6 +147,34 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'typeAliasClassName' => NULL,
          'traitData' => NULL,
       )),
+      'bd02a34a7d31204395c9127e39ab9605' => 
+      \PHPStan\Analyser\IntermediaryNameScope::__set_state(array(
+         'namespace' => 'App\\Console\\Commands',
+         'uses' => 
+        array (
+          'agentbackupsetting' => 'App\\Models\\AgentBackupSetting',
+          'auditlogger' => 'App\\Support\\Agent\\AuditLogger',
+          'carbonimmutable' => 'Carbon\\CarbonImmutable',
+          'command' => 'Illuminate\\Console\\Command',
+          'artisan' => 'Illuminate\\Support\\Facades\\Artisan',
+          'throwable' => 'Throwable',
+        ),
+         'className' => 'App\\Console\\Commands\\AgentBackupDatabaseCommand',
+         'functionName' => 'ensureBackupDirectoriesExist',
+         'templatePhpDocNodes' => 
+        array (
+        ),
+         'parent' => NULL,
+         'typeAliasesMap' => 
+        array (
+        ),
+         'bypassTypeAliases' => false,
+         'constUses' => 
+        array (
+        ),
+         'typeAliasClassName' => NULL,
+         'traitData' => NULL,
+      )),
       '9e913b1afde0d82e396c9442ac3e4699' => 
       \PHPStan\Analyser\IntermediaryNameScope::__set_state(array(
          'namespace' => 'App\\Console\\Commands',
@@ -234,7 +262,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     1 => 
     array (
-      '/Users/garethdaine/Code/agent/app/Console/Commands/AgentBackupDatabaseCommand.php' => 'b616d9c511b8b6b61b1925fe2dcf8b974bbfd98fbaa545c1a8839c890daafd22',
+      '/Users/garethdaine/Code/agent/app/Console/Commands/AgentBackupDatabaseCommand.php' => 'a18bed9ee006594f0c053d37e795f60cec5ec19e0c1c32996a2ce93db4547223',
     ),
   ),
 ));

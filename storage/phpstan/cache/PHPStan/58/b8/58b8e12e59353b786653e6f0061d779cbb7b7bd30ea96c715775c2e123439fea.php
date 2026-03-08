@@ -877,7 +877,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'typeAliasClassName' => NULL,
          'traitData' => NULL,
       )),
-      'c626d593cf373c29f859635495749258' => 
+      'a68bf88a43ba9baaf840b05ae2dfe6fd' => 
       \PHPStan\Analyser\IntermediaryNameScope::__set_state(array(
          'namespace' => 'App\\Support\\Agent',
          'uses' => 
@@ -892,7 +892,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
           'str' => 'Illuminate\\Support\\Str',
         ),
          'className' => 'App\\Support\\Agent\\RunEventWriter',
-         'functionName' => 'looksLikeSourceCodeWithRateLimitString',
+         'functionName' => 'scanRecentOutputForRateLimit',
          'templatePhpDocNodes' => 
         array (
         ),
@@ -1420,7 +1420,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     1 => 
     array (
-      '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php' => '8147336afa71bbcefe2c275fa4a3777405fe62aaff860334f1106f1fce5ccf9c',
+      '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php' => 'f6f56fd83436db99ec9f679d49b55b30c19939101076e5c8c494ab328afebee8',
     ),
   ),
 ));

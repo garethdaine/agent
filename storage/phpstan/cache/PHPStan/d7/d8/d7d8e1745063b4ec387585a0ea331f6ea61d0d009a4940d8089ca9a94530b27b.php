@@ -2,7 +2,7 @@
 
 // odsl-/Users/garethdaine/Code/agent/app/Support/Documentation/DocsCatalog.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Support\Documentation\DocsCatalog
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.65.0.9-8.4.18-0a754bcb46de9a104448a7c1fc54157b331536cf0998c9ad5fa8a73c6b5229b1',
+   'variableKey' => 'v2-6.65.0.9-8.4.18-4bfe3fa324159c4bcbc65f45793792d3ab677591f7ca9c7e0da4dab7fc8b1441',
    'data' => 
   array (
     'locatedSource' => 
@@ -27,7 +27,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     array (
     ),
     'startLine' => 7,
-    'endLine' => 121,
+    'endLine' => 186,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => NULL,
@@ -104,15 +104,15 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         ),
         'default' => 
         array (
-          'code' => '[\'docs.overview\' => [\'ui_key\' => \'docs.overview\', \'short_text\' => \'Docs are internal-only and require authentication.\', \'long_text\' => \'This helper text is served from the docs fragments read API.\', \'severity\' => \'info\', \'learn_more_slug\' => \'overview\'], \'sessions.detail\' => [\'ui_key\' => \'sessions.detail\', \'short_text\' => \'Inspect session turns, tool calls, and approvals.\', \'severity\' => \'info\', \'learn_more_slug\' => \'overview\']]',
+          'code' => '[\'docs.overview\' => [\'ui_key\' => \'docs.overview\', \'short_text\' => \'Docs are internal-only and require authentication.\', \'long_text\' => \'This helper text is served from the docs fragments read API.\', \'severity\' => \'info\', \'learn_more_slug\' => \'overview\'], \'sessions.detail\' => [\'ui_key\' => \'sessions.detail\', \'short_text\' => \'Inspect session turns, tool calls, and approvals.\', \'severity\' => \'info\', \'learn_more_slug\' => \'overview\'], \'connectors.overview\' => [\'ui_key\' => \'connectors.overview\', \'short_text\' => \'Browse and manage connected third-party services.\', \'severity\' => \'info\'], \'deployments.overview\' => [\'ui_key\' => \'deployments.overview\', \'short_text\' => \'Deployment history and release status tracking.\', \'severity\' => \'info\'], \'sessions.overview\' => [\'ui_key\' => \'sessions.overview\', \'short_text\' => \'Active runtime sessions and connection status.\', \'severity\' => \'info\'], \'code-analysis.overview\' => [\'ui_key\' => \'code-analysis.overview\', \'short_text\' => \'Code analysis runs, findings, and quality metrics.\', \'severity\' => \'info\'], \'security.audit\' => [\'ui_key\' => \'security.audit\', \'short_text\' => \'Security audit findings and compliance status.\', \'severity\' => \'info\'], \'diagnostics\' => [\'ui_key\' => \'diagnostics\', \'short_text\' => \'System diagnostics and health check results.\', \'severity\' => \'info\'], \'services\' => [\'ui_key\' => \'services\', \'short_text\' => \'Registered services and their operational status.\', \'severity\' => \'info\'], \'logs\' => [\'ui_key\' => \'logs\', \'short_text\' => \'Application log stream and filtering controls.\', \'severity\' => \'info\'], \'audit.log\' => [\'ui_key\' => \'audit.log\', \'short_text\' => \'Audit trail of user and system actions.\', \'severity\' => \'info\'], \'memory.settings\' => [\'ui_key\' => \'memory.settings\', \'short_text\' => \'Memory system configuration and storage settings.\', \'severity\' => \'info\'], \'settings.tunnel\' => [\'ui_key\' => \'settings.tunnel\', \'short_text\' => \'Tunnel configuration for secure remote access.\', \'severity\' => \'info\'], \'settings.configuration\' => [\'ui_key\' => \'settings.configuration\', \'short_text\' => \'Application configuration and environment settings.\', \'severity\' => \'info\'], \'credentials\' => [\'ui_key\' => \'credentials\', \'short_text\' => \'Secret and credential management for integrations.\', \'severity\' => \'info\']]',
           'attributes' => 
           array (
             'startLine' => 34,
-            'endLine' => 48,
+            'endLine' => 113,
             'startTokenPos' => 148,
             'startFilePos' => 920,
-            'endTokenPos' => 231,
-            'endFilePos' => 1504,
+            'endTokenPos' => 621,
+            'endFilePos' => 4063,
           ),
         ),
         'docComment' => '/**
@@ -122,7 +122,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'startLine' => 34,
-        'endLine' => 48,
+        'endLine' => 113,
         'startColumn' => 5,
         'endColumn' => 6,
         'isPromoted' => false,
@@ -178,8 +178,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 53,
-            'endLine' => 53,
+            'startLine' => 118,
+            'endLine' => 118,
             'startColumn' => 28,
             'endColumn' => 41,
             'parameterIndex' => 0,
@@ -193,12 +193,12 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
               'code' => 'null',
               'attributes' => 
               array (
-                'startLine' => 53,
-                'endLine' => 53,
-                'startTokenPos' => 255,
-                'startFilePos' => 1633,
-                'endTokenPos' => 255,
-                'endFilePos' => 1636,
+                'startLine' => 118,
+                'endLine' => 118,
+                'startTokenPos' => 645,
+                'startFilePos' => 4192,
+                'endTokenPos' => 645,
+                'endFilePos' => 4195,
               ),
             ),
             'type' => 
@@ -235,8 +235,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 53,
-            'endLine' => 53,
+            'startLine' => 118,
+            'endLine' => 118,
             'startColumn' => 44,
             'endColumn' => 65,
             'parameterIndex' => 1,
@@ -250,12 +250,12 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
               'code' => 'null',
               'attributes' => 
               array (
-                'startLine' => 53,
-                'endLine' => 53,
-                'startTokenPos' => 265,
-                'startFilePos' => 1658,
-                'endTokenPos' => 265,
-                'endFilePos' => 1661,
+                'startLine' => 118,
+                'endLine' => 118,
+                'startTokenPos' => 655,
+                'startFilePos' => 4217,
+                'endTokenPos' => 655,
+                'endFilePos' => 4220,
               ),
             ),
             'type' => 
@@ -292,8 +292,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 53,
-            'endLine' => 53,
+            'startLine' => 118,
+            'endLine' => 118,
             'startColumn' => 68,
             'endColumn' => 90,
             'parameterIndex' => 2,
@@ -307,12 +307,12 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
               'code' => '20',
               'attributes' => 
               array (
-                'startLine' => 53,
-                'endLine' => 53,
-                'startTokenPos' => 274,
-                'startFilePos' => 1677,
-                'endTokenPos' => 274,
-                'endFilePos' => 1678,
+                'startLine' => 118,
+                'endLine' => 118,
+                'startTokenPos' => 664,
+                'startFilePos' => 4236,
+                'endTokenPos' => 664,
+                'endFilePos' => 4237,
               ),
             ),
             'type' => 
@@ -330,8 +330,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 53,
-            'endLine' => 53,
+            'startLine' => 118,
+            'endLine' => 118,
             'startColumn' => 93,
             'endColumn' => 107,
             'parameterIndex' => 3,
@@ -354,8 +354,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         'docComment' => '/**
  * @return array<int, array<string, mixed>>
  */',
-        'startLine' => 53,
-        'endLine' => 88,
+        'startLine' => 118,
+        'endLine' => 153,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -393,8 +393,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 93,
-            'endLine' => 93,
+            'startLine' => 158,
+            'endLine' => 158,
             'startColumn' => 31,
             'endColumn' => 42,
             'parameterIndex' => 0,
@@ -436,8 +436,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         'docComment' => '/**
  * @return array<string, mixed>|null
  */',
-        'startLine' => 93,
-        'endLine' => 96,
+        'startLine' => 158,
+        'endLine' => 161,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -475,8 +475,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 101,
-            'endLine' => 101,
+            'startLine' => 166,
+            'endLine' => 166,
             'startColumn' => 34,
             'endColumn' => 46,
             'parameterIndex' => 0,
@@ -518,8 +518,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         'docComment' => '/**
  * @return array<string, mixed>|null
  */',
-        'startLine' => 101,
-        'endLine' => 104,
+        'startLine' => 166,
+        'endLine' => 169,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -555,8 +555,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         'docComment' => '/**
  * @return array<string, mixed>
  */',
-        'startLine' => 109,
-        'endLine' => 120,
+        'startLine' => 174,
+        'endLine' => 185,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

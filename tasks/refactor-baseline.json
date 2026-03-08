@@ -1,0 +1,56 @@
+{
+    "captured_at": "2026-03-08",
+    "session": "7-task-1",
+    "metrics": {
+        "phpstan": {
+            "level": 5,
+            "errors": 3484,
+            "note": "Ran with php -d memory_limit=512M"
+        },
+        "pint": {
+            "result": "fail",
+            "violation_files": 145,
+            "note": "145 files with formatting violations"
+        },
+        "eslint": {
+            "problems": 19,
+            "errors": 2,
+            "warnings": 17
+        },
+        "test_suite": {
+            "passed": 3959,
+            "failed": 11,
+            "skipped": 9,
+            "note": "Test suite OOMs at 128MB; values from discovery report. Memory issue in routes/web.php:212"
+        },
+        "strict_types": {
+            "files_with_declaration": 434,
+            "files_missing_declaration": 683,
+            "total_php_files": 1117
+        },
+        "factories": {
+            "existing": 38,
+            "note": "Count from database/factories/ directory"
+        },
+        "guarded_models": {
+            "count": 57,
+            "note": "Models using $guarded = []"
+        },
+        "ci_workflows": {
+            "count": 1,
+            "files": ["docs-deploy-sync.yml"]
+        },
+        "chunk_sizes": {
+            "orbit_controls_kb": 509.37,
+            "wizard_kb": 726.02,
+            "vite_warning_threshold_kb": 500
+        },
+        "horizon_supervisors": {
+            "count": 15,
+            "issues": [
+                "supervisor-1 should be renamed to supervisor-long-running",
+                "supervisor-tunnel has balance set to string 'false' (truthy in PHP)"
+            ]
+        }
+    }
+}

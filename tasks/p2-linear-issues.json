@@ -1,0 +1,29 @@
+{
+    "created_at": "2026-03-08",
+    "session": "7-task-1",
+    "team": "Agent Orchestration",
+    "project": "AgentOps",
+    "label": "Discovery Audit",
+    "priority": "P2 (Normal=3)",
+    "issues": [
+        {"finding": 56, "identifier": "AGE-2792", "id": "35da7f91-114b-473c-a878-cc5842346a52", "title": "Replace $request->all() with $request->only() in MessengerConnectorController"},
+        {"finding": 57, "identifier": "AGE-2793", "id": "ad5ef302-6148-453f-b09e-31e1871c5aa0", "title": "Sanitize v-html usage in 10 Vue files"},
+        {"finding": 58, "identifier": "AGE-2794", "id": "2ca3f2c8-f431-4b34-a0c1-3158e7084cb4", "title": "DB::raw() safety review across 9 locations"},
+        {"finding": 59, "identifier": "AGE-2795", "id": "f7792c00-90f5-4051-a04d-5b67bf96626b", "title": "Address 87 files exceeding 300-line threshold"},
+        {"finding": 60, "identifier": "AGE-2796", "id": "8442e518-db0d-416c-82ef-316bec064149", "title": "Extract AbstractBuildAdapter from CodexAdapter/ClaudeAdapter"},
+        {"finding": 61, "identifier": "AGE-2797", "id": "a567b7c2-100f-48bc-9d9f-c2738e30107c", "title": "Lazy-load Three.js OrbitControls (509 kB chunk)"},
+        {"finding": 62, "identifier": "AGE-2798", "id": "ff4887a9-e966-4462-90b6-7fa57abb3be7", "title": "Split Wizard chunk below 500 kB Vite threshold"},
+        {"finding": 63, "identifier": "AGE-2799", "id": "6f358496-314e-44fc-a50b-bbd35faf581c", "title": "Fix unbounded ConnectorAccount::all() in MessengerHealthController"},
+        {"finding": 64, "identifier": "AGE-2800", "id": "4ba4c197-2ef7-46d0-8897-91a5bbe91152", "title": "Add caching for ConnectorAccount lookups"},
+        {"finding": 65, "identifier": "AGE-2801", "id": "7d5e1e0b-2883-40de-9e30-b35911174703", "title": "Track laravel/ai package availability (informational)"},
+        {"finding": 66, "identifier": "AGE-2802", "id": "bf60ba63-a28a-4852-ba88-fd1a10ac12ca", "title": "Evaluate laravel/mcp installation"},
+        {"finding": 67, "identifier": "AGE-2803", "id": "2885b273-0c13-4686-a9a0-c38013ca1b38", "title": "Evaluate laravel/boost installation"},
+        {"finding": 68, "identifier": "AGE-2804", "id": "470e2fde-ed0c-454b-83fb-80c6f91c9c92", "title": "Create application Dockerfile for containerized deployment"},
+        {"finding": 69, "identifier": "AGE-2805", "id": "9868d1bb-8ffc-47b1-8e42-ea8cd0251eef", "title": "Pennant feature flag cleanup"},
+        {"finding": 70, "identifier": "AGE-2806", "id": "47521576-3c6b-4ca2-af2f-f99d0cf9447e", "title": "Fix supervisor-tunnel balance set to string 'false'"},
+        {"finding": 71, "identifier": "AGE-2807", "id": "1c31f895-c1b2-4477-9015-7e48f240b09f", "title": "Fix 11 failing tests, investigate 9 skipped tests"},
+        {"finding": 72, "identifier": "AGE-2808", "id": "b494aa51-b27d-4e3c-b5a0-1c258c2207ef", "title": "Fix 19 ESLint problems (2 errors, 17 warnings)"},
+        {"finding": 73, "identifier": "AGE-2809", "id": "573d8dc8-db88-4e28-8cfd-1612e97ccd24", "title": "Migrate 5 Vue components from Options API to script setup"},
+        {"finding": 74, "identifier": "AGE-2810", "id": "22b7286b-9751-455f-bb1d-658a9d188c34", "title": "Migrate Playwright tests to role-based locators"}
+    ]
+}

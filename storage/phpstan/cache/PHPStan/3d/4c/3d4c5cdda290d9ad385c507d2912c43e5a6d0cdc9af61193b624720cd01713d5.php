@@ -2,7 +2,7 @@
 
 // odsl-/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Support\Connectors\Pipeline\ApprovalGate
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.65.0.9-8.4.18-509c589866740b2ef7c1572165dd03339bed69b24505cd5d4231acf3e482230d',
+   'variableKey' => 'v2-6.65.0.9-8.4.18-d05a211315124228955a3dab789bfd328d21307afedc483fda12e3f0e977a19f',
    'data' => 
   array (
     'locatedSource' => 
@@ -26,8 +26,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     'attributes' => 
     array (
     ),
-    'startLine' => 12,
-    'endLine' => 69,
+    'startLine' => 13,
+    'endLine' => 70,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => NULL,
@@ -42,9 +42,93 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     'immediateProperties' => 
     array (
+      'approvalService' => 
+      array (
+        'declaringClassName' => 'App\\Support\\Connectors\\Pipeline\\ApprovalGate',
+        'implementingClassName' => 'App\\Support\\Connectors\\Pipeline\\ApprovalGate',
+        'name' => 'approvalService',
+        'modifiers' => 132,
+        'type' => 
+        array (
+          'class' => 'PHPStan\\BetterReflection\\Reflection\\ReflectionNamedType',
+          'data' => 
+          array (
+            'name' => 'App\\Services\\Connectors\\DualChannelApprovalService',
+            'isIdentifier' => false,
+          ),
+        ),
+        'default' => NULL,
+        'docComment' => NULL,
+        'attributes' => 
+        array (
+        ),
+        'startLine' => 16,
+        'endLine' => 16,
+        'startColumn' => 9,
+        'endColumn' => 68,
+        'isPromoted' => true,
+        'declaredAtCompileTime' => true,
+        'immediateVirtual' => false,
+        'immediateHooks' => 
+        array (
+        ),
+      ),
     ),
     'immediateMethods' => 
     array (
+      '__construct' => 
+      array (
+        'name' => '__construct',
+        'parameters' => 
+        array (
+          'approvalService' => 
+          array (
+            'name' => 'approvalService',
+            'default' => NULL,
+            'type' => 
+            array (
+              'class' => 'PHPStan\\BetterReflection\\Reflection\\ReflectionNamedType',
+              'data' => 
+              array (
+                'name' => 'App\\Services\\Connectors\\DualChannelApprovalService',
+                'isIdentifier' => false,
+              ),
+            ),
+            'isVariadic' => false,
+            'byRef' => false,
+            'isPromoted' => true,
+            'attributes' => 
+            array (
+            ),
+            'startLine' => 16,
+            'endLine' => 16,
+            'startColumn' => 9,
+            'endColumn' => 68,
+            'parameterIndex' => 0,
+            'isOptional' => false,
+          ),
+        ),
+        'returnsReference' => false,
+        'returnType' => NULL,
+        'attributes' => 
+        array (
+        ),
+        'docComment' => NULL,
+        'startLine' => 15,
+        'endLine' => 17,
+        'startColumn' => 5,
+        'endColumn' => 8,
+        'couldThrow' => false,
+        'isClosure' => false,
+        'isGenerator' => false,
+        'isVariadic' => false,
+        'modifiers' => 1,
+        'namespace' => 'App\\Support\\Connectors\\Pipeline',
+        'declaringClassName' => 'App\\Support\\Connectors\\Pipeline\\ApprovalGate',
+        'implementingClassName' => 'App\\Support\\Connectors\\Pipeline\\ApprovalGate',
+        'currentClassName' => 'App\\Support\\Connectors\\Pipeline\\ApprovalGate',
+        'aliasName' => NULL,
+      ),
       'handle' => 
       array (
         'name' => 'handle',
@@ -69,8 +153,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 14,
-            'endLine' => 14,
+            'startLine' => 19,
+            'endLine' => 19,
             'startColumn' => 28,
             'endColumn' => 49,
             'parameterIndex' => 0,
@@ -95,8 +179,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 14,
-            'endLine' => 14,
+            'startLine' => 19,
+            'endLine' => 19,
             'startColumn' => 52,
             'endColumn' => 64,
             'parameterIndex' => 1,
@@ -117,8 +201,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 14,
-        'endLine' => 55,
+        'startLine' => 19,
+        'endLine' => 56,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => true,
@@ -156,8 +240,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 57,
-            'endLine' => 57,
+            'startLine' => 58,
+            'endLine' => 58,
             'startColumn' => 39,
             'endColumn' => 60,
             'parameterIndex' => 0,
@@ -178,8 +262,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         array (
         ),
         'docComment' => NULL,
-        'startLine' => 57,
-        'endLine' => 68,
+        'startLine' => 58,
+        'endLine' => 69,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

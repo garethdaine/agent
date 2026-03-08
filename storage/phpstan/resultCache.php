@@ -1,7 +1,7 @@
 <?php declare(strict_types = 1);
 
 return [
-	'lastFullAnalysisTime' => 1772974476,
+	'lastFullAnalysisTime' => 1772993471,
 	'meta' => array (
   'cacheVersion' => 'v12-linesToIgnore',
   'phpstanVersion' => '2.1.40',
@@ -2782,36 +2782,35 @@ return [
     35 => 'mysqlnd',
     36 => 'openssl',
     37 => 'pcntl',
-    38 => 'pcov',
-    39 => 'pcre',
-    40 => 'pdo_mysql',
-    41 => 'pdo_pgsql',
-    42 => 'pdo_sqlite',
-    43 => 'pdo_sqlsrv',
-    44 => 'pgsql',
-    45 => 'posix',
-    46 => 'random',
-    47 => 'readline',
-    48 => 'redis',
-    49 => 'session',
-    50 => 'shmop',
-    51 => 'soap',
-    52 => 'sockets',
-    53 => 'sodium',
-    54 => 'sqlite3',
-    55 => 'sqlsrv',
-    56 => 'standard',
-    57 => 'sysvmsg',
-    58 => 'sysvsem',
-    59 => 'sysvshm',
-    60 => 'tokenizer',
-    61 => 'xml',
-    62 => 'xmlreader',
-    63 => 'xmlwriter',
-    64 => 'xsl',
-    65 => 'zip',
-    66 => 'zlib',
-    67 => 'zstd',
+    38 => 'pcre',
+    39 => 'pdo_mysql',
+    40 => 'pdo_pgsql',
+    41 => 'pdo_sqlite',
+    42 => 'pdo_sqlsrv',
+    43 => 'pgsql',
+    44 => 'posix',
+    45 => 'random',
+    46 => 'readline',
+    47 => 'redis',
+    48 => 'session',
+    49 => 'shmop',
+    50 => 'soap',
+    51 => 'sockets',
+    52 => 'sodium',
+    53 => 'sqlite3',
+    54 => 'sqlsrv',
+    55 => 'standard',
+    56 => 'sysvmsg',
+    57 => 'sysvsem',
+    58 => 'sysvshm',
+    59 => 'tokenizer',
+    60 => 'xml',
+    61 => 'xmlreader',
+    62 => 'xmlwriter',
+    63 => 'xsl',
+    64 => 'zip',
+    65 => 'zlib',
+    66 => 'zstd',
   ),
   'stubFiles' => 
   array (
@@ -2907,12 +2906,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Cannot call method toIso8601String() on string.',
        'file' => '/Users/garethdaine/Code/agent/app/Console/Commands/AgentBackupDatabaseCommand.php',
-       'line' => 77,
+       'line' => 78,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Console/Commands/AgentBackupDatabaseCommand.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 77,
+       'nodeLine' => 78,
        'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
        'identifier' => 'method.nonObject',
        'metadata' => 
@@ -2924,12 +2923,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Cannot call method toIso8601String() on string.',
        'file' => '/Users/garethdaine/Code/agent/app/Console/Commands/AgentBackupDatabaseCommand.php',
-       'line' => 98,
+       'line' => 99,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Console/Commands/AgentBackupDatabaseCommand.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 98,
+       'nodeLine' => 99,
        'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
        'identifier' => 'method.nonObject',
        'metadata' => 
@@ -6882,6 +6881,26 @@ return [
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
        'nodeLine' => 171,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+  ),
+  '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorLibraryController.php' => 
+  array (
+    0 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorLibraryController.php',
+       'line' => 44,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorLibraryController.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 44,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -20781,14 +20800,14 @@ return [
   array (
     0 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\AgentSkill::$id.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
-       'line' => 152,
+       'line' => 77,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 152,
+       'nodeLine' => 77,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -20800,12 +20819,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property App\\Models\\AgentSkill::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
-       'line' => 192,
+       'line' => 158,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 192,
+       'nodeLine' => 158,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -20815,14 +20834,14 @@ return [
     )),
     2 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\AgentSkill::$skill_path.',
+       'message' => 'Access to an undefined property App\\Models\\AgentSkill::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
-       'line' => 213,
+       'line' => 198,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 213,
+       'nodeLine' => 198,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -20834,12 +20853,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property App\\Models\\AgentSkill::$skill_path.',
        'file' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
-       'line' => 222,
+       'line' => 219,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 222,
+       'nodeLine' => 219,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -20851,12 +20870,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property App\\Models\\AgentSkill::$skill_path.',
        'file' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
-       'line' => 234,
+       'line' => 228,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 234,
+       'nodeLine' => 228,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -20866,14 +20885,14 @@ return [
     )),
     5 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\AgentSkill::$team_id.',
+       'message' => 'Access to an undefined property App\\Models\\AgentSkill::$skill_path.',
        'file' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
-       'line' => 237,
+       'line' => 240,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 237,
+       'nodeLine' => 240,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -20883,14 +20902,31 @@ return [
     )),
     6 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
+       'message' => 'Access to an undefined property App\\Models\\AgentSkill::$team_id.',
        'file' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
-       'line' => 345,
+       'line' => 243,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 345,
+       'nodeLine' => 243,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    7 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
+       'line' => 351,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 351,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -24531,12 +24567,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Using nullsafe property access "?->remediation" on left side of ?? is unnecessary. Use -> instead.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 110,
+       'line' => 111,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 110,
+       'nodeLine' => 111,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullsafe.neverNull',
        'metadata' => 
@@ -24548,12 +24584,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Using nullsafe property access on non-nullable type App\\Support\\Compliance\\DTOs\\GateResult. Use -> instead.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 113,
+       'line' => 114,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 113,
+       'nodeLine' => 114,
        'nodeType' => 'PhpParser\\Node\\Expr\\NullsafePropertyFetch',
        'identifier' => 'nullsafe.neverNull',
        'metadata' => 
@@ -24565,12 +24601,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Parameter #1 $job of method App\\Support\\Agent\\RuntimeValidation::validate() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model|null given.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 133,
+       'line' => 134,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 133,
+       'nodeLine' => 134,
        'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
        'identifier' => 'argument.type',
        'metadata' => 
@@ -24582,12 +24618,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$last_validated_executable_path.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 151,
+       'line' => 152,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 151,
+       'nodeLine' => 152,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -24599,12 +24635,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$task_markdown_path.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 166,
+       'line' => 167,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 166,
+       'nodeLine' => 167,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -24616,12 +24652,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$task_markdown_path.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 167,
+       'line' => 168,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 167,
+       'nodeLine' => 168,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -24631,16 +24667,16 @@ return [
     )),
     6 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #1 $job of method App\\Support\\Agent\\StarPreambleGenerator::isEnabled() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model|null given.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$task_markdown_path.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 185,
+       'line' => 187,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 185,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 187,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -24648,14 +24684,14 @@ return [
     )),
     7 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #1 $job of method App\\Support\\Agent\\StarPreambleGenerator::assignAbGroup() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model|null given.',
+       'message' => 'Parameter #1 $job of method App\\Support\\Agent\\StarPreambleGenerator::isEnabled() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model|null given.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 186,
+       'line' => 206,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 186,
+       'nodeLine' => 206,
        'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
        'identifier' => 'argument.type',
        'metadata' => 
@@ -24665,14 +24701,14 @@ return [
     )),
     8 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #1 $job of method App\\Support\\Agent\\StarPreambleGenerator::generate() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model|null given.',
+       'message' => 'Parameter #1 $job of method App\\Support\\Agent\\StarPreambleGenerator::assignAbGroup() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model|null given.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 190,
+       'line' => 207,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 190,
+       'nodeLine' => 207,
        'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
        'identifier' => 'argument.type',
        'metadata' => 
@@ -24682,16 +24718,16 @@ return [
     )),
     9 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$task_markdown_path.',
+       'message' => 'Parameter #1 $job of method App\\Support\\Agent\\StarPreambleGenerator::generate() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model|null given.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 212,
+       'line' => 211,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 212,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 211,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
        'metadata' => 
       array (
       ),
@@ -24699,14 +24735,14 @@ return [
     )),
     10 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$team_id.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$task_markdown_path.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 213,
+       'line' => 233,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 213,
+       'nodeLine' => 233,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -24716,31 +24752,14 @@ return [
     )),
     11 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #1 $job of method App\\Support\\Agent\\CommandTemplateRenderer::renderTokens() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model|null given.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$team_id.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 252,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 252,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    12 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$task_markdown_path.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 257,
+       'line' => 234,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 257,
+       'nodeLine' => 234,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -24748,16 +24767,33 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
+    12 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Parameter #1 $job of method App\\Support\\Agent\\CommandTemplateRenderer::renderTokens() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model|null given.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 273,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 273,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
     13 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$working_directory.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$task_markdown_path.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 264,
+       'line' => 278,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 264,
+       'nodeLine' => 278,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -24767,16 +24803,16 @@ return [
     )),
     14 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Right side of && is always true.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$working_directory.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 353,
+       'line' => 285,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 353,
-       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
-       'identifier' => 'booleanAnd.rightAlwaysTrue',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 285,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -24784,48 +24820,14 @@ return [
     )),
     15 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$max_runtime_seconds.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 391,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 391,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    16 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'If condition is always true.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 398,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 398,
-       'nodeType' => 'PhpParser\\Node\\Stmt\\If_',
-       'identifier' => 'if.alwaysTrue',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    17 => 
-    \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Right side of && is always true.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 400,
+       'line' => 374,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 400,
+       'nodeLine' => 374,
        'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
        'identifier' => 'booleanAnd.rightAlwaysTrue',
        'metadata' => 
@@ -24833,203 +24835,16 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    18 => 
+    16 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'permission_blocker…\' on array{}|array{string} on left side of ?? does not exist.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$max_runtime_seconds.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 445,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 445,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    19 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Strict comparison using === between false and true will always evaluate to false.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 445,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 445,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
-       'identifier' => 'identical.alwaysFalse',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    20 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Negated boolean expression is always true.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 454,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 454,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BooleanNot',
-       'identifier' => 'booleanNot.alwaysTrue',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    21 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Right side of && is always false.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 478,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 478,
-       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
-       'identifier' => 'booleanAnd.rightAlwaysFalse',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    22 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #2 $job of method App\\Support\\Agent\\FailureModeClassifier::classify() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model|null given.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 499,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 499,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    23 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_string() with null will always evaluate to false.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 513,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 513,
-       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
-       'identifier' => 'function.impossibleType',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    24 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Result of && is always false.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 513,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 513,
-       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
-       'identifier' => 'booleanAnd.alwaysFalse',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    25 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Strict comparison using !== between *NEVER* and \'\' will always evaluate to true.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 513,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 513,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\NotIdentical',
-       'identifier' => 'notIdentical.alwaysTrue',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    26 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_string() with null will always evaluate to false.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 517,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 517,
-       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
-       'identifier' => 'function.impossibleType',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    27 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Result of && is always false.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 517,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 517,
-       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
-       'identifier' => 'booleanAnd.alwaysFalse',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    28 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter $job of method App\\Services\\Cost\\WorkflowBudgetEnforcer::recordRunCost() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model given.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 700,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 699,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    29 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$payload.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 748,
+       'line' => 412,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 748,
+       'nodeLine' => 412,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25037,16 +24852,237 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
+    17 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'If condition is always true.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 419,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 419,
+       'nodeType' => 'PhpParser\\Node\\Stmt\\If_',
+       'identifier' => 'if.alwaysTrue',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    18 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Right side of && is always true.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 421,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 421,
+       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
+       'identifier' => 'booleanAnd.rightAlwaysTrue',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    19 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset \'permission_blocker…\' on array{}|array{string} on left side of ?? does not exist.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 466,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 466,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    20 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Strict comparison using === between false and true will always evaluate to false.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 466,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 466,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
+       'identifier' => 'identical.alwaysFalse',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    21 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Negated boolean expression is always true.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 475,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 475,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BooleanNot',
+       'identifier' => 'booleanNot.alwaysTrue',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    22 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Right side of && is always false.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 499,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 499,
+       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
+       'identifier' => 'booleanAnd.rightAlwaysFalse',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    23 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Parameter #2 $job of method App\\Support\\Agent\\FailureModeClassifier::classify() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model|null given.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 520,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 520,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    24 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Call to function is_string() with null will always evaluate to false.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 534,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 534,
+       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
+       'identifier' => 'function.impossibleType',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    25 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Result of && is always false.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 534,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 534,
+       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
+       'identifier' => 'booleanAnd.alwaysFalse',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    26 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Strict comparison using !== between *NEVER* and \'\' will always evaluate to true.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 534,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 534,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\NotIdentical',
+       'identifier' => 'notIdentical.alwaysTrue',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    27 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Call to function is_string() with null will always evaluate to false.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 538,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 538,
+       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
+       'identifier' => 'function.impossibleType',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    28 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Result of && is always false.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 538,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 538,
+       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
+       'identifier' => 'booleanAnd.alwaysFalse',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    29 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Parameter $job of method App\\Services\\Cost\\WorkflowBudgetEnforcer::recordRunCost() expects App\\Models\\AgentJob, Illuminate\\Database\\Eloquent\\Model given.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 733,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 732,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
     30 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$payload.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 840,
+       'line' => 781,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 840,
+       'nodeLine' => 781,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25056,58 +25092,7 @@ return [
     )),
     31 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'rate_limit_detected\' on array{}|array{string} on left side of ?? does not exist.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 850,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 850,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    32 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Strict comparison using !== between false and true will always evaluate to true.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 850,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 850,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\NotIdentical',
-       'identifier' => 'notIdentical.alwaysTrue',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    33 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Unreachable statement - code above always terminates.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 854,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 854,
-       'nodeType' => 'PHPStan\\Node\\UnreachableStatementNode',
-       'identifier' => 'deadCode.unreachable',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    34 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$scheduled_path_failure_streak.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'line' => 873,
        'canBeIgnored' => true,
@@ -25122,17 +25107,68 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
+    32 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset \'rate_limit_detected\' on array{}|array{string} on left side of ?? does not exist.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 883,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 883,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    33 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Strict comparison using !== between false and true will always evaluate to true.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 883,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 883,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\NotIdentical',
+       'identifier' => 'notIdentical.alwaysTrue',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    34 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Unreachable statement - code above always terminates.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 887,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 887,
+       'nodeType' => 'PHPStan\\Node\\UnreachableStatementNode',
+       'identifier' => 'deadCode.unreachable',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
     35 => 
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$scheduled_path_failure_streak.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 889,
+       'line' => 906,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 889,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'nodeLine' => 906,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
       array (
@@ -25141,14 +25177,14 @@ return [
     )),
     36 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$is_enabled.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$scheduled_path_failure_streak.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 892,
+       'line' => 922,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 892,
+       'nodeLine' => 922,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25158,16 +25194,16 @@ return [
     )),
     37 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'approval_required\' on array{0?: string, termination_mode: \'runner_exception\'} on left side of ?? does not exist.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$is_enabled.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 926,
+       'line' => 925,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 926,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 925,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -25175,16 +25211,16 @@ return [
     )),
     38 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Strict comparison using === between false and true will always evaluate to false.',
+       'message' => 'Offset \'approval_required\' on array{0?: string, termination_mode: \'runner_exception\'} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 926,
+       'line' => 959,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 926,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
-       'identifier' => 'identical.alwaysFalse',
+       'tip' => NULL,
+       'nodeLine' => 959,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
        'metadata' => 
       array (
       ),
@@ -25192,16 +25228,16 @@ return [
     )),
     39 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'permission_blocker…\' on array{0?: string, termination_mode: \'runner_exception\'} on left side of ?? does not exist.',
+       'message' => 'Strict comparison using === between false and true will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 931,
+       'line' => 959,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 931,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 959,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
+       'identifier' => 'identical.alwaysFalse',
        'metadata' => 
       array (
       ),
@@ -25209,16 +25245,16 @@ return [
     )),
     40 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Strict comparison using === between false and true will always evaluate to false.',
+       'message' => 'Offset \'permission_blocker…\' on array{0?: string, termination_mode: \'runner_exception\'} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 931,
+       'line' => 964,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 931,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
-       'identifier' => 'identical.alwaysFalse',
+       'tip' => NULL,
+       'nodeLine' => 964,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
        'metadata' => 
       array (
       ),
@@ -25226,31 +25262,14 @@ return [
     )),
     41 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'clarification…\' on array{0?: string, termination_mode: \'runner_exception\'} on left side of ?? does not exist.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 935,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 935,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    42 => 
-    \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Strict comparison using === between false and true will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 935,
+       'line' => 964,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 935,
+       'nodeLine' => 964,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
        'identifier' => 'identical.alwaysFalse',
        'metadata' => 
@@ -25258,16 +25277,16 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    43 => 
+    42 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'task_category\' on array{}|array{string} on left side of ?? does not exist.',
+       'message' => 'Offset \'clarification…\' on array{0?: string, termination_mode: \'runner_exception\'} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 978,
+       'line' => 968,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 978,
+       'nodeLine' => 968,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -25275,16 +25294,33 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
+    43 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Strict comparison using === between false and true will always evaluate to false.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 968,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 968,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
+       'identifier' => 'identical.alwaysFalse',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
     44 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'estimated_file_count\' on array{}|array{string} on left side of ?? does not exist.',
+       'message' => 'Offset \'task_category\' on array{}|array{string} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 979,
+       'line' => 1023,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 979,
+       'nodeLine' => 1023,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -25294,14 +25330,14 @@ return [
     )),
     45 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'estimated_loc_count\' on array{}|array{string} on left side of ?? does not exist.',
+       'message' => 'Offset \'estimated_file_count\' on array{}|array{string} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 980,
+       'line' => 1024,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 980,
+       'nodeLine' => 1024,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -25311,14 +25347,14 @@ return [
     )),
     46 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'estimated_directory…\' on array{}|array{string} on left side of ?? does not exist.',
+       'message' => 'Offset \'estimated_loc_count\' on array{}|array{string} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 981,
+       'line' => 1025,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 981,
+       'nodeLine' => 1025,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -25328,16 +25364,16 @@ return [
     )),
     47 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, mixed>.',
+       'message' => 'Offset \'estimated_directory…\' on array{}|array{string} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 991,
+       'line' => 1026,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 991,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
-       'identifier' => 'assign.propertyType',
+       'nodeLine' => 1026,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
        'metadata' => 
       array (
       ),
@@ -25345,16 +25381,16 @@ return [
     )),
     48 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$task_markdown_path.',
+       'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, mixed>.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 1000,
+       'line' => 1036,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 1000,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 1036,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'assign.propertyType',
        'metadata' => 
       array (
       ),
@@ -25362,14 +25398,31 @@ return [
     )),
     49 => 
     \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$task_markdown_path.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'line' => 1045,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 1045,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    50 => 
+    \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, mixed>.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-       'line' => 1032,
+       'line' => 1077,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1032,
+       'nodeLine' => 1077,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'assign.propertyType',
        'metadata' => 
@@ -25433,16 +25486,16 @@ return [
     )),
     3 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #2 $task of method App\\Jobs\\ExecuteInterrogationBuildJob::finalizeTaskFromRun() expects App\\Models\\InterrogationBuildTask, Illuminate\\Database\\Eloquent\\Model given.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$agent_job_run_id.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 69,
+       'line' => 84,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 69,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 84,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -25450,16 +25503,16 @@ return [
     )),
     4 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$id.',
+       'message' => 'Parameter #2 $task of method App\\Jobs\\ExecuteInterrogationBuildJob::persistActivePointers() expects App\\Models\\InterrogationBuildTask, Illuminate\\Database\\Eloquent\\Model given.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 72,
+       'line' => 87,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 72,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 87,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
        'metadata' => 
       array (
       ),
@@ -25467,7 +25520,41 @@ return [
     )),
     5 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$attempt_count.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'line' => 88,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 88,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    6 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Parameter #2 $task of method App\\Jobs\\ExecuteInterrogationBuildJob::finalizeTaskFromRun() expects App\\Models\\InterrogationBuildTask, Illuminate\\Database\\Eloquent\\Model given.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'line' => 94,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 94,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    7 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'line' => 97,
        'canBeIgnored' => true,
@@ -25482,51 +25569,17 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    6 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #2 $task of method App\\Jobs\\ExecuteInterrogationBuildJob::ensureBackupBeforeTaskStart() expects App\\Models\\InterrogationBuildTask, Illuminate\\Database\\Eloquent\\Model given.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 99,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 99,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    7 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #2 $task of method App\\Support\\Interrogation\\BuildTaskRunFactory::create() expects App\\Models\\InterrogationBuildTask, Illuminate\\Database\\Eloquent\\Model given.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 103,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 103,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
     8 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$status.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$attempt_count.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 105,
+       'line' => 122,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 105,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'nodeLine' => 122,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
       array (
@@ -25535,16 +25588,16 @@ return [
     )),
     9 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$attempt_count.',
+       'message' => 'Parameter #2 $task of method App\\Jobs\\ExecuteInterrogationBuildJob::ensureBackupBeforeTaskStart() expects App\\Models\\InterrogationBuildTask, Illuminate\\Database\\Eloquent\\Model given.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 106,
+       'line' => 124,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 106,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 124,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
        'metadata' => 
       array (
       ),
@@ -25552,16 +25605,16 @@ return [
     )),
     10 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$agent_job_run_id.',
+       'message' => 'Parameter #2 $task of method App\\Support\\Interrogation\\BuildTaskRunFactory::create() expects App\\Models\\InterrogationBuildTask, Illuminate\\Database\\Eloquent\\Model given.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 107,
+       'line' => 128,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 107,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 128,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
        'metadata' => 
       array (
       ),
@@ -25569,14 +25622,14 @@ return [
     )),
     11 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$last_error.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$status.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 108,
+       'line' => 130,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 108,
+       'nodeLine' => 130,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25586,14 +25639,14 @@ return [
     )),
     12 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$started_at.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$attempt_count.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 109,
+       'line' => 131,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 109,
+       'nodeLine' => 131,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25603,14 +25656,14 @@ return [
     )),
     13 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$finished_at.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$agent_job_run_id.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 110,
+       'line' => 132,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 110,
+       'nodeLine' => 132,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25620,16 +25673,16 @@ return [
     )),
     14 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #2 $task of method App\\Jobs\\ExecuteInterrogationBuildJob::queueTaskProviderStatusSync() expects App\\Models\\InterrogationBuildTask, Illuminate\\Database\\Eloquent\\Model given.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$last_error.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 112,
+       'line' => 133,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 112,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 133,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -25637,16 +25690,16 @@ return [
     )),
     15 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #2 $task of method App\\Jobs\\ExecuteInterrogationBuildJob::persistActivePointers() expects App\\Models\\InterrogationBuildTask, Illuminate\\Database\\Eloquent\\Model given.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$started_at.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 114,
+       'line' => 134,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 114,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 134,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -25654,15 +25707,15 @@ return [
     )),
     16 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$finished_at.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 118,
+       'line' => 135,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 118,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'nodeLine' => 135,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
       array (
@@ -25671,16 +25724,16 @@ return [
     )),
     17 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$sequence.',
+       'message' => 'Parameter #2 $task of method App\\Jobs\\ExecuteInterrogationBuildJob::queueTaskProviderStatusSync() expects App\\Models\\InterrogationBuildTask, Illuminate\\Database\\Eloquent\\Model given.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 119,
+       'line' => 137,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 119,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 137,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
        'metadata' => 
       array (
       ),
@@ -25688,16 +25741,16 @@ return [
     )),
     18 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$title.',
+       'message' => 'Parameter #2 $task of method App\\Jobs\\ExecuteInterrogationBuildJob::persistActivePointers() expects App\\Models\\InterrogationBuildTask, Illuminate\\Database\\Eloquent\\Model given.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 120,
+       'line' => 139,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 120,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 139,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
        'metadata' => 
       array (
       ),
@@ -25705,14 +25758,14 @@ return [
     )),
     19 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$id.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 125,
+       'line' => 143,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 125,
+       'nodeLine' => 143,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25722,14 +25775,14 @@ return [
     )),
     20 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$sequence.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 160,
+       'line' => 144,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 160,
+       'nodeLine' => 144,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25739,14 +25792,14 @@ return [
     )),
     21 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$agent_job_run_id.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$title.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 161,
+       'line' => 145,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 161,
+       'nodeLine' => 145,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25756,15 +25809,15 @@ return [
     )),
     22 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 165,
+       'line' => 150,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 165,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'nodeLine' => 150,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
       array (
@@ -25773,15 +25826,15 @@ return [
     )),
     23 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$phase.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 166,
+       'line' => 185,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 166,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'nodeLine' => 185,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
       array (
@@ -25790,15 +25843,15 @@ return [
     )),
     24 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_code.',
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$agent_job_run_id.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 167,
+       'line' => 186,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 167,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'nodeLine' => 186,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
       array (
@@ -25807,14 +25860,14 @@ return [
     )),
     25 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_summary.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 168,
+       'line' => 190,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 168,
+       'nodeLine' => 190,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25824,14 +25877,14 @@ return [
     )),
     26 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$finished_at.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$phase.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 169,
+       'line' => 191,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 169,
+       'nodeLine' => 191,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25841,16 +25894,16 @@ return [
     )),
     27 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #1 $key of method Illuminate\\Database\\Eloquent\\Collection<int,Illuminate\\Database\\Eloquent\\Model>::contains() expects (callable(Illuminate\\Database\\Eloquent\\Model, int): bool)|Illuminate\\Database\\Eloquent\\Model|int|string, Closure(App\\Models\\InterrogationBuildTask): bool given.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_code.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 184,
+       'line' => 192,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 184,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 192,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -25858,16 +25911,16 @@ return [
     )),
     28 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #1 $key of method Illuminate\\Database\\Eloquent\\Collection<int,Illuminate\\Database\\Eloquent\\Model>::contains() expects (callable(Illuminate\\Database\\Eloquent\\Model, int): bool)|Illuminate\\Database\\Eloquent\\Model|int|string, Closure(App\\Models\\InterrogationBuildTask): bool given.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_summary.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 185,
+       'line' => 193,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 185,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 193,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -25875,14 +25928,14 @@ return [
     )),
     29 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$finished_at.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 197,
+       'line' => 194,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 197,
+       'nodeLine' => 194,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25892,16 +25945,16 @@ return [
     )),
     30 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_code.',
+       'message' => 'Parameter #1 $key of method Illuminate\\Database\\Eloquent\\Collection<int,Illuminate\\Database\\Eloquent\\Model>::contains() expects (callable(Illuminate\\Database\\Eloquent\\Model, int): bool)|Illuminate\\Database\\Eloquent\\Model|int|string, Closure(App\\Models\\InterrogationBuildTask): bool given.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 198,
+       'line' => 209,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 198,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 209,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
        'metadata' => 
       array (
       ),
@@ -25909,16 +25962,16 @@ return [
     )),
     31 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_summary.',
+       'message' => 'Parameter #1 $key of method Illuminate\\Database\\Eloquent\\Collection<int,Illuminate\\Database\\Eloquent\\Model>::contains() expects (callable(Illuminate\\Database\\Eloquent\\Model, int): bool)|Illuminate\\Database\\Eloquent\\Model|int|string, Closure(App\\Models\\InterrogationBuildTask): bool given.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 199,
+       'line' => 210,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 199,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 210,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
        'metadata' => 
       array (
       ),
@@ -25926,14 +25979,14 @@ return [
     )),
     32 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$finished_at.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 200,
+       'line' => 222,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 200,
+       'nodeLine' => 222,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25943,15 +25996,15 @@ return [
     )),
     33 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_code.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 218,
+       'line' => 223,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 218,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'nodeLine' => 223,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
       array (
@@ -25960,14 +26013,14 @@ return [
     )),
     34 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_summary.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 237,
+       'line' => 224,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 237,
+       'nodeLine' => 224,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25977,14 +26030,14 @@ return [
     )),
     35 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$phase.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$finished_at.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 238,
+       'line' => 225,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 238,
+       'nodeLine' => 225,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -25994,15 +26047,15 @@ return [
     )),
     36 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$finished_at.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 239,
+       'line' => 243,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 239,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'nodeLine' => 243,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
       array (
@@ -26011,14 +26064,14 @@ return [
     )),
     37 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_code.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 240,
+       'line' => 262,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 240,
+       'nodeLine' => 262,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -26028,14 +26081,14 @@ return [
     )),
     38 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_summary.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$phase.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 241,
+       'line' => 263,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 241,
+       'nodeLine' => 263,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -26045,16 +26098,16 @@ return [
     )),
     39 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_array() with string|null will always evaluate to false.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$finished_at.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 282,
+       'line' => 264,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 282,
-       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
-       'identifier' => 'function.impossibleType',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 264,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -26062,16 +26115,16 @@ return [
     )),
     40 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'permission_blocker…\' on array{} on left side of ?? does not exist.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_code.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 283,
+       'line' => 265,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 283,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 265,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -26079,16 +26132,16 @@ return [
     )),
     41 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Strict comparison using === between false and true will always evaluate to false.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$error_summary.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 283,
+       'line' => 266,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 283,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
-       'identifier' => 'identical.alwaysFalse',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 266,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -26096,16 +26149,16 @@ return [
     )),
     42 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'clarification…\' on array{} on left side of ?? does not exist.',
+       'message' => 'Call to function is_array() with string|null will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 284,
+       'line' => 307,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 284,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 307,
+       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
+       'identifier' => 'function.impossibleType',
        'metadata' => 
       array (
       ),
@@ -26113,31 +26166,14 @@ return [
     )),
     43 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Strict comparison using === between false and true will always evaluate to false.',
+       'message' => 'Offset \'permission_blocker…\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 284,
+       'line' => 308,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 284,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
-       'identifier' => 'identical.alwaysFalse',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    44 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'rate_limit_detected\' on array{} on left side of ?? does not exist.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 286,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 286,
+       'nodeLine' => 308,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26145,18 +26181,35 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    45 => 
+    44 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Result of && is always false.',
+       'message' => 'Strict comparison using === between false and true will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 286,
+       'line' => 308,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 286,
-       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
-       'identifier' => 'booleanAnd.alwaysFalse',
+       'nodeLine' => 308,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
+       'identifier' => 'identical.alwaysFalse',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    45 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset \'clarification…\' on array{} on left side of ?? does not exist.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'line' => 309,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 309,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
        'metadata' => 
       array (
       ),
@@ -26166,12 +26219,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Strict comparison using === between false and true will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 286,
+       'line' => 309,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 286,
+       'nodeLine' => 309,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
        'identifier' => 'identical.alwaysFalse',
        'metadata' => 
@@ -26181,14 +26234,14 @@ return [
     )),
     47 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'rate_limit_hold…\' on *NEVER* on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'rate_limit_detected\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 294,
+       'line' => 311,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 294,
+       'nodeLine' => 311,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26198,16 +26251,16 @@ return [
     )),
     48 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'rate_limit_reset_at\' on *NEVER* on left side of ?? always exists and is not nullable.',
+       'message' => 'Result of && is always false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 294,
+       'line' => 311,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 294,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'nodeLine' => 311,
+       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
+       'identifier' => 'booleanAnd.alwaysFalse',
        'metadata' => 
       array (
       ),
@@ -26215,16 +26268,16 @@ return [
     )),
     49 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'rate_limit_excerpt\' on *NEVER* on left side of ?? always exists and is not nullable.',
+       'message' => 'Strict comparison using === between false and true will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 295,
+       'line' => 311,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 295,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'nodeLine' => 311,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
+       'identifier' => 'identical.alwaysFalse',
        'metadata' => 
       array (
       ),
@@ -26232,16 +26285,16 @@ return [
     )),
     50 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Right side of && is always false.',
+       'message' => 'Offset \'rate_limit_hold…\' on *NEVER* on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 318,
+       'line' => 319,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 318,
-       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
-       'identifier' => 'booleanAnd.rightAlwaysFalse',
+       'nodeLine' => 319,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
        'metadata' => 
       array (
       ),
@@ -26249,16 +26302,16 @@ return [
     )),
     51 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_string() with null will always evaluate to false.',
+       'message' => 'Offset \'rate_limit_reset_at\' on *NEVER* on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 329,
+       'line' => 319,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 329,
-       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
-       'identifier' => 'function.impossibleType',
+       'nodeLine' => 319,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
        'metadata' => 
       array (
       ),
@@ -26266,14 +26319,14 @@ return [
     )),
     52 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'clarification…\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'rate_limit_excerpt\' on *NEVER* on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 329,
+       'line' => 320,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 329,
+       'nodeLine' => 320,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26283,16 +26336,16 @@ return [
     )),
     53 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'clarification…\' on non-empty-array<string, mixed> on left side of ?? always exists and is always null.',
+       'message' => 'Right side of && is always false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 344,
+       'line' => 343,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 344,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'nodeLine' => 343,
+       'nodeType' => 'PHPStan\\Node\\BooleanAndNode',
+       'identifier' => 'booleanAnd.rightAlwaysFalse',
        'metadata' => 
       array (
       ),
@@ -26300,31 +26353,14 @@ return [
     )),
     54 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Ternary operator condition is always false.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 466,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 466,
-       'nodeType' => 'PhpParser\\Node\\Expr\\Ternary',
-       'identifier' => 'ternary.alwaysFalse',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    55 => 
-    \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Call to function is_string() with null will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 467,
+       'line' => 354,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 467,
+       'nodeLine' => 354,
        'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
        'identifier' => 'function.impossibleType',
        'metadata' => 
@@ -26332,16 +26368,33 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    56 => 
+    55 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'permission_blocker…\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'clarification…\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 467,
+       'line' => 354,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 467,
+       'nodeLine' => 354,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    56 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset \'clarification…\' on non-empty-array<string, mixed> on left side of ?? always exists and is always null.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'line' => 369,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 369,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26353,12 +26406,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Ternary operator condition is always false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 470,
+       'line' => 491,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 470,
+       'nodeLine' => 491,
        'nodeType' => 'PhpParser\\Node\\Expr\\Ternary',
        'identifier' => 'ternary.alwaysFalse',
        'metadata' => 
@@ -26370,12 +26423,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Call to function is_string() with null will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 471,
+       'line' => 492,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 471,
+       'nodeLine' => 492,
        'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
        'identifier' => 'function.impossibleType',
        'metadata' => 
@@ -26385,14 +26438,14 @@ return [
     )),
     59 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'clarification…\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'permission_blocker…\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 471,
+       'line' => 492,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 471,
+       'nodeLine' => 492,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26402,16 +26455,16 @@ return [
     )),
     60 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$runner_type.',
+       'message' => 'Ternary operator condition is always false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'line' => 495,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'tip' => NULL,
        'nodeLine' => 495,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
+       'nodeType' => 'PhpParser\\Node\\Expr\\Ternary',
+       'identifier' => 'ternary.alwaysFalse',
        'metadata' => 
       array (
       ),
@@ -26419,14 +26472,14 @@ return [
     )),
     61 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_array() with string|null will always evaluate to false.',
+       'message' => 'Call to function is_string() with null will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 499,
+       'line' => 496,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 499,
+       'tip' => NULL,
+       'nodeLine' => 496,
        'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
        'identifier' => 'function.impossibleType',
        'metadata' => 
@@ -26436,14 +26489,14 @@ return [
     )),
     62 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'source\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'clarification…\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 501,
+       'line' => 496,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 501,
+       'nodeLine' => 496,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26453,16 +26506,16 @@ return [
     )),
     63 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Strict comparison using === between \'\' and \'interrogation_build\' will always evaluate to false.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$runner_type.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 501,
+       'line' => 520,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 501,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
-       'identifier' => 'identical.alwaysFalse',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 520,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -26470,16 +26523,16 @@ return [
     )),
     64 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_string() with string will always evaluate to true.',
+       'message' => 'Call to function is_array() with string|null will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 530,
+       'line' => 524,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 530,
+       'nodeLine' => 524,
        'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
-       'identifier' => 'function.alreadyNarrowedType',
+       'identifier' => 'function.impossibleType',
        'metadata' => 
       array (
       ),
@@ -26487,14 +26540,14 @@ return [
     )),
     65 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'success\' on array{success: int, failed: int} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'source\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 550,
+       'line' => 526,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 550,
+       'nodeLine' => 526,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26504,16 +26557,16 @@ return [
     )),
     66 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'failed\' on array{success: int, failed: int} on left side of ?? always exists and is not nullable.',
+       'message' => 'Strict comparison using === between \'\' and \'interrogation_build\' will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 551,
+       'line' => 526,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 551,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'nodeLine' => 526,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
+       'identifier' => 'identical.alwaysFalse',
        'metadata' => 
       array (
       ),
@@ -26521,14 +26574,14 @@ return [
     )),
     67 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_string() with non-empty-string will always evaluate to true.',
+       'message' => 'Call to function is_string() with string will always evaluate to true.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 573,
+       'line' => 555,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 573,
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 555,
        'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
        'identifier' => 'function.alreadyNarrowedType',
        'metadata' => 
@@ -26538,14 +26591,14 @@ return [
     )),
     68 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset 1 on array{list<string>, list<string>} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'success\' on array{success: int, failed: int} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 646,
+       'line' => 575,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 646,
+       'nodeLine' => 575,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26555,31 +26608,14 @@ return [
     )),
     69 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_string() with string will always evaluate to true.',
+       'message' => 'Offset \'failed\' on array{success: int, failed: int} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 647,
+       'line' => 576,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 647,
-       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
-       'identifier' => 'function.alreadyNarrowedType',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    70 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset 1 on array{list<string>, list<string>} on left side of ?? always exists and is not nullable.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 734,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 734,
+       'nodeLine' => 576,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26587,16 +26623,16 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    71 => 
+    70 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_string() with string will always evaluate to true.',
+       'message' => 'Call to function is_string() with non-empty-string will always evaluate to true.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 735,
+       'line' => 598,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 735,
+       'nodeLine' => 598,
        'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
        'identifier' => 'function.alreadyNarrowedType',
        'metadata' => 
@@ -26604,18 +26640,35 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    72 => 
+    71 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_array() with string|null will always evaluate to false.',
+       'message' => 'Offset 1 on array{list<string>, list<string>} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 834,
+       'line' => 671,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 834,
+       'tip' => NULL,
+       'nodeLine' => 671,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    72 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Call to function is_string() with string will always evaluate to true.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'line' => 672,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 672,
        'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
-       'identifier' => 'function.impossibleType',
+       'identifier' => 'function.alreadyNarrowedType',
        'metadata' => 
       array (
       ),
@@ -26623,14 +26676,14 @@ return [
     )),
     73 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'approval_required\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset 1 on array{list<string>, list<string>} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 835,
+       'line' => 759,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 835,
+       'nodeLine' => 759,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26640,16 +26693,16 @@ return [
     )),
     74 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'permission_blocker…\' on array{} on left side of ?? does not exist.',
+       'message' => 'Call to function is_string() with string will always evaluate to true.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 836,
+       'line' => 760,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 836,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'nodeLine' => 760,
+       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
+       'identifier' => 'function.alreadyNarrowedType',
        'metadata' => 
       array (
       ),
@@ -26657,14 +26710,14 @@ return [
     )),
     75 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_string() with null will always evaluate to false.',
+       'message' => 'Call to function is_array() with string|null will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 837,
+       'line' => 859,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 837,
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 859,
        'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
        'identifier' => 'function.impossibleType',
        'metadata' => 
@@ -26674,14 +26727,14 @@ return [
     )),
     76 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'permission_blocker…\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'approval_required\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 837,
+       'line' => 860,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 837,
+       'nodeLine' => 860,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26691,14 +26744,14 @@ return [
     )),
     77 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'clarification…\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'permission_blocker…\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 840,
+       'line' => 861,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 840,
+       'nodeLine' => 861,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26710,12 +26763,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Call to function is_string() with null will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 841,
+       'line' => 862,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 841,
+       'nodeLine' => 862,
        'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
        'identifier' => 'function.impossibleType',
        'metadata' => 
@@ -26725,14 +26778,14 @@ return [
     )),
     79 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'clarification…\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'permission_blocker…\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 841,
+       'line' => 862,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 841,
+       'nodeLine' => 862,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26742,14 +26795,14 @@ return [
     )),
     80 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'rate_limit_detected\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'clarification…\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 844,
+       'line' => 865,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 844,
+       'nodeLine' => 865,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26759,16 +26812,16 @@ return [
     )),
     81 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'rate_limit_hold…\' on array{} on left side of ?? does not exist.',
+       'message' => 'Call to function is_string() with null will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 845,
+       'line' => 866,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 845,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'nodeLine' => 866,
+       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
+       'identifier' => 'function.impossibleType',
        'metadata' => 
       array (
       ),
@@ -26776,14 +26829,14 @@ return [
     )),
     82 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'rate_limit_reset_at\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'clarification…\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 845,
+       'line' => 866,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 845,
+       'nodeLine' => 866,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26793,16 +26846,16 @@ return [
     )),
     83 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$phase.',
+       'message' => 'Offset \'rate_limit_detected\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 849,
+       'line' => 869,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 849,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 869,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
        'metadata' => 
       array (
       ),
@@ -26810,16 +26863,16 @@ return [
     )),
     84 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
+       'message' => 'Offset \'rate_limit_hold…\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 849,
+       'line' => 870,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 849,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 870,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
        'metadata' => 
       array (
       ),
@@ -26827,16 +26880,16 @@ return [
     )),
     85 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
+       'message' => 'Offset \'rate_limit_reset_at\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 850,
+       'line' => 870,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 850,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 870,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
        'metadata' => 
       array (
       ),
@@ -26846,13 +26899,13 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$phase.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 851,
+       'line' => 874,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 851,
-       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'nodeLine' => 874,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
       array (
@@ -26861,14 +26914,14 @@ return [
     )),
     87 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$metadata_json.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 890,
+       'line' => 874,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 890,
+       'nodeLine' => 874,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -26878,15 +26931,15 @@ return [
     )),
     88 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$metadata_json.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$status.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 900,
+       'line' => 875,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 900,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'nodeLine' => 875,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'property.notFound',
        'metadata' => 
       array (
@@ -26895,16 +26948,16 @@ return [
     )),
     89 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_array() with string|null will always evaluate to false.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$phase.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 921,
+       'line' => 876,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 921,
-       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
-       'identifier' => 'function.impossibleType',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 876,
+       'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -26912,48 +26965,14 @@ return [
     )),
     90 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'compliance_block…\' on array{} on left side of ?? does not exist.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$metadata_json.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 927,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 927,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    91 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'compliance…\' on array{} on left side of ?? does not exist.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 928,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 928,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    92 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$id.',
-       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 939,
+       'line' => 915,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 939,
+       'nodeLine' => 915,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -26961,16 +26980,50 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
+    91 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$metadata_json.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'line' => 925,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 925,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    92 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Call to function is_array() with string|null will always evaluate to false.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'line' => 946,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 946,
+       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
+       'identifier' => 'function.impossibleType',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
     93 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'attempted_at\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'compliance_block…\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 992,
+       'line' => 952,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 992,
+       'nodeLine' => 952,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26980,14 +27033,14 @@ return [
     )),
     94 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'message\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'compliance…\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 993,
+       'line' => 953,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 993,
+       'nodeLine' => 953,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -26997,16 +27050,16 @@ return [
     )),
     95 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'ok\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 997,
+       'line' => 964,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 997,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 964,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
        'metadata' => 
       array (
       ),
@@ -27014,14 +27067,14 @@ return [
     )),
     96 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'ok\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'attempted_at\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 999,
+       'line' => 1017,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 999,
+       'nodeLine' => 1017,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -27031,14 +27084,14 @@ return [
     )),
     97 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'skipped\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'message\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 1004,
+       'line' => 1018,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1004,
+       'nodeLine' => 1018,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -27050,12 +27103,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'ok\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 1009,
+       'line' => 1022,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1009,
+       'nodeLine' => 1022,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -27065,14 +27118,14 @@ return [
     )),
     99 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'skipped\' on array{ok: true, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'ok\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 1038,
+       'line' => 1024,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1038,
+       'nodeLine' => 1024,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -27082,14 +27135,14 @@ return [
     )),
     100 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'attempted_at\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'skipped\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 1053,
+       'line' => 1029,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1053,
+       'nodeLine' => 1029,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -27099,14 +27152,14 @@ return [
     )),
     101 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'message\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'ok\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 1054,
+       'line' => 1034,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1054,
+       'nodeLine' => 1034,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -27116,14 +27169,14 @@ return [
     )),
     102 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'ok\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'skipped\' on array{ok: true, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 1064,
+       'line' => 1063,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1064,
+       'nodeLine' => 1063,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -27133,14 +27186,14 @@ return [
     )),
     103 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'skipped\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'attempted_at\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 1070,
+       'line' => 1078,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1070,
+       'nodeLine' => 1078,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -27150,14 +27203,14 @@ return [
     )),
     104 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'ok\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'message\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 1081,
+       'line' => 1079,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1081,
+       'nodeLine' => 1079,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -27167,14 +27220,65 @@ return [
     )),
     105 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'skipped\' on array{ok: true, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'message' => 'Offset \'ok\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
-       'line' => 1118,
+       'line' => 1089,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1118,
+       'nodeLine' => 1089,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    106 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset \'skipped\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'line' => 1095,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 1095,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    107 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset \'ok\' on array{ok: bool, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'line' => 1106,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 1106,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    108 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset \'skipped\' on array{ok: true, attempted_at: string, message: string, output: string|null, skipped: bool} on left side of ?? always exists and is not nullable.',
+       'file' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'line' => 1143,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 1143,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -36944,12 +37048,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Unreachable statement - code above always terminates.',
        'file' => '/Users/garethdaine/Code/agent/app/Listeners/DispatchBuildTickOnRunFinished.php',
-       'line' => 34,
+       'line' => 39,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Listeners/DispatchBuildTickOnRunFinished.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 34,
+       'nodeLine' => 39,
        'nodeType' => 'PHPStan\\Node\\UnreachableStatementNode',
        'identifier' => 'deadCode.unreachable',
        'metadata' => 
@@ -44826,6 +44930,247 @@ return [
        'fixedErrorDiff' => NULL,
     )),
   ),
+  '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php' => 
+  array (
+    0 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 31,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 31,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    1 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$connector_id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 32,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 32,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    2 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorApproval::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 55,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 55,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    3 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorApproval::$status.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 63,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 63,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    4 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorApproval::$expires_at.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 67,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 67,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    5 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$connector.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 101,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 101,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    6 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$connected_by.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 104,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 104,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    7 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorApproval::$type.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 109,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 109,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    8 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorApproval::$action_name.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 114,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 114,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    9 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorApproval::$expires_at.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 115,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 115,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    10 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorApproval::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 125,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 125,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    11 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 127,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 127,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    12 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorApproval::$action_name.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 128,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 128,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    13 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorApproval::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'line' => 134,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 134,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+  ),
   '/Users/garethdaine/Code/agent/app/Services/Cost/WorkflowBudgetEnforcer.php' => 
   array (
     0 => 
@@ -47709,12 +48054,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Parameter #1 $user of method App\\Services\\Credentials\\CredentialsManager::get() expects App\\Models\\User, Illuminate\\Database\\Eloquent\\Model given.',
        'file' => '/Users/garethdaine/Code/agent/app/Services/Runtime/CliRuntimeExecutor.php',
-       'line' => 51,
+       'line' => 52,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Services/Runtime/CliRuntimeExecutor.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 51,
+       'nodeLine' => 52,
        'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
        'identifier' => 'argument.type',
        'metadata' => 
@@ -47726,12 +48071,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Variable $_ENV on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Services/Runtime/CliRuntimeExecutor.php',
-       'line' => 92,
+       'line' => 107,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Services/Runtime/CliRuntimeExecutor.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 92,
+       'nodeLine' => 107,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.variable',
        'metadata' => 
@@ -47743,12 +48088,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Variable $_SERVER on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Services/Runtime/CliRuntimeExecutor.php',
-       'line' => 92,
+       'line' => 107,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Services/Runtime/CliRuntimeExecutor.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 92,
+       'nodeLine' => 107,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.variable',
        'metadata' => 
@@ -49686,6 +50031,26 @@ return [
        'fixedErrorDiff' => NULL,
     )),
   ),
+  '/Users/garethdaine/Code/agent/app/Support/Agent/EngineeringRulesInjector.php' => 
+  array (
+    0 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'PHPDoc tag @var with type array<int, string> is not subtype of native type array{\'architecture\', \'design_patterns\', \'security\', \'solid\', \'dry\', \'clean_code\', \'planning\', \'rest_apis\', ...}|array{\'architecture\', \'design_patterns\', \'security\', \'solid\', \'dry\', \'clean_code\', \'planning\', \'testing\', ...}|array{\'architecture\', \'planning\', \'testing\', \'databases\', \'laravel\', \'agentops\'}.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/EngineeringRulesInjector.php',
+       'line' => 200,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/EngineeringRulesInjector.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 200,
+       'nodeType' => 'PhpParser\\Node\\Stmt\\Expression',
+       'identifier' => 'varTag.nativeType',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+  ),
   '/Users/garethdaine/Code/agent/app/Support/Agent/FailureModeClassifier.php' => 
   array (
     0 => 
@@ -50319,12 +50684,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'redaction_count\' on array{}|array{string} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 123,
+       'line' => 121,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 123,
+       'nodeLine' => 121,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -50336,12 +50701,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, int|string>.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 125,
+       'line' => 123,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 125,
+       'nodeLine' => 123,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'assign.propertyType',
        'metadata' => 
@@ -50353,12 +50718,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, string|true>.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 181,
+       'line' => 179,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 181,
+       'nodeLine' => 179,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'assign.propertyType',
        'metadata' => 
@@ -50370,12 +50735,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$name.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 311,
+       'line' => 309,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 311,
+       'nodeLine' => 309,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -50387,12 +50752,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Using nullsafe property access "?->name" on left side of ?? is unnecessary. Use -> instead.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 311,
+       'line' => 309,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 311,
+       'nodeLine' => 309,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullsafe.neverNull',
        'metadata' => 
@@ -50404,12 +50769,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'truncate_bytes\' on array{}|array{string} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 489,
+       'line' => 487,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 489,
+       'nodeLine' => 487,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -50421,12 +50786,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, int|string|true>.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 491,
+       'line' => 489,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 491,
+       'nodeLine' => 489,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'assign.propertyType',
        'metadata' => 
@@ -50438,12 +50803,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'approval_required\' on array{}|array{string} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 506,
+       'line' => 504,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 506,
+       'nodeLine' => 504,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -50455,12 +50820,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Strict comparison using === between false and true will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 506,
+       'line' => 504,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 506,
+       'nodeLine' => 504,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
        'identifier' => 'identical.alwaysFalse',
        'metadata' => 
@@ -50472,12 +50837,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, string|true>.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 514,
+       'line' => 512,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 514,
+       'nodeLine' => 512,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'assign.propertyType',
        'metadata' => 
@@ -50489,12 +50854,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'permission_blocker…\' on array{}|array{string} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 523,
+       'line' => 521,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 523,
+       'nodeLine' => 521,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -50506,12 +50871,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Strict comparison using === between false and true will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 523,
+       'line' => 521,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 523,
+       'nodeLine' => 521,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
        'identifier' => 'identical.alwaysFalse',
        'metadata' => 
@@ -50523,12 +50888,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, string|true>.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 531,
+       'line' => 529,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 531,
+       'nodeLine' => 529,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'assign.propertyType',
        'metadata' => 
@@ -50540,12 +50905,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'clarification…\' on array{}|array{string} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 545,
+       'line' => 543,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 545,
+       'nodeLine' => 543,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -50557,12 +50922,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Strict comparison using === between false and true will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 545,
+       'line' => 543,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 545,
+       'nodeLine' => 543,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
        'identifier' => 'identical.alwaysFalse',
        'metadata' => 
@@ -50574,12 +50939,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, string|true>.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 554,
+       'line' => 552,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 554,
+       'nodeLine' => 552,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'assign.propertyType',
        'metadata' => 
@@ -50591,12 +50956,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'rate_limit_detected\' on array{}|array{string} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 633,
+       'line' => 631,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 633,
+       'nodeLine' => 631,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -50608,12 +50973,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Strict comparison using === between false and true will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 633,
+       'line' => 631,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 633,
+       'nodeLine' => 631,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
        'identifier' => 'identical.alwaysFalse',
        'metadata' => 
@@ -50625,12 +50990,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, bool|string>.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 648,
+       'line' => 646,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 648,
+       'nodeLine' => 646,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'assign.propertyType',
        'metadata' => 
@@ -50642,12 +51007,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'rate_limit_reset…\' on array{0?: string, rate_limit_detected: true, rate_limit_detected_at: string, rate_limit_excerpt: string, rate_limit_reset_at: string, rate_limit_reset_timezone: string} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 657,
+       'line' => 655,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 657,
+       'nodeLine' => 655,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -50659,12 +51024,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Call to function is_array() with null will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 668,
+       'line' => 666,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 668,
+       'nodeLine' => 666,
        'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
        'identifier' => 'function.impossibleType',
        'metadata' => 
@@ -50676,6 +51041,57 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'issues\' on array{}|array{string} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'line' => 666,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 666,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    22 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Call to function is_array() with null will always evaluate to false.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'line' => 667,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 667,
+       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
+       'identifier' => 'function.impossibleType',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    23 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset \'mcp_server…\' on array{} on left side of ?? does not exist.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'line' => 667,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 667,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    24 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset \'count\' on array{} on left side of ?? does not exist.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'line' => 668,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
@@ -50689,67 +51105,16 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    22 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_array() with null will always evaluate to false.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 669,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 669,
-       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
-       'identifier' => 'function.impossibleType',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    23 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'mcp_server…\' on array{} on left side of ?? does not exist.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 669,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 669,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    24 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'count\' on array{} on left side of ?? does not exist.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 670,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 670,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
     25 => 
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Call to function is_string() with null will always evaluate to false.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 681,
+       'line' => 679,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 681,
+       'nodeLine' => 679,
        'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
        'identifier' => 'function.impossibleType',
        'metadata' => 
@@ -50761,12 +51126,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'first_detected_at\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 681,
+       'line' => 679,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 681,
+       'nodeLine' => 679,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -50778,12 +51143,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, array<string, array<string, int|string>>|string|true>.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 689,
+       'line' => 687,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 689,
+       'nodeLine' => 687,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'assign.propertyType',
        'metadata' => 
@@ -50795,12 +51160,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Strict comparison using === between 1 and 1 will always evaluate to true.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 691,
+       'line' => 689,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
-       'nodeLine' => 691,
+       'nodeLine' => 689,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
        'identifier' => 'identical.alwaysTrue',
        'metadata' => 
@@ -50810,16 +51175,16 @@ return [
     )),
     29 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset 1 on array{list<string>, list<non-falsy-string>} on left side of ?? always exists and is not nullable.',
+       'message' => 'Method App\\Support\\Agent\\RunEventWriter::isStructuredStreamEvent() is unused.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 815,
+       'line' => 779,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 815,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
+       'nodeLine' => 14,
+       'nodeType' => 'PHPStan\\Node\\ClassMethodsNode',
+       'identifier' => 'method.unused',
        'metadata' => 
       array (
       ),
@@ -50827,7 +51192,7 @@ return [
     )),
     30 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to function is_array() with list<non-falsy-string> will always evaluate to true.',
+       'message' => 'Offset 1 on array{list<string>, list<non-falsy-string>} on left side of ?? always exists and is not nullable.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'line' => 817,
        'canBeIgnored' => true,
@@ -50835,74 +51200,6 @@ return [
        'traitFilePath' => NULL,
        'tip' => NULL,
        'nodeLine' => 817,
-       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
-       'identifier' => 'function.alreadyNarrowedType',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    31 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Strict comparison using === between non-empty-string and \'\' will always evaluate to false.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 927,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 927,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
-       'identifier' => 'identical.alwaysFalse',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    32 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$timezone.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 994,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 994,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    33 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset 2 on array{non-falsy-string, numeric-string, \'\'|(non-falsy-string&numeric-string), non-falsy-string} in isset() always exists and is not nullable.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 1014,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 1014,
-       'nodeType' => 'PhpParser\\Node\\Expr\\Isset_',
-       'identifier' => 'isset.offset',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    34 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'noise_suppressed…\' on array{}|array{string} on left side of ?? does not exist.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 1155,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 1155,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -50910,16 +51207,84 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    35 => 
+    31 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'noise_suppressed…\' on array{0?: string, noise_suppressed_chunks: 1} on left side of ?? does not exist.',
+       'message' => 'Call to function is_array() with list<non-falsy-string> will always evaluate to true.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 1156,
+       'line' => 819,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1156,
+       'nodeLine' => 819,
+       'nodeType' => 'PhpParser\\Node\\Expr\\FuncCall',
+       'identifier' => 'function.alreadyNarrowedType',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    32 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Strict comparison using === between non-empty-string and \'\' will always evaluate to false.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'line' => 929,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 929,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Identical',
+       'identifier' => 'identical.alwaysFalse',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    33 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$timezone.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'line' => 996,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 996,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    34 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset 2 on array{non-falsy-string, numeric-string, \'\'|(non-falsy-string&numeric-string), non-falsy-string} in isset() always exists and is not nullable.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'line' => 1016,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 1016,
+       'nodeType' => 'PhpParser\\Node\\Expr\\Isset_',
+       'identifier' => 'isset.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    35 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset \'noise_suppressed…\' on array{}|array{string} on left side of ?? does not exist.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'line' => 1157,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 1157,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -50929,14 +51294,31 @@ return [
     )),
     36 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, int|string>.',
+       'message' => 'Offset \'noise_suppressed…\' on array{0?: string, noise_suppressed_chunks: 1} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-       'line' => 1157,
+       'line' => 1158,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 1157,
+       'nodeLine' => 1158,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    37 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Property App\\Models\\AgentJobRun::$metadata_json (string|null) does not accept array<int|string, int|string>.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'line' => 1159,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 1159,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
        'identifier' => 'assign.propertyType',
        'metadata' => 
@@ -51059,12 +51441,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'reasoning_summary\' on array{}|string in empty() does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 58,
+       'line' => 59,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 58,
+       'nodeLine' => 59,
        'nodeType' => 'PhpParser\\Node\\Expr\\Empty_',
        'identifier' => 'empty.offset',
        'metadata' => 
@@ -51076,12 +51458,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Unreachable statement - code above always terminates.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 63,
+       'line' => 64,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 63,
+       'nodeLine' => 64,
        'nodeType' => 'PHPStan\\Node\\UnreachableStatementNode',
        'identifier' => 'deadCode.unreachable',
        'metadata' => 
@@ -51092,23 +51474,6 @@ return [
     2 => 
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'reasoning_summary\' on array{}|string on left side of ?? does not exist.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 95,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 95,
-       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
-       'identifier' => 'nullCoalesce.offset',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    3 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'failure_mode_hint\' on array{}|string on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'line' => 96,
        'canBeIgnored' => true,
@@ -51123,16 +51488,16 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    4 => 
+    3 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'task\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'failure_mode_hint\' on array{}|string on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 100,
+       'line' => 97,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 100,
+       'nodeLine' => 97,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -51140,9 +51505,9 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    5 => 
+    4 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'description\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'task\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'line' => 101,
        'canBeIgnored' => true,
@@ -51157,16 +51522,33 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
-    6 => 
+    5 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'situation\' on array{} on left side of ?? does not exist.',
+       'message' => 'Offset \'description\' on array{} on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 103,
+       'line' => 102,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 103,
+       'nodeLine' => 102,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    6 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Offset \'situation\' on array{} on left side of ?? does not exist.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
+       'line' => 104,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 104,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -51178,12 +51560,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Offset \'retry_count\' on array{}|string on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 130,
+       'line' => 128,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 130,
+       'nodeLine' => 128,
        'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
        'identifier' => 'nullCoalesce.offset',
        'metadata' => 
@@ -51193,16 +51575,16 @@ return [
     )),
     8 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Offset \'retry_count\' does not exist on string.',
+       'message' => 'Offset \'interrogation_build…\'|\'interrogation…\'|\'source\' on array{}|string in isset() does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 141,
+       'line' => 133,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 141,
-       'nodeType' => 'PhpParser\\Node\\Expr\\ArrayDimFetch',
-       'identifier' => 'offsetAccess.notFound',
+       'nodeLine' => 133,
+       'nodeType' => 'PhpParser\\Node\\Expr\\Isset_',
+       'identifier' => 'isset.offset',
        'metadata' => 
       array (
       ),
@@ -51210,16 +51592,16 @@ return [
     )),
     9 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Method App\\Support\\Agent\\TargetedRetryService::isRetryEnabled() is unused.',
+       'message' => 'Offset \'interrogation_build…\' on array{}|string on left side of ?? does not exist.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 147,
+       'line' => 150,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 10,
-       'nodeType' => 'PHPStan\\Node\\ClassMethodsNode',
-       'identifier' => 'method.unused',
+       'nodeLine' => 150,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullCoalesce.offset',
        'metadata' => 
       array (
       ),
@@ -51227,16 +51609,16 @@ return [
     )),
     10 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\AgentJob::$targeted_retry_enabled.',
+       'message' => 'Comparison operation ">" between 0 and 0 is always false.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 150,
+       'line' => 151,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 150,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
+       'tip' => 'Because the type is coming from a PHPDoc, you can turn off this check by setting <fg=cyan>treatPhpDocTypesAsCertain: false</> in your <fg=cyan>%configurationFile%</>.',
+       'nodeLine' => 151,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Greater',
+       'identifier' => 'greater.alwaysFalse',
        'metadata' => 
       array (
       ),
@@ -51244,16 +51626,16 @@ return [
     )),
     11 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Method App\\Support\\Agent\\TargetedRetryService::getMaxRetries() is unused.',
+       'message' => 'Offset \'retry_count\' does not exist on string.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 158,
+       'line' => 164,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 10,
-       'nodeType' => 'PHPStan\\Node\\ClassMethodsNode',
-       'identifier' => 'method.unused',
+       'nodeLine' => 164,
+       'nodeType' => 'PhpParser\\Node\\Expr\\ArrayDimFetch',
+       'identifier' => 'offsetAccess.notFound',
        'metadata' => 
       array (
       ),
@@ -51261,16 +51643,16 @@ return [
     )),
     12 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\AgentJob::$max_retries.',
+       'message' => 'Comparison operation ">" between 0 and 0 is always false.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 161,
+       'line' => 165,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 161,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
+       'tip' => NULL,
+       'nodeLine' => 165,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Greater',
+       'identifier' => 'greater.alwaysFalse',
        'metadata' => 
       array (
       ),
@@ -51278,14 +51660,14 @@ return [
     )),
     13 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Method App\\Support\\Agent\\TargetedRetryService::isOnRateLimitHold() is unused.',
+       'message' => 'Method App\\Support\\Agent\\TargetedRetryService::isRetryEnabled() is unused.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 169,
+       'line' => 171,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
        'tip' => NULL,
-       'nodeLine' => 10,
+       'nodeLine' => 11,
        'nodeType' => 'PHPStan\\Node\\ClassMethodsNode',
        'identifier' => 'method.unused',
        'metadata' => 
@@ -51295,14 +51677,82 @@ return [
     )),
     14 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\AgentJob::$id.',
+       'message' => 'Access to an undefined property App\\Models\\AgentJob::$targeted_retry_enabled.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
-       'line' => 171,
+       'line' => 174,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 171,
+       'nodeLine' => 174,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    15 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Method App\\Support\\Agent\\TargetedRetryService::getMaxRetries() is unused.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
+       'line' => 182,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 11,
+       'nodeType' => 'PHPStan\\Node\\ClassMethodsNode',
+       'identifier' => 'method.unused',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    16 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentJob::$max_retries.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
+       'line' => 185,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 185,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    17 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Method App\\Support\\Agent\\TargetedRetryService::isOnRateLimitHold() is unused.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
+       'line' => 193,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 11,
+       'nodeType' => 'PHPStan\\Node\\ClassMethodsNode',
+       'identifier' => 'method.unused',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    18 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentJob::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
+       'line' => 195,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 195,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -51743,18 +52193,432 @@ return [
        'fixedErrorDiff' => NULL,
     )),
   ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Mcp/ConnectorMcpRegistrar.php' => 
+  array (
+    0 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$connector.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Mcp/ConnectorMcpRegistrar.php',
+       'line' => 35,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Mcp/ConnectorMcpRegistrar.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 35,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php' => 
+  array (
+    0 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$auth_type.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 44,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 44,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    1 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$display_name.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 46,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 46,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    2 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 46,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 46,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    3 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 47,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 47,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    4 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$display_name.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 52,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 52,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    5 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 52,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 52,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    6 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 53,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 53,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    7 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 65,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 65,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    8 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$connector.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 81,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 81,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    9 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$status.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 82,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 82,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    10 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$health_score.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 83,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 83,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    11 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 121,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 121,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    12 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 122,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 122,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    13 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$display_name.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 127,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 127,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    14 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$display_name.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 134,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 134,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    15 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$display_name.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 140,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 140,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    16 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property Illuminate\\Database\\Eloquent\\Model::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 164,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 164,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    17 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 165,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 165,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    18 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$display_name.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 170,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 170,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    19 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$display_name.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 178,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 178,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    20 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 179,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 179,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    21 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$display_name.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 186,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 186,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    22 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'line' => 187,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 187,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+  ),
   '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php' => 
   array (
     0 => 
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
-       'line' => 20,
+       'line' => 25,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 20,
+       'nodeLine' => 25,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -51766,12 +52630,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property App\\Models\\AgentConnector::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
-       'line' => 21,
+       'line' => 26,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 21,
+       'nodeLine' => 26,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -51783,12 +52647,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
-       'line' => 31,
+       'line' => 36,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 31,
+       'nodeLine' => 36,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -51800,46 +52664,12 @@ return [
     \PHPStan\Analyser\Error::__set_state(array(
        'message' => 'Access to an undefined property App\\Models\\AgentConnector::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
-       'line' => 32,
+       'line' => 37,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 32,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    4 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$id.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
-       'line' => 43,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 43,
-       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
-       'identifier' => 'property.notFound',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    5 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\AgentConnector::$id.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
-       'line' => 44,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
-       'traitFilePath' => NULL,
-       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 44,
+       'nodeLine' => 37,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -52233,6 +53063,386 @@ return [
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
        'nodeLine' => 51,
        'nodeType' => 'PHPStan\\Node\\PropertyAssignNode',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php' => 
+  array (
+    0 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$credential.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 23,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 23,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    1 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 45,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 45,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    2 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$connector_id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 46,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 46,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    3 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$connector.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 59,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 59,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    4 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$action_count_24h.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 73,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 73,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    5 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 85,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 85,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    6 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$connector_id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 86,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 86,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    7 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 104,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 104,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    8 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$connector_id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 105,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 105,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    9 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$health_score.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 119,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 119,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    10 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 135,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 135,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    11 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$connector_id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 136,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 136,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    12 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$connector.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 145,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 145,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    13 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Using nullsafe property access "?->display_name" on left side of ?? is unnecessary. Use -> instead.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 148,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 148,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullsafe.neverNull',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    14 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Using nullsafe property access "?->name" on left side of ?? is unnecessary. Use -> instead.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'line' => 148,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 148,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullsafe.neverNull',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php' => 
+  array (
+    0 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorInvocation::$token_usage.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'line' => 37,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 37,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    1 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorConnection::$action_count_24h.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'line' => 70,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 70,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    2 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Using nullsafe property access "?->action_count_24h" on left side of ?? is unnecessary. Use -> instead.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'line' => 70,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 70,
+       'nodeType' => 'PhpParser\\Node\\Expr\\BinaryOp\\Coalesce',
+       'identifier' => 'nullsafe.neverNull',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    3 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorInvocation::$connector.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'line' => 78,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 78,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    4 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorInvocation::$connector_id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'line' => 81,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 81,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    5 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Method App\\Support\\Connectors\\Telemetry\\ConnectorCostAttributor::resolveConnection() should return App\\Models\\AgentConnectorConnection|null but returns Illuminate\\Database\\ConnectionInterface.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'line' => 87,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 87,
+       'nodeType' => 'PhpParser\\Node\\Stmt\\Return_',
+       'identifier' => 'return.type',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    6 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\AgentConnectorInvocation::$connection_id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'line' => 90,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 90,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
       array (
@@ -55873,14 +57083,14 @@ return [
   array (
     0 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$interrogation_type.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$id.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
-       'line' => 46,
+       'line' => 55,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 46,
+       'nodeLine' => 55,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -55890,14 +57100,14 @@ return [
     )),
     1 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$feature_brief.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$interrogation_type.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
-       'line' => 47,
+       'line' => 66,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 47,
+       'nodeLine' => 66,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -55907,48 +57117,14 @@ return [
     )),
     2 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany::ordered().',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$feature_brief.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
-       'line' => 66,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 66,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'method.notFound',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    3 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Parameter #1 $callback of method Illuminate\\Database\\Eloquent\\Collection<int,Illuminate\\Database\\Eloquent\\Model>::map() expects callable(Illuminate\\Database\\Eloquent\\Model, int): string, Closure(App\\Models\\InterrogationEvent): string given.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
-       'line' => 116,
-       'canBeIgnored' => true,
-       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
-       'traitFilePath' => NULL,
-       'tip' => NULL,
-       'nodeLine' => 111,
-       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
-       'identifier' => 'argument.type',
-       'metadata' => 
-      array (
-      ),
-       'fixedErrorDiff' => NULL,
-    )),
-    4 => 
-    \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationEvent::$payload.',
-       'file' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
-       'line' => 117,
+       'line' => 67,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 117,
+       'nodeLine' => 67,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -55956,16 +57132,50 @@ return [
       ),
        'fixedErrorDiff' => NULL,
     )),
+    3 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany::ordered().',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
+       'line' => 86,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 86,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'method.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    4 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Parameter #1 $callback of method Illuminate\\Database\\Eloquent\\Collection<int,Illuminate\\Database\\Eloquent\\Model>::map() expects callable(Illuminate\\Database\\Eloquent\\Model, int): string, Closure(App\\Models\\InterrogationEvent): string given.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
+       'line' => 136,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
+       'traitFilePath' => NULL,
+       'tip' => NULL,
+       'nodeLine' => 131,
+       'nodeType' => 'PhpParser\\Node\\Expr\\MethodCall',
+       'identifier' => 'argument.type',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
     5 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$runner_type.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationEvent::$payload.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
-       'line' => 139,
+       'line' => 137,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 139,
+       'nodeLine' => 137,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -55975,14 +57185,31 @@ return [
     )),
     6 => 
     \PHPStan\Analyser\Error::__set_state(array(
-       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$user_id.',
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$runner_type.',
        'file' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
-       'line' => 158,
+       'line' => 159,
        'canBeIgnored' => true,
        'filePath' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
        'traitFilePath' => NULL,
        'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
-       'nodeLine' => 158,
+       'nodeLine' => 159,
+       'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
+       'identifier' => 'property.notFound',
+       'metadata' => 
+      array (
+      ),
+       'fixedErrorDiff' => NULL,
+    )),
+    7 => 
+    \PHPStan\Analyser\Error::__set_state(array(
+       'message' => 'Access to an undefined property App\\Models\\InterrogationSession::$user_id.',
+       'file' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
+       'line' => 178,
+       'canBeIgnored' => true,
+       'filePath' => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
+       'traitFilePath' => NULL,
+       'tip' => 'Learn more: <fg=cyan>https://phpstan.org/blog/solving-phpstan-access-to-undefined-property</>',
+       'nodeLine' => 178,
        'nodeType' => 'PhpParser\\Node\\Expr\\PropertyFetch',
        'identifier' => 'property.notFound',
        'metadata' => 
@@ -63280,7 +64507,7 @@ return [
       0 => 
       array (
         0 => 'abort',
-        1 => 80,
+        1 => 101,
       ),
     ),
   ),
@@ -63966,38 +65193,22 @@ return [
       0 => 
       array (
         0 => 'abort',
-        1 => 333,
+        1 => 339,
       ),
       1 => 
       array (
         0 => 'abort',
-        1 => 342,
+        1 => 348,
       ),
       2 => 
       array (
         0 => 'abort',
-        1 => 353,
+        1 => 359,
       ),
       3 => 
       array (
         0 => 'abort',
-        1 => 357,
-      ),
-    ),
-  ),
-  '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillDashboardController.php' => 
-  array (
-    'PHPStan\\Rules\\DeadCode\\PossiblyPureFuncCallCollector' => 
-    array (
-      0 => 
-      array (
-        0 => 'abort',
-        1 => 20,
-      ),
-      1 => 
-      array (
-        0 => 'abort',
-        1 => 70,
+        1 => 363,
       ),
     ),
   ),
@@ -64725,6 +65936,19 @@ return [
       ),
     ),
   ),
+  '/Users/garethdaine/Code/agent/app/Jobs/Connectors/ExpireConnectorApprovalsJob.php' => 
+  array (
+    'PHPStan\\Rules\\Traits\\TraitUseCollector' => 
+    array (
+      0 => 
+      array (
+        0 => 'Illuminate\\Foundation\\Bus\\Dispatchable',
+        1 => 'Illuminate\\Queue\\InteractsWithQueue',
+        2 => 'Illuminate\\Bus\\Queueable',
+        3 => 'Illuminate\\Queue\\SerializesModels',
+      ),
+    ),
+  ),
   '/Users/garethdaine/Code/agent/app/Jobs/Connectors/ProcessConnectorWebhookJob.php' => 
   array (
     'PHPStan\\Rules\\Traits\\TraitUseCollector' => 
@@ -64829,7 +66053,12 @@ return [
       0 => 
       array (
         0 => 'event',
-        1 => 678,
+        1 => 711,
+      ),
+      1 => 
+      array (
+        0 => 'event',
+        1 => 994,
       ),
     ),
     'PHPStan\\Rules\\DeadCode\\PossiblyPureMethodCallCollector' => 
@@ -64841,7 +66070,7 @@ return [
           0 => 'Symfony\\Component\\Process\\Process',
         ),
         1 => 'setTimeout',
-        2 => 265,
+        2 => 286,
       ),
       1 => 
       array (
@@ -64850,7 +66079,7 @@ return [
           0 => 'App\\Jobs\\ExecuteAgentRunJob',
         ),
         1 => 'signalProcess',
-        2 => 350,
+        2 => 371,
       ),
       2 => 
       array (
@@ -64859,7 +66088,7 @@ return [
           0 => 'App\\Jobs\\ExecuteAgentRunJob',
         ),
         1 => 'signalProcess',
-        2 => 394,
+        2 => 415,
       ),
       3 => 
       array (
@@ -64868,7 +66097,7 @@ return [
           0 => 'App\\Services\\Cost\\WorkflowBudgetEnforcer',
         ),
         1 => 'recordRunCost',
-        2 => 699,
+        2 => 732,
       ),
     ),
     'PHPStan\\Rules\\DeadCode\\PossiblyPureStaticCallCollector' => 
@@ -64877,31 +66106,37 @@ return [
       array (
         0 => 'App\\Events\\AgentJobRunFinished',
         1 => 'dispatch',
-        2 => 675,
+        2 => 708,
       ),
       1 => 
       array (
         0 => 'App\\Models\\MemoryProviderUsage',
         1 => 'record',
-        2 => 713,
+        2 => 746,
       ),
       2 => 
       array (
-        0 => 'Illuminate\\Support\\Facades\\File',
-        1 => 'put',
-        2 => 1010,
+        0 => 'App\\Events\\AgentJobRunFinished',
+        1 => 'dispatch',
+        2 => 991,
       ),
       3 => 
       array (
         0 => 'Illuminate\\Support\\Facades\\File',
         1 => 'put',
-        2 => 1021,
+        2 => 1055,
       ),
       4 => 
       array (
         0 => 'Illuminate\\Support\\Facades\\File',
+        1 => 'put',
+        2 => 1066,
+      ),
+      5 => 
+      array (
+        0 => 'Illuminate\\Support\\Facades\\File',
         1 => 'delete',
-        2 => 1042,
+        2 => 1087,
       ),
     ),
     'PHPStan\\Rules\\Traits\\TraitUseCollector' => 
@@ -64923,7 +66158,7 @@ return [
           0 => 'App\\Support\\Interrogation\\InterrogationEventWriter',
         ),
         1 => 'appendSystem',
-        2 => 116,
+        2 => 141,
       ),
       1 => 
       array (
@@ -64932,7 +66167,7 @@ return [
           0 => 'App\\Support\\Interrogation\\InterrogationEventWriter',
         ),
         1 => 'appendError',
-        2 => 173,
+        2 => 198,
       ),
     ),
     'PHPStan\\Rules\\DeadCode\\PossiblyPureStaticCallCollector' => 
@@ -64941,7 +66176,7 @@ return [
       array (
         0 => 'App\\Jobs\\SyncInterrogationTaskStatusToTaskProviderJob',
         1 => 'dispatch',
-        2 => 939,
+        2 => 964,
       ),
     ),
     'PHPStan\\Rules\\Traits\\TraitUseCollector' => 
@@ -67132,6 +68367,13 @@ return [
         1 => 'dispatch',
         2 => 38,
       ),
+    ),
+  ),
+  '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ConnectorCommandHandler.php' => 
+  array (
+    'PHPStan\\Rules\\DeadCode\\ConstructorWithoutImpurePointsCollector' => 
+    array (
+      0 => 'App\\Messenger\\SlashCommands\\ConnectorCommandHandler',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ContextCommandHandler.php' => 
@@ -69964,6 +71206,13 @@ return [
       ),
     ),
   ),
+  '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php' => 
+  array (
+    'PHPStan\\Rules\\DeadCode\\ConstructorWithoutImpurePointsCollector' => 
+    array (
+      0 => 'App\\Services\\Connectors\\DualChannelApprovalService',
+    ),
+  ),
   '/Users/garethdaine/Code/agent/app/Services/Cost/WorkflowBudgetEnforcementResult.php' => 
   array (
     'PHPStan\\Rules\\DeadCode\\ConstructorWithoutImpurePointsCollector' => 
@@ -70534,7 +71783,7 @@ return [
           0 => 'Symfony\\Component\\Process\\Process',
         ),
         1 => 'setInput',
-        2 => 110,
+        2 => 125,
       ),
       1 => 
       array (
@@ -70543,7 +71792,7 @@ return [
           0 => 'Symfony\\Component\\Process\\Process',
         ),
         1 => 'setTimeout',
-        2 => 111,
+        2 => 126,
       ),
       2 => 
       array (
@@ -70552,7 +71801,7 @@ return [
           0 => 'Symfony\\Component\\Process\\Process',
         ),
         1 => 'run',
-        2 => 112,
+        2 => 127,
       ),
     ),
   ),
@@ -71390,6 +72639,17 @@ return [
       0 => 'App\\Support\\Agent\\DispatchDueService',
     ),
   ),
+  '/Users/garethdaine/Code/agent/app/Support/Agent/EngineeringRulesInjector.php' => 
+  array (
+    'PHPStan\\Rules\\DeadCode\\PossiblyPureFuncCallCollector' => 
+    array (
+      0 => 
+      array (
+        0 => 'preg_match_all',
+        1 => 232,
+      ),
+    ),
+  ),
   '/Users/garethdaine/Code/agent/app/Support/Agent/FeatureFlagManager.php' => 
   array (
     'PHPStan\\Rules\\DeadCode\\MethodWithoutImpurePointsCollector' => 
@@ -71507,31 +72767,31 @@ return [
       array (
         0 => 'Illuminate\\Cache\\Repository',
         1 => 'put',
-        2 => 263,
+        2 => 261,
       ),
       1 => 
       array (
         0 => 'App\\Events\\RunEventsAvailable',
         1 => 'dispatch',
-        2 => 266,
+        2 => 264,
       ),
       2 => 
       array (
         0 => 'Illuminate\\Cache\\Repository',
         1 => 'put',
-        2 => 281,
+        2 => 279,
       ),
       3 => 
       array (
         0 => 'App\\Events\\Office\\AgentActivityChanged',
         1 => 'dispatch',
-        2 => 289,
+        2 => 287,
       ),
       4 => 
       array (
         0 => 'App\\Events\\Office\\AgentActivityChanged',
         1 => 'dispatch',
-        2 => 306,
+        2 => 304,
       ),
     ),
   ),
@@ -71576,7 +72836,7 @@ return [
       array (
         0 => 'App\\Jobs\\ExecuteAgentRunJob',
         1 => 'dispatch',
-        2 => 136,
+        2 => 159,
       ),
     ),
   ),
@@ -71826,6 +73086,38 @@ return [
       0 => 'App\\Support\\Connectors\\ManifestValidationResult',
     ),
   ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Mcp/ConnectorMcpRegistrar.php' => 
+  array (
+    'PHPStan\\Rules\\DeadCode\\MethodWithoutImpurePointsCollector' => 
+    array (
+      0 => 
+      array (
+        0 => 'App\\Support\\Connectors\\Mcp\\ConnectorMcpRegistrar',
+        1 => 'buildInputSchema',
+        2 => 'App\\Support\\Connectors\\Mcp\\ConnectorMcpRegistrar',
+      ),
+      1 => 
+      array (
+        0 => 'App\\Support\\Connectors\\Mcp\\ConnectorMcpRegistrar',
+        1 => 'defaultStability',
+        2 => 'App\\Support\\Connectors\\Mcp\\ConnectorMcpRegistrar',
+      ),
+    ),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php' => 
+  array (
+    'PHPStan\\Rules\\DeadCode\\ConstructorWithoutImpurePointsCollector' => 
+    array (
+      0 => 'App\\Support\\Connectors\\Messenger\\ConnectorCommandHandler',
+    ),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php' => 
+  array (
+    'PHPStan\\Rules\\DeadCode\\ConstructorWithoutImpurePointsCollector' => 
+    array (
+      0 => 'App\\Support\\Connectors\\Pipeline\\ApprovalGate',
+    ),
+  ),
   '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorExecutionPipeline.php' => 
   array (
     'PHPStan\\Rules\\DeadCode\\ConstructorWithoutImpurePointsCollector' => 
@@ -71906,6 +73198,13 @@ return [
     'PHPStan\\Rules\\DeadCode\\ConstructorWithoutImpurePointsCollector' => 
     array (
       0 => 'App\\Support\\Connectors\\RegistrySyncResult',
+    ),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php' => 
+  array (
+    'PHPStan\\Rules\\DeadCode\\ConstructorWithoutImpurePointsCollector' => 
+    array (
+      0 => 'App\\Support\\Connectors\\Telemetry\\ConnectorAlertService',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Support/Delegation/AssignmentResult.php' => 
@@ -74901,7 +76200,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Console/Commands/AgentBackupDatabaseCommand.php' => 
   array (
-    'fileHash' => 'b616d9c511b8b6b61b1925fe2dcf8b974bbfd98fbaa545c1a8839c890daafd22',
+    'fileHash' => 'a18bed9ee006594f0c053d37e795f60cec5ec19e0c1c32996a2ce93db4547223',
     'dependentFiles' => 
     array (
     ),
@@ -75312,21 +76611,22 @@ return [
       2 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/BrowserCommandHandler.php',
       3 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/CommandsCommandHandler.php',
       4 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/CompactCommandHandler.php',
-      5 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ContextCommandHandler.php',
-      6 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/DenyCommandHandler.php',
-      7 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/HelpCommandHandler.php',
-      8 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/JobsCommandHandler.php',
-      9 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ModeCommandHandler.php',
-      10 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/NewCommandHandler.php',
-      11 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ProgressCommandHandler.php',
-      12 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/RunsCommandHandler.php',
-      13 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SessionsCommandHandler.php',
-      14 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SkillsCommandHandler.php',
-      15 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StatusCommandHandler.php',
-      16 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StopCommandHandler.php',
-      17 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SubAgentsCommandHandler.php',
-      18 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/WhoamiCommandHandler.php',
-      19 => '/Users/garethdaine/Code/agent/app/Services/Messenger/CommandRouter.php',
+      5 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ConnectorCommandHandler.php',
+      6 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ContextCommandHandler.php',
+      7 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/DenyCommandHandler.php',
+      8 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/HelpCommandHandler.php',
+      9 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/JobsCommandHandler.php',
+      10 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ModeCommandHandler.php',
+      11 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/NewCommandHandler.php',
+      12 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ProgressCommandHandler.php',
+      13 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/RunsCommandHandler.php',
+      14 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SessionsCommandHandler.php',
+      15 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SkillsCommandHandler.php',
+      16 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StatusCommandHandler.php',
+      17 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StopCommandHandler.php',
+      18 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SubAgentsCommandHandler.php',
+      19 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/WhoamiCommandHandler.php',
+      20 => '/Users/garethdaine/Code/agent/app/Services/Messenger/CommandRouter.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Contracts/OrchestrationPolicyServiceContract.php' => 
@@ -75374,6 +76674,7 @@ return [
     array (
       0 => '/Users/garethdaine/Code/agent/app/Console/Commands/ConnectorTestCommand.php',
       1 => '/Users/garethdaine/Code/agent/app/Services/Connectors/ConnectionLifecycleService.php',
+      2 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/DTOs/Messenger/AccountLinkPayload.php' => 
@@ -75407,21 +76708,23 @@ return [
       4 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/BrowserCommandHandler.php',
       5 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/CommandsCommandHandler.php',
       6 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/CompactCommandHandler.php',
-      7 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ContextCommandHandler.php',
-      8 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/DenyCommandHandler.php',
-      9 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/HelpCommandHandler.php',
-      10 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/JobsCommandHandler.php',
-      11 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ModeCommandHandler.php',
-      12 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/NewCommandHandler.php',
-      13 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ProgressCommandHandler.php',
-      14 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/RunsCommandHandler.php',
-      15 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SessionsCommandHandler.php',
-      16 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SkillsCommandHandler.php',
-      17 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StatusCommandHandler.php',
-      18 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StopCommandHandler.php',
-      19 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SubAgentsCommandHandler.php',
-      20 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/WhoamiCommandHandler.php',
-      21 => '/Users/garethdaine/Code/agent/app/Services/Messenger/CommandRouter.php',
+      7 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ConnectorCommandHandler.php',
+      8 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ContextCommandHandler.php',
+      9 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/DenyCommandHandler.php',
+      10 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/HelpCommandHandler.php',
+      11 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/JobsCommandHandler.php',
+      12 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ModeCommandHandler.php',
+      13 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/NewCommandHandler.php',
+      14 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ProgressCommandHandler.php',
+      15 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/RunsCommandHandler.php',
+      16 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SessionsCommandHandler.php',
+      17 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SkillsCommandHandler.php',
+      18 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StatusCommandHandler.php',
+      19 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StopCommandHandler.php',
+      20 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SubAgentsCommandHandler.php',
+      21 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/WhoamiCommandHandler.php',
+      22 => '/Users/garethdaine/Code/agent/app/Services/Messenger/CommandRouter.php',
+      23 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/DTOs/Messenger/NormalizedAttachment.php' => 
@@ -75549,7 +76852,9 @@ return [
       4 => '/Users/garethdaine/Code/agent/app/Listeners/Messenger/SendInterrogationPhaseNotification.php',
       5 => '/Users/garethdaine/Code/agent/app/Listeners/Messenger/SendRepoAnalysisCompletedNotification.php',
       6 => '/Users/garethdaine/Code/agent/app/Listeners/Messenger/SendRitualRunCompletedNotification.php',
-      7 => '/Users/garethdaine/Code/agent/app/Services/Messenger/SystemNotificationDispatcher.php',
+      7 => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+      8 => '/Users/garethdaine/Code/agent/app/Services/Messenger/SystemNotificationDispatcher.php',
+      9 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/DTOs/Messenger/ThreadingStrategy.php' => 
@@ -76330,7 +77635,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorLibraryController.php' => 
   array (
-    'fileHash' => '2e442f8a9a2b56cf369f30a2cd7694cc5f400ca4ad7a64b5d17551e49cb73e86',
+    'fileHash' => '4051fa71f414e223e733e54aa24077dd733ec4e5831c322781f31c1a05fef725',
     'dependentFiles' => 
     array (
     ),
@@ -76666,14 +77971,14 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php' => 
   array (
-    'fileHash' => 'f32a9633aad010517fb0cc108787a10afe2889a15b1069093ee5edcf80b107b7',
+    'fileHash' => '9965e84a43ff9392efa1629b744948d8b1a8c00e22aba2e210a1231503c087e5',
     'dependentFiles' => 
     array (
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillDashboardController.php' => 
   array (
-    'fileHash' => 'c2db668bb033f7e7a83da09255109eabd1247ac43496d889edae71cf85c42919',
+    'fileHash' => '4fd8359dc49bbe70c02ca2ec5b27ac6b29faefcc66e312cc21d55398e6e733ad',
     'dependentFiles' => 
     array (
     ),
@@ -77122,7 +78427,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Http/Requests/Connectors/ListConnectorsRequest.php' => 
   array (
-    'fileHash' => '74c985b59974b5fd976039dec2b0cb23666942c4f7f39e2da238a6e63303b0da',
+    'fileHash' => '4e5949bec496d67d2959726063de1df6d528a0b2fd737e1a7db8eff3b16a4135',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorLibraryController.php',
@@ -77446,6 +78751,13 @@ return [
       3 => '/Users/garethdaine/Code/agent/app/Listeners/Compliance/LessonExtractionListener.php',
     ),
   ),
+  '/Users/garethdaine/Code/agent/app/Jobs/Connectors/ExpireConnectorApprovalsJob.php' => 
+  array (
+    'fileHash' => '052f32da10cbc98c92dd4bec6da45452abb0fa30258ed27be1cde3f096705305',
+    'dependentFiles' => 
+    array (
+    ),
+  ),
   '/Users/garethdaine/Code/agent/app/Jobs/Connectors/ProcessConnectorWebhookJob.php' => 
   array (
     'fileHash' => '0436b69e1ffd29768f6c0b0b901cd2729ef7cf7ef5a87ed530b721930a221d75',
@@ -77479,7 +78791,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php' => 
   array (
-    'fileHash' => '34a288adb3f7c238c542c91cc3e8134e16dc351b780e191011cb9b3b57550692',
+    'fileHash' => 'fb8839573179a86e83c57973ee1c3215cee1ea37b2bbbc33174d2d2a57fa94b7',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/AgentJobController.php',
@@ -77498,7 +78810,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationBuildJob.php' => 
   array (
-    'fileHash' => '4822598f0f02e6b04d3e2bfce6bd7c62b20105972c755bb722f6627f65eb8c8e',
+    'fileHash' => 'c200300ae6ee074b10b647f8565d9668e971d9b9e3091cca41f4cba087c54ed6',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/InterrogationSessionController.php',
@@ -77854,7 +79166,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Listeners/DispatchBuildTickOnRunFinished.php' => 
   array (
-    'fileHash' => 'cc43ca5c3fce8cf5996850b98a00a5f29b150543654985917748e7575e175a9d',
+    'fileHash' => 'cbd2d30f4d2d1617857a18cd8c3217054aa2d774633e6f3028bc50f445247abe',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Providers/AppServiceProvider.php',
@@ -78313,6 +79625,14 @@ return [
       0 => '/Users/garethdaine/Code/agent/app/Services/Messenger/CommandRouter.php',
     ),
   ),
+  '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ConnectorCommandHandler.php' => 
+  array (
+    'fileHash' => 'b6e71a4e5ae7fda21e6f5311b668682f750ff0da149cf475c4cecb520d6f586d',
+    'dependentFiles' => 
+    array (
+      0 => '/Users/garethdaine/Code/agent/app/Services/Messenger/CommandRouter.php',
+    ),
+  ),
   '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ContextCommandHandler.php' => 
   array (
     'fileHash' => '5aebc81ed59e502761fd6f62b7508d4ac702cda1ac2180ff5445cb192b1e1f9d',
@@ -78567,21 +79887,24 @@ return [
       7 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorApproval.php',
       8 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorConnection.php',
       9 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorCredential.php',
-      10 => '/Users/garethdaine/Code/agent/app/Services/Connectors/ConnectionLifecycleService.php',
-      11 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ActionRequest.php',
-      12 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/ApiKeyAuthManager.php',
-      13 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/OAuthFlowManager.php',
-      14 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ConnectorRegistryLoader.php',
-      15 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
-      16 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorExecutionPipeline.php',
-      17 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorHttpClient.php',
-      18 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorPolicyGate.php',
-      19 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorRateLimiter.php',
-      20 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorResolver.php',
-      21 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/CredentialManager.php',
-      22 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/PiiRedactor.php',
-      23 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ResponseNormalizer.php',
-      24 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/TelemetryEmitter.php',
+      10 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorInvocation.php',
+      11 => '/Users/garethdaine/Code/agent/app/Services/Connectors/ConnectionLifecycleService.php',
+      12 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ActionRequest.php',
+      13 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/ApiKeyAuthManager.php',
+      14 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/OAuthFlowManager.php',
+      15 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ConnectorRegistryLoader.php',
+      16 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+      17 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
+      18 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorExecutionPipeline.php',
+      19 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorHttpClient.php',
+      20 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorPolicyGate.php',
+      21 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorRateLimiter.php',
+      22 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorResolver.php',
+      23 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/CredentialManager.php',
+      24 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/PiiRedactor.php',
+      25 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ResponseNormalizer.php',
+      26 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/TelemetryEmitter.php',
+      27 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Models/AgentConnectorApproval.php' => 
@@ -78589,9 +79912,11 @@ return [
     'fileHash' => 'da5ebb7085c5d72239bbb1aa4eb810f0e6da2c3c4487b48c06014c47cac423d9',
     'dependentFiles' => 
     array (
-      0 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorConnection.php',
-      1 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Exceptions/ApprovalRequiredException.php',
-      2 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
+      0 => '/Users/garethdaine/Code/agent/app/Jobs/Connectors/ExpireConnectorApprovalsJob.php',
+      1 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorConnection.php',
+      2 => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+      3 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Exceptions/ApprovalRequiredException.php',
+      4 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Models/AgentConnectorConnection.php' => 
@@ -78604,28 +79929,34 @@ return [
       2 => '/Users/garethdaine/Code/agent/app/Console/Commands/ConnectorTestCommand.php',
       3 => '/Users/garethdaine/Code/agent/app/DTOs/Connectors/ConnectResult.php',
       4 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorConnectionController.php',
-      5 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorOAuthCallbackController.php',
-      6 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorTelemetryController.php',
-      7 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorWebhookController.php',
-      8 => '/Users/garethdaine/Code/agent/app/Models/AgentConnector.php',
-      9 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorApproval.php',
-      10 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorInvocation.php',
-      11 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorWebhookEvent.php',
-      12 => '/Users/garethdaine/Code/agent/app/Policies/ConnectorPolicy.php',
-      13 => '/Users/garethdaine/Code/agent/app/Providers/AppServiceProvider.php',
-      14 => '/Users/garethdaine/Code/agent/app/Services/Connectors/ConnectionLifecycleService.php',
-      15 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ActionRequest.php',
-      16 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/OAuthFlowManager.php',
-      17 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ConnectorHealthScorer.php',
-      18 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
-      19 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorExecutionPipeline.php',
-      20 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorHttpClient.php',
-      21 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorRateLimiter.php',
-      22 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorResolver.php',
-      23 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/CredentialManager.php',
-      24 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/PiiRedactor.php',
-      25 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ResponseNormalizer.php',
-      26 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/TelemetryEmitter.php',
+      5 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorLibraryController.php',
+      6 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorOAuthCallbackController.php',
+      7 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorTelemetryController.php',
+      8 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorWebhookController.php',
+      9 => '/Users/garethdaine/Code/agent/app/Models/AgentConnector.php',
+      10 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorApproval.php',
+      11 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorInvocation.php',
+      12 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorWebhookEvent.php',
+      13 => '/Users/garethdaine/Code/agent/app/Policies/ConnectorPolicy.php',
+      14 => '/Users/garethdaine/Code/agent/app/Providers/AppServiceProvider.php',
+      15 => '/Users/garethdaine/Code/agent/app/Services/Connectors/ConnectionLifecycleService.php',
+      16 => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+      17 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ActionRequest.php',
+      18 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/OAuthFlowManager.php',
+      19 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ConnectorHealthScorer.php',
+      20 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Mcp/ConnectorMcpRegistrar.php',
+      21 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+      22 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
+      23 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorExecutionPipeline.php',
+      24 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorHttpClient.php',
+      25 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorRateLimiter.php',
+      26 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorResolver.php',
+      27 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/CredentialManager.php',
+      28 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/PiiRedactor.php',
+      29 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ResponseNormalizer.php',
+      30 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/TelemetryEmitter.php',
+      31 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
+      32 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Models/AgentConnectorCredential.php' => 
@@ -78660,7 +79991,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Models/AgentConnectorInvocation.php' => 
   array (
-    'fileHash' => '5475285585726f1b4b6b22d98e98c0f1d444907c9f602f7bb595626e43f8ea8f',
+    'fileHash' => '15ce0cc0c9b95e7b00d1dbf60ce8c15122b7239e68f2d753b080373065689df1',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Console/Commands/ConnectorPruneTelemetryCommand.php',
@@ -78668,6 +79999,8 @@ return [
       2 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorConnection.php',
       3 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ConnectorHealthScorer.php',
       4 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/TelemetryEmitter.php',
+      5 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php',
+      6 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorReliabilityContributor.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Models/AgentConnectorWebhookEvent.php' => 
@@ -79314,13 +80647,14 @@ return [
       5 => '/Users/garethdaine/Code/agent/app/Jobs/RegenerateInterrogationBuildTaskJob.php',
       6 => '/Users/garethdaine/Code/agent/app/Jobs/SyncInterrogationTaskStatusToTaskProviderJob.php',
       7 => '/Users/garethdaine/Code/agent/app/Models/InterrogationSession.php',
-      8 => '/Users/garethdaine/Code/agent/app/Support/Compliance/OrchestrationPolicyService.php',
-      9 => '/Users/garethdaine/Code/agent/app/Support/Interrogation/BuildExecutionBackupService.php',
-      10 => '/Users/garethdaine/Code/agent/app/Support/Interrogation/BuildTaskGenerator.php',
-      11 => '/Users/garethdaine/Code/agent/app/Support/Interrogation/BuildTaskRunFactory.php',
-      12 => '/Users/garethdaine/Code/agent/app/Support/TaskProviders/Contracts/TaskManagementProviderDriver.php',
-      13 => '/Users/garethdaine/Code/agent/app/Support/TaskProviders/Drivers/LinearTaskManagementProvider.php',
-      14 => '/Users/garethdaine/Code/agent/app/Support/TaskProviders/InterrogationTaskProviderSyncService.php',
+      8 => '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php',
+      9 => '/Users/garethdaine/Code/agent/app/Support/Compliance/OrchestrationPolicyService.php',
+      10 => '/Users/garethdaine/Code/agent/app/Support/Interrogation/BuildExecutionBackupService.php',
+      11 => '/Users/garethdaine/Code/agent/app/Support/Interrogation/BuildTaskGenerator.php',
+      12 => '/Users/garethdaine/Code/agent/app/Support/Interrogation/BuildTaskRunFactory.php',
+      13 => '/Users/garethdaine/Code/agent/app/Support/TaskProviders/Contracts/TaskManagementProviderDriver.php',
+      14 => '/Users/garethdaine/Code/agent/app/Support/TaskProviders/Drivers/LinearTaskManagementProvider.php',
+      15 => '/Users/garethdaine/Code/agent/app/Support/TaskProviders/InterrogationTaskProviderSyncService.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Models/InterrogationEvent.php' => 
@@ -79962,7 +81296,8 @@ return [
       24 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/ApiKeyAuthManager.php',
       25 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/OAuthFlowManager.php',
       26 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ConnectorVaultEncrypter.php',
-      27 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/CredentialManager.php',
+      27 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Mcp/ConnectorMcpRegistrar.php',
+      28 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/CredentialManager.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Models/TeamInvitation.php' => 
@@ -80014,199 +81349,203 @@ return [
       23 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/ChatSessionController.php',
       24 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/ComplianceController.php',
       25 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorConnectionController.php',
-      26 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorTelemetryController.php',
-      27 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/CredentialsController.php',
-      28 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/DelegateeProfileController.php',
-      29 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/DelegationGraphController.php',
-      30 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/DelegationTaskController.php',
-      31 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/InterrogationSessionController.php',
-      32 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/InterrogationSettingsController.php',
-      33 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/InterrogationTaskProviderController.php',
-      34 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/InterrogationTechStackController.php',
-      35 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemoryCoreBlockController.php',
-      36 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemoryDiagnosticsController.php',
-      37 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemoryModelsController.php',
-      38 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemoryRetrievalController.php',
-      39 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemorySettingsController.php',
-      40 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemoryWorkingController.php',
-      41 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/MessengerConnectorController.php',
-      42 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/NotificationController.php',
-      43 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/OfficeStateController.php',
-      44 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/NlOrgController.php',
-      45 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgAgentController.php',
-      46 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgCostController.php',
-      47 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgCouncilController.php',
-      48 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgEscalationController.php',
-      49 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgRitualController.php',
-      50 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgRitualRunController.php',
-      51 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/RepoAnalysisSessionController.php',
-      52 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Runtime/RuntimeSessionController.php',
-      53 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Runtime/RuntimeToolCallController.php',
-      54 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/ServiceManagerController.php',
-      55 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
-      56 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillDashboardController.php',
-      57 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/WorkflowGovernanceController.php',
-      58 => '/Users/garethdaine/Code/agent/app/Http/Controllers/BillingPortalController.php',
-      59 => '/Users/garethdaine/Code/agent/app/Http/Controllers/DashboardController.php',
-      60 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Internal/NlScheduleController.php',
-      61 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Messenger/AccountLinkController.php',
-      62 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Onboarding/OnboardingController.php',
-      63 => '/Users/garethdaine/Code/agent/app/Http/Controllers/RuntimeWebController.php',
-      64 => '/Users/garethdaine/Code/agent/app/Http/Controllers/TaskProviderOAuthController.php',
-      65 => '/Users/garethdaine/Code/agent/app/Http/Middleware/EnsureOnboardingCompleted.php',
-      66 => '/Users/garethdaine/Code/agent/app/Http/Middleware/HandleInertiaRequests.php',
-      67 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/ActivateReplayBuildRequest.php',
-      68 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/GateTransitionsIndexRequest.php',
-      69 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/RepoAnalysis/RepoAnalysisEventsRequest.php',
-      70 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/RepoAnalysis/RetryRepoAnalysisTaskRequest.php',
-      71 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/RepoAnalysis/StoreRepoAnalysisSessionRequest.php',
-      72 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/RepoAnalysis/UpdateRepoAnalysisSessionRequest.php',
-      73 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/StoreAgentJobRequest.php',
-      74 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/UpdateAgentJobRequest.php',
-      75 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/UpdateBackupSettingsRequest.php',
-      76 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/UpdateFeatureSettingsRequest.php',
-      77 => '/Users/garethdaine/Code/agent/app/Http/Requests/Connectors/ConnectRequest.php',
-      78 => '/Users/garethdaine/Code/agent/app/Http/Requests/Connectors/ListConnectorsRequest.php',
-      79 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/RequestPlanRevisionRequest.php',
-      80 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/StoreInterrogationSessionRequest.php',
-      81 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/StoreInterrogationTechStackRequest.php',
-      82 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/SubmitAnswerRequest.php',
-      83 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/UpdateAnnotationRequest.php',
-      84 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/UpdateInterrogationSessionRequest.php',
-      85 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/UpdateInterrogationTaskProviderSettingsRequest.php',
-      86 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/UpdateSettingsRequest.php',
-      87 => '/Users/garethdaine/Code/agent/app/Http/Requests/Memory/AppendWorkingMemoryRequest.php',
-      88 => '/Users/garethdaine/Code/agent/app/Http/Requests/Memory/RetrieveMemoryRequest.php',
-      89 => '/Users/garethdaine/Code/agent/app/Http/Requests/Memory/TestConnectionRequest.php',
-      90 => '/Users/garethdaine/Code/agent/app/Http/Requests/Memory/UpdateCoreBlockRequest.php',
-      91 => '/Users/garethdaine/Code/agent/app/Http/Requests/Memory/UpdateMemorySettingsRequest.php',
-      92 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/ResolveEscalationRequest.php',
-      93 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/StoreOrgAgentRequest.php',
-      94 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/StoreOrgCouncilRequest.php',
-      95 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/StoreOrgRitualRequest.php',
-      96 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/UpdateOrgAgentRequest.php',
-      97 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/UpdateOrgCouncilRequest.php',
-      98 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/UpdateOrgRitualRequest.php',
-      99 => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
-      100 => '/Users/garethdaine/Code/agent/app/Jobs/Messenger/ProcessChatIntent.php',
-      101 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/ChatActionContext.php',
-      102 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/JobsCreateHandler.php',
-      103 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/JobsDeleteHandler.php',
-      104 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/JobsListHandler.php',
-      105 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/JobsShowHandler.php',
-      106 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsListActiveHandler.php',
-      107 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsListHistoryHandler.php',
-      108 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsRetryHandler.php',
-      109 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsRunNowHandler.php',
-      110 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsShowHandler.php',
-      111 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsSteerHandler.php',
-      112 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsStopHandler.php',
-      113 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ApproveCommandHandler.php',
-      114 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/AskCommandHandler.php',
-      115 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/BrowserCommandHandler.php',
-      116 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/CommandsCommandHandler.php',
-      117 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/CompactCommandHandler.php',
-      118 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ContextCommandHandler.php',
-      119 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/DenyCommandHandler.php',
-      120 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/HelpCommandHandler.php',
-      121 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/JobsCommandHandler.php',
-      122 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ModeCommandHandler.php',
-      123 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/NewCommandHandler.php',
-      124 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ProgressCommandHandler.php',
-      125 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/RunsCommandHandler.php',
-      126 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SessionsCommandHandler.php',
-      127 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SkillsCommandHandler.php',
-      128 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StatusCommandHandler.php',
-      129 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StopCommandHandler.php',
-      130 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SubAgentsCommandHandler.php',
-      131 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/WhoamiCommandHandler.php',
-      132 => '/Users/garethdaine/Code/agent/app/Messenger/Validation/ChatActionPolicyValidator.php',
-      133 => '/Users/garethdaine/Code/agent/app/Models/AgentAuditLog.php',
-      134 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorApproval.php',
-      135 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorConnection.php',
-      136 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorCredential.php',
-      137 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorCredentialEvent.php',
-      138 => '/Users/garethdaine/Code/agent/app/Models/AgentJob.php',
-      139 => '/Users/garethdaine/Code/agent/app/Models/AgentJobRun.php',
-      140 => '/Users/garethdaine/Code/agent/app/Models/AgentSkill.php',
-      141 => '/Users/garethdaine/Code/agent/app/Models/AgentSkillValidation.php',
-      142 => '/Users/garethdaine/Code/agent/app/Models/ChatSession.php',
-      143 => '/Users/garethdaine/Code/agent/app/Models/ConnectedProvider.php',
-      144 => '/Users/garethdaine/Code/agent/app/Models/CredentialVault.php',
-      145 => '/Users/garethdaine/Code/agent/app/Models/DelegateeProfile.php',
-      146 => '/Users/garethdaine/Code/agent/app/Models/DelegationGraph.php',
-      147 => '/Users/garethdaine/Code/agent/app/Models/InterrogationSession.php',
-      148 => '/Users/garethdaine/Code/agent/app/Models/InterrogationSetting.php',
-      149 => '/Users/garethdaine/Code/agent/app/Models/MemoryConsolidationLog.php',
-      150 => '/Users/garethdaine/Code/agent/app/Models/MemoryConversationLog.php',
-      151 => '/Users/garethdaine/Code/agent/app/Models/MemoryCoreBlock.php',
-      152 => '/Users/garethdaine/Code/agent/app/Models/MemoryEmbedding.php',
-      153 => '/Users/garethdaine/Code/agent/app/Models/MemoryFormationFailure.php',
-      154 => '/Users/garethdaine/Code/agent/app/Models/MemoryProviderUsage.php',
-      155 => '/Users/garethdaine/Code/agent/app/Models/MemorySetting.php',
-      156 => '/Users/garethdaine/Code/agent/app/Models/MessengerIdentityLink.php',
-      157 => '/Users/garethdaine/Code/agent/app/Models/NlOrgParseAttempt.php',
-      158 => '/Users/garethdaine/Code/agent/app/Models/NlParseAttempt.php',
-      159 => '/Users/garethdaine/Code/agent/app/Models/OrgAgentProfile.php',
-      160 => '/Users/garethdaine/Code/agent/app/Models/OrgCostLedger.php',
-      161 => '/Users/garethdaine/Code/agent/app/Models/OrgCouncilTemplate.php',
-      162 => '/Users/garethdaine/Code/agent/app/Models/OrgReportingEdge.php',
-      163 => '/Users/garethdaine/Code/agent/app/Models/OrgRitualRun.php',
-      164 => '/Users/garethdaine/Code/agent/app/Models/OrgRitualTemplate.php',
-      165 => '/Users/garethdaine/Code/agent/app/Models/RepoAnalysisSession.php',
-      166 => '/Users/garethdaine/Code/agent/app/Models/Runtime/RuntimeApproval.php',
-      167 => '/Users/garethdaine/Code/agent/app/Models/Runtime/RuntimeSession.php',
-      168 => '/Users/garethdaine/Code/agent/app/Models/UserChatPreference.php',
-      169 => '/Users/garethdaine/Code/agent/app/Models/UserNotificationSetting.php',
-      170 => '/Users/garethdaine/Code/agent/app/Notifications/OutboundMessageFailedNotification.php',
-      171 => '/Users/garethdaine/Code/agent/app/Policies/AgentAuditLogPolicy.php',
-      172 => '/Users/garethdaine/Code/agent/app/Policies/AgentJobPolicy.php',
-      173 => '/Users/garethdaine/Code/agent/app/Policies/AgentJobRunPolicy.php',
-      174 => '/Users/garethdaine/Code/agent/app/Policies/ConnectorPolicy.php',
-      175 => '/Users/garethdaine/Code/agent/app/Policies/DelegateeProfilePolicy.php',
-      176 => '/Users/garethdaine/Code/agent/app/Policies/DelegationGraphPolicy.php',
-      177 => '/Users/garethdaine/Code/agent/app/Policies/InterrogationSessionPolicy.php',
-      178 => '/Users/garethdaine/Code/agent/app/Policies/NlOrgParseAttemptPolicy.php',
-      179 => '/Users/garethdaine/Code/agent/app/Policies/NlParseAttemptPolicy.php',
-      180 => '/Users/garethdaine/Code/agent/app/Policies/OrgAgentProfilePolicy.php',
-      181 => '/Users/garethdaine/Code/agent/app/Policies/OrgCouncilTemplatePolicy.php',
-      182 => '/Users/garethdaine/Code/agent/app/Policies/OrgRitualRunPolicy.php',
-      183 => '/Users/garethdaine/Code/agent/app/Policies/OrgRitualTemplatePolicy.php',
-      184 => '/Users/garethdaine/Code/agent/app/Policies/RepoAnalysisSessionPolicy.php',
-      185 => '/Users/garethdaine/Code/agent/app/Policies/TeamPolicy.php',
-      186 => '/Users/garethdaine/Code/agent/app/Policies/WorkflowGovernancePolicy.php',
-      187 => '/Users/garethdaine/Code/agent/app/Providers/AppServiceProvider.php',
-      188 => '/Users/garethdaine/Code/agent/app/Services/Billing/BillingUsageService.php',
-      189 => '/Users/garethdaine/Code/agent/app/Services/Connectors/ConnectionLifecycleService.php',
-      190 => '/Users/garethdaine/Code/agent/app/Services/Credentials/CredentialsManager.php',
-      191 => '/Users/garethdaine/Code/agent/app/Services/Messenger/AgentRouter.php',
-      192 => '/Users/garethdaine/Code/agent/app/Services/Messenger/ChatActionExecutor.php',
-      193 => '/Users/garethdaine/Code/agent/app/Services/Messenger/ChatActionPolicyValidator.php',
-      194 => '/Users/garethdaine/Code/agent/app/Services/Messenger/ChatSessionManager.php',
-      195 => '/Users/garethdaine/Code/agent/app/Services/Messenger/CommandRouter.php',
-      196 => '/Users/garethdaine/Code/agent/app/Services/Messenger/SystemNotificationDispatcher.php',
-      197 => '/Users/garethdaine/Code/agent/app/Services/Runtime/Adapters/AgentApiToolAdapter.php',
-      198 => '/Users/garethdaine/Code/agent/app/Services/Runtime/Adapters/DiscoveryToolAdapter.php',
-      199 => '/Users/garethdaine/Code/agent/app/Services/Runtime/Adapters/RuntimeToolAdapter.php',
-      200 => '/Users/garethdaine/Code/agent/app/Services/Runtime/ApprovalGate.php',
-      201 => '/Users/garethdaine/Code/agent/app/Services/Runtime/RuntimeLlmClient.php',
-      202 => '/Users/garethdaine/Code/agent/app/Services/Runtime/RuntimeSessionManager.php',
-      203 => '/Users/garethdaine/Code/agent/app/Services/Runtime/ToolGateway.php',
-      204 => '/Users/garethdaine/Code/agent/app/Support/Agent/AuditLogger.php',
-      205 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/ApiKeyAuthManager.php',
-      206 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/OAuthFlowManager.php',
-      207 => '/Users/garethdaine/Code/agent/app/Support/Delegation/DelegationGraphBuilder.php',
-      208 => '/Users/garethdaine/Code/agent/app/Support/Delegation/TrustScoreCalculator.php',
-      209 => '/Users/garethdaine/Code/agent/app/Support/Memory/MemorySettingsService.php',
-      210 => '/Users/garethdaine/Code/agent/app/Support/NlOrg/NlOrgDiffApplier.php',
-      211 => '/Users/garethdaine/Code/agent/app/Support/NlOrg/NlOrgParserService.php',
-      212 => '/Users/garethdaine/Code/agent/app/Support/NlSchedule/NlParseAttemptRepository.php',
-      213 => '/Users/garethdaine/Code/agent/app/Support/NlSchedule/NlScheduleParserService.php',
-      214 => '/Users/garethdaine/Code/agent/app/Support/Org/OrgAgentProfileService.php',
-      215 => '/Users/garethdaine/Code/agent/app/Support/Org/OrgAuditService.php',
-      216 => '/Users/garethdaine/Code/agent/app/Support/Org/OrgCostGovernanceService.php',
-      217 => '/Users/garethdaine/Code/agent/app/Support/Org/OrgCouncilService.php',
-      218 => '/Users/garethdaine/Code/agent/app/Support/Org/OrgRitualTemplateService.php',
+      26 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorLibraryController.php',
+      27 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Connectors/ConnectorTelemetryController.php',
+      28 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/CredentialsController.php',
+      29 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/DelegateeProfileController.php',
+      30 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/DelegationGraphController.php',
+      31 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/DelegationTaskController.php',
+      32 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/InterrogationSessionController.php',
+      33 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/InterrogationSettingsController.php',
+      34 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/InterrogationTaskProviderController.php',
+      35 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/InterrogationTechStackController.php',
+      36 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemoryCoreBlockController.php',
+      37 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemoryDiagnosticsController.php',
+      38 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemoryModelsController.php',
+      39 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemoryRetrievalController.php',
+      40 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemorySettingsController.php',
+      41 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Memory/MemoryWorkingController.php',
+      42 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/MessengerConnectorController.php',
+      43 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/NotificationController.php',
+      44 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/OfficeStateController.php',
+      45 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/NlOrgController.php',
+      46 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgAgentController.php',
+      47 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgCostController.php',
+      48 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgCouncilController.php',
+      49 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgEscalationController.php',
+      50 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgRitualController.php',
+      51 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Org/OrgRitualRunController.php',
+      52 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/RepoAnalysisSessionController.php',
+      53 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Runtime/RuntimeSessionController.php',
+      54 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Runtime/RuntimeToolCallController.php',
+      55 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/ServiceManagerController.php',
+      56 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillController.php',
+      57 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Skills/SkillDashboardController.php',
+      58 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/WorkflowGovernanceController.php',
+      59 => '/Users/garethdaine/Code/agent/app/Http/Controllers/BillingPortalController.php',
+      60 => '/Users/garethdaine/Code/agent/app/Http/Controllers/DashboardController.php',
+      61 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Internal/NlScheduleController.php',
+      62 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Messenger/AccountLinkController.php',
+      63 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Onboarding/OnboardingController.php',
+      64 => '/Users/garethdaine/Code/agent/app/Http/Controllers/RuntimeWebController.php',
+      65 => '/Users/garethdaine/Code/agent/app/Http/Controllers/TaskProviderOAuthController.php',
+      66 => '/Users/garethdaine/Code/agent/app/Http/Middleware/EnsureOnboardingCompleted.php',
+      67 => '/Users/garethdaine/Code/agent/app/Http/Middleware/HandleInertiaRequests.php',
+      68 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/ActivateReplayBuildRequest.php',
+      69 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/GateTransitionsIndexRequest.php',
+      70 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/RepoAnalysis/RepoAnalysisEventsRequest.php',
+      71 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/RepoAnalysis/RetryRepoAnalysisTaskRequest.php',
+      72 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/RepoAnalysis/StoreRepoAnalysisSessionRequest.php',
+      73 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/RepoAnalysis/UpdateRepoAnalysisSessionRequest.php',
+      74 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/StoreAgentJobRequest.php',
+      75 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/UpdateAgentJobRequest.php',
+      76 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/UpdateBackupSettingsRequest.php',
+      77 => '/Users/garethdaine/Code/agent/app/Http/Requests/Agent/UpdateFeatureSettingsRequest.php',
+      78 => '/Users/garethdaine/Code/agent/app/Http/Requests/Connectors/ConnectRequest.php',
+      79 => '/Users/garethdaine/Code/agent/app/Http/Requests/Connectors/ListConnectorsRequest.php',
+      80 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/RequestPlanRevisionRequest.php',
+      81 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/StoreInterrogationSessionRequest.php',
+      82 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/StoreInterrogationTechStackRequest.php',
+      83 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/SubmitAnswerRequest.php',
+      84 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/UpdateAnnotationRequest.php',
+      85 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/UpdateInterrogationSessionRequest.php',
+      86 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/UpdateInterrogationTaskProviderSettingsRequest.php',
+      87 => '/Users/garethdaine/Code/agent/app/Http/Requests/Interrogation/UpdateSettingsRequest.php',
+      88 => '/Users/garethdaine/Code/agent/app/Http/Requests/Memory/AppendWorkingMemoryRequest.php',
+      89 => '/Users/garethdaine/Code/agent/app/Http/Requests/Memory/RetrieveMemoryRequest.php',
+      90 => '/Users/garethdaine/Code/agent/app/Http/Requests/Memory/TestConnectionRequest.php',
+      91 => '/Users/garethdaine/Code/agent/app/Http/Requests/Memory/UpdateCoreBlockRequest.php',
+      92 => '/Users/garethdaine/Code/agent/app/Http/Requests/Memory/UpdateMemorySettingsRequest.php',
+      93 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/ResolveEscalationRequest.php',
+      94 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/StoreOrgAgentRequest.php',
+      95 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/StoreOrgCouncilRequest.php',
+      96 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/StoreOrgRitualRequest.php',
+      97 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/UpdateOrgAgentRequest.php',
+      98 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/UpdateOrgCouncilRequest.php',
+      99 => '/Users/garethdaine/Code/agent/app/Http/Requests/Org/UpdateOrgRitualRequest.php',
+      100 => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+      101 => '/Users/garethdaine/Code/agent/app/Jobs/Messenger/ProcessChatIntent.php',
+      102 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/ChatActionContext.php',
+      103 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/JobsCreateHandler.php',
+      104 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/JobsDeleteHandler.php',
+      105 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/JobsListHandler.php',
+      106 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/JobsShowHandler.php',
+      107 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsListActiveHandler.php',
+      108 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsListHistoryHandler.php',
+      109 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsRetryHandler.php',
+      110 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsRunNowHandler.php',
+      111 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsShowHandler.php',
+      112 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsSteerHandler.php',
+      113 => '/Users/garethdaine/Code/agent/app/Messenger/ChatAction/Handlers/RunsStopHandler.php',
+      114 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ApproveCommandHandler.php',
+      115 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/AskCommandHandler.php',
+      116 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/BrowserCommandHandler.php',
+      117 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/CommandsCommandHandler.php',
+      118 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/CompactCommandHandler.php',
+      119 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ConnectorCommandHandler.php',
+      120 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ContextCommandHandler.php',
+      121 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/DenyCommandHandler.php',
+      122 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/HelpCommandHandler.php',
+      123 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/JobsCommandHandler.php',
+      124 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ModeCommandHandler.php',
+      125 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/NewCommandHandler.php',
+      126 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ProgressCommandHandler.php',
+      127 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/RunsCommandHandler.php',
+      128 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SessionsCommandHandler.php',
+      129 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SkillsCommandHandler.php',
+      130 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StatusCommandHandler.php',
+      131 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/StopCommandHandler.php',
+      132 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/SubAgentsCommandHandler.php',
+      133 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/WhoamiCommandHandler.php',
+      134 => '/Users/garethdaine/Code/agent/app/Messenger/Validation/ChatActionPolicyValidator.php',
+      135 => '/Users/garethdaine/Code/agent/app/Models/AgentAuditLog.php',
+      136 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorApproval.php',
+      137 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorConnection.php',
+      138 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorCredential.php',
+      139 => '/Users/garethdaine/Code/agent/app/Models/AgentConnectorCredentialEvent.php',
+      140 => '/Users/garethdaine/Code/agent/app/Models/AgentJob.php',
+      141 => '/Users/garethdaine/Code/agent/app/Models/AgentJobRun.php',
+      142 => '/Users/garethdaine/Code/agent/app/Models/AgentSkill.php',
+      143 => '/Users/garethdaine/Code/agent/app/Models/AgentSkillValidation.php',
+      144 => '/Users/garethdaine/Code/agent/app/Models/ChatSession.php',
+      145 => '/Users/garethdaine/Code/agent/app/Models/ConnectedProvider.php',
+      146 => '/Users/garethdaine/Code/agent/app/Models/CredentialVault.php',
+      147 => '/Users/garethdaine/Code/agent/app/Models/DelegateeProfile.php',
+      148 => '/Users/garethdaine/Code/agent/app/Models/DelegationGraph.php',
+      149 => '/Users/garethdaine/Code/agent/app/Models/InterrogationSession.php',
+      150 => '/Users/garethdaine/Code/agent/app/Models/InterrogationSetting.php',
+      151 => '/Users/garethdaine/Code/agent/app/Models/MemoryConsolidationLog.php',
+      152 => '/Users/garethdaine/Code/agent/app/Models/MemoryConversationLog.php',
+      153 => '/Users/garethdaine/Code/agent/app/Models/MemoryCoreBlock.php',
+      154 => '/Users/garethdaine/Code/agent/app/Models/MemoryEmbedding.php',
+      155 => '/Users/garethdaine/Code/agent/app/Models/MemoryFormationFailure.php',
+      156 => '/Users/garethdaine/Code/agent/app/Models/MemoryProviderUsage.php',
+      157 => '/Users/garethdaine/Code/agent/app/Models/MemorySetting.php',
+      158 => '/Users/garethdaine/Code/agent/app/Models/MessengerIdentityLink.php',
+      159 => '/Users/garethdaine/Code/agent/app/Models/NlOrgParseAttempt.php',
+      160 => '/Users/garethdaine/Code/agent/app/Models/NlParseAttempt.php',
+      161 => '/Users/garethdaine/Code/agent/app/Models/OrgAgentProfile.php',
+      162 => '/Users/garethdaine/Code/agent/app/Models/OrgCostLedger.php',
+      163 => '/Users/garethdaine/Code/agent/app/Models/OrgCouncilTemplate.php',
+      164 => '/Users/garethdaine/Code/agent/app/Models/OrgReportingEdge.php',
+      165 => '/Users/garethdaine/Code/agent/app/Models/OrgRitualRun.php',
+      166 => '/Users/garethdaine/Code/agent/app/Models/OrgRitualTemplate.php',
+      167 => '/Users/garethdaine/Code/agent/app/Models/RepoAnalysisSession.php',
+      168 => '/Users/garethdaine/Code/agent/app/Models/Runtime/RuntimeApproval.php',
+      169 => '/Users/garethdaine/Code/agent/app/Models/Runtime/RuntimeSession.php',
+      170 => '/Users/garethdaine/Code/agent/app/Models/UserChatPreference.php',
+      171 => '/Users/garethdaine/Code/agent/app/Models/UserNotificationSetting.php',
+      172 => '/Users/garethdaine/Code/agent/app/Notifications/OutboundMessageFailedNotification.php',
+      173 => '/Users/garethdaine/Code/agent/app/Policies/AgentAuditLogPolicy.php',
+      174 => '/Users/garethdaine/Code/agent/app/Policies/AgentJobPolicy.php',
+      175 => '/Users/garethdaine/Code/agent/app/Policies/AgentJobRunPolicy.php',
+      176 => '/Users/garethdaine/Code/agent/app/Policies/ConnectorPolicy.php',
+      177 => '/Users/garethdaine/Code/agent/app/Policies/DelegateeProfilePolicy.php',
+      178 => '/Users/garethdaine/Code/agent/app/Policies/DelegationGraphPolicy.php',
+      179 => '/Users/garethdaine/Code/agent/app/Policies/InterrogationSessionPolicy.php',
+      180 => '/Users/garethdaine/Code/agent/app/Policies/NlOrgParseAttemptPolicy.php',
+      181 => '/Users/garethdaine/Code/agent/app/Policies/NlParseAttemptPolicy.php',
+      182 => '/Users/garethdaine/Code/agent/app/Policies/OrgAgentProfilePolicy.php',
+      183 => '/Users/garethdaine/Code/agent/app/Policies/OrgCouncilTemplatePolicy.php',
+      184 => '/Users/garethdaine/Code/agent/app/Policies/OrgRitualRunPolicy.php',
+      185 => '/Users/garethdaine/Code/agent/app/Policies/OrgRitualTemplatePolicy.php',
+      186 => '/Users/garethdaine/Code/agent/app/Policies/RepoAnalysisSessionPolicy.php',
+      187 => '/Users/garethdaine/Code/agent/app/Policies/TeamPolicy.php',
+      188 => '/Users/garethdaine/Code/agent/app/Policies/WorkflowGovernancePolicy.php',
+      189 => '/Users/garethdaine/Code/agent/app/Providers/AppServiceProvider.php',
+      190 => '/Users/garethdaine/Code/agent/app/Services/Billing/BillingUsageService.php',
+      191 => '/Users/garethdaine/Code/agent/app/Services/Connectors/ConnectionLifecycleService.php',
+      192 => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+      193 => '/Users/garethdaine/Code/agent/app/Services/Credentials/CredentialsManager.php',
+      194 => '/Users/garethdaine/Code/agent/app/Services/Messenger/AgentRouter.php',
+      195 => '/Users/garethdaine/Code/agent/app/Services/Messenger/ChatActionExecutor.php',
+      196 => '/Users/garethdaine/Code/agent/app/Services/Messenger/ChatActionPolicyValidator.php',
+      197 => '/Users/garethdaine/Code/agent/app/Services/Messenger/ChatSessionManager.php',
+      198 => '/Users/garethdaine/Code/agent/app/Services/Messenger/CommandRouter.php',
+      199 => '/Users/garethdaine/Code/agent/app/Services/Messenger/SystemNotificationDispatcher.php',
+      200 => '/Users/garethdaine/Code/agent/app/Services/Runtime/Adapters/AgentApiToolAdapter.php',
+      201 => '/Users/garethdaine/Code/agent/app/Services/Runtime/Adapters/DiscoveryToolAdapter.php',
+      202 => '/Users/garethdaine/Code/agent/app/Services/Runtime/Adapters/RuntimeToolAdapter.php',
+      203 => '/Users/garethdaine/Code/agent/app/Services/Runtime/ApprovalGate.php',
+      204 => '/Users/garethdaine/Code/agent/app/Services/Runtime/RuntimeLlmClient.php',
+      205 => '/Users/garethdaine/Code/agent/app/Services/Runtime/RuntimeSessionManager.php',
+      206 => '/Users/garethdaine/Code/agent/app/Services/Runtime/ToolGateway.php',
+      207 => '/Users/garethdaine/Code/agent/app/Support/Agent/AuditLogger.php',
+      208 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/ApiKeyAuthManager.php',
+      209 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Auth/OAuthFlowManager.php',
+      210 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+      211 => '/Users/garethdaine/Code/agent/app/Support/Delegation/DelegationGraphBuilder.php',
+      212 => '/Users/garethdaine/Code/agent/app/Support/Delegation/TrustScoreCalculator.php',
+      213 => '/Users/garethdaine/Code/agent/app/Support/Memory/MemorySettingsService.php',
+      214 => '/Users/garethdaine/Code/agent/app/Support/NlOrg/NlOrgDiffApplier.php',
+      215 => '/Users/garethdaine/Code/agent/app/Support/NlOrg/NlOrgParserService.php',
+      216 => '/Users/garethdaine/Code/agent/app/Support/NlSchedule/NlParseAttemptRepository.php',
+      217 => '/Users/garethdaine/Code/agent/app/Support/NlSchedule/NlScheduleParserService.php',
+      218 => '/Users/garethdaine/Code/agent/app/Support/Org/OrgAgentProfileService.php',
+      219 => '/Users/garethdaine/Code/agent/app/Support/Org/OrgAuditService.php',
+      220 => '/Users/garethdaine/Code/agent/app/Support/Org/OrgCostGovernanceService.php',
+      221 => '/Users/garethdaine/Code/agent/app/Support/Org/OrgCouncilService.php',
+      222 => '/Users/garethdaine/Code/agent/app/Support/Org/OrgRitualTemplateService.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Models/UserChatPreference.php' => 
@@ -80533,6 +81872,15 @@ return [
       0 => '/Users/garethdaine/Code/agent/app/Console/Commands/ConnectorConnectCommand.php',
       1 => '/Users/garethdaine/Code/agent/app/Console/Commands/ConnectorDisconnectCommand.php',
       2 => '/Users/garethdaine/Code/agent/app/Console/Commands/ConnectorTestCommand.php',
+      3 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php',
+    ),
+  ),
+  '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php' => 
+  array (
+    'fileHash' => '5e8015330fbb57ab50650672c5cefebe4279277ce4a578c5f3c3403989d087a2',
+    'dependentFiles' => 
+    array (
+      0 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Services/Cost/CanonicalCostCalculator.php' => 
@@ -80691,7 +82039,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Services/Messenger/CommandRouter.php' => 
   array (
-    'fileHash' => 'aeda3c693ad75b874d96fbdeeacf014b4635d73ed4a67c00e72e04a4c7ce86f9',
+    'fileHash' => '8b1970266a204636c9f3dd09d2db8b8846b9ba8bf70a5cc4caf8998fedfd3af4',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/ChatSessionController.php',
@@ -80769,6 +82117,8 @@ return [
       4 => '/Users/garethdaine/Code/agent/app/Listeners/Messenger/SendInterrogationPhaseNotification.php',
       5 => '/Users/garethdaine/Code/agent/app/Listeners/Messenger/SendRepoAnalysisCompletedNotification.php',
       6 => '/Users/garethdaine/Code/agent/app/Listeners/Messenger/SendRitualRunCompletedNotification.php',
+      7 => '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php',
+      8 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Services/Observability/ObservabilitySnapshotService.php' => 
@@ -80957,7 +82307,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Services/Runtime/CliRuntimeExecutor.php' => 
   array (
-    'fileHash' => '2a125f30e3e4a9a73d86360ba754ee3eef0366bfb762b68f68e11b68e9c9ef63',
+    'fileHash' => '0b4f4b23aca0dd1086db9dde3be220a55ed0cfb048d14d457d69e233e3e04bb8',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Services/Runtime/MessengerRuntimeOrchestrator.php',
@@ -81633,6 +82983,16 @@ return [
       2 => '/Users/garethdaine/Code/agent/app/Support/Agent/ReconcileActiveRunsService.php',
     ),
   ),
+  '/Users/garethdaine/Code/agent/app/Support/Agent/EngineeringRulesInjector.php' => 
+  array (
+    'fileHash' => 'f4dd6b6e7edfb0cd01df9ebb1610bf10ba6caa32dacbb309054f4bd852bbe8ca',
+    'dependentFiles' => 
+    array (
+      0 => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteAgentRunJob.php',
+      1 => '/Users/garethdaine/Code/agent/app/Services/Runtime/CliRuntimeExecutor.php',
+      2 => '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php',
+    ),
+  ),
   '/Users/garethdaine/Code/agent/app/Support/Agent/EnvPolicy.php' => 
   array (
     'fileHash' => 'e5603eb118a8e58fc99bccd58afd8391addfa889304c250c866ef531bebae603',
@@ -81691,7 +83051,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Support/Agent/FeatureFlagManager.php' => 
   array (
-    'fileHash' => '0d01847236150b8eeb3fe270ad43bc38e391cef39f6d43f578265060fa94b8d0',
+    'fileHash' => '81a380ab668bd578bcf945c50ab069f7d24b7110b01507d5c7ff990a8607e840',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Console/Commands/DelegationRecomputeMetricsCommand.php',
@@ -81740,15 +83100,16 @@ return [
       43 => '/Users/garethdaine/Code/agent/app/Services/Messenger/SystemNotificationDispatcher.php',
       44 => '/Users/garethdaine/Code/agent/app/Services/Runtime/RuntimeSessionManager.php',
       45 => '/Users/garethdaine/Code/agent/app/Services/Skills/SkillResolver.php',
-      46 => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
-      47 => '/Users/garethdaine/Code/agent/app/Support/Compliance/ComplianceFlagResolver.php',
-      48 => '/Users/garethdaine/Code/agent/app/Support/Documentation/TooltipRegistryService.php',
-      49 => '/Users/garethdaine/Code/agent/app/Support/Memory/ConsolidationService.php',
-      50 => '/Users/garethdaine/Code/agent/app/Support/Memory/ForgettingService.php',
-      51 => '/Users/garethdaine/Code/agent/app/Support/Memory/MemoryCapabilityResolver.php',
-      52 => '/Users/garethdaine/Code/agent/app/Support/Memory/MemoryContextBuilder.php',
-      53 => '/Users/garethdaine/Code/agent/app/Support/Memory/MemoryFormationPipeline.php',
-      54 => '/Users/garethdaine/Code/agent/app/Support/RepoAnalysis/ReportComposer.php',
+      46 => '/Users/garethdaine/Code/agent/app/Support/Agent/EngineeringRulesInjector.php',
+      47 => '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php',
+      48 => '/Users/garethdaine/Code/agent/app/Support/Compliance/ComplianceFlagResolver.php',
+      49 => '/Users/garethdaine/Code/agent/app/Support/Documentation/TooltipRegistryService.php',
+      50 => '/Users/garethdaine/Code/agent/app/Support/Memory/ConsolidationService.php',
+      51 => '/Users/garethdaine/Code/agent/app/Support/Memory/ForgettingService.php',
+      52 => '/Users/garethdaine/Code/agent/app/Support/Memory/MemoryCapabilityResolver.php',
+      53 => '/Users/garethdaine/Code/agent/app/Support/Memory/MemoryContextBuilder.php',
+      54 => '/Users/garethdaine/Code/agent/app/Support/Memory/MemoryFormationPipeline.php',
+      55 => '/Users/garethdaine/Code/agent/app/Support/RepoAnalysis/ReportComposer.php',
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Support/Agent/InstanceFingerprint.php' => 
@@ -81829,7 +83190,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Support/Agent/RunEventWriter.php' => 
   array (
-    'fileHash' => '8147336afa71bbcefe2c275fa4a3777405fe62aaff860334f1106f1fce5ccf9c',
+    'fileHash' => 'f6f56fd83436db99ec9f679d49b55b30c19939101076e5c8c494ab328afebee8',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/AgentRunController.php',
@@ -81884,7 +83245,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Support/Agent/TargetedRetryService.php' => 
   array (
-    'fileHash' => '840833e4940efcba3ee495f4a63d110197b024f23ef4da534e8a00d6defd3280',
+    'fileHash' => '21f8cf6984d3eb54495bfb217310c0f1596c81c5b25c357b8d5f3eeecbb599ce',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/AgentRunController.php',
@@ -82167,9 +83528,24 @@ return [
       1 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ConnectorRegistryLoader.php',
     ),
   ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Mcp/ConnectorMcpRegistrar.php' => 
+  array (
+    'fileHash' => 'afa6bd1391399e430d33f3eb0919dc19d5be6ff3d7a1fb935ed833e69e45ef83',
+    'dependentFiles' => 
+    array (
+    ),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php' => 
+  array (
+    'fileHash' => '6d9915f2ec77edb0181e59a2a5a20cca99e3f752a49e638b5f24e6cb908f2a98',
+    'dependentFiles' => 
+    array (
+      0 => '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ConnectorCommandHandler.php',
+    ),
+  ),
   '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php' => 
   array (
-    'fileHash' => '509c589866740b2ef7c1572165dd03339bed69b24505cd5d4231acf3e482230d',
+    'fileHash' => 'd05a211315124228955a3dab789bfd328d21307afedc483fda12e3f0e977a19f',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ConnectorExecutionPipeline.php',
@@ -82254,6 +83630,27 @@ return [
       0 => '/Users/garethdaine/Code/agent/app/Console/Commands/ConnectorSyncCommand.php',
       1 => '/Users/garethdaine/Code/agent/app/Providers/ConnectorServiceProvider.php',
       2 => '/Users/garethdaine/Code/agent/app/Support/Connectors/ConnectorRegistryLoader.php',
+    ),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php' => 
+  array (
+    'fileHash' => '75678075627796624ae15e219e9467db8ee39f5dedb36173fb6f54a151bad181',
+    'dependentFiles' => 
+    array (
+    ),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php' => 
+  array (
+    'fileHash' => '685e8854a9a166be61e02972ff062eb493d3042c615840d2d98e0ab19671ba85',
+    'dependentFiles' => 
+    array (
+    ),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorReliabilityContributor.php' => 
+  array (
+    'fileHash' => '7bb9887b43651998298cb89ae56b664b808d78e0438503a22cd6d9af176bf7f7',
+    'dependentFiles' => 
+    array (
     ),
   ),
   '/Users/garethdaine/Code/agent/app/Support/Connectors/Webhooks/WebhookSignatureVerifier.php' => 
@@ -82480,7 +83877,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Support/Documentation/DocsCatalog.php' => 
   array (
-    'fileHash' => '0a754bcb46de9a104448a7c1fc54157b331536cf0998c9ad5fa8a73c6b5229b1',
+    'fileHash' => '4bfe3fa324159c4bcbc65f45793792d3ab677591f7ca9c7e0da4dab7fc8b1441',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Http/Controllers/Api/V1/Docs/DocsCoverageController.php',
@@ -82949,7 +84346,7 @@ return [
   ),
   '/Users/garethdaine/Code/agent/app/Support/Interrogation/SystemPromptResolver.php' => 
   array (
-    'fileHash' => '30df4940256ddb51b33973cf2cc8e31fad5bab78ab672e8b612eac3fe4ddc0f4',
+    'fileHash' => '8963a10588608f6341fda4c317b42b2c5624d656147eed077003397ee5bbf7c1',
     'dependentFiles' => 
     array (
       0 => '/Users/garethdaine/Code/agent/app/Jobs/ExecuteInterrogationDiscoveryJob.php',
@@ -125217,6 +126614,123 @@ return [
       ),
     )),
   ),
+  '/Users/garethdaine/Code/agent/app/Jobs/Connectors/ExpireConnectorApprovalsJob.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Jobs\\Connectors\\ExpireConnectorApprovalsJob',
+       'phpDoc' => NULL,
+       'abstract' => false,
+       'final' => false,
+       'extends' => NULL,
+       'implements' => 
+      array (
+        0 => 'Illuminate\\Contracts\\Queue\\ShouldQueue',
+      ),
+       'usedTraits' => 
+      array (
+        0 => 'Illuminate\\Foundation\\Bus\\Dispatchable',
+        1 => 'Illuminate\\Queue\\InteractsWithQueue',
+        2 => 'Illuminate\\Bus\\Queueable',
+        3 => 'Illuminate\\Queue\\SerializesModels',
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedPropertiesNode::__set_state(array(
+           'names' => 
+          array (
+            0 => 'tries',
+          ),
+           'phpDoc' => NULL,
+           'type' => 'int',
+           'public' => true,
+           'private' => false,
+           'static' => false,
+           'readonly' => false,
+           'abstract' => false,
+           'final' => false,
+           'publicSet' => false,
+           'protectedSet' => false,
+           'privateSet' => false,
+           'virtual' => false,
+           'attributes' => 
+          array (
+          ),
+           'hooks' => 
+          array (
+          ),
+        )),
+        1 => 
+        \PHPStan\Dependency\ExportedNode\ExportedPropertiesNode::__set_state(array(
+           'names' => 
+          array (
+            0 => 'backoff',
+          ),
+           'phpDoc' => NULL,
+           'type' => 'array',
+           'public' => true,
+           'private' => false,
+           'static' => false,
+           'readonly' => false,
+           'abstract' => false,
+           'final' => false,
+           'publicSet' => false,
+           'protectedSet' => false,
+           'privateSet' => false,
+           'virtual' => false,
+           'attributes' => 
+          array (
+          ),
+           'hooks' => 
+          array (
+          ),
+        )),
+        2 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => '__construct',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => NULL,
+           'parameters' => 
+          array (
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        3 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'handle',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'void',
+           'parameters' => 
+          array (
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
   '/Users/garethdaine/Code/agent/app/Jobs/Connectors/ProcessConnectorWebhookJob.php' => 
   array (
     0 => 
@@ -143205,6 +144719,164 @@ return [
       ),
     )),
   ),
+  '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ConnectorCommandHandler.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Messenger\\SlashCommands\\ConnectorCommandHandler',
+       'phpDoc' => 
+      \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+         'phpDocString' => '/**
+ * Handler for the /connector slash command.
+ *
+ * Routes connector subcommands to the ConnectorCommandHandler.
+ *
+ * Usage:
+ * - /connector connect {service} - Initiate connection
+ * - /connector list connections - Show connected services
+ * - /connector test {service} - Run health check
+ * - /connector disconnect {service} - Remove connection
+ */',
+         'namespace' => 'App\\Messenger\\SlashCommands',
+         'uses' => 
+        array (
+          'slashcommandhandlerinterface' => 'App\\Contracts\\Messenger\\SlashCommandHandlerInterface',
+          'commandresult' => 'App\\DTOs\\Messenger\\CommandResult',
+          'user' => 'App\\Models\\User',
+          'connectorhandler' => 'App\\Support\\Connectors\\Messenger\\ConnectorCommandHandler',
+        ),
+         'constUses' => 
+        array (
+        ),
+      )),
+       'abstract' => false,
+       'final' => true,
+       'extends' => NULL,
+       'implements' => 
+      array (
+        0 => 'App\\Contracts\\Messenger\\SlashCommandHandlerInterface',
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => '__construct',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => NULL,
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'handler',
+               'type' => 'App\\Support\\Connectors\\Messenger\\ConnectorCommandHandler',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        1 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'handle',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * @param  array<int, string>  $args
+     */',
+             'namespace' => 'App\\Messenger\\SlashCommands',
+             'uses' => 
+            array (
+              'slashcommandhandlerinterface' => 'App\\Contracts\\Messenger\\SlashCommandHandlerInterface',
+              'commandresult' => 'App\\DTOs\\Messenger\\CommandResult',
+              'user' => 'App\\Models\\User',
+              'connectorhandler' => 'App\\Support\\Connectors\\Messenger\\ConnectorCommandHandler',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'App\\DTOs\\Messenger\\CommandResult',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'user',
+               'type' => 'App\\Models\\User',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            1 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'args',
+               'type' => 'array',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            2 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'chatSessionId',
+               'type' => '?string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => true,
+               'attributes' => 
+              array (
+              ),
+            )),
+            3 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'connectorAccountId',
+               'type' => '?string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => true,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
   '/Users/garethdaine/Code/agent/app/Messenger/SlashCommands/ContextCommandHandler.php' => 
   array (
     0 => 
@@ -149595,6 +151267,24 @@ return [
         8 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'connection',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'Illuminate\\Database\\Eloquent\\Relations\\BelongsTo',
+           'parameters' => 
+          array (
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        9 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'connector',
            'phpDoc' => NULL,
            'byRef' => false,
            'public' => true,
@@ -180751,6 +182441,265 @@ return [
       ),
     )),
   ),
+  '/Users/garethdaine/Code/agent/app/Services/Connectors/DualChannelApprovalService.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Services\\Connectors\\DualChannelApprovalService',
+       'phpDoc' => NULL,
+       'abstract' => false,
+       'final' => false,
+       'extends' => NULL,
+       'implements' => 
+      array (
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => '__construct',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => NULL,
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'notificationDispatcher',
+               'type' => 'App\\Services\\Messenger\\SystemNotificationDispatcher',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        1 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'requestApproval',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'App\\Models\\AgentConnectorApproval',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'connection',
+               'type' => 'App\\Models\\AgentConnectorConnection',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            1 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'actionName',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            2 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'type',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            3 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'context',
+               'type' => 'array',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            4 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'runAttemptId',
+               'type' => '?string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => true,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        2 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'resolveApproval',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'bool',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'approval',
+               'type' => 'App\\Models\\AgentConnectorApproval',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            1 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'user',
+               'type' => 'App\\Models\\User',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            2 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'channel',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            3 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'status',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => true,
+               'attributes' => 
+              array (
+              ),
+            )),
+            4 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'payload',
+               'type' => '?array',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => true,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        3 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'isApproved',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'bool',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'approvalId',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        4 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'isPending',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'bool',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'approvalId',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
   '/Users/garethdaine/Code/agent/app/Services/Cost/CanonicalCostCalculator.php' => 
   array (
     0 => 
@@ -184773,6 +186722,7 @@ return [
           'browsercommandhandler' => 'App\\Messenger\\SlashCommands\\BrowserCommandHandler',
           'commandscommandhandler' => 'App\\Messenger\\SlashCommands\\CommandsCommandHandler',
           'compactcommandhandler' => 'App\\Messenger\\SlashCommands\\CompactCommandHandler',
+          'connectorcommandhandler' => 'App\\Messenger\\SlashCommands\\ConnectorCommandHandler',
           'contextcommandhandler' => 'App\\Messenger\\SlashCommands\\ContextCommandHandler',
           'denycommandhandler' => 'App\\Messenger\\SlashCommands\\DenyCommandHandler',
           'helpcommandhandler' => 'App\\Messenger\\SlashCommands\\HelpCommandHandler',
@@ -184824,6 +186774,7 @@ return [
               'browsercommandhandler' => 'App\\Messenger\\SlashCommands\\BrowserCommandHandler',
               'commandscommandhandler' => 'App\\Messenger\\SlashCommands\\CommandsCommandHandler',
               'compactcommandhandler' => 'App\\Messenger\\SlashCommands\\CompactCommandHandler',
+              'connectorcommandhandler' => 'App\\Messenger\\SlashCommands\\ConnectorCommandHandler',
               'contextcommandhandler' => 'App\\Messenger\\SlashCommands\\ContextCommandHandler',
               'denycommandhandler' => 'App\\Messenger\\SlashCommands\\DenyCommandHandler',
               'helpcommandhandler' => 'App\\Messenger\\SlashCommands\\HelpCommandHandler',
@@ -184888,6 +186839,7 @@ return [
               'browsercommandhandler' => 'App\\Messenger\\SlashCommands\\BrowserCommandHandler',
               'commandscommandhandler' => 'App\\Messenger\\SlashCommands\\CommandsCommandHandler',
               'compactcommandhandler' => 'App\\Messenger\\SlashCommands\\CompactCommandHandler',
+              'connectorcommandhandler' => 'App\\Messenger\\SlashCommands\\ConnectorCommandHandler',
               'contextcommandhandler' => 'App\\Messenger\\SlashCommands\\ContextCommandHandler',
               'denycommandhandler' => 'App\\Messenger\\SlashCommands\\DenyCommandHandler',
               'helpcommandhandler' => 'App\\Messenger\\SlashCommands\\HelpCommandHandler',
@@ -184952,6 +186904,7 @@ return [
               'browsercommandhandler' => 'App\\Messenger\\SlashCommands\\BrowserCommandHandler',
               'commandscommandhandler' => 'App\\Messenger\\SlashCommands\\CommandsCommandHandler',
               'compactcommandhandler' => 'App\\Messenger\\SlashCommands\\CompactCommandHandler',
+              'connectorcommandhandler' => 'App\\Messenger\\SlashCommands\\ConnectorCommandHandler',
               'contextcommandhandler' => 'App\\Messenger\\SlashCommands\\ContextCommandHandler',
               'denycommandhandler' => 'App\\Messenger\\SlashCommands\\DenyCommandHandler',
               'helpcommandhandler' => 'App\\Messenger\\SlashCommands\\HelpCommandHandler',
@@ -185049,6 +187002,7 @@ return [
               'browsercommandhandler' => 'App\\Messenger\\SlashCommands\\BrowserCommandHandler',
               'commandscommandhandler' => 'App\\Messenger\\SlashCommands\\CommandsCommandHandler',
               'compactcommandhandler' => 'App\\Messenger\\SlashCommands\\CompactCommandHandler',
+              'connectorcommandhandler' => 'App\\Messenger\\SlashCommands\\ConnectorCommandHandler',
               'contextcommandhandler' => 'App\\Messenger\\SlashCommands\\ContextCommandHandler',
               'denycommandhandler' => 'App\\Messenger\\SlashCommands\\DenyCommandHandler',
               'helpcommandhandler' => 'App\\Messenger\\SlashCommands\\HelpCommandHandler',
@@ -189898,6 +191852,7 @@ return [
           'runtimesession' => 'App\\Models\\Runtime\\RuntimeSession',
           'credentialsmanager' => 'App\\Services\\Credentials\\CredentialsManager',
           'injectiondetectionengine' => 'App\\Services\\Security\\InjectionDetectionEngine',
+          'engineeringrulesinjector' => 'App\\Support\\Agent\\EngineeringRulesInjector',
           'securityeventlogger' => 'App\\Services\\Security\\SecurityEventLogger',
           'log' => 'Illuminate\\Support\\Facades\\Log',
           'process' => 'Symfony\\Component\\Process\\Process',
@@ -189991,6 +191946,7 @@ return [
               'runtimesession' => 'App\\Models\\Runtime\\RuntimeSession',
               'credentialsmanager' => 'App\\Services\\Credentials\\CredentialsManager',
               'injectiondetectionengine' => 'App\\Services\\Security\\InjectionDetectionEngine',
+              'engineeringrulesinjector' => 'App\\Support\\Agent\\EngineeringRulesInjector',
               'securityeventlogger' => 'App\\Services\\Security\\SecurityEventLogger',
               'log' => 'Illuminate\\Support\\Facades\\Log',
               'process' => 'Symfony\\Component\\Process\\Process',
@@ -202633,6 +204589,231 @@ return [
       ),
     )),
   ),
+  '/Users/garethdaine/Code/agent/app/Support/Agent/EngineeringRulesInjector.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Support\\Agent\\EngineeringRulesInjector',
+       'phpDoc' => 
+      \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+         'phpDocString' => '/**
+ * Reads, compiles, and injects AgentOps Engineering Rules into agent task context.
+ *
+ * Profiles select context-appropriate rule subsets to manage token budget:
+ * - full: All sections (~6250 tokens) for standard agent runs
+ * - core: Architecture + SOLID + Security + Planning + Testing + Laravel + AgentOps (~3000 tokens)
+ * - interrogation: Planning + Testing + Databases + Laravel + AgentOps (~2000 tokens)
+ * - build: All except Marketing/UX/Design/Research (~4500 tokens)
+ *
+ * Compiled profiles are cached in Redis to avoid re-parsing on every job dispatch.
+ */',
+         'namespace' => 'App\\Support\\Agent',
+         'uses' => 
+        array (
+          'cache' => 'Illuminate\\Support\\Facades\\Cache',
+          'file' => 'Illuminate\\Support\\Facades\\File',
+          'log' => 'Illuminate\\Support\\Facades\\Log',
+        ),
+         'constUses' => 
+        array (
+        ),
+      )),
+       'abstract' => false,
+       'final' => false,
+       'extends' => NULL,
+       'implements' => 
+      array (
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'isEnabled',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'bool',
+           'parameters' => 
+          array (
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        1 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'getCompiledRules',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * Get compiled rules for a given profile, with Redis caching.
+     *
+     * @return string|null The compiled rules markdown, or null if disabled/failed.
+     */',
+             'namespace' => 'App\\Support\\Agent',
+             'uses' => 
+            array (
+              'cache' => 'Illuminate\\Support\\Facades\\Cache',
+              'file' => 'Illuminate\\Support\\Facades\\File',
+              'log' => 'Illuminate\\Support\\Facades\\Log',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => '?string',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'profile',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => true,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        2 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'inject',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * Inject engineering rules into task content by prepending the compiled rules block.
+     * Used for file-based task markdown paths (ExecuteAgentRunJob pipeline).
+     */',
+             'namespace' => 'App\\Support\\Agent',
+             'uses' => 
+            array (
+              'cache' => 'Illuminate\\Support\\Facades\\Cache',
+              'file' => 'Illuminate\\Support\\Facades\\File',
+              'log' => 'Illuminate\\Support\\Facades\\Log',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'string',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'existingContent',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            1 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'profile',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => true,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        3 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'injectIntoSystemPrompt',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * Inject rules into a system prompt string.
+     * Used for CLI --system-prompt paths (CliRuntimeExecutor, SystemPromptResolver).
+     */',
+             'namespace' => 'App\\Support\\Agent',
+             'uses' => 
+            array (
+              'cache' => 'Illuminate\\Support\\Facades\\Cache',
+              'file' => 'Illuminate\\Support\\Facades\\File',
+              'log' => 'Illuminate\\Support\\Facades\\Log',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'string',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'systemPrompt',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            1 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'profile',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => true,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
   '/Users/garethdaine/Code/agent/app/Support/Agent/EnvPolicy.php' => 
   array (
     0 => 
@@ -203505,6 +205686,24 @@ return [
           array (
             0 => 
             \PHPStan\Dependency\ExportedNode\ExportedClassConstantNode::__set_state(array(
+               'name' => 'ENGINEERING_RULES_ENABLED',
+               'value' => '\'agent.engineering_rules.enabled\'',
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'public' => true,
+           'private' => false,
+           'final' => false,
+           'phpDoc' => NULL,
+        )),
+        35 => 
+        \PHPStan\Dependency\ExportedNode\ExportedClassConstantsNode::__set_state(array(
+           'constants' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedClassConstantNode::__set_state(array(
                'name' => 'SKILLS_VALIDATION_STRICT_MODE',
                'value' => '\'skills.validation.strict_mode\'',
                'attributes' => 
@@ -203517,7 +205716,7 @@ return [
            'final' => false,
            'phpDoc' => NULL,
         )),
-        35 => 
+        36 => 
         \PHPStan\Dependency\ExportedNode\ExportedClassConstantsNode::__set_state(array(
            'constants' => 
           array (
@@ -203535,7 +205734,7 @@ return [
            'final' => false,
            'phpDoc' => NULL,
         )),
-        36 => 
+        37 => 
         \PHPStan\Dependency\ExportedNode\ExportedClassConstantsNode::__set_state(array(
            'constants' => 
           array (
@@ -203553,7 +205752,7 @@ return [
            'final' => false,
            'phpDoc' => NULL,
         )),
-        37 => 
+        38 => 
         \PHPStan\Dependency\ExportedNode\ExportedClassConstantsNode::__set_state(array(
            'constants' => 
           array (
@@ -203571,7 +205770,7 @@ return [
            'final' => false,
            'phpDoc' => NULL,
         )),
-        38 => 
+        39 => 
         \PHPStan\Dependency\ExportedNode\ExportedClassConstantsNode::__set_state(array(
            'constants' => 
           array (
@@ -203589,7 +205788,7 @@ return [
            'final' => false,
            'phpDoc' => NULL,
         )),
-        39 => 
+        40 => 
         \PHPStan\Dependency\ExportedNode\ExportedClassConstantsNode::__set_state(array(
            'constants' => 
           array (
@@ -203607,7 +205806,7 @@ return [
            'final' => false,
            'phpDoc' => NULL,
         )),
-        40 => 
+        41 => 
         \PHPStan\Dependency\ExportedNode\ExportedClassConstantsNode::__set_state(array(
            'constants' => 
           array (
@@ -203625,7 +205824,7 @@ return [
            'final' => false,
            'phpDoc' => NULL,
         )),
-        41 => 
+        42 => 
         \PHPStan\Dependency\ExportedNode\ExportedClassConstantsNode::__set_state(array(
            'constants' => 
           array (
@@ -203643,7 +205842,7 @@ return [
            'final' => false,
            'phpDoc' => NULL,
         )),
-        42 => 
+        43 => 
         \PHPStan\Dependency\ExportedNode\ExportedClassConstantsNode::__set_state(array(
            'constants' => 
           array (
@@ -203661,7 +205860,7 @@ return [
            'final' => false,
            'phpDoc' => NULL,
         )),
-        43 => 
+        44 => 
         \PHPStan\Dependency\ExportedNode\ExportedClassConstantsNode::__set_state(array(
            'constants' => 
           array (
@@ -203679,7 +205878,7 @@ return [
            'final' => false,
            'phpDoc' => NULL,
         )),
-        44 => 
+        45 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'managedKeys',
            'phpDoc' => 
@@ -203712,7 +205911,7 @@ return [
           array (
           ),
         )),
-        45 => 
+        46 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'getComplianceFlags',
            'phpDoc' => 
@@ -203747,7 +205946,7 @@ return [
           array (
           ),
         )),
-        46 => 
+        47 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'getSkillsFlags',
            'phpDoc' => 
@@ -203782,7 +205981,7 @@ return [
           array (
           ),
         )),
-        47 => 
+        48 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'getConnectorsFlags',
            'phpDoc' => 
@@ -203817,7 +206016,7 @@ return [
           array (
           ),
         )),
-        48 => 
+        49 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'getSecurityFlags',
            'phpDoc' => 
@@ -203852,7 +206051,7 @@ return [
           array (
           ),
         )),
-        49 => 
+        50 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'enabled',
            'phpDoc' => NULL,
@@ -203881,7 +206080,7 @@ return [
           array (
           ),
         )),
-        50 => 
+        51 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'isEnabled',
            'phpDoc' => 
@@ -203925,7 +206124,7 @@ return [
           array (
           ),
         )),
-        51 => 
+        52 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'isOrgFeatureEnabled',
            'phpDoc' => 
@@ -203970,7 +206169,7 @@ return [
           array (
           ),
         )),
-        52 => 
+        53 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'all',
            'phpDoc' => 
@@ -204003,7 +206202,7 @@ return [
           array (
           ),
         )),
-        53 => 
+        54 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'updateMany',
            'phpDoc' => 
@@ -204059,7 +206258,7 @@ return [
           array (
           ),
         )),
-        54 => 
+        55 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'valuesFor',
            'phpDoc' => 
@@ -204104,7 +206303,7 @@ return [
           array (
           ),
         )),
-        55 => 
+        56 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'enable',
            'phpDoc' => 
@@ -205449,6 +207648,24 @@ return [
        'statements' => 
       array (
         0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedClassConstantsNode::__set_state(array(
+           'constants' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedClassConstantNode::__set_state(array(
+               'name' => 'RATE_LIMIT_PATTERN',
+               'value' => '\'/\\bhit(?:ting)?\\s+(?:your\\s+)?limit\\b|\\brate[-\\s]?limited\\b|\\btoo many requests\\b|\\bquota exceeded\\b|\\b(?:status|code|error|http)\\s*[:=]?\\s*429\\b|\\bretry[-\\s]?after\\b/i\'',
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'public' => true,
+           'private' => false,
+           'final' => false,
+           'phpDoc' => NULL,
+        )),
+        1 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => '__construct',
            'phpDoc' => NULL,
@@ -205477,7 +207694,7 @@ return [
           array (
           ),
         )),
-        1 => 
+        2 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'appendOutput',
            'phpDoc' => NULL,
@@ -205528,7 +207745,7 @@ return [
           array (
           ),
         )),
-        2 => 
+        3 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'appendLifecycle',
            'phpDoc' => 
@@ -205572,6 +207789,51 @@ return [
               array (
               ),
             )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        4 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'scanRecentOutputForRateLimit',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * Post-hoc scan of the tail output events for a *failed* run.
+     *
+     * Call this at run finalization when the process exited non-zero and
+     * no structured error event already set the rate-limit flag.  Because
+     * the process actually died, plain-text rate-limit phrases in the final
+     * output are a reliable signal rather than noise from code/docs.
+     *
+     * @return array<string, mixed>|null  Metadata entries to merge, or null.
+     */',
+             'namespace' => 'App\\Support\\Agent',
+             'uses' => 
+            array (
+              'agentactivitychanged' => 'App\\Events\\Office\\AgentActivityChanged',
+              'runeventsavailable' => 'App\\Events\\RunEventsAvailable',
+              'memoryworkingbufferjob' => 'App\\Jobs\\Memory\\MemoryWorkingBufferJob',
+              'agentjobrun' => 'App\\Models\\AgentJobRun',
+              'agentrunevent' => 'App\\Models\\AgentRunEvent',
+              'carbonimmutable' => 'Carbon\\CarbonImmutable',
+              'cache' => 'Illuminate\\Support\\Facades\\Cache',
+              'str' => 'Illuminate\\Support\\Str',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => '?array',
+           'parameters' => 
+          array (
           ),
            'attributes' => 
           array (
@@ -210286,6 +212548,190 @@ return [
       ),
     )),
   ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Mcp/ConnectorMcpRegistrar.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Support\\Connectors\\Mcp\\ConnectorMcpRegistrar',
+       'phpDoc' => NULL,
+       'abstract' => false,
+       'final' => false,
+       'extends' => NULL,
+       'implements' => 
+      array (
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'getRegisteredTools',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * Get MCP tool definitions for all connected connectors belonging to a team.
+     *
+     * Each tool definition includes:
+     * - name: {mcp_tool_prefix}.{action_name}
+     * - description: Generated from connector and action metadata
+     * - input_schema: Request schema for the action
+     * - stability: From action manifest or connector risk_level default
+     * - scope: {tenant, environment, role}
+     *
+     * @return array<int, array{name: string, description: string, input_schema: array, stability: string, scope: array}>
+     */',
+             'namespace' => 'App\\Support\\Connectors\\Mcp',
+             'uses' => 
+            array (
+              'agentconnectorconnection' => 'App\\Models\\AgentConnectorConnection',
+              'team' => 'App\\Models\\Team',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'array',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'team',
+               'type' => 'App\\Models\\Team',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Messenger/ConnectorCommandHandler.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Support\\Connectors\\Messenger\\ConnectorCommandHandler',
+       'phpDoc' => NULL,
+       'abstract' => false,
+       'final' => false,
+       'extends' => NULL,
+       'implements' => 
+      array (
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => '__construct',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => NULL,
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'lifecycleService',
+               'type' => 'App\\Services\\Connectors\\ConnectionLifecycleService',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        1 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'handleCommand',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'App\\DTOs\\Messenger\\CommandResult',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'command',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            1 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'args',
+               'type' => 'array',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            2 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'user',
+               'type' => 'App\\Models\\User',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
   '/Users/garethdaine/Code/agent/app/Support/Connectors/Pipeline/ApprovalGate.php' => 
   array (
     0 => 
@@ -210307,6 +212753,35 @@ return [
        'statements' => 
       array (
         0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => '__construct',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => NULL,
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'approvalService',
+               'type' => 'App\\Services\\Connectors\\DualChannelApprovalService',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        1 => 
         \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
            'name' => 'handle',
            'phpDoc' => NULL,
@@ -211219,6 +213694,421 @@ return [
            'returnType' => 'int',
            'parameters' => 
           array (
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorAlertService.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Support\\Connectors\\Telemetry\\ConnectorAlertService',
+       'phpDoc' => NULL,
+       'abstract' => false,
+       'final' => false,
+       'extends' => NULL,
+       'implements' => 
+      array (
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => '__construct',
+           'phpDoc' => NULL,
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => NULL,
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'dispatcher',
+               'type' => 'App\\Services\\Messenger\\SystemNotificationDispatcher',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        1 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'checkCredentialExpiry',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * Check if a connection\'s credential is nearing expiry and alert if so.
+     */',
+             'namespace' => 'App\\Support\\Connectors\\Telemetry',
+             'uses' => 
+            array (
+              'systemnotificationpayload' => 'App\\DTOs\\Messenger\\SystemNotificationPayload',
+              'agentconnectorconnection' => 'App\\Models\\AgentConnectorConnection',
+              'systemnotificationdispatcher' => 'App\\Services\\Messenger\\SystemNotificationDispatcher',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'void',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'connection',
+               'type' => 'App\\Models\\AgentConnectorConnection',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            1 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'daysThreshold',
+               'type' => 'int',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => true,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        2 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'checkRateLimitUtilization',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * Check rate limit utilization and alert at 80% (warning) or 100% (critical).
+     */',
+             'namespace' => 'App\\Support\\Connectors\\Telemetry',
+             'uses' => 
+            array (
+              'systemnotificationpayload' => 'App\\DTOs\\Messenger\\SystemNotificationPayload',
+              'agentconnectorconnection' => 'App\\Models\\AgentConnectorConnection',
+              'systemnotificationdispatcher' => 'App\\Services\\Messenger\\SystemNotificationDispatcher',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'void',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'connection',
+               'type' => 'App\\Models\\AgentConnectorConnection',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        3 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'checkHealthScore',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * Check connection health score and alert if degraded.
+     */',
+             'namespace' => 'App\\Support\\Connectors\\Telemetry',
+             'uses' => 
+            array (
+              'systemnotificationpayload' => 'App\\DTOs\\Messenger\\SystemNotificationPayload',
+              'agentconnectorconnection' => 'App\\Models\\AgentConnectorConnection',
+              'systemnotificationdispatcher' => 'App\\Services\\Messenger\\SystemNotificationDispatcher',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'void',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'connection',
+               'type' => 'App\\Models\\AgentConnectorConnection',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorCostAttributor.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Support\\Connectors\\Telemetry\\ConnectorCostAttributor',
+       'phpDoc' => NULL,
+       'abstract' => false,
+       'final' => false,
+       'extends' => NULL,
+       'implements' => 
+      array (
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'attributeCost',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * Attribute the cost of a connector invocation based on the connector\'s cost model.
+     *
+     * For \'metered\' connectors: calculates per-call cost from declared pricing
+     * (cost_per_call_usd or cost_per_token_usd × token_usage).
+     * For \'free\' and \'quota-limited\' connectors: returns 0.0.
+     */',
+             'namespace' => 'App\\Support\\Connectors\\Telemetry',
+             'uses' => 
+            array (
+              'agentconnector' => 'App\\Models\\AgentConnector',
+              'agentconnectorconnection' => 'App\\Models\\AgentConnectorConnection',
+              'agentconnectorinvocation' => 'App\\Models\\AgentConnectorInvocation',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'float',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'invocation',
+               'type' => 'App\\Models\\AgentConnectorInvocation',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+        1 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'getRemainingQuota',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * Get the remaining quota for a quota-limited connector invocation.
+     *
+     * Returns null for non-quota-limited connectors or when no daily_limit is configured.
+     */',
+             'namespace' => 'App\\Support\\Connectors\\Telemetry',
+             'uses' => 
+            array (
+              'agentconnector' => 'App\\Models\\AgentConnector',
+              'agentconnectorconnection' => 'App\\Models\\AgentConnectorConnection',
+              'agentconnectorinvocation' => 'App\\Models\\AgentConnectorInvocation',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => '?int',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'invocation',
+               'type' => 'App\\Models\\AgentConnectorInvocation',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+          ),
+           'attributes' => 
+          array (
+          ),
+        )),
+      ),
+       'attributes' => 
+      array (
+      ),
+    )),
+  ),
+  '/Users/garethdaine/Code/agent/app/Support/Connectors/Telemetry/ConnectorReliabilityContributor.php' => 
+  array (
+    0 => 
+    \PHPStan\Dependency\ExportedNode\ExportedClassNode::__set_state(array(
+       'name' => 'App\\Support\\Connectors\\Telemetry\\ConnectorReliabilityContributor',
+       'phpDoc' => NULL,
+       'abstract' => false,
+       'final' => false,
+       'extends' => NULL,
+       'implements' => 
+      array (
+      ),
+       'usedTraits' => 
+      array (
+      ),
+       'traitUseAdaptations' => 
+      array (
+      ),
+       'statements' => 
+      array (
+        0 => 
+        \PHPStan\Dependency\ExportedNode\ExportedMethodNode::__set_state(array(
+           'name' => 'getReliabilityContribution',
+           'phpDoc' => 
+          \PHPStan\Dependency\ExportedNode\ExportedPhpDocNode::__set_state(array(
+             'phpDocString' => '/**
+     * Calculate the connector reliability contribution for a workflow over a time range.
+     *
+     * Returns a float between 0.0 and 1.0 representing the success rate of
+     * connector invocations for the given workflow. A value of 1.0 means all
+     * invocations succeeded; 0.0 means all failed.
+     *
+     * When no invocations exist for the time range, returns 1.0 (no degradation signal).
+     */',
+             'namespace' => 'App\\Support\\Connectors\\Telemetry',
+             'uses' => 
+            array (
+              'agentconnectorinvocation' => 'App\\Models\\AgentConnectorInvocation',
+              'carbon' => 'Carbon\\Carbon',
+            ),
+             'constUses' => 
+            array (
+            ),
+          )),
+           'byRef' => false,
+           'public' => true,
+           'private' => false,
+           'abstract' => false,
+           'final' => false,
+           'static' => false,
+           'returnType' => 'float',
+           'parameters' => 
+          array (
+            0 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'workflowKey',
+               'type' => 'string',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            1 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'from',
+               'type' => 'Carbon\\Carbon',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
+            2 => 
+            \PHPStan\Dependency\ExportedNode\ExportedParameterNode::__set_state(array(
+               'name' => 'to',
+               'type' => 'Carbon\\Carbon',
+               'byRef' => false,
+               'variadic' => false,
+               'hasDefault' => false,
+               'attributes' => 
+              array (
+              ),
+            )),
           ),
            'attributes' => 
           array (

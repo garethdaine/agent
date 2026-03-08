@@ -460,7 +460,7 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     ),
     1 => 
     array (
-      '/Users/garethdaine/Code/agent/app/Support/Agent/FeatureFlagManager.php' => '0d01847236150b8eeb3fe270ad43bc38e391cef39f6d43f578265060fa94b8d0',
+      '/Users/garethdaine/Code/agent/app/Support/Agent/FeatureFlagManager.php' => '81a380ab668bd578bcf945c50ab069f7d24b7110b01507d5c7ff990a8607e840',
     ),
   ),
 ));

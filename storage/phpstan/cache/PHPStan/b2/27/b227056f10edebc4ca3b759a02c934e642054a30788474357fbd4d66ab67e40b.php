@@ -2,7 +2,7 @@
 
 // odsl-/Users/garethdaine/Code/agent/app/Services/Messenger/CommandRouter.php-PHPStan\BetterReflection\Reflection\ReflectionClass-App\Services\Messenger\CommandRouter
 return \PHPStan\Cache\CacheItem::__set_state(array(
-   'variableKey' => 'v2-6.65.0.9-8.4.18-aeda3c693ad75b874d96fbdeeacf014b4635d73ed4a67c00e72e04a4c7ce86f9',
+   'variableKey' => 'v2-6.65.0.9-8.4.18-8b1970266a204636c9f3dd09d2db8b8846b9ba8bf70a5cc4caf8998fedfd3af4',
    'data' => 
   array (
     'locatedSource' => 
@@ -44,8 +44,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
     'attributes' => 
     array (
     ),
-    'startLine' => 48,
-    'endLine' => 140,
+    'startLine' => 49,
+    'endLine' => 142,
     'startColumn' => 1,
     'endColumn' => 1,
     'parentClassName' => NULL,
@@ -77,15 +77,15 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         ),
         'default' => 
         array (
-          'code' => '[\'jobs\' => \\App\\Messenger\\SlashCommands\\JobsCommandHandler::class, \'runs\' => \\App\\Messenger\\SlashCommands\\RunsCommandHandler::class, \'status\' => \\App\\Messenger\\SlashCommands\\StatusCommandHandler::class, \'sessions\' => \\App\\Messenger\\SlashCommands\\SessionsCommandHandler::class, \'mode\' => \\App\\Messenger\\SlashCommands\\ModeCommandHandler::class, \'approve\' => \\App\\Messenger\\SlashCommands\\ApproveCommandHandler::class, \'deny\' => \\App\\Messenger\\SlashCommands\\DenyCommandHandler::class, \'browser\' => \\App\\Messenger\\SlashCommands\\BrowserCommandHandler::class, \'ask\' => \\App\\Messenger\\SlashCommands\\AskCommandHandler::class, \'context\' => \\App\\Messenger\\SlashCommands\\ContextCommandHandler::class, \'new\' => \\App\\Messenger\\SlashCommands\\NewCommandHandler::class, \'help\' => \\App\\Messenger\\SlashCommands\\HelpCommandHandler::class, \'commands\' => \\App\\Messenger\\SlashCommands\\CommandsCommandHandler::class, \'whoami\' => \\App\\Messenger\\SlashCommands\\WhoamiCommandHandler::class, \'compact\' => \\App\\Messenger\\SlashCommands\\CompactCommandHandler::class, \'subagents\' => \\App\\Messenger\\SlashCommands\\SubAgentsCommandHandler::class, \'progress\' => \\App\\Messenger\\SlashCommands\\ProgressCommandHandler::class, \'skills\' => \\App\\Messenger\\SlashCommands\\SkillsCommandHandler::class]',
+          'code' => '[\'jobs\' => \\App\\Messenger\\SlashCommands\\JobsCommandHandler::class, \'runs\' => \\App\\Messenger\\SlashCommands\\RunsCommandHandler::class, \'status\' => \\App\\Messenger\\SlashCommands\\StatusCommandHandler::class, \'sessions\' => \\App\\Messenger\\SlashCommands\\SessionsCommandHandler::class, \'mode\' => \\App\\Messenger\\SlashCommands\\ModeCommandHandler::class, \'approve\' => \\App\\Messenger\\SlashCommands\\ApproveCommandHandler::class, \'deny\' => \\App\\Messenger\\SlashCommands\\DenyCommandHandler::class, \'browser\' => \\App\\Messenger\\SlashCommands\\BrowserCommandHandler::class, \'ask\' => \\App\\Messenger\\SlashCommands\\AskCommandHandler::class, \'context\' => \\App\\Messenger\\SlashCommands\\ContextCommandHandler::class, \'new\' => \\App\\Messenger\\SlashCommands\\NewCommandHandler::class, \'help\' => \\App\\Messenger\\SlashCommands\\HelpCommandHandler::class, \'commands\' => \\App\\Messenger\\SlashCommands\\CommandsCommandHandler::class, \'whoami\' => \\App\\Messenger\\SlashCommands\\WhoamiCommandHandler::class, \'compact\' => \\App\\Messenger\\SlashCommands\\CompactCommandHandler::class, \'subagents\' => \\App\\Messenger\\SlashCommands\\SubAgentsCommandHandler::class, \'progress\' => \\App\\Messenger\\SlashCommands\\ProgressCommandHandler::class, \'skills\' => \\App\\Messenger\\SlashCommands\\SkillsCommandHandler::class, \'connector\' => \\App\\Messenger\\SlashCommands\\ConnectorCommandHandler::class]',
           'attributes' => 
           array (
-            'startLine' => 53,
-            'endLine' => 72,
-            'startTokenPos' => 140,
-            'startFilePos' => 2148,
-            'endTokenPos' => 304,
-            'endFilePos' => 3030,
+            'startLine' => 54,
+            'endLine' => 74,
+            'startTokenPos' => 145,
+            'startFilePos' => 2205,
+            'endTokenPos' => 318,
+            'endFilePos' => 3142,
           ),
         ),
         'docComment' => '/**
@@ -94,8 +94,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         'attributes' => 
         array (
         ),
-        'startLine' => 53,
-        'endLine' => 72,
+        'startLine' => 54,
+        'endLine' => 74,
         'startColumn' => 5,
         'endColumn' => 6,
         'isPromoted' => false,
@@ -132,8 +132,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 77,
-            'endLine' => 77,
+            'startLine' => 79,
+            'endLine' => 79,
             'startColumn' => 31,
             'endColumn' => 45,
             'parameterIndex' => 0,
@@ -156,8 +156,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
         'docComment' => '/**
  * Check if the content is a slash command.
  */',
-        'startLine' => 77,
-        'endLine' => 82,
+        'startLine' => 79,
+        'endLine' => 84,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -195,8 +195,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 89,
-            'endLine' => 89,
+            'startLine' => 91,
+            'endLine' => 91,
             'startColumn' => 34,
             'endColumn' => 48,
             'parameterIndex' => 0,
@@ -221,8 +221,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
  *
  * @return array{0: string, 1: array<int, string>}
  */',
-        'startLine' => 89,
-        'endLine' => 106,
+        'startLine' => 91,
+        'endLine' => 108,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -260,8 +260,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 113,
-            'endLine' => 113,
+            'startLine' => 115,
+            'endLine' => 115,
             'startColumn' => 27,
             'endColumn' => 41,
             'parameterIndex' => 0,
@@ -286,8 +286,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 113,
-            'endLine' => 113,
+            'startLine' => 115,
+            'endLine' => 115,
             'startColumn' => 44,
             'endColumn' => 53,
             'parameterIndex' => 1,
@@ -301,12 +301,12 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
               'code' => 'null',
               'attributes' => 
               array (
-                'startLine' => 113,
-                'endLine' => 113,
-                'startTokenPos' => 520,
-                'startFilePos' => 4122,
-                'endTokenPos' => 520,
-                'endFilePos' => 4125,
+                'startLine' => 115,
+                'endLine' => 115,
+                'startTokenPos' => 534,
+                'startFilePos' => 4234,
+                'endTokenPos' => 534,
+                'endFilePos' => 4237,
               ),
             ),
             'type' => 
@@ -343,8 +343,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 113,
-            'endLine' => 113,
+            'startLine' => 115,
+            'endLine' => 115,
             'startColumn' => 56,
             'endColumn' => 84,
             'parameterIndex' => 2,
@@ -358,12 +358,12 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
               'code' => 'null',
               'attributes' => 
               array (
-                'startLine' => 113,
-                'endLine' => 113,
-                'startTokenPos' => 530,
-                'startFilePos' => 4158,
-                'endTokenPos' => 530,
-                'endFilePos' => 4161,
+                'startLine' => 115,
+                'endLine' => 115,
+                'startTokenPos' => 544,
+                'startFilePos' => 4270,
+                'endTokenPos' => 544,
+                'endFilePos' => 4273,
               ),
             ),
             'type' => 
@@ -400,8 +400,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
             'attributes' => 
             array (
             ),
-            'startLine' => 113,
-            'endLine' => 113,
+            'startLine' => 115,
+            'endLine' => 115,
             'startColumn' => 87,
             'endColumn' => 120,
             'parameterIndex' => 3,
@@ -445,8 +445,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
  *
  * Returns null if the content is not a command.
  */',
-        'startLine' => 113,
-        'endLine' => 129,
+        'startLine' => 115,
+        'endLine' => 131,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,
@@ -484,8 +484,8 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
  *
  * @return array<string>
  */',
-        'startLine' => 136,
-        'endLine' => 139,
+        'startLine' => 138,
+        'endLine' => 141,
         'startColumn' => 5,
         'endColumn' => 5,
         'couldThrow' => false,

@@ -786,10 +786,63 @@ return \PHPStan\Cache\CacheItem::__set_state(array(
          'typeAliasClassName' => NULL,
          'traitData' => NULL,
       )),
+      '4c1d222ba49ba2aad1de88fdd36d4499' => 
+      \PHPStan\Analyser\IntermediaryNameScope::__set_state(array(
+         'namespace' => 'App\\Models',
+         'uses' => 
+        array (
+          'builder' => 'Illuminate\\Database\\Eloquent\\Builder',
+          'hasuuids' => 'Illuminate\\Database\\Eloquent\\Concerns\\HasUuids',
+          'hasfactory' => 'Illuminate\\Database\\Eloquent\\Factories\\HasFactory',
+          'model' => 'Illuminate\\Database\\Eloquent\\Model',
+          'belongsto' => 'Illuminate\\Database\\Eloquent\\Relations\\BelongsTo',
+        ),
+         'className' => 'App\\Models\\AgentConnectorInvocation',
+         'functionName' => 'connector',
+         'templatePhpDocNodes' => 
+        array (
+        ),
+         'parent' => 
+        \PHPStan\Analyser\IntermediaryNameScope::__set_state(array(
+           'namespace' => 'App\\Models',
+           'uses' => 
+          array (
+            'builder' => 'Illuminate\\Database\\Eloquent\\Builder',
+            'hasuuids' => 'Illuminate\\Database\\Eloquent\\Concerns\\HasUuids',
+            'hasfactory' => 'Illuminate\\Database\\Eloquent\\Factories\\HasFactory',
+            'model' => 'Illuminate\\Database\\Eloquent\\Model',
+            'belongsto' => 'Illuminate\\Database\\Eloquent\\Relations\\BelongsTo',
+          ),
+           'className' => 'App\\Models\\AgentConnectorInvocation',
+           'functionName' => NULL,
+           'templatePhpDocNodes' => 
+          array (
+          ),
+           'parent' => NULL,
+           'typeAliasesMap' => 
+          array (
+          ),
+           'bypassTypeAliases' => false,
+           'constUses' => 
+          array (
+          ),
+           'typeAliasClassName' => NULL,
+           'traitData' => NULL,
+        )),
+         'typeAliasesMap' => 
+        array (
+        ),
+         'bypassTypeAliases' => false,
+         'constUses' => 
+        array (
+        ),
+         'typeAliasClassName' => NULL,
+         'traitData' => NULL,
+      )),
     ),
     1 => 
     array (
-      '/Users/garethdaine/Code/agent/app/Models/AgentConnectorInvocation.php' => '5475285585726f1b4b6b22d98e98c0f1d444907c9f602f7bb595626e43f8ea8f',
+      '/Users/garethdaine/Code/agent/app/Models/AgentConnectorInvocation.php' => '15ce0cc0c9b95e7b00d1dbf60ce8c15122b7239e68f2d753b080373065689df1',
       '/Users/garethdaine/Code/agent/vendor/composer/../laravel/framework/src/Illuminate/Database/Eloquent/Factories/HasFactory.php' => 'b6cb2b164e90168e80963a5549541f5f3188a3ec8cfd368bf3611bd94fbd46a7',
       '/Users/garethdaine/Code/agent/vendor/composer/../laravel/framework/src/Illuminate/Database/Eloquent/Concerns/HasUuids.php' => 'f75b8db33aafd61f17652a5e4bb5b8989e62197b306e9f7ae60bb3ac2c34d534',
       '/Users/garethdaine/Code/agent/vendor/composer/../laravel/framework/src/Illuminate/Database/Eloquent/Concerns/HasUniqueStringIds.php' => '3d5612d3c0a56c6c9f19e628b02085d4d68a64d9d07656742725cec78d4a79c5',
