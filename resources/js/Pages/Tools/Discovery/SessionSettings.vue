@@ -10,7 +10,8 @@ import Input from '@/Components/ui/Input.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowLeft, ExternalLink, RefreshCw, Search, Trash2, Plus } from 'lucide-vue-next';
+import Toggle from '@/Components/ui/Toggle.vue';
+import { ArrowLeft, ExternalLink, GitBranch, RefreshCw, Search, Trash2, Plus } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
@@ -44,6 +45,19 @@ const form = reactive({
 const availableModels = ref([]);
 const loadingModels = ref(false);
 const defaultModel = ref('');
+
+const gitForm = reactive({
+    commit_enabled: false,
+    conventional_commits: false,
+    worktree_enabled: false,
+    branching_enabled: false,
+    branch_prefix: '',
+    target_branch: '',
+});
+const gitSaving = ref(false);
+const gitBranches = ref([]);
+const gitBranchesLoading = ref(false);
+const gitCurrentBranch = ref('');
 
 const techStackDraft = reactive({
     name: '',
@@ -120,6 +134,7 @@ const loadSession = async () => {
 
         const runnerType = String(session.value?.runner_type ?? 'claude');
         await fetchModels(runnerType);
+        syncGitFormFromSession();
         syncProviderProjectDraftFromSession();
 
         if (linearProvider.value) {
@@ -172,6 +187,63 @@ const loadLinearProjects = async ({ force = false } = {}) => {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load Linear projects.';
     } finally {
         providerProjectsLoading.value = false;
+    }
+};
+
+const syncGitFormFromSession = () => {
+    const git = session.value?.git_settings ?? {};
+    gitForm.commit_enabled = !!git.commit_enabled;
+    gitForm.conventional_commits = !!git.conventional_commits;
+    gitForm.worktree_enabled = !!git.worktree_enabled;
+    gitForm.branching_enabled = !!git.branching_enabled;
+    gitForm.branch_prefix = String(git.branch_prefix ?? '');
+    gitForm.target_branch = String(git.target_branch ?? '');
+};
+
+const loadGitBranches = async () => {
+    gitBranchesLoading.value = true;
+
+    try {
+        const { data } = await axios.get(`/agent/api/v1/interrogation/sessions/${props.sessionId}/git-branches`);
+        gitBranches.value = Array.isArray(data?.data?.branches) ? data.data.branches : [];
+        gitCurrentBranch.value = String(data?.data?.current_branch ?? '');
+
+        if (!gitForm.target_branch && gitCurrentBranch.value) {
+            gitForm.target_branch = gitCurrentBranch.value;
+        }
+    } catch {
+        gitBranches.value = [];
+        gitCurrentBranch.value = '';
+    } finally {
+        gitBranchesLoading.value = false;
+    }
+};
+
+const saveGitSettings = async () => {
+    gitSaving.value = true;
+    error.value = '';
+    validation.value = {};
+
+    try {
+        await axios.patch(`/agent/api/v1/interrogation/sessions/${props.sessionId}`, {
+            git: {
+                commit_enabled: gitForm.commit_enabled,
+                conventional_commits: gitForm.conventional_commits,
+                worktree_enabled: gitForm.worktree_enabled,
+                branching_enabled: gitForm.branching_enabled,
+                branch_prefix: gitForm.branch_prefix || null,
+                target_branch: !gitForm.branching_enabled ? (gitForm.target_branch || null) : null,
+            },
+        });
+
+        notice.value = 'Git settings updated.';
+        await loadSession();
+    } catch (e) {
+        const payload = e?.response?.data ?? {};
+        validation.value = payload?.errors ?? payload?.error?.details ?? {};
+        error.value = payload?.error?.message ?? payload?.message ?? 'Failed to update git settings.';
+    } finally {
+        gitSaving.value = false;
     }
 };
 
@@ -358,6 +430,26 @@ onMounted(async () => {
     }
 });
 
+watch(() => gitForm.commit_enabled, (enabled) => {
+    if (!enabled) {
+        gitForm.conventional_commits = false;
+        gitForm.worktree_enabled = false;
+        gitForm.branching_enabled = false;
+        gitForm.branch_prefix = '';
+        gitForm.target_branch = '';
+    } else if (gitBranches.value.length === 0) {
+        loadGitBranches();
+    }
+});
+
+watch(() => gitForm.branching_enabled, (enabled) => {
+    if (enabled) {
+        gitForm.target_branch = '';
+    } else if (!enabled && gitBranches.value.length === 0 && gitForm.commit_enabled) {
+        loadGitBranches();
+    }
+});
+
 watch(linearProvider, (provider) => {
     if (!provider) {
         linearProjects.value = [];
@@ -506,6 +598,98 @@ watch(() => providerTeamForm.team_id, async (nextTeamId) => {
                             <div class="flex justify-end">
                                 <Button :disabled="saving" @click="saveSession">
                                     {{ saving ? 'Saving...' : 'Save Session Settings' }}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <div class="flex items-center gap-2">
+                                <GitBranch class="h-4 w-4 text-muted-foreground" />
+                                <CardTitle>Git Operations</CardTitle>
+                            </div>
+                            <CardDescription>Configure how build tasks interact with git. All settings are off by default.</CardDescription>
+                        </CardHeader>
+                        <CardContent class="space-y-4">
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 px-3 py-2">
+                                    <div>
+                                        <p class="text-sm font-medium">Commit work</p>
+                                        <p class="text-xs text-muted-foreground">Allow the AI to commit changes during build tasks.</p>
+                                    </div>
+                                    <Toggle v-model="gitForm.commit_enabled" />
+                                </div>
+
+                                <template v-if="gitForm.commit_enabled">
+                                    <div class="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 px-3 py-2 ml-4">
+                                        <div>
+                                            <p class="text-sm font-medium">Conventional commits</p>
+                                            <p class="text-xs text-muted-foreground">Use conventional commit message format (feat:, fix:, etc.).</p>
+                                        </div>
+                                        <Toggle v-model="gitForm.conventional_commits" />
+                                    </div>
+
+                                    <div class="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 px-3 py-2 ml-4">
+                                        <div>
+                                            <p class="text-sm font-medium">Use worktrees</p>
+                                            <p class="text-xs text-muted-foreground">Work in a separate git worktree so the main checkout stays clean.</p>
+                                        </div>
+                                        <Toggle v-model="gitForm.worktree_enabled" />
+                                    </div>
+
+                                    <div class="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 px-3 py-2 ml-4">
+                                        <div>
+                                            <p class="text-sm font-medium">Feature branching</p>
+                                            <p class="text-xs text-muted-foreground">Create a feature branch per task (gitflow). When off, uses trunk-based development on a selected branch.</p>
+                                        </div>
+                                        <Toggle v-model="gitForm.branching_enabled" />
+                                    </div>
+
+                                    <div v-if="gitForm.branching_enabled" class="ml-4 space-y-2">
+                                        <label class="block text-sm font-medium">Branch prefix (optional)</label>
+                                        <Input
+                                            v-model="gitForm.branch_prefix"
+                                            type="text"
+                                            placeholder="e.g. feature/, agent/"
+                                            :error="!!firstValidationError('git.branch_prefix')"
+                                        />
+                                        <p class="text-xs text-muted-foreground">Prepended to auto-generated branch names.</p>
+                                        <p v-if="firstValidationError('git.branch_prefix')" class="text-xs text-destructive">{{ firstValidationError('git.branch_prefix') }}</p>
+                                    </div>
+
+                                    <div v-if="!gitForm.branching_enabled" class="ml-4 space-y-2">
+                                        <label class="block text-sm font-medium">Target branch</label>
+                                        <div class="flex items-center gap-2">
+                                            <select
+                                                v-model="gitForm.target_branch"
+                                                :disabled="gitBranchesLoading"
+                                                class="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                                            >
+                                                <option v-if="gitBranchesLoading" value="">Loading branches...</option>
+                                                <option v-if="!gitBranchesLoading && gitBranches.length === 0" value="">No branches found</option>
+                                                <option v-for="branch in gitBranches" :key="branch" :value="branch">
+                                                    {{ branch }}{{ branch === gitCurrentBranch ? ' (current)' : '' }}
+                                                </option>
+                                            </select>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                :disabled="gitBranchesLoading"
+                                                @click="loadGitBranches"
+                                            >
+                                                <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': gitBranchesLoading }" />
+                                            </Button>
+                                        </div>
+                                        <p class="text-xs text-muted-foreground">Branch to commit to when using trunk-based development.</p>
+                                        <p v-if="firstValidationError('git.target_branch')" class="text-xs text-destructive">{{ firstValidationError('git.target_branch') }}</p>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div class="flex justify-end">
+                                <Button :disabled="gitSaving" @click="saveGitSettings">
+                                    {{ gitSaving ? 'Saving...' : 'Save Git Settings' }}
                                 </Button>
                             </div>
                         </CardContent>

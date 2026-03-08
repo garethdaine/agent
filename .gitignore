@@ -30,6 +30,5 @@ Thumbs.db
 /test-results/
 /tests/e2e/.auth/
 
-.agent-worktrees/
 .firecrawl/
 /agent-website/

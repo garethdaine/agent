@@ -9,7 +9,8 @@ import Input from '@/Components/ui/Input.vue';
 import DirectoryPickerInput from '@/Components/ui/DirectoryPickerInput.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowLeft, Search } from 'lucide-vue-next';
+import Toggle from '@/Components/ui/Toggle.vue';
+import { ArrowLeft, GitBranch, RefreshCw, Search } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { reactive, ref, watch } from 'vue';
@@ -21,7 +22,19 @@ const form = reactive({
     project_directory: '/Users/garethdaine/Code/agent',
     interrogation_type: 'feature',
     feature_brief: '',
+    git: {
+        commit_enabled: false,
+        conventional_commits: false,
+        worktree_enabled: false,
+        branching_enabled: false,
+        branch_prefix: '',
+        target_branch: '',
+    },
 });
+
+const gitBranches = ref([]);
+const gitBranchesLoading = ref(false);
+const gitCurrentBranch = ref('');
 
 const submitting = ref(false);
 const error = ref('');
@@ -50,9 +63,57 @@ const fetchModels = async (runnerType) => {
     }
 };
 
+const loadGitBranches = async () => {
+    const dir = String(form.project_directory ?? '').trim();
+    if (dir === '') {
+        gitBranches.value = [];
+        gitCurrentBranch.value = '';
+        return;
+    }
+
+    gitBranchesLoading.value = true;
+
+    try {
+        const { data } = await axios.get('/agent/api/v1/interrogation/git-branches-preview', {
+            params: { project_directory: dir },
+        });
+        gitBranches.value = Array.isArray(data?.data?.branches) ? data.data.branches : [];
+        gitCurrentBranch.value = String(data?.data?.current_branch ?? '');
+
+        if (!form.git.target_branch && gitCurrentBranch.value) {
+            form.git.target_branch = gitCurrentBranch.value;
+        }
+    } catch {
+        gitBranches.value = [];
+        gitCurrentBranch.value = '';
+    } finally {
+        gitBranchesLoading.value = false;
+    }
+};
+
 watch(() => form.runner_type, (runnerType) => {
     fetchModels(runnerType);
 }, { immediate: true });
+
+watch(() => form.git.commit_enabled, (enabled) => {
+    if (!enabled) {
+        form.git.conventional_commits = false;
+        form.git.worktree_enabled = false;
+        form.git.branching_enabled = false;
+        form.git.branch_prefix = '';
+        form.git.target_branch = '';
+    } else if (gitBranches.value.length === 0) {
+        loadGitBranches();
+    }
+});
+
+watch(() => form.git.branching_enabled, (enabled) => {
+    if (enabled) {
+        form.git.target_branch = '';
+    } else if (!enabled && gitBranches.value.length === 0 && form.git.commit_enabled) {
+        loadGitBranches();
+    }
+});
 
 const submit = async () => {
     submitting.value = true;
@@ -60,7 +121,17 @@ const submit = async () => {
     validation.value = {};
 
     try {
-        const { data } = await axios.post('/agent/api/v1/interrogation/sessions', form);
+        const payload = { ...form };
+        payload.git = {
+            commit_enabled: form.git.commit_enabled,
+            conventional_commits: form.git.conventional_commits,
+            worktree_enabled: form.git.worktree_enabled,
+            branching_enabled: form.git.branching_enabled,
+            branch_prefix: form.git.branch_prefix || null,
+            target_branch: !form.git.branching_enabled ? (form.git.target_branch || null) : null,
+        };
+
+        const { data } = await axios.post('/agent/api/v1/interrogation/sessions', payload);
         const id = data?.data?.id;
 
         if (id) {
@@ -192,6 +263,88 @@ const submit = async () => {
                             />
                             <p class="mt-1 text-xs text-muted-foreground">Required for feature sessions.</p>
                             <p v-if="validation.feature_brief" class="mt-1 text-sm text-destructive">{{ validation.feature_brief[0] }}</p>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-2">
+                                <GitBranch class="h-4 w-4 text-muted-foreground" />
+                                <label class="text-sm font-semibold">Git Operations</label>
+                            </div>
+                            <p class="text-xs text-muted-foreground">Configure how build tasks interact with git. All settings are off by default.</p>
+
+                            <div class="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 px-3 py-2">
+                                <div>
+                                    <p class="text-sm font-medium">Commit work</p>
+                                    <p class="text-xs text-muted-foreground">Allow the AI to commit changes during build tasks.</p>
+                                </div>
+                                <Toggle v-model="form.git.commit_enabled" />
+                            </div>
+
+                            <template v-if="form.git.commit_enabled">
+                                <div class="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 px-3 py-2 ml-4">
+                                    <div>
+                                        <p class="text-sm font-medium">Conventional commits</p>
+                                        <p class="text-xs text-muted-foreground">Use conventional commit message format (feat:, fix:, etc.).</p>
+                                    </div>
+                                    <Toggle v-model="form.git.conventional_commits" />
+                                </div>
+
+                                <div class="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 px-3 py-2 ml-4">
+                                    <div>
+                                        <p class="text-sm font-medium">Use worktrees</p>
+                                        <p class="text-xs text-muted-foreground">Work in a separate git worktree so the main checkout stays clean.</p>
+                                    </div>
+                                    <Toggle v-model="form.git.worktree_enabled" />
+                                </div>
+
+                                <div class="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 px-3 py-2 ml-4">
+                                    <div>
+                                        <p class="text-sm font-medium">Feature branching</p>
+                                        <p class="text-xs text-muted-foreground">Create a feature branch per task (gitflow). When off, uses trunk-based development on a selected branch.</p>
+                                    </div>
+                                    <Toggle v-model="form.git.branching_enabled" />
+                                </div>
+
+                                <div v-if="form.git.branching_enabled" class="ml-4 space-y-2">
+                                    <label class="block text-sm font-medium">Branch prefix (optional)</label>
+                                    <Input
+                                        v-model="form.git.branch_prefix"
+                                        type="text"
+                                        placeholder="e.g. feature/, agent/"
+                                        :error="!!validation['git.branch_prefix']"
+                                    />
+                                    <p class="text-xs text-muted-foreground">Prepended to auto-generated branch names.</p>
+                                    <p v-if="validation['git.branch_prefix']" class="text-xs text-destructive">{{ validation['git.branch_prefix'][0] }}</p>
+                                </div>
+
+                                <div v-if="!form.git.branching_enabled" class="ml-4 space-y-2">
+                                    <label class="block text-sm font-medium">Target branch</label>
+                                    <div class="flex items-center gap-2">
+                                        <select
+                                            v-model="form.git.target_branch"
+                                            :disabled="gitBranchesLoading"
+                                            class="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                                        >
+                                            <option v-if="gitBranchesLoading" value="">Loading branches...</option>
+                                            <option v-if="!gitBranchesLoading && gitBranches.length === 0" value="">No branches found</option>
+                                            <option v-for="branch in gitBranches" :key="branch" :value="branch">
+                                                {{ branch }}{{ branch === gitCurrentBranch ? ' (current)' : '' }}
+                                            </option>
+                                        </select>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            type="button"
+                                            :disabled="gitBranchesLoading"
+                                            @click="loadGitBranches"
+                                        >
+                                            <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': gitBranchesLoading }" />
+                                        </Button>
+                                    </div>
+                                    <p class="text-xs text-muted-foreground">Branch to commit to when using trunk-based development.</p>
+                                    <p v-if="validation['git.target_branch']" class="text-xs text-destructive">{{ validation['git.target_branch'][0] }}</p>
+                                </div>
+                            </template>
                         </div>
 
                         <div class="flex justify-end">

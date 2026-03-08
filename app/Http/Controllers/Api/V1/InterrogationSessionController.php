@@ -260,18 +260,30 @@ class InterrogationSessionController extends Controller
         ]);
     }
 
+    public function gitBranchesPreview(Request $request): JsonResponse
+    {
+        $projectDirectory = (string) ($request->query('project_directory') ?? '');
+
+        return $this->resolveGitBranches($projectDirectory);
+    }
+
     public function gitBranches(Request $request, int $id): JsonResponse
     {
         $session = $request->user()->interrogationSessions()->findOrFail($id);
         $projectDirectory = (string) $session->project_directory;
 
+        return $this->resolveGitBranches($projectDirectory);
+    }
+
+    private function resolveGitBranches(string $projectDirectory): JsonResponse
+    {
         if ($projectDirectory === '' || ! is_dir($projectDirectory)) {
-            return ErrorEnvelope::make('INVALID_DIRECTORY', 'Session project directory does not exist.', 422);
+            return ErrorEnvelope::make('INVALID_DIRECTORY', 'Project directory does not exist.', 422);
         }
 
         $gitDir = rtrim($projectDirectory, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.'.git';
         if (! is_dir($gitDir) && ! is_file($gitDir)) {
-            return ErrorEnvelope::make('NOT_A_GIT_REPO', 'Session project directory is not a git repository.', 422);
+            return ErrorEnvelope::make('NOT_A_GIT_REPO', 'Project directory is not a git repository.', 422);
         }
 
         $process = new Process(
