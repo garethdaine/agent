@@ -1,0 +1,37 @@
+{
+    "name": "notion-connector",
+    "display_name": "Notion",
+    "description": "All-in-one workspace for notes, databases, and project management. Query databases, create and update pages, and search content.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://api.notion.com/v1/oauth/authorize",
+        "token_url": "https://api.notion.com/v1/oauth/token",
+        "scopes": [],
+        "pkce_required": false,
+        "refresh_strategy": "none",
+        "token_expiry_seconds": 0
+    },
+    "base_url": "https://api.notion.com/v1",
+    "rate_limits": {
+        "requests_per_minute": 3,
+        "daily_limit": 50000,
+        "concurrent_limit": 3
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "knowledge-base",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "notion",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["query-database", "create-page", "update-page", "search"],
+    "data_regions": ["US"],
+    "webhooks": [],
+    "actions": [
+        {"name": "query-database", "method": "POST", "path": "/databases/{database_id}/query"},
+        {"name": "create-page", "method": "POST", "path": "/pages"},
+        {"name": "update-page", "method": "POST", "path": "/pages/{page_id}"},
+        {"name": "search", "method": "POST", "path": "/search"}
+    ]
+}

@@ -177,6 +177,7 @@ class AppServiceProvider extends ServiceProvider
         $events->listen(DelegationTaskVerified::class, SendDelegationTaskFailedNotification::class);
         $events->listen(AgentJobRunFinished::class, SendAgentJobFinishedNotification::class);
         $events->listen(AgentJobRunFinished::class, \App\Listeners\Compliance\LessonExtractionListener::class);
+        $events->listen(AgentJobRunFinished::class, \App\Listeners\DispatchBuildTickOnRunFinished::class);
         $events->listen(OrgRitualEscalationTimedOut::class, SendEscalationTimedOutNotification::class);
         $events->listen(RuntimeApprovalRequested::class, SendApprovalRequestedNotification::class);
         $events->listen(RepoAnalysisSessionUpdated::class, SendRepoAnalysisCompletedNotification::class);

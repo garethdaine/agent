@@ -1,0 +1,28 @@
+{
+    "name": "send-message",
+    "display_name": "Send Message",
+    "description": "Send a message to a Microsoft Teams channel.",
+    "method": "POST",
+    "path": "/teams/{teamId}/channels/{channelId}/messages",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "teamId": {"type": "string", "description": "Team ID"},
+            "channelId": {"type": "string", "description": "Channel ID"},
+            "body": {
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "Message content"},
+                    "contentType": {"type": "string", "enum": ["text", "html"], "description": "Content type"}
+                },
+                "required": ["content"]
+            }
+        },
+        "required": ["teamId", "channelId", "body"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

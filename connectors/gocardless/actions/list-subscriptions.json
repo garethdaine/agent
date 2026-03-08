@@ -1,0 +1,27 @@
+{
+    "name": "list-subscriptions",
+    "display_name": "List Subscriptions",
+    "description": "Retrieve a list of recurring payment subscriptions.",
+    "method": "GET",
+    "path": "/subscriptions",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "mandate": {"type": "string", "description": "Filter by mandate ID"},
+            "customer": {"type": "string", "description": "Filter by customer ID"},
+            "status": {"type": "string", "description": "Filter by subscription status"},
+            "limit": {"type": "integer", "description": "Number of results to return"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "subscriptions": {"type": "array", "items": {"type": "object"}},
+            "meta": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

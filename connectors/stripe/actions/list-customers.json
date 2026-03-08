@@ -1,0 +1,26 @@
+{
+    "name": "list-customers",
+    "display_name": "List Customers",
+    "description": "Retrieve a list of Stripe customers.",
+    "method": "GET",
+    "path": "/customers",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of customers to return"},
+            "starting_after": {"type": "string", "description": "Cursor for pagination"},
+            "email": {"type": "string", "description": "Filter by email"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}},
+            "has_more": {"type": "boolean"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["data.email", "data.name", "data.phone"]
+}

@@ -1,0 +1,22 @@
+{
+    "name": "create-purchase-order",
+    "display_name": "Create Purchase Order",
+    "description": "Create a new purchase order/invoice.",
+    "method": "POST",
+    "path": "/purchase_invoices",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "contact_id": {"type": "string", "description": "Supplier contact identifier"},
+            "date": {"type": "string", "description": "Order date (YYYY-MM-DD)"},
+            "invoice_lines": {"type": "array", "description": "Line items"},
+            "reference": {"type": "string", "description": "Purchase order reference"}
+        },
+        "required": ["contact_id", "date", "invoice_lines"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

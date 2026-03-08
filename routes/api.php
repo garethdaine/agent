@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\V1\Runtime\RuntimePolicyController;
 use App\Http\Controllers\Api\V1\Runtime\RuntimeSessionController;
 use App\Http\Controllers\Api\V1\Runtime\RuntimeToolCallController;
 use App\Http\Controllers\Api\V1\SecurityAuditController;
+use App\Http\Controllers\Api\V1\ServiceManagerController;
 use App\Http\Controllers\Api\V1\SystemDirectoryPickerController;
 use App\Http\Controllers\Api\V1\WorkflowCostController;
 use App\Http\Controllers\Api\V1\WorkflowEscalationController;
@@ -138,6 +139,9 @@ Route::middleware([AgentApiVersionHeader::class])
 
             Route::get('/security/audit', [SecurityAuditController::class, 'index']);
             Route::get('/diagnostics', [DiagnosticsController::class, 'index']);
+            Route::get('/services', [ServiceManagerController::class, 'index']);
+            Route::post('/services/restart', [ServiceManagerController::class, 'restart'])
+                ->middleware('throttle:agent-mutations');
             Route::get('/runtime/policy', [RuntimePolicyController::class, 'index']);
             Route::get('/audit-log', [AuditLogController::class, 'index']);
             Route::get('/configuration', [ConfigurationController::class, 'index']);

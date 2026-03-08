@@ -1,0 +1,24 @@
+{
+    "name": "list-payments",
+    "display_name": "List Payments",
+    "description": "Retrieve a list of payments with optional filtering.",
+    "method": "GET",
+    "path": "/Payments",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "where": {"type": "string", "description": "Filter expression"},
+            "order": {"type": "string", "description": "Sort order"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "Payments": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

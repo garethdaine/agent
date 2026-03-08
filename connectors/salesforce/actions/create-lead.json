@@ -1,0 +1,24 @@
+{
+    "name": "create-lead",
+    "display_name": "Create Lead",
+    "description": "Create a new lead record in Salesforce.",
+    "method": "POST",
+    "path": "/services/data/v59.0/sobjects/Lead",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "LastName": {"type": "string", "description": "Lead last name"},
+            "FirstName": {"type": "string", "description": "Lead first name"},
+            "Company": {"type": "string", "description": "Company name"},
+            "Email": {"type": "string", "description": "Email address"},
+            "Phone": {"type": "string", "description": "Phone number"},
+            "Status": {"type": "string", "description": "Lead status"}
+        },
+        "required": ["LastName", "Company"]
+    },
+    "response_schema": {"type": "object", "properties": {"id": {"type": "string"}, "success": {"type": "boolean"}}},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["LastName", "FirstName", "Email", "Phone"]
+}

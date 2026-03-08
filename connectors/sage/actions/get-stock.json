@@ -1,0 +1,24 @@
+{
+    "name": "get-stock",
+    "display_name": "Get Stock",
+    "description": "Retrieve stock item details and levels.",
+    "method": "GET",
+    "path": "/stock_items",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "items_per_page": {"type": "integer", "description": "Number of items per page"},
+            "page": {"type": "integer", "description": "Page number"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "$items": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,27 @@
+{
+    "name": "update-invoice",
+    "display_name": "Update Invoice",
+    "description": "Update an existing invoice in Xero.",
+    "method": "POST",
+    "path": "/Invoices/{InvoiceID}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "InvoiceID": {"type": "string", "description": "The unique identifier of the invoice"},
+            "Status": {"type": "string", "description": "New invoice status"},
+            "LineItems": {"type": "array", "description": "Updated line items"},
+            "Reference": {"type": "string", "description": "Updated reference"}
+        },
+        "required": ["InvoiceID"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "Invoices": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

@@ -1,0 +1,29 @@
+{
+    "name": "reply-in-thread",
+    "display_name": "Reply in Thread",
+    "description": "Reply to a message in a thread.",
+    "method": "POST",
+    "path": "/chat.postMessage",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "channel": {"type": "string", "description": "Channel ID"},
+            "text": {"type": "string", "description": "Reply text"},
+            "thread_ts": {"type": "string", "description": "Parent message timestamp"}
+        },
+        "required": ["channel", "text", "thread_ts"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "ok": {"type": "boolean"},
+            "channel": {"type": "string"},
+            "ts": {"type": "string"},
+            "message": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

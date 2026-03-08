@@ -1,0 +1,26 @@
+{
+    "name": "list-payouts",
+    "display_name": "List Payouts",
+    "description": "Retrieve a list of payouts.",
+    "method": "GET",
+    "path": "/payouts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string", "description": "Filter by payout status"},
+            "limit": {"type": "integer", "description": "Number of results to return"},
+            "after": {"type": "string", "description": "Cursor for pagination"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "payouts": {"type": "array", "items": {"type": "object"}},
+            "meta": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

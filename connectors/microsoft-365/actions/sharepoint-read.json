@@ -1,0 +1,27 @@
+{
+    "name": "sharepoint-read",
+    "display_name": "Read SharePoint List Items",
+    "description": "Retrieve items from a SharePoint list.",
+    "method": "GET",
+    "path": "/sites/{siteId}/lists/{listId}/items",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "siteId": {"type": "string", "description": "SharePoint site ID"},
+            "listId": {"type": "string", "description": "List ID"},
+            "$top": {"type": "integer", "description": "Number of items to return"},
+            "$filter": {"type": "string", "description": "OData filter"}
+        },
+        "required": ["siteId", "listId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "value": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

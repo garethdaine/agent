@@ -1,0 +1,21 @@
+{
+    "name": "drive-read",
+    "display_name": "Read Drive File",
+    "description": "Retrieve metadata and content of a Google Drive file.",
+    "method": "GET",
+    "path": "/drive/v3/files/{fileId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "fileId": {"type": "string", "description": "File ID"},
+            "fields": {"type": "string", "description": "Comma-separated list of fields to include"},
+            "alt": {"type": "string", "description": "Set to 'media' to download file content"}
+        },
+        "required": ["fileId"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

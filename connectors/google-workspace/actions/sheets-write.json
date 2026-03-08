@@ -1,0 +1,30 @@
+{
+    "name": "sheets-write",
+    "display_name": "Write Spreadsheet",
+    "description": "Write values to a Google Sheets spreadsheet.",
+    "method": "POST",
+    "path": "/v4/spreadsheets/{spreadsheetId}/values/{range}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "spreadsheetId": {"type": "string", "description": "Spreadsheet ID"},
+            "range": {"type": "string", "description": "A1 notation range"},
+            "valueInputOption": {"type": "string", "description": "How input data should be interpreted (RAW or USER_ENTERED)"},
+            "values": {"type": "array", "description": "2D array of values to write"}
+        },
+        "required": ["spreadsheetId", "range", "values"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "updatedRange": {"type": "string"},
+            "updatedRows": {"type": "integer"},
+            "updatedColumns": {"type": "integer"},
+            "updatedCells": {"type": "integer"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

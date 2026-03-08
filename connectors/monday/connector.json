@@ -1,0 +1,37 @@
+{
+    "name": "monday",
+    "display_name": "Monday.com",
+    "description": "Project management and work operating system. Manage boards, items, columns, and groups via GraphQL API.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": ""
+    },
+    "base_url": "https://api.monday.com/v2",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 50000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "quota-limited",
+    "risk_level": "standard",
+    "category": "project-management",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "monday",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-board", "create-item", "update-item"],
+    "data_regions": ["US", "EU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-boards", "method": "GET", "path": "/"},
+        {"name": "get-board", "method": "GET", "path": "/"},
+        {"name": "create-board", "method": "POST", "path": "/"},
+        {"name": "list-items", "method": "GET", "path": "/"},
+        {"name": "create-item", "method": "POST", "path": "/"},
+        {"name": "update-item", "method": "POST", "path": "/"},
+        {"name": "list-columns", "method": "GET", "path": "/"},
+        {"name": "list-groups", "method": "GET", "path": "/"}
+    ]
+}

@@ -1,0 +1,42 @@
+{
+    "name": "microsoft-365",
+    "display_name": "Microsoft 365",
+    "description": "Productivity suite including Outlook, OneDrive, Calendar, and SharePoint. Manage emails, files, events, and documents.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        "token_url": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        "scopes": ["Mail.Read", "Mail.Send", "Files.ReadWrite", "Calendars.ReadWrite", "Sites.Read.All"],
+        "pkce_required": true,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "rate_limits": {
+        "requests_per_minute": 120,
+        "daily_limit": 50000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "productivity",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "m365",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["outlook-send", "onedrive-upload", "calendar-create"],
+    "data_regions": ["US", "EU", "GB", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "outlook-list", "method": "GET", "path": "/me/messages"},
+        {"name": "outlook-send", "method": "POST", "path": "/me/sendMail"},
+        {"name": "onedrive-list", "method": "GET", "path": "/me/drive/root/children"},
+        {"name": "onedrive-read", "method": "GET", "path": "/me/drive/items/{itemId}"},
+        {"name": "onedrive-upload", "method": "POST", "path": "/me/drive/root:/{filename}:/content"},
+        {"name": "calendar-list", "method": "GET", "path": "/me/events"},
+        {"name": "calendar-create", "method": "POST", "path": "/me/events"},
+        {"name": "sharepoint-list", "method": "GET", "path": "/sites/{siteId}/lists"},
+        {"name": "sharepoint-read", "method": "GET", "path": "/sites/{siteId}/lists/{listId}/items"}
+    ]
+}

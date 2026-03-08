@@ -1,0 +1,20 @@
+{
+    "name": "onedrive-upload",
+    "display_name": "Upload to OneDrive",
+    "description": "Upload a file to the user's OneDrive.",
+    "method": "POST",
+    "path": "/me/drive/root:/{filename}:/content",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "filename": {"type": "string", "description": "Destination filename with path"},
+            "content": {"type": "string", "description": "File content"}
+        },
+        "required": ["filename", "content"]
+    },
+    "response_schema": {"type": "object", "properties": {"id": {"type": "string"}, "name": {"type": "string"}}},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

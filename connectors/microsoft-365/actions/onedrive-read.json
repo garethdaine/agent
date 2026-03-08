@@ -1,0 +1,20 @@
+{
+    "name": "onedrive-read",
+    "display_name": "Read OneDrive File",
+    "description": "Get metadata or download a file from OneDrive.",
+    "method": "GET",
+    "path": "/me/drive/items/{itemId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "itemId": {"type": "string", "description": "Drive item ID"},
+            "$select": {"type": "string", "description": "Fields to return"}
+        },
+        "required": ["itemId"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

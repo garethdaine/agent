@@ -203,6 +203,10 @@ Route::middleware([
         return Inertia::render('Tools/Diagnostics/Index');
     })->name('tools.diagnostics.index');
 
+    Route::get('/tools/services', function () {
+        return Inertia::render('Tools/Services/Index');
+    })->name('tools.services.index');
+
     Route::get('/tools/logs', function () {
         return Inertia::render('Tools/Logs/Index');
     })->name('tools.logs.index');
@@ -261,6 +265,21 @@ Route::middleware([
         Route::get('/tools/skills/{id}', function (string $id) {
             return Inertia::render('Tools/Skills/Show', ['skillId' => $id]);
         })->name('tools.skills.show');
+    });
+
+    // Connectors routes (guarded by connectors UI feature flag)
+    Route::middleware(['connectors.ui'])->group(function () {
+        Route::get('/tools/connectors', function () {
+            return Inertia::render('Tools/Connectors/Index');
+        })->name('tools.connectors.index');
+
+        Route::get('/tools/connectors/library', function () {
+            return Inertia::render('Tools/Connectors/Library');
+        })->name('tools.connectors.library');
+
+        Route::get('/tools/connectors/{id}', function (string $id) {
+            return Inertia::render('Tools/Connectors/Show', ['connectorId' => $id]);
+        })->name('tools.connectors.show');
     });
 
     // Messenger health dashboard (authenticated)

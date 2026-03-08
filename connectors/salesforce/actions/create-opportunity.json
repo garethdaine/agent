@@ -1,0 +1,23 @@
+{
+    "name": "create-opportunity",
+    "display_name": "Create Opportunity",
+    "description": "Create a new sales opportunity.",
+    "method": "POST",
+    "path": "/services/data/v59.0/sobjects/Opportunity",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "Name": {"type": "string", "description": "Opportunity name"},
+            "StageName": {"type": "string", "description": "Sales stage"},
+            "CloseDate": {"type": "string", "description": "Expected close date (YYYY-MM-DD)"},
+            "Amount": {"type": "number", "description": "Deal amount"},
+            "AccountId": {"type": "string", "description": "Associated account ID"}
+        },
+        "required": ["Name", "StageName", "CloseDate"]
+    },
+    "response_schema": {"type": "object", "properties": {"id": {"type": "string"}, "success": {"type": "boolean"}}},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

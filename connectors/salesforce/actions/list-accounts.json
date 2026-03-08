@@ -1,0 +1,21 @@
+{
+    "name": "list-accounts",
+    "display_name": "List Accounts",
+    "description": "Retrieve a list of account records.",
+    "method": "GET",
+    "path": "/services/data/v59.0/sobjects/Account",
+    "parameters": {
+        "type": "object",
+        "properties": {}
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "recentItems": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

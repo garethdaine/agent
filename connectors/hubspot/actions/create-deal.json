@@ -1,0 +1,28 @@
+{
+    "name": "create-deal",
+    "display_name": "Create Deal",
+    "description": "Create a new deal in HubSpot CRM.",
+    "method": "POST",
+    "path": "/crm/v3/objects/deals",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "properties": {
+                "type": "object",
+                "properties": {
+                    "dealname": {"type": "string", "description": "Deal name"},
+                    "dealstage": {"type": "string", "description": "Deal stage"},
+                    "amount": {"type": "string", "description": "Deal amount"},
+                    "closedate": {"type": "string", "description": "Expected close date"}
+                },
+                "required": ["dealname"]
+            }
+        },
+        "required": ["properties"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

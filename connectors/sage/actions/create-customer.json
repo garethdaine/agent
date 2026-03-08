@@ -1,0 +1,22 @@
+{
+    "name": "create-customer",
+    "display_name": "Create Customer",
+    "description": "Create a new customer contact.",
+    "method": "POST",
+    "path": "/contacts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "description": "Customer name"},
+            "email": {"type": "string", "description": "Email address"},
+            "telephone": {"type": "string", "description": "Phone number"},
+            "contact_type_ids": {"type": "array", "description": "Contact type identifiers"}
+        },
+        "required": ["name"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["email", "name", "telephone"]
+}

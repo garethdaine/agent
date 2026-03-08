@@ -1,0 +1,37 @@
+{
+    "name": "stripe",
+    "display_name": "Stripe",
+    "description": "Payment processing platform. Manage charges, customers, invoices, payment intents, and subscriptions.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "Authorization",
+        "header_prefix": "Bearer"
+    },
+    "base_url": "https://api.stripe.com/v1",
+    "rate_limits": {
+        "requests_per_minute": 100,
+        "daily_limit": 100000,
+        "concurrent_limit": 25
+    },
+    "cost_model": "metered",
+    "risk_level": "elevated",
+    "category": "payments",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "stripe",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["create-charge", "create-customer", "create-invoice", "create-payment-intent"],
+    "data_regions": ["US", "EU", "GB", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-charges", "method": "GET", "path": "/charges"},
+        {"name": "create-charge", "method": "POST", "path": "/charges"},
+        {"name": "list-customers", "method": "GET", "path": "/customers"},
+        {"name": "create-customer", "method": "POST", "path": "/customers"},
+        {"name": "list-invoices", "method": "GET", "path": "/invoices"},
+        {"name": "create-invoice", "method": "POST", "path": "/invoices"},
+        {"name": "create-payment-intent", "method": "POST", "path": "/payment_intents"},
+        {"name": "list-subscriptions", "method": "GET", "path": "/subscriptions"}
+    ]
+}

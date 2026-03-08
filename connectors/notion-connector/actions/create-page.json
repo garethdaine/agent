@@ -1,0 +1,23 @@
+{
+    "name": "create-page",
+    "display_name": "Create Page",
+    "description": "Create a new page in a Notion database or as a child of another page.",
+    "method": "POST",
+    "path": "/pages",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "parent": {"type": "object", "description": "Parent (database_id or page_id)"},
+            "properties": {"type": "object", "description": "Page properties matching the database schema"},
+            "children": {"type": "array", "description": "Page content blocks"},
+            "icon": {"type": "object", "description": "Page icon"},
+            "cover": {"type": "object", "description": "Page cover image"}
+        },
+        "required": ["parent", "properties"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

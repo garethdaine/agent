@@ -1,0 +1,27 @@
+{
+    "name": "list-invoices",
+    "display_name": "List Invoices",
+    "description": "Retrieve a list of sales invoices with optional filtering.",
+    "method": "GET",
+    "path": "/sales_invoices",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "from_date": {"type": "string", "description": "Filter from date (YYYY-MM-DD)"},
+            "to_date": {"type": "string", "description": "Filter to date (YYYY-MM-DD)"},
+            "status": {"type": "string", "description": "Invoice status filter"},
+            "items_per_page": {"type": "integer", "description": "Number of items per page"},
+            "page": {"type": "integer", "description": "Page number"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "$items": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

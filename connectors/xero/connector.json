@@ -1,0 +1,42 @@
+{
+    "name": "xero",
+    "display_name": "Xero",
+    "description": "Cloud-based accounting software for small and medium businesses. Manage invoices, contacts, bank transactions, and financial reports.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://login.xero.com/identity/connect/authorize",
+        "token_url": "https://identity.xero.com/connect/token",
+        "scopes": ["openid", "profile", "accounting.transactions", "accounting.contacts", "accounting.settings.read"],
+        "pkce_required": true,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 1800
+    },
+    "base_url": "https://api.xero.com/api.xro/2.0",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 5000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "quota-limited",
+    "risk_level": "standard",
+    "category": "accounting",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "xero",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-invoice", "create-contact", "update-invoice"],
+    "data_regions": ["AU", "NZ", "GB", "US"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-invoices", "method": "GET", "path": "/Invoices"},
+        {"name": "create-invoice", "method": "POST", "path": "/Invoices"},
+        {"name": "update-invoice", "method": "POST", "path": "/Invoices/{InvoiceID}"},
+        {"name": "get-contact", "method": "GET", "path": "/Contacts/{ContactID}"},
+        {"name": "list-contacts", "method": "GET", "path": "/Contacts"},
+        {"name": "create-contact", "method": "POST", "path": "/Contacts"},
+        {"name": "get-bank-transactions", "method": "GET", "path": "/BankTransactions"},
+        {"name": "get-reports", "method": "GET", "path": "/Reports/{ReportID}"},
+        {"name": "list-payments", "method": "GET", "path": "/Payments"}
+    ]
+}

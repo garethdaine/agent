@@ -1,0 +1,36 @@
+{
+    "name": "sage",
+    "display_name": "Sage",
+    "description": "Accounting and business management software. Manage invoices, customers, products, and stock levels.",
+    "version": "1.0.0",
+    "auth_type": "api_key",
+    "auth_config": {
+        "header_name": "X-API-Key",
+        "header_prefix": ""
+    },
+    "base_url": "https://api.accounting.sage.com/v3.1",
+    "rate_limits": {
+        "requests_per_minute": 100,
+        "daily_limit": 10000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "accounting",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "sage",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-invoice", "create-customer", "create-purchase-order"],
+    "data_regions": ["GB", "US"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-invoices", "method": "GET", "path": "/sales_invoices"},
+        {"name": "create-invoice", "method": "POST", "path": "/sales_invoices"},
+        {"name": "list-customers", "method": "GET", "path": "/contacts"},
+        {"name": "create-customer", "method": "POST", "path": "/contacts"},
+        {"name": "list-products", "method": "GET", "path": "/products"},
+        {"name": "get-stock", "method": "GET", "path": "/stock_items"},
+        {"name": "create-purchase-order", "method": "POST", "path": "/purchase_invoices"}
+    ]
+}

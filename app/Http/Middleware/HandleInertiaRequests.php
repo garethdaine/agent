@@ -44,6 +44,8 @@ class HandleInertiaRequests extends Middleware
             'orgLayerEnabled' => app(FeatureFlagManager::class)->isEnabled(FeatureFlagManager::ORG_ENABLED),
             'tunnelEnabled' => app(FeatureFlagManager::class)->isEnabled(FeatureFlagManager::TUNNEL_ENABLED),
             'skillsEnabled' => app(FeatureFlagManager::class)->isEnabled(FeatureFlagManager::SKILLS_ENABLED),
+            'connectorsUiEnabled' => app(FeatureFlagManager::class)->isEnabled(FeatureFlagManager::CONNECTORS_ENABLED)
+                && app(FeatureFlagManager::class)->isEnabled(FeatureFlagManager::CONNECTORS_UI_ENABLED),
             'office3dEnabled' => config('agent.office_3d_enabled', true),
             'operatorNavigation' => [
                 'deployments' => '/agent/deployments',

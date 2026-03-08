@@ -1,0 +1,23 @@
+{
+    "name": "create-payment-intent",
+    "display_name": "Create Payment Intent",
+    "description": "Create a new payment intent for processing a payment.",
+    "method": "POST",
+    "path": "/payment_intents",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "amount": {"type": "integer", "description": "Amount in smallest currency unit"},
+            "currency": {"type": "string", "description": "Three-letter ISO currency code"},
+            "customer": {"type": "string", "description": "Customer ID"},
+            "payment_method_types": {"type": "array", "description": "Accepted payment method types", "items": {"type": "string"}},
+            "description": {"type": "string", "description": "Description"}
+        },
+        "required": ["amount", "currency"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

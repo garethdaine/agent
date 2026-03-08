@@ -1020,7 +1020,7 @@ class InterrogationSessionController extends Controller
             'notes' => ['nullable', 'string', 'max:6000'],
             'project_rules' => ['nullable'],
             'project_rule_files' => ['nullable', 'array', 'max:20'],
-            'project_rule_files.*' => ['file', 'max:1024', 'mimes:md,markdown,txt'],
+            'project_rule_files.*' => ['file', 'max:2048', 'mimes:md,markdown,txt'],
         ]);
 
         $projectRulePayload = $this->resolveProjectRulesPayload($request);
@@ -3374,14 +3374,14 @@ class InterrogationSessionController extends Controller
                 $title = mb_substr($title, 0, 120);
             }
 
-            if (mb_strlen($markdown) > 20000) {
+            if (mb_strlen($markdown) > 120000) {
                 if ($strict) {
                     throw ValidationException::withMessages([
-                        'project_rules' => sprintf('project_rules[%d].markdown must be 20000 characters or fewer.', (int) $index),
+                        'project_rules' => sprintf('project_rules[%d].markdown must be 120000 characters or fewer.', (int) $index),
                     ]);
                 }
 
-                $markdown = mb_substr($markdown, 0, 20000);
+                $markdown = mb_substr($markdown, 0, 120000);
             }
 
             if (! in_array($source, ['manual', 'uploaded'], true)) {
@@ -3433,9 +3433,9 @@ class InterrogationSessionController extends Controller
                 ]);
             }
 
-            if (mb_strlen($markdown) > 20000) {
+            if (mb_strlen($markdown) > 120000) {
                 throw ValidationException::withMessages([
-                    'project_rule_files' => sprintf('Uploaded project rule file "%s" exceeds 20000 characters.', $upload->getClientOriginalName()),
+                    'project_rule_files' => sprintf('Uploaded project rule file "%s" exceeds 120000 characters.', $upload->getClientOriginalName()),
                 ]);
             }
 

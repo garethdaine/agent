@@ -1,0 +1,26 @@
+{
+    "name": "list-contacts",
+    "display_name": "List Contacts",
+    "description": "Retrieve a list of contacts from HubSpot CRM.",
+    "method": "GET",
+    "path": "/crm/v3/objects/contacts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of results to return (max 100)"},
+            "after": {"type": "string", "description": "Cursor for pagination"},
+            "properties": {"type": "string", "description": "Comma-separated list of properties to return"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "results": {"type": "array", "items": {"type": "object"}},
+            "paging": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["results.properties.email", "results.properties.firstname", "results.properties.lastname", "results.properties.phone"]
+}

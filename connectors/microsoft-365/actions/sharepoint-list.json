@@ -1,0 +1,24 @@
+{
+    "name": "sharepoint-list",
+    "display_name": "List SharePoint Lists",
+    "description": "Retrieve lists from a SharePoint site.",
+    "method": "GET",
+    "path": "/sites/{siteId}/lists",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "siteId": {"type": "string", "description": "SharePoint site ID"}
+        },
+        "required": ["siteId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "value": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

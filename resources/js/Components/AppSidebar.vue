@@ -27,6 +27,8 @@ import {
     Settings,
     FileText,
     Globe,
+    Plug,
+    Power,
 } from 'lucide-vue-next';
 
 defineProps({
@@ -182,6 +184,17 @@ const page = usePage();
                     Tools
                 </SidebarNavLink>
                 <SidebarNavLink
+                    v-if="page.props.connectorsUiEnabled"
+                    :href="route('tools.connectors.index')"
+                    :active="route().current('tools.connectors.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <Plug class="h-4 w-4 shrink-0" />
+                    </template>
+                    Connectors
+                </SidebarNavLink>
+                <SidebarNavLink
                     v-if="page.props.delegationEnabled"
                     :href="route('agent.delegation.index')"
                     :active="route().current('agent.delegation.*')"
@@ -236,6 +249,16 @@ const page = usePage();
                         <Stethoscope class="h-4 w-4 shrink-0" />
                     </template>
                     Diagnostics
+                </SidebarNavLink>
+                <SidebarNavLink
+                    :href="route('tools.services.index')"
+                    :active="route().current('tools.services.*')"
+                    :collapsed="collapsed"
+                >
+                    <template #icon>
+                        <Power class="h-4 w-4 shrink-0" />
+                    </template>
+                    Services
                 </SidebarNavLink>
                 <SidebarNavLink
                     :href="route('tools.logs.index')"

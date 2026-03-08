@@ -1,0 +1,28 @@
+{
+    "name": "list-payments",
+    "display_name": "List Payments",
+    "description": "Retrieve a list of payments.",
+    "method": "GET",
+    "path": "/payments",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "mandate": {"type": "string", "description": "Filter by mandate ID"},
+            "customer": {"type": "string", "description": "Filter by customer ID"},
+            "status": {"type": "string", "description": "Filter by payment status"},
+            "limit": {"type": "integer", "description": "Number of results to return"},
+            "after": {"type": "string", "description": "Cursor for pagination"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "payments": {"type": "array", "items": {"type": "object"}},
+            "meta": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,26 @@
+{
+    "name": "list-invoices",
+    "display_name": "List Invoices",
+    "description": "Retrieve a list of invoices with optional filtering by status, date range, and contact.",
+    "method": "GET",
+    "path": "/Invoices",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "where": {"type": "string", "description": "Filter expression (e.g. Status==\"AUTHORISED\")"},
+            "order": {"type": "string", "description": "Sort order (e.g. Date DESC)"},
+            "page": {"type": "integer", "description": "Page number for pagination"},
+            "Statuses": {"type": "string", "description": "Comma-separated invoice statuses to filter by"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "Invoices": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,24 @@
+{
+    "name": "calendar-create",
+    "display_name": "Create Calendar Event",
+    "description": "Create a new event in the user's Outlook calendar.",
+    "method": "POST",
+    "path": "/me/events",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "subject": {"type": "string", "description": "Event subject"},
+            "body": {"type": "object", "description": "Event body with contentType and content"},
+            "start": {"type": "object", "description": "Start date/time with timeZone"},
+            "end": {"type": "object", "description": "End date/time with timeZone"},
+            "attendees": {"type": "array", "description": "List of attendees"},
+            "location": {"type": "object", "description": "Event location"}
+        },
+        "required": ["subject", "start", "end"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["attendees.emailAddress.address"]
+}

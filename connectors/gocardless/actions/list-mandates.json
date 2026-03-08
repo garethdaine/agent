@@ -1,0 +1,27 @@
+{
+    "name": "list-mandates",
+    "display_name": "List Mandates",
+    "description": "Retrieve a list of direct debit mandates.",
+    "method": "GET",
+    "path": "/mandates",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "customer": {"type": "string", "description": "Filter by customer ID"},
+            "status": {"type": "string", "description": "Filter by mandate status"},
+            "limit": {"type": "integer", "description": "Number of results to return"},
+            "after": {"type": "string", "description": "Cursor for pagination"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "mandates": {"type": "array", "items": {"type": "object"}},
+            "meta": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

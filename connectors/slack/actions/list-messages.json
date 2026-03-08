@@ -1,0 +1,30 @@
+{
+    "name": "list-messages",
+    "display_name": "List Messages",
+    "description": "Retrieve message history from a Slack channel.",
+    "method": "GET",
+    "path": "/conversations.history",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "channel": {"type": "string", "description": "Channel ID"},
+            "limit": {"type": "integer", "description": "Number of messages to return"},
+            "oldest": {"type": "string", "description": "Oldest message timestamp"},
+            "latest": {"type": "string", "description": "Latest message timestamp"},
+            "cursor": {"type": "string", "description": "Pagination cursor"}
+        },
+        "required": ["channel"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "ok": {"type": "boolean"},
+            "messages": {"type": "array", "items": {"type": "object"}},
+            "response_metadata": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["messages.user", "messages.text"]
+}

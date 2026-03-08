@@ -1,0 +1,29 @@
+{
+    "name": "upload-file",
+    "display_name": "Upload File",
+    "description": "Upload a file to a Slack channel.",
+    "method": "POST",
+    "path": "/files.upload",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "channels": {"type": "string", "description": "Comma-separated channel IDs"},
+            "content": {"type": "string", "description": "File content"},
+            "filename": {"type": "string", "description": "Filename"},
+            "title": {"type": "string", "description": "File title"},
+            "filetype": {"type": "string", "description": "File type identifier"}
+        },
+        "required": ["channels", "content", "filename"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "ok": {"type": "boolean"},
+            "file": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

@@ -1,0 +1,28 @@
+{
+    "name": "outlook-list",
+    "display_name": "List Outlook Emails",
+    "description": "Retrieve a list of emails from the user's Outlook mailbox.",
+    "method": "GET",
+    "path": "/me/messages",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "$top": {"type": "integer", "description": "Number of messages to return"},
+            "$skip": {"type": "integer", "description": "Number of messages to skip"},
+            "$filter": {"type": "string", "description": "OData filter expression"},
+            "$select": {"type": "string", "description": "Comma-separated fields to return"},
+            "$orderby": {"type": "string", "description": "Sort order"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "value": {"type": "array", "items": {"type": "object"}},
+            "@odata.nextLink": {"type": "string"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["value.from.emailAddress.address", "value.toRecipients.emailAddress.address", "value.body.content"]
+}

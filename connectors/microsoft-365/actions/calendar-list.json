@@ -1,0 +1,26 @@
+{
+    "name": "calendar-list",
+    "display_name": "List Calendar Events",
+    "description": "Retrieve calendar events from the user's Outlook calendar.",
+    "method": "GET",
+    "path": "/me/events",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "$top": {"type": "integer", "description": "Number of events to return"},
+            "$filter": {"type": "string", "description": "OData filter expression"},
+            "$orderby": {"type": "string", "description": "Sort order"},
+            "$select": {"type": "string", "description": "Fields to return"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "value": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["value.organizer.emailAddress.address", "value.attendees.emailAddress.address"]
+}

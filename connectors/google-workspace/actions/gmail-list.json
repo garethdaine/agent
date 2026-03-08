@@ -1,0 +1,28 @@
+{
+    "name": "gmail-list",
+    "display_name": "List Gmail Messages",
+    "description": "Retrieve a list of Gmail messages.",
+    "method": "GET",
+    "path": "/gmail/v1/users/me/messages",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "q": {"type": "string", "description": "Gmail search query"},
+            "maxResults": {"type": "integer", "description": "Maximum number of messages to return"},
+            "pageToken": {"type": "string", "description": "Page token for pagination"},
+            "labelIds": {"type": "array", "description": "Filter by label IDs", "items": {"type": "string"}}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "messages": {"type": "array", "items": {"type": "object"}},
+            "nextPageToken": {"type": "string"},
+            "resultSizeEstimate": {"type": "integer"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["messages.payload.headers.From", "messages.payload.headers.To", "messages.snippet"]
+}

@@ -1,0 +1,25 @@
+{
+    "name": "list-customers",
+    "display_name": "List Customers",
+    "description": "Retrieve a list of customer contacts.",
+    "method": "GET",
+    "path": "/contacts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "contact_type": {"type": "string", "description": "Filter by contact type"},
+            "items_per_page": {"type": "integer", "description": "Number of items per page"},
+            "page": {"type": "integer", "description": "Page number"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "$items": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["$items.email", "$items.name"]
+}

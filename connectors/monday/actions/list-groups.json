@@ -1,0 +1,24 @@
+{
+    "name": "list-groups",
+    "display_name": "List Groups",
+    "description": "Retrieve groups for a board.",
+    "method": "GET",
+    "path": "/",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "board_id": {"type": "string", "description": "Board ID"}
+        },
+        "required": ["board_id"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "object", "properties": {"boards": {"type": "array"}}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

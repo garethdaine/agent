@@ -1,0 +1,39 @@
+{
+    "name": "gocardless",
+    "display_name": "GoCardless",
+    "description": "Direct debit payment platform. Manage mandates, payments, subscriptions, and payouts for recurring billing.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://connect.gocardless.com/oauth/authorize",
+        "token_url": "https://connect.gocardless.com/oauth/access_token",
+        "scopes": ["read_write"],
+        "pkce_required": false,
+        "refresh_strategy": "none",
+        "token_expiry_seconds": 0
+    },
+    "base_url": "https://api.gocardless.com",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 10000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "metered",
+    "risk_level": "elevated",
+    "category": "payments",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "gocardless",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["create-mandate", "create-payment"],
+    "data_regions": ["GB", "EU", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-mandates", "method": "GET", "path": "/mandates"},
+        {"name": "create-mandate", "method": "POST", "path": "/mandates"},
+        {"name": "list-payments", "method": "GET", "path": "/payments"},
+        {"name": "create-payment", "method": "POST", "path": "/payments"},
+        {"name": "list-subscriptions", "method": "GET", "path": "/subscriptions"},
+        {"name": "list-payouts", "method": "GET", "path": "/payouts"}
+    ]
+}

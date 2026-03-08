@@ -1,0 +1,25 @@
+{
+    "name": "list-boards",
+    "display_name": "List Boards",
+    "description": "Retrieve a list of boards via GraphQL query.",
+    "method": "GET",
+    "path": "/",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of boards to return"},
+            "page": {"type": "integer", "description": "Page number"},
+            "board_kind": {"type": "string", "description": "Filter by board kind (public, private, share)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "object", "properties": {"boards": {"type": "array", "items": {"type": "object"}}}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

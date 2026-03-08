@@ -297,7 +297,7 @@ class AdversarialReviewerSummaryTest extends TestCase
         $mockAdapter = Mockery::mock(ClaudeAdapter::class);
         $mockAdapter->shouldReceive('buildReviewerCommand')->andReturn(['echo', 'test']);
         $mockAdapter->shouldReceive('parseReviewerResponse')
-            ->times(3)
+            ->times(4)
             ->andReturn($revisePayload);
 
         $service = new AdversarialReviewerService(
@@ -311,7 +311,8 @@ class AdversarialReviewerSummaryTest extends TestCase
 
         $job = new ExecuteInterrogationSummaryJob($session->id);
 
-        // First two attempts return revise payload for regeneration
+        // The initial review (attempt 1) is not a retry. With max_retries=3,
+        // attempts 2, 3, and 4 are actual retries. Attempt 4 exceeds the cap.
         $result1 = $this->invokeAdversarialReview($job, $session, ['summary_markdown' => '# Test Summary v0']);
         $session->refresh();
         $this->assertNotNull($result1);
@@ -322,15 +323,20 @@ class AdversarialReviewerSummaryTest extends TestCase
         $this->assertNotNull($result2);
         $this->assertSame('revise', $result2['verdict']);
 
-        // Third attempt degrades gracefully — accepts summary with warnings
         $result3 = $this->invokeAdversarialReview($job, $session, ['summary_markdown' => '# Test Summary v2']);
         $session->refresh();
+        $this->assertNotNull($result3);
+        $this->assertSame('revise', $result3['verdict']);
 
-        $this->assertNull($result3);
+        // Fourth attempt exceeds retry cap — degrades gracefully and accepts
+        $result4 = $this->invokeAdversarialReview($job, $session, ['summary_markdown' => '# Test Summary v3']);
+        $session->refresh();
+
+        $this->assertNull($result4);
 
         $metadata = $session->metadata_json ?? [];
         $this->assertSame('accepted_with_warnings', $metadata['summary']['review_status'] ?? null);
-        $this->assertCount(3, $metadata['summary']['review_history'] ?? []);
+        $this->assertCount(4, $metadata['summary']['review_history'] ?? []);
 
         $exhaustedEvent = $session->events()
             ->where('event_type', InterrogationEvent::TYPE_SYSTEM)
@@ -510,5 +516,99 @@ class AdversarialReviewerSummaryTest extends TestCase
         $this->assertSame(1, $payload['issue_count']);
         $this->assertSame(0.85, $payload['confidence']);
         $this->assertFalse($payload['shadow_mode']);
+    }
+
+    public function test_critical_issue_escalation_only_on_first_attempt(): void
+    {
+        $session = InterrogationSession::factory()
+            ->summarizing()
+            ->withBrief('Test feature brief')
+            ->create();
+
+        // Pass with critical issue — should escalate on first attempt
+        $criticalPassPayload = [
+            'verdict' => 'pass',
+            'issues' => [
+                ['type' => 'contradiction', 'severity' => 'critical', 'message' => 'Critical issue', 'evidence' => 'Conflict'],
+            ],
+            'confidence' => 0.9,
+            'required_changes' => ['Fix the conflict'],
+            'clarification_questions' => [],
+            'review_notes' => '',
+        ];
+
+        $mockAdapter = Mockery::mock(ClaudeAdapter::class);
+        $mockAdapter->shouldReceive('buildReviewerCommand')->andReturn(['echo', 'test']);
+        $mockAdapter->shouldReceive('parseReviewerResponse')
+            ->times(2)
+            ->andReturn($criticalPassPayload);
+
+        $service = new AdversarialReviewerService(
+            $mockAdapter,
+            new ReviewerPayloadGuard,
+            new ReviewerPayloadNormalizer,
+            new ReviewerContextBuilder
+        );
+        $service->setTestMode(true);
+        $this->app->instance(AdversarialReviewerService::class, $service);
+
+        $job = new ExecuteInterrogationSummaryJob($session->id);
+
+        // First attempt — critical issue should auto-escalate pass to revise
+        $result1 = $this->invokeAdversarialReview($job, $session, ['summary_markdown' => '# v1']);
+        $session->refresh();
+        $this->assertNotNull($result1);
+        $this->assertSame('revising', $session->metadata_json['summary']['review_status'] ?? null);
+
+        // Second attempt — same critical issue but should NOT escalate (accepts pass with warning)
+        $result2 = $this->invokeAdversarialReview($job, $session, ['summary_markdown' => '# v2']);
+        $session->refresh();
+        $this->assertNull($result2);
+        $this->assertSame('passed', $session->metadata_json['summary']['review_status'] ?? null);
+        $this->assertTrue($session->metadata_json['summary']['critical_issues_accepted'] ?? false);
+    }
+
+    public function test_gating_mode_handles_reviewer_errors_gracefully(): void
+    {
+        config(['agent.interrogation.review_warn_only' => false]);
+
+        $session = InterrogationSession::factory()
+            ->summarizing()
+            ->withBrief('Test feature brief')
+            ->create();
+
+        $mockAdapter = Mockery::mock(ClaudeAdapter::class);
+        $mockAdapter->shouldReceive('buildReviewerCommand')->andReturn(['echo', 'test']);
+        $mockAdapter->shouldReceive('parseReviewerResponse')
+            ->andThrow(new \RuntimeException('Subprocess failed'));
+
+        $service = new AdversarialReviewerService(
+            $mockAdapter,
+            new ReviewerPayloadGuard,
+            new ReviewerPayloadNormalizer,
+            new ReviewerContextBuilder
+        );
+        $service->setTestMode(true);
+        $this->app->instance(AdversarialReviewerService::class, $service);
+
+        $job = new ExecuteInterrogationSummaryJob($session->id);
+
+        // Should NOT throw — gracefully degrades instead of killing the session
+        $result = $this->invokeAdversarialReview($job, $session, ['summary_markdown' => '# Test Summary']);
+
+        $this->assertNull($result);
+
+        $session->refresh();
+        $metadata = $session->metadata_json ?? [];
+        $this->assertSame('review_error', $metadata['summary']['review_status'] ?? null);
+        $this->assertNotNull($metadata['summary']['review_error'] ?? null);
+        $this->assertStringContainsString('Subprocess failed', $metadata['summary']['review_error']['message'] ?? '');
+
+        $errorEvent = $session->events()
+            ->where('event_type', InterrogationEvent::TYPE_SYSTEM)
+            ->get()
+            ->first(fn ($e) => ($e->payload['notice'] ?? '') === 'summary_review_error');
+
+        $this->assertNotNull($errorEvent, 'Expected summary_review_error system event');
     }
 }

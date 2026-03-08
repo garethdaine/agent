@@ -1,0 +1,21 @@
+{
+    "name": "send-envelope",
+    "display_name": "Send Envelope",
+    "description": "Send a draft envelope for signing.",
+    "method": "POST",
+    "path": "/accounts/{accountId}/envelopes",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "accountId": {"type": "string", "description": "DocuSign account ID"},
+            "envelopeId": {"type": "string", "description": "Envelope ID to send"},
+            "status": {"type": "string", "description": "Set to 'sent' to send"}
+        },
+        "required": ["accountId"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

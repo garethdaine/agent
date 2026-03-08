@@ -1,0 +1,21 @@
+{
+    "name": "download-signed",
+    "display_name": "Download Signed Document",
+    "description": "Download a signed document from an envelope.",
+    "method": "GET",
+    "path": "/accounts/{accountId}/envelopes/{envelopeId}/documents/{documentId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "accountId": {"type": "string", "description": "DocuSign account ID"},
+            "envelopeId": {"type": "string", "description": "Envelope ID"},
+            "documentId": {"type": "string", "description": "Document ID (or 'combined' for all)"}
+        },
+        "required": ["accountId", "envelopeId", "documentId"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,22 @@
+{
+    "name": "drive-upload",
+    "display_name": "Upload Drive File",
+    "description": "Upload a file to Google Drive.",
+    "method": "POST",
+    "path": "/upload/drive/v3/files",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string", "description": "File name"},
+            "mimeType": {"type": "string", "description": "MIME type"},
+            "parents": {"type": "array", "description": "Parent folder IDs", "items": {"type": "string"}},
+            "content": {"type": "string", "description": "File content"}
+        },
+        "required": ["name", "content"]
+    },
+    "response_schema": {"type": "object", "properties": {"id": {"type": "string"}, "name": {"type": "string"}}},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

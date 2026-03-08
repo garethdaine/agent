@@ -1,0 +1,23 @@
+{
+    "name": "create-charge",
+    "display_name": "Create Charge",
+    "description": "Create a new charge to a customer's payment source.",
+    "method": "POST",
+    "path": "/charges",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "amount": {"type": "integer", "description": "Amount in smallest currency unit (e.g. pence)"},
+            "currency": {"type": "string", "description": "Three-letter ISO currency code"},
+            "customer": {"type": "string", "description": "Customer ID"},
+            "source": {"type": "string", "description": "Payment source token"},
+            "description": {"type": "string", "description": "Charge description"}
+        },
+        "required": ["amount", "currency"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

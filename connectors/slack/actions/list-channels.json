@@ -1,0 +1,27 @@
+{
+    "name": "list-channels",
+    "display_name": "List Channels",
+    "description": "Retrieve a list of Slack channels.",
+    "method": "GET",
+    "path": "/conversations.list",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "types": {"type": "string", "description": "Comma-separated channel types (public_channel, private_channel)"},
+            "limit": {"type": "integer", "description": "Number of channels to return"},
+            "cursor": {"type": "string", "description": "Pagination cursor"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "ok": {"type": "boolean"},
+            "channels": {"type": "array", "items": {"type": "object"}},
+            "response_metadata": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

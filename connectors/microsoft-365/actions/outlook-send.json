@@ -1,0 +1,28 @@
+{
+    "name": "outlook-send",
+    "display_name": "Send Outlook Email",
+    "description": "Send an email via Outlook.",
+    "method": "POST",
+    "path": "/me/sendMail",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "message": {
+                "type": "object",
+                "properties": {
+                    "subject": {"type": "string", "description": "Email subject"},
+                    "body": {"type": "object", "description": "Email body with contentType and content"},
+                    "toRecipients": {"type": "array", "description": "List of recipients"}
+                },
+                "required": ["subject", "body", "toRecipients"]
+            },
+            "saveToSentItems": {"type": "boolean", "description": "Save to Sent Items folder"}
+        },
+        "required": ["message"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["message.toRecipients.emailAddress.address", "message.body.content"]
+}

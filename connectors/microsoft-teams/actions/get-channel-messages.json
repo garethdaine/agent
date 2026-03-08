@@ -1,0 +1,26 @@
+{
+    "name": "get-channel-messages",
+    "display_name": "Get Channel Messages",
+    "description": "Retrieve messages from a Microsoft Teams channel.",
+    "method": "GET",
+    "path": "/teams/{teamId}/channels/{channelId}/messages",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "teamId": {"type": "string", "description": "Team ID"},
+            "channelId": {"type": "string", "description": "Channel ID"},
+            "$top": {"type": "integer", "description": "Number of messages to return"}
+        },
+        "required": ["teamId", "channelId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "value": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["value.from.user.displayName", "value.body.content"]
+}

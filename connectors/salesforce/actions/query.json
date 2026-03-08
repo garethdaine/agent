@@ -1,0 +1,26 @@
+{
+    "name": "query",
+    "display_name": "SOQL Query",
+    "description": "Execute a SOQL query to retrieve Salesforce records.",
+    "method": "GET",
+    "path": "/services/data/v59.0/query",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "q": {"type": "string", "description": "SOQL query string"}
+        },
+        "required": ["q"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "totalSize": {"type": "integer"},
+            "done": {"type": "boolean"},
+            "records": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,26 @@
+{
+    "name": "add-reaction",
+    "display_name": "Add Reaction",
+    "description": "Add an emoji reaction to a message.",
+    "method": "POST",
+    "path": "/reactions.add",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "channel": {"type": "string", "description": "Channel ID"},
+            "name": {"type": "string", "description": "Emoji name (without colons)"},
+            "timestamp": {"type": "string", "description": "Message timestamp"}
+        },
+        "required": ["channel", "name", "timestamp"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "ok": {"type": "boolean"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": true,
+    "pii_fields": []
+}

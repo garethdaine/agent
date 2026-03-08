@@ -1,0 +1,29 @@
+{
+    "name": "create-payment",
+    "display_name": "Create Payment",
+    "description": "Create a new payment against a mandate.",
+    "method": "POST",
+    "path": "/payments",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "payments": {
+                "type": "object",
+                "properties": {
+                    "amount": {"type": "integer", "description": "Amount in pence/cents"},
+                    "currency": {"type": "string", "description": "Three-letter ISO currency code"},
+                    "charge_date": {"type": "string", "description": "Charge date (YYYY-MM-DD)"},
+                    "description": {"type": "string", "description": "Payment description"},
+                    "links": {"type": "object", "description": "Link to mandate"}
+                },
+                "required": ["amount", "currency", "links"]
+            }
+        },
+        "required": ["payments"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

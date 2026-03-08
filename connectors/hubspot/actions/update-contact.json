@@ -1,0 +1,20 @@
+{
+    "name": "update-contact",
+    "display_name": "Update Contact",
+    "description": "Update an existing contact in HubSpot CRM.",
+    "method": "POST",
+    "path": "/crm/v3/objects/contacts/{contactId}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "contactId": {"type": "string", "description": "Contact ID"},
+            "properties": {"type": "object", "description": "Properties to update"}
+        },
+        "required": ["contactId", "properties"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["properties.email", "properties.firstname", "properties.lastname"]
+}

@@ -1,0 +1,26 @@
+{
+    "name": "list-companies",
+    "display_name": "List Companies",
+    "description": "Retrieve a list of companies from HubSpot CRM.",
+    "method": "GET",
+    "path": "/crm/v3/objects/companies",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of results to return"},
+            "after": {"type": "string", "description": "Cursor for pagination"},
+            "properties": {"type": "string", "description": "Comma-separated list of properties"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "results": {"type": "array", "items": {"type": "object"}},
+            "paging": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

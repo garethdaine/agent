@@ -1,0 +1,28 @@
+{
+    "name": "post-adaptive-card",
+    "display_name": "Post Adaptive Card",
+    "description": "Post an Adaptive Card to a Microsoft Teams channel.",
+    "method": "POST",
+    "path": "/teams/{teamId}/channels/{channelId}/messages",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "teamId": {"type": "string", "description": "Team ID"},
+            "channelId": {"type": "string", "description": "Channel ID"},
+            "body": {
+                "type": "object",
+                "properties": {
+                    "contentType": {"type": "string", "description": "Must be 'html'"},
+                    "content": {"type": "string", "description": "Adaptive Card JSON as HTML attachment"}
+                }
+            },
+            "attachments": {"type": "array", "description": "Adaptive Card attachments"}
+        },
+        "required": ["teamId", "channelId"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

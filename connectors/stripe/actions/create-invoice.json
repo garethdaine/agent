@@ -1,0 +1,22 @@
+{
+    "name": "create-invoice",
+    "display_name": "Create Invoice",
+    "description": "Create a new Stripe invoice for a customer.",
+    "method": "POST",
+    "path": "/invoices",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "customer": {"type": "string", "description": "Customer ID"},
+            "collection_method": {"type": "string", "description": "charge_automatically or send_invoice"},
+            "description": {"type": "string", "description": "Invoice description"},
+            "auto_advance": {"type": "boolean", "description": "Whether to automatically advance the invoice"}
+        },
+        "required": ["customer"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

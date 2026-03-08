@@ -1,0 +1,24 @@
+{
+    "name": "get-contact",
+    "display_name": "Get Contact",
+    "description": "Retrieve a specific contact by their unique identifier.",
+    "method": "GET",
+    "path": "/Contacts/{ContactID}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "ContactID": {"type": "string", "description": "The unique identifier of the contact"}
+        },
+        "required": ["ContactID"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "Contacts": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["Contacts.EmailAddress", "Contacts.FirstName", "Contacts.LastName", "Contacts.Phone"]
+}

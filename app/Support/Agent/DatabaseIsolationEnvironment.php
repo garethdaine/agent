@@ -24,17 +24,31 @@ class DatabaseIsolationEnvironment
     ];
 
     /**
+     * Keys that must be explicitly suppressed in subprocesses.
+     *
+     * Symfony Process merges getenv()/\$_SERVER back into the env array
+     * via += for any missing keys.  Simply omitting a key is not enough;
+     * we must set it to `false` so the key is present (blocking the
+     * backfill) while Symfony skips false values when building envPairs.
+     *
+     * @var array<int, string>
+     */
+    private const SUPPRESSED_KEYS = [
+        'CLAUDECODE',
+    ];
+
+    /**
      * Build a subprocess environment from $_ENV with production DB
      * credentials stripped and safe testing values injected.
      *
      * @param  array<string, mixed>  $baseEnv  Typically $_ENV
      * @param  array<string, mixed>  $overrides  Job-level env_json
-     * @return array<string, string>
+     * @return array<string, string|false>
      */
     public static function build(array $baseEnv, array $overrides = []): array
     {
         $env = [];
-        $stripped = array_merge(self::PRODUCTION_DB_KEYS, ['APP_KEY']);
+        $stripped = array_merge(self::PRODUCTION_DB_KEYS, ['APP_KEY'], self::SUPPRESSED_KEYS);
 
         foreach ($baseEnv as $key => $value) {
             if (! is_string($key) || ! is_scalar($value)) {
@@ -60,7 +74,16 @@ class DatabaseIsolationEnvironment
             $env[$key] = (string) $value;
         }
 
-        return array_merge($env, self::safeTestingDatabaseVars());
+        $env = array_merge($env, self::safeTestingDatabaseVars());
+
+        // Set suppressed keys to false so Symfony Process sees them as
+        // present (preventing getDefaultEnv() backfill via +=) but skips
+        // them when building the envPairs array for proc_open().
+        foreach (self::SUPPRESSED_KEYS as $key) {
+            $env[$key] = false;
+        }
+
+        return $env;
     }
 
     /**

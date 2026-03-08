@@ -1,0 +1,23 @@
+{
+    "name": "create-invoice",
+    "display_name": "Create Invoice",
+    "description": "Create a new sales invoice.",
+    "method": "POST",
+    "path": "/sales_invoices",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "contact_id": {"type": "string", "description": "Contact identifier"},
+            "date": {"type": "string", "description": "Invoice date (YYYY-MM-DD)"},
+            "due_date": {"type": "string", "description": "Due date (YYYY-MM-DD)"},
+            "invoice_lines": {"type": "array", "description": "Line items"},
+            "reference": {"type": "string", "description": "Invoice reference"}
+        },
+        "required": ["contact_id", "date", "invoice_lines"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

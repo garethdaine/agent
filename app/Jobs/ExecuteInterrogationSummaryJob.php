@@ -209,6 +209,18 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
                     static fn ($v): bool => is_string($v) && trim($v) !== ''
                 );
 
+                // If required_changes is empty, fall back to issue descriptions
+                // so the revision pass has actionable context.
+                if ($requiredChanges === []) {
+                    $issues = (array) ($reviewResult['issues'] ?? []);
+                    foreach ($issues as $issue) {
+                        $desc = trim((string) ($issue['description'] ?? $issue['title'] ?? ''));
+                        if ($desc !== '') {
+                            $requiredChanges[] = $desc;
+                        }
+                    }
+                }
+
                 if ($requiredChanges !== []) {
                     $revisionNotes = "Adversarial review required changes:\n- "
                         .implode("\n- ", array_values($requiredChanges));
@@ -544,9 +556,17 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
             $verdict = $reviewPayload['verdict'];
             $confidence = (float) ($reviewPayload['confidence'] ?? 1.0);
 
-            // Check for critical issue auto-escalation
-            if ($verdict === 'pass' && $this->hasCriticalIssue($reviewPayload['issues'] ?? [])) {
+            // Critical issue auto-escalation — only on the first attempt to avoid
+            // unwinnable loops where the reviewer consistently passes with a critical
+            // issue that the summary generator cannot resolve.
+            if ($verdict === 'pass' && $attempt <= 1 && $this->hasCriticalIssue($reviewPayload['issues'] ?? [])) {
                 $verdict = 'revise';
+            }
+
+            // On subsequent attempts, if the reviewer passes with critical issues,
+            // accept but log a warning so the user is aware.
+            if ($verdict === 'pass' && $attempt > 1 && $this->hasCriticalIssue($reviewPayload['issues'] ?? [])) {
+                $metadata['summary']['critical_issues_accepted'] = true;
             }
 
             // Check low confidence warning (only for pass verdict after escalation check)
@@ -581,7 +601,10 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
                     return null; // Success, continue with summary persistence
 
                 case 'revise':
-                    if ($attempt >= $maxRetries) {
+                    // The initial review (attempt 1) is not a retry. Only count
+                    // subsequent attempts as retries, so max_retries=3 gives 3
+                    // actual revision passes before exhaustion.
+                    if ($attempt > $maxRetries) {
                         $metadata['summary']['review_status'] = 'accepted_with_warnings';
                         $session->update(['metadata_json' => $metadata]);
 
@@ -611,23 +634,54 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
             }
 
         } catch (\Throwable $e) {
+            report($e);
+
+            // Store error in metadata for debugging
+            $metadata = $session->metadata_json ?? [];
+            $metadata['summary'] = $metadata['summary'] ?? [];
+            $attempt = ($metadata['summary']['review_attempts'] ?? 0) + 1;
+            $metadata['summary']['review_attempts'] = $attempt;
+            $metadata['summary']['review_error'] = [
+                'message' => $e->getMessage(),
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ];
+
             // In shadow mode, log error but don't fail the job
             if ($warnOnly) {
-                report($e);
-
-                // Store error in metadata for debugging
-                $metadata = $session->metadata_json ?? [];
-                $metadata['summary'] = $metadata['summary'] ?? [];
-                $metadata['summary']['review_error'] = [
-                    'message' => $e->getMessage(),
-                    'at' => CarbonImmutable::now('UTC')->toIso8601String(),
-                ];
                 $session->update(['metadata_json' => $metadata]);
 
                 return null;
             }
 
-            throw $e;
+            // In gating mode, treat parse/subprocess failures as a failed review
+            // attempt rather than killing the session. If we've exhausted retries,
+            // accept with warnings; otherwise allow the summary to proceed without
+            // gating so the user can still review it.
+            if ($attempt > $maxRetries) {
+                $metadata['summary']['review_status'] = 'accepted_with_warnings';
+                $session->update(['metadata_json' => $metadata]);
+
+                $writer->appendSystem([
+                    'notice' => 'summary_review_error_exhausted',
+                    'message' => 'Adversarial review failed after '.$maxRetries.' attempts due to errors. Accepting current summary with warnings.',
+                    'error' => $e->getMessage(),
+                    'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+                ]);
+
+                return null;
+            }
+
+            $metadata['summary']['review_status'] = 'review_error';
+            $session->update(['metadata_json' => $metadata]);
+
+            $writer->appendSystem([
+                'notice' => 'summary_review_error',
+                'message' => 'Adversarial review encountered an error. Proceeding without review gating.',
+                'error' => $e->getMessage(),
+                'at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ]);
+
+            return null;
         }
 
         return null;

@@ -155,7 +155,7 @@ mutation CreateProject($input: ProjectCreateInput!) {
 GRAPHQL,
             [
                 'input' => [
-                    'name' => $projectName,
+                    'name' => mb_substr($projectName, 0, 80),
                     'description' => $this->projectDescription($session),
                     'content' => $this->projectContent($session),
                     'teamIds' => [$teamId],
@@ -354,7 +354,7 @@ GRAPHQL,
             [
                 'input' => array_filter([
                     'projectId' => $projectId,
-                    'name' => trim((string) $name),
+                    'name' => mb_substr(trim((string) $name), 0, 80),
                     'description' => is_string($description) ? trim($description) : null,
                 ], static fn ($value): bool => $value !== null && (! is_string($value) || $value !== '')),
             ],
@@ -388,7 +388,7 @@ GRAPHQL,
         $input = [
             'teamId' => $teamId,
             'projectId' => $projectId,
-            'title' => trim((string) ($title ?? $task->title)),
+            'title' => mb_substr(trim((string) ($title ?? $task->title)), 0, 80),
             'description' => $description,
             'priority' => max(0, min(4, $priority)),
         ];

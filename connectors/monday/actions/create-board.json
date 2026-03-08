@@ -1,0 +1,26 @@
+{
+    "name": "create-board",
+    "display_name": "Create Board",
+    "description": "Create a new board via GraphQL mutation.",
+    "method": "POST",
+    "path": "/",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "board_name": {"type": "string", "description": "Board name"},
+            "board_kind": {"type": "string", "description": "Board kind (public, private, share)"},
+            "template_id": {"type": "integer", "description": "Optional template ID"}
+        },
+        "required": ["board_name", "board_kind"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "object", "properties": {"create_board": {"type": "object"}}}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

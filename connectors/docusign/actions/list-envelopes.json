@@ -1,0 +1,30 @@
+{
+    "name": "list-envelopes",
+    "display_name": "List Envelopes",
+    "description": "Retrieve a list of envelopes with optional filtering.",
+    "method": "GET",
+    "path": "/accounts/{accountId}/envelopes",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "accountId": {"type": "string", "description": "DocuSign account ID"},
+            "from_date": {"type": "string", "description": "Start date for results (ISO 8601)"},
+            "to_date": {"type": "string", "description": "End date for results"},
+            "status": {"type": "string", "description": "Filter by envelope status"},
+            "count": {"type": "integer", "description": "Number of results to return"}
+        },
+        "required": ["accountId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "envelopes": {"type": "array", "items": {"type": "object"}},
+            "resultSetSize": {"type": "string"},
+            "totalSetSize": {"type": "string"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

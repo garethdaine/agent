@@ -1,0 +1,28 @@
+{
+    "name": "list-charges",
+    "display_name": "List Charges",
+    "description": "Retrieve a list of charges.",
+    "method": "GET",
+    "path": "/charges",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of charges to return (max 100)"},
+            "starting_after": {"type": "string", "description": "Cursor for pagination"},
+            "customer": {"type": "string", "description": "Filter by customer ID"},
+            "created": {"type": "object", "description": "Date filter (gt, gte, lt, lte)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}},
+            "has_more": {"type": "boolean"},
+            "url": {"type": "string"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["data.billing_details.email", "data.billing_details.name", "data.billing_details.phone"]
+}

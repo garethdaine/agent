@@ -1,0 +1,27 @@
+{
+    "name": "create-ticket",
+    "display_name": "Create Ticket",
+    "description": "Create a new support ticket in HubSpot.",
+    "method": "POST",
+    "path": "/crm/v3/objects/tickets",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "properties": {
+                "type": "object",
+                "properties": {
+                    "subject": {"type": "string", "description": "Ticket subject"},
+                    "content": {"type": "string", "description": "Ticket description"},
+                    "hs_pipeline_stage": {"type": "string", "description": "Pipeline stage"}
+                },
+                "required": ["subject"]
+            }
+        },
+        "required": ["properties"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

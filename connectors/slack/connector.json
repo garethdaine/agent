@@ -1,0 +1,39 @@
+{
+    "name": "slack",
+    "display_name": "Slack",
+    "description": "Team messaging platform. Send messages, manage channels, upload files, and interact with conversations.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://slack.com/oauth/v2/authorize",
+        "token_url": "https://slack.com/api/oauth.v2.access",
+        "scopes": ["chat:write", "channels:read", "files:write", "reactions:write", "channels:history"],
+        "pkce_required": false,
+        "refresh_strategy": "none",
+        "token_expiry_seconds": 0
+    },
+    "base_url": "https://slack.com/api",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 100000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "communication",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "slack",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["send-message", "upload-file", "add-reaction", "reply-in-thread"],
+    "data_regions": ["US"],
+    "webhooks": [],
+    "actions": [
+        {"name": "send-message", "method": "POST", "path": "/chat.postMessage"},
+        {"name": "list-channels", "method": "GET", "path": "/conversations.list"},
+        {"name": "upload-file", "method": "POST", "path": "/files.upload"},
+        {"name": "list-messages", "method": "GET", "path": "/conversations.history"},
+        {"name": "add-reaction", "method": "POST", "path": "/reactions.add"},
+        {"name": "reply-in-thread", "method": "POST", "path": "/chat.postMessage"}
+    ]
+}

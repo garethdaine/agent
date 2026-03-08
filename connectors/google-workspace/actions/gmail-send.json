@@ -1,0 +1,22 @@
+{
+    "name": "gmail-send",
+    "display_name": "Send Gmail Message",
+    "description": "Send an email message via Gmail.",
+    "method": "POST",
+    "path": "/gmail/v1/users/me/messages/send",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "raw": {"type": "string", "description": "Base64url-encoded email message (RFC 2822)"},
+            "to": {"type": "string", "description": "Recipient email address"},
+            "subject": {"type": "string", "description": "Email subject"},
+            "body": {"type": "string", "description": "Email body content"}
+        },
+        "required": ["to", "subject", "body"]
+    },
+    "response_schema": {"type": "object", "properties": {"id": {"type": "string"}, "threadId": {"type": "string"}}},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["to", "body"]
+}

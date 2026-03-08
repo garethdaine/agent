@@ -1,0 +1,24 @@
+{
+    "name": "list-channels",
+    "display_name": "List Channels",
+    "description": "Retrieve a list of channels in a Microsoft Teams team.",
+    "method": "GET",
+    "path": "/teams/{teamId}/channels",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "teamId": {"type": "string", "description": "Team ID"}
+        },
+        "required": ["teamId"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "value": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

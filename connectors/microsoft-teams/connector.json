@@ -1,0 +1,38 @@
+{
+    "name": "microsoft-teams",
+    "display_name": "Microsoft Teams",
+    "description": "Team communication and collaboration platform. Send messages, manage channels, and read conversations.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        "token_url": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        "scopes": ["ChannelMessage.Send", "Channel.ReadBasic.All", "Team.ReadBasic.All", "ChannelMessage.Read.All"],
+        "pkce_required": true,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://graph.microsoft.com/v1.0",
+    "rate_limits": {
+        "requests_per_minute": 120,
+        "daily_limit": 50000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "communication",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "teams",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["send-message", "post-adaptive-card"],
+    "data_regions": ["US", "EU", "GB", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "send-message", "method": "POST", "path": "/teams/{teamId}/channels/{channelId}/messages"},
+        {"name": "list-channels", "method": "GET", "path": "/teams/{teamId}/channels"},
+        {"name": "list-teams", "method": "GET", "path": "/me/joinedTeams"},
+        {"name": "get-channel-messages", "method": "GET", "path": "/teams/{teamId}/channels/{channelId}/messages"},
+        {"name": "post-adaptive-card", "method": "POST", "path": "/teams/{teamId}/channels/{channelId}/messages"}
+    ]
+}

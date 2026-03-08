@@ -1,0 +1,41 @@
+{
+    "name": "salesforce",
+    "display_name": "Salesforce",
+    "description": "Customer relationship management platform. Query records, manage leads, opportunities, contacts, and tasks.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://login.salesforce.com/services/oauth2/authorize",
+        "token_url": "https://login.salesforce.com/services/oauth2/token",
+        "scopes": ["api", "refresh_token", "offline_access"],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 7200
+    },
+    "base_url": "https://login.salesforce.com",
+    "rate_limits": {
+        "requests_per_minute": 100,
+        "daily_limit": 15000,
+        "concurrent_limit": 25
+    },
+    "cost_model": "quota-limited",
+    "risk_level": "standard",
+    "category": "crm",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "salesforce",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-lead", "update-lead", "create-opportunity", "update-opportunity", "create-task"],
+    "data_regions": ["US", "EU", "GB", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "query", "method": "GET", "path": "/services/data/v59.0/query"},
+        {"name": "create-lead", "method": "POST", "path": "/services/data/v59.0/sobjects/Lead"},
+        {"name": "update-lead", "method": "POST", "path": "/services/data/v59.0/sobjects/Lead/{id}"},
+        {"name": "get-contact", "method": "GET", "path": "/services/data/v59.0/sobjects/Contact/{id}"},
+        {"name": "create-opportunity", "method": "POST", "path": "/services/data/v59.0/sobjects/Opportunity"},
+        {"name": "update-opportunity", "method": "POST", "path": "/services/data/v59.0/sobjects/Opportunity/{id}"},
+        {"name": "list-accounts", "method": "GET", "path": "/services/data/v59.0/sobjects/Account"},
+        {"name": "create-task", "method": "POST", "path": "/services/data/v59.0/sobjects/Task"}
+    ]
+}

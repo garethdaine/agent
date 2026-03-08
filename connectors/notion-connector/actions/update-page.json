@@ -1,0 +1,23 @@
+{
+    "name": "update-page",
+    "display_name": "Update Page",
+    "description": "Update properties of an existing Notion page.",
+    "method": "POST",
+    "path": "/pages/{page_id}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "page_id": {"type": "string", "description": "Page ID"},
+            "properties": {"type": "object", "description": "Properties to update"},
+            "archived": {"type": "boolean", "description": "Set to true to archive the page"},
+            "icon": {"type": "object", "description": "Updated icon"},
+            "cover": {"type": "object", "description": "Updated cover image"}
+        },
+        "required": ["page_id"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

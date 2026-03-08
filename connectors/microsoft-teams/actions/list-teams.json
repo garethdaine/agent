@@ -1,0 +1,21 @@
+{
+    "name": "list-teams",
+    "display_name": "List Teams",
+    "description": "Retrieve a list of teams the authenticated user has joined.",
+    "method": "GET",
+    "path": "/me/joinedTeams",
+    "parameters": {
+        "type": "object",
+        "properties": {}
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "value": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

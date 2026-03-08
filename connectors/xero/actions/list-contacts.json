@@ -1,0 +1,25 @@
+{
+    "name": "list-contacts",
+    "display_name": "List Contacts",
+    "description": "Retrieve a list of contacts with optional filtering.",
+    "method": "GET",
+    "path": "/Contacts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "where": {"type": "string", "description": "Filter expression"},
+            "order": {"type": "string", "description": "Sort order"},
+            "page": {"type": "integer", "description": "Page number"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "Contacts": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["Contacts.EmailAddress", "Contacts.FirstName", "Contacts.LastName"]
+}

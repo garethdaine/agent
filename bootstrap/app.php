@@ -36,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'office.ui' => \App\Http\Middleware\OfficeUiFeatureGate::class,
             'outage.protect' => \App\Http\Middleware\OutageAutoProtect::class,
             'skills.ui' => \App\Http\Middleware\EnsureSkillsUiEnabled::class,
+            'connectors.ui' => \App\Http\Middleware\EnsureConnectorsUiEnabled::class,
             'tunnel.feature' => \App\Http\Middleware\TunnelFeatureGate::class,
             'tunnel.ip' => \App\Http\Middleware\TunnelIpAllowlistMiddleware::class,
         ]);

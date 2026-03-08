@@ -1,0 +1,25 @@
+{
+    "name": "get-bank-transactions",
+    "display_name": "Get Bank Transactions",
+    "description": "Retrieve bank transactions with optional filtering.",
+    "method": "GET",
+    "path": "/BankTransactions",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "where": {"type": "string", "description": "Filter expression"},
+            "order": {"type": "string", "description": "Sort order"},
+            "page": {"type": "integer", "description": "Page number"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "BankTransactions": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

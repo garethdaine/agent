@@ -1,0 +1,42 @@
+{
+    "name": "google-workspace",
+    "display_name": "Google Workspace",
+    "description": "Productivity suite including Gmail, Drive, Calendar, and Sheets. Manage emails, files, events, and spreadsheet data.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://accounts.google.com/o/oauth2/v2/auth",
+        "token_url": "https://oauth2.googleapis.com/token",
+        "scopes": ["https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/gmail.send", "https://www.googleapis.com/auth/drive.readonly", "https://www.googleapis.com/auth/calendar", "https://www.googleapis.com/auth/spreadsheets"],
+        "pkce_required": true,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 3600
+    },
+    "base_url": "https://www.googleapis.com",
+    "rate_limits": {
+        "requests_per_minute": 250,
+        "daily_limit": 1000000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "productivity",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "google",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["gmail-send", "drive-upload", "calendar-create-event", "sheets-write"],
+    "data_regions": ["US", "EU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "gmail-list", "method": "GET", "path": "/gmail/v1/users/me/messages"},
+        {"name": "gmail-send", "method": "POST", "path": "/gmail/v1/users/me/messages/send"},
+        {"name": "drive-list", "method": "GET", "path": "/drive/v3/files"},
+        {"name": "drive-read", "method": "GET", "path": "/drive/v3/files/{fileId}"},
+        {"name": "drive-upload", "method": "POST", "path": "/upload/drive/v3/files"},
+        {"name": "calendar-list-events", "method": "GET", "path": "/calendar/v3/calendars/{calendarId}/events"},
+        {"name": "calendar-create-event", "method": "POST", "path": "/calendar/v3/calendars/{calendarId}/events"},
+        {"name": "sheets-read", "method": "GET", "path": "/v4/spreadsheets/{spreadsheetId}/values/{range}"},
+        {"name": "sheets-write", "method": "POST", "path": "/v4/spreadsheets/{spreadsheetId}/values/{range}"}
+    ]
+}

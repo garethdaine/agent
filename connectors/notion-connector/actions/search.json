@@ -1,0 +1,29 @@
+{
+    "name": "search",
+    "display_name": "Search",
+    "description": "Search across all pages and databases accessible to the integration.",
+    "method": "POST",
+    "path": "/search",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "Search query text"},
+            "filter": {"type": "object", "description": "Filter by object type (page or database)"},
+            "sort": {"type": "object", "description": "Sort direction and timestamp"},
+            "start_cursor": {"type": "string", "description": "Pagination cursor"},
+            "page_size": {"type": "integer", "description": "Number of results (max 100)"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "results": {"type": "array", "items": {"type": "object"}},
+            "next_cursor": {"type": "string"},
+            "has_more": {"type": "boolean"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

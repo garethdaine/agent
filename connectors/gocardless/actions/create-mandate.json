@@ -1,0 +1,26 @@
+{
+    "name": "create-mandate",
+    "display_name": "Create Mandate",
+    "description": "Create a new direct debit mandate for a customer.",
+    "method": "POST",
+    "path": "/mandates",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "mandates": {
+                "type": "object",
+                "properties": {
+                    "scheme": {"type": "string", "description": "Direct debit scheme (bacs, sepa_core, etc.)"},
+                    "links": {"type": "object", "description": "Links to customer_bank_account and creditor"}
+                },
+                "required": ["scheme", "links"]
+            }
+        },
+        "required": ["mandates"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

@@ -1,0 +1,27 @@
+{
+    "name": "drive-list",
+    "display_name": "List Drive Files",
+    "description": "Retrieve a list of files from Google Drive.",
+    "method": "GET",
+    "path": "/drive/v3/files",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "q": {"type": "string", "description": "Search query (Drive API syntax)"},
+            "pageSize": {"type": "integer", "description": "Maximum number of files to return"},
+            "pageToken": {"type": "string", "description": "Page token for pagination"},
+            "orderBy": {"type": "string", "description": "Sort order"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "files": {"type": "array", "items": {"type": "object"}},
+            "nextPageToken": {"type": "string"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

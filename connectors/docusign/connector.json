@@ -1,0 +1,38 @@
+{
+    "name": "docusign",
+    "display_name": "DocuSign",
+    "description": "Electronic signature and agreement management platform. Create envelopes, send documents for signing, and track status.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://account-d.docusign.com/oauth/auth",
+        "token_url": "https://account-d.docusign.com/oauth/token",
+        "scopes": ["signature", "extended"],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 28800
+    },
+    "base_url": "https://demo.docusign.net/restapi/v2.1",
+    "rate_limits": {
+        "requests_per_minute": 60,
+        "daily_limit": 1000,
+        "concurrent_limit": 5
+    },
+    "cost_model": "metered",
+    "risk_level": "elevated",
+    "category": "document-signing",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "docusign",
+    "write_trust_threshold": 0.8,
+    "pii_redaction_mode": "context_and_memory",
+    "requires_approval_for": ["create-envelope", "send-envelope"],
+    "data_regions": ["US", "EU", "AU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "create-envelope", "method": "POST", "path": "/accounts/{accountId}/envelopes"},
+        {"name": "send-envelope", "method": "POST", "path": "/accounts/{accountId}/envelopes"},
+        {"name": "check-status", "method": "GET", "path": "/accounts/{accountId}/envelopes/{envelopeId}"},
+        {"name": "download-signed", "method": "GET", "path": "/accounts/{accountId}/envelopes/{envelopeId}/documents/{documentId}"},
+        {"name": "list-envelopes", "method": "GET", "path": "/accounts/{accountId}/envelopes"}
+    ]
+}

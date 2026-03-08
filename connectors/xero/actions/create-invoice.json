@@ -1,0 +1,29 @@
+{
+    "name": "create-invoice",
+    "display_name": "Create Invoice",
+    "description": "Create a new sales or purchase invoice in Xero.",
+    "method": "POST",
+    "path": "/Invoices",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "Type": {"type": "string", "enum": ["ACCREC", "ACCPAY"], "description": "Invoice type: ACCREC (sales) or ACCPAY (purchase)"},
+            "Contact": {"type": "object", "description": "Contact details for the invoice"},
+            "LineItems": {"type": "array", "description": "Line items for the invoice"},
+            "Date": {"type": "string", "description": "Invoice date (YYYY-MM-DD)"},
+            "DueDate": {"type": "string", "description": "Due date (YYYY-MM-DD)"},
+            "Reference": {"type": "string", "description": "Invoice reference number"}
+        },
+        "required": ["Type", "Contact", "LineItems"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "Invoices": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["Contact.EmailAddress", "Contact.FirstName", "Contact.LastName"]
+}

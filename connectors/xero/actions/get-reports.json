@@ -1,0 +1,24 @@
+{
+    "name": "get-reports",
+    "display_name": "Get Reports",
+    "description": "Retrieve a specific financial report by its identifier.",
+    "method": "GET",
+    "path": "/Reports/{ReportID}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "ReportID": {"type": "string", "description": "The report identifier (e.g. BalanceSheet, ProfitAndLoss)"}
+        },
+        "required": ["ReportID"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "Reports": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,23 @@
+{
+    "name": "create-envelope",
+    "display_name": "Create Envelope",
+    "description": "Create a new envelope (document package) for signing.",
+    "method": "POST",
+    "path": "/accounts/{accountId}/envelopes",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "accountId": {"type": "string", "description": "DocuSign account ID"},
+            "emailSubject": {"type": "string", "description": "Email subject for the envelope"},
+            "documents": {"type": "array", "description": "Documents to include"},
+            "recipients": {"type": "object", "description": "Recipients (signers, cc, etc.)"},
+            "status": {"type": "string", "enum": ["created", "sent"], "description": "Envelope status (created=draft, sent=send immediately)"}
+        },
+        "required": ["accountId", "emailSubject", "documents", "recipients"]
+    },
+    "response_schema": {"type": "object", "properties": {"envelopeId": {"type": "string"}, "status": {"type": "string"}}},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["recipients.signers.email", "recipients.signers.name"]
+}

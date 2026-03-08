@@ -1,0 +1,27 @@
+{
+    "name": "create-item",
+    "display_name": "Create Item",
+    "description": "Create a new item on a board via GraphQL mutation.",
+    "method": "POST",
+    "path": "/",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "board_id": {"type": "string", "description": "Board ID"},
+            "item_name": {"type": "string", "description": "Item name"},
+            "group_id": {"type": "string", "description": "Group ID to place the item in"},
+            "column_values": {"type": "string", "description": "JSON string of column values"}
+        },
+        "required": ["board_id", "item_name"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "object", "properties": {"create_item": {"type": "object"}}}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

@@ -1,0 +1,27 @@
+{
+    "name": "list-subscriptions",
+    "display_name": "List Subscriptions",
+    "description": "Retrieve a list of Stripe subscriptions.",
+    "method": "GET",
+    "path": "/subscriptions",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of subscriptions to return"},
+            "starting_after": {"type": "string", "description": "Cursor for pagination"},
+            "customer": {"type": "string", "description": "Filter by customer ID"},
+            "status": {"type": "string", "description": "Filter by status"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "array", "items": {"type": "object"}},
+            "has_more": {"type": "boolean"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

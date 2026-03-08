@@ -1,0 +1,25 @@
+{
+    "name": "onedrive-list",
+    "display_name": "List OneDrive Files",
+    "description": "List files and folders in the user's OneDrive root.",
+    "method": "GET",
+    "path": "/me/drive/root/children",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "$top": {"type": "integer", "description": "Number of items to return"},
+            "$select": {"type": "string", "description": "Fields to return"},
+            "$orderby": {"type": "string", "description": "Sort order"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "value": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

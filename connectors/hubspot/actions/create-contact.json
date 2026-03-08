@@ -1,0 +1,29 @@
+{
+    "name": "create-contact",
+    "display_name": "Create Contact",
+    "description": "Create a new contact in HubSpot CRM.",
+    "method": "POST",
+    "path": "/crm/v3/objects/contacts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "properties": {
+                "type": "object",
+                "properties": {
+                    "email": {"type": "string"},
+                    "firstname": {"type": "string"},
+                    "lastname": {"type": "string"},
+                    "phone": {"type": "string"},
+                    "company": {"type": "string"}
+                },
+                "required": ["email"]
+            }
+        },
+        "required": ["properties"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["properties.email", "properties.firstname", "properties.lastname", "properties.phone"]
+}

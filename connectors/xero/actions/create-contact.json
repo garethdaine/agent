@@ -1,0 +1,28 @@
+{
+    "name": "create-contact",
+    "display_name": "Create Contact",
+    "description": "Create a new contact in Xero.",
+    "method": "POST",
+    "path": "/Contacts",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "Name": {"type": "string", "description": "Contact name (required)"},
+            "EmailAddress": {"type": "string", "description": "Email address"},
+            "FirstName": {"type": "string", "description": "First name"},
+            "LastName": {"type": "string", "description": "Last name"},
+            "AccountNumber": {"type": "string", "description": "Account number"}
+        },
+        "required": ["Name"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "Contacts": {"type": "array", "items": {"type": "object"}}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["EmailAddress", "FirstName", "LastName"]
+}

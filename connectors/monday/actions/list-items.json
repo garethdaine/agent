@@ -1,0 +1,27 @@
+{
+    "name": "list-items",
+    "display_name": "List Items",
+    "description": "Retrieve items from a board via GraphQL query.",
+    "method": "GET",
+    "path": "/",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "board_id": {"type": "string", "description": "Board ID"},
+            "limit": {"type": "integer", "description": "Number of items to return"},
+            "page": {"type": "integer", "description": "Page number"},
+            "group_id": {"type": "string", "description": "Filter by group ID"}
+        },
+        "required": ["board_id"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "data": {"type": "object", "properties": {"boards": {"type": "array"}}}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

@@ -1,0 +1,22 @@
+{
+    "name": "create-customer",
+    "display_name": "Create Customer",
+    "description": "Create a new Stripe customer.",
+    "method": "POST",
+    "path": "/customers",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "email": {"type": "string", "description": "Customer email"},
+            "name": {"type": "string", "description": "Customer name"},
+            "phone": {"type": "string", "description": "Phone number"},
+            "description": {"type": "string", "description": "Customer description"},
+            "metadata": {"type": "object", "description": "Key-value metadata"}
+        }
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": ["email", "name", "phone"]
+}

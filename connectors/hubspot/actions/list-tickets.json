@@ -1,0 +1,25 @@
+{
+    "name": "list-tickets",
+    "display_name": "List Tickets",
+    "description": "Retrieve a list of support tickets from HubSpot.",
+    "method": "GET",
+    "path": "/crm/v3/objects/tickets",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "limit": {"type": "integer", "description": "Number of results to return"},
+            "after": {"type": "string", "description": "Cursor for pagination"}
+        }
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "results": {"type": "array", "items": {"type": "object"}},
+            "paging": {"type": "object"}
+        }
+    },
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

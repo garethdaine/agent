@@ -1,0 +1,19 @@
+{
+    "name": "get-contact",
+    "display_name": "Get Contact",
+    "description": "Retrieve a specific contact record by ID.",
+    "method": "GET",
+    "path": "/services/data/v59.0/sobjects/Contact/{id}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string", "description": "Contact record ID"}
+        },
+        "required": ["id"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": false,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": ["Email", "Phone", "FirstName", "LastName"]
+}

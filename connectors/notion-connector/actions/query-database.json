@@ -1,0 +1,30 @@
+{
+    "name": "query-database",
+    "display_name": "Query Database",
+    "description": "Query a Notion database with optional filters and sorts.",
+    "method": "POST",
+    "path": "/databases/{database_id}/query",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "database_id": {"type": "string", "description": "Database ID"},
+            "filter": {"type": "object", "description": "Filter conditions"},
+            "sorts": {"type": "array", "description": "Sort conditions"},
+            "start_cursor": {"type": "string", "description": "Pagination cursor"},
+            "page_size": {"type": "integer", "description": "Number of results (max 100)"}
+        },
+        "required": ["database_id"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "results": {"type": "array", "items": {"type": "object"}},
+            "next_cursor": {"type": "string"},
+            "has_more": {"type": "boolean"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": true,
+    "idempotent": true,
+    "pii_fields": []
+}

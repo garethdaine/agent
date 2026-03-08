@@ -1,0 +1,22 @@
+{
+    "name": "update-opportunity",
+    "display_name": "Update Opportunity",
+    "description": "Update an existing sales opportunity.",
+    "method": "POST",
+    "path": "/services/data/v59.0/sobjects/Opportunity/{id}",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string", "description": "Opportunity record ID"},
+            "StageName": {"type": "string"},
+            "CloseDate": {"type": "string"},
+            "Amount": {"type": "number"}
+        },
+        "required": ["id"]
+    },
+    "response_schema": {"type": "object"},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

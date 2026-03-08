@@ -15,7 +15,7 @@ class InterrogationTaskProviderSyncService
 
     private const MAX_SUBTASKS_PER_TASK = 20;
 
-    private const MAX_SUBTASK_TITLE_LENGTH = 180;
+    private const MAX_SUBTASK_TITLE_LENGTH = 80;
 
     public function __construct(
         private readonly TaskManagementProviderManager $providerManager,
@@ -328,9 +328,11 @@ class InterrogationTaskProviderSyncService
     {
         $name = trim((string) ($session->name ?? ''));
 
-        return $name !== ''
-            ? sprintf('Agent Build: %s (S%d)', mb_substr($name, 0, 60), (int) $session->id)
+        $projectName = $name !== ''
+            ? sprintf('Agent Build: %s (S%d)', mb_substr($name, 0, 50), (int) $session->id)
             : sprintf('Agent Build Session %d', (int) $session->id);
+
+        return mb_substr($projectName, 0, 80);
     }
 
     /**
@@ -703,6 +705,10 @@ class InterrogationTaskProviderSyncService
         $phaseName = trim($phaseName);
         if ($phaseName === '') {
             return null;
+        }
+
+        if (mb_strlen($phaseName) > 80) {
+            $phaseName = mb_substr($phaseName, 0, 79).'…';
         }
 
         $token = null;

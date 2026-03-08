@@ -1,0 +1,29 @@
+{
+    "name": "send-message",
+    "display_name": "Send Message",
+    "description": "Send a message to a Slack channel.",
+    "method": "POST",
+    "path": "/chat.postMessage",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "channel": {"type": "string", "description": "Channel ID"},
+            "text": {"type": "string", "description": "Message text"},
+            "blocks": {"type": "array", "description": "Block Kit blocks for rich formatting"}
+        },
+        "required": ["channel", "text"]
+    },
+    "response_schema": {
+        "type": "object",
+        "properties": {
+            "ok": {"type": "boolean"},
+            "channel": {"type": "string"},
+            "ts": {"type": "string"},
+            "message": {"type": "object"}
+        }
+    },
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}

@@ -1,0 +1,41 @@
+{
+    "name": "hubspot",
+    "display_name": "HubSpot",
+    "description": "CRM platform for managing contacts, companies, deals, and tickets with marketing and sales automation.",
+    "version": "1.0.0",
+    "auth_type": "oauth2_authorization_code",
+    "auth_config": {
+        "authorization_url": "https://app.hubspot.com/oauth/authorize",
+        "token_url": "https://api.hubapi.com/oauth/v1/token",
+        "scopes": ["crm.objects.contacts.read", "crm.objects.contacts.write", "crm.objects.companies.read", "crm.objects.deals.read", "crm.objects.deals.write", "tickets"],
+        "pkce_required": false,
+        "refresh_strategy": "auto",
+        "token_expiry_seconds": 1800
+    },
+    "base_url": "https://api.hubapi.com",
+    "rate_limits": {
+        "requests_per_minute": 100,
+        "daily_limit": 250000,
+        "concurrent_limit": 10
+    },
+    "cost_model": "free",
+    "risk_level": "standard",
+    "category": "crm",
+    "industries": ["cross-industry"],
+    "mcp_tool_prefix": "hubspot",
+    "write_trust_threshold": 0.7,
+    "pii_redaction_mode": "memory_only",
+    "requires_approval_for": ["create-contact", "update-contact", "create-deal", "create-ticket"],
+    "data_regions": ["US", "EU"],
+    "webhooks": [],
+    "actions": [
+        {"name": "list-contacts", "method": "GET", "path": "/crm/v3/objects/contacts"},
+        {"name": "create-contact", "method": "POST", "path": "/crm/v3/objects/contacts"},
+        {"name": "update-contact", "method": "POST", "path": "/crm/v3/objects/contacts/{contactId}"},
+        {"name": "list-companies", "method": "GET", "path": "/crm/v3/objects/companies"},
+        {"name": "list-deals", "method": "GET", "path": "/crm/v3/objects/deals"},
+        {"name": "create-deal", "method": "POST", "path": "/crm/v3/objects/deals"},
+        {"name": "list-tickets", "method": "GET", "path": "/crm/v3/objects/tickets"},
+        {"name": "create-ticket", "method": "POST", "path": "/crm/v3/objects/tickets"}
+    ]
+}

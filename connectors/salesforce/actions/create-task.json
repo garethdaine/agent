@@ -1,0 +1,24 @@
+{
+    "name": "create-task",
+    "display_name": "Create Task",
+    "description": "Create a new task record associated with a lead, contact, or account.",
+    "method": "POST",
+    "path": "/services/data/v59.0/sobjects/Task",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "Subject": {"type": "string", "description": "Task subject"},
+            "WhoId": {"type": "string", "description": "Related contact or lead ID"},
+            "WhatId": {"type": "string", "description": "Related account or opportunity ID"},
+            "Status": {"type": "string", "description": "Task status"},
+            "Priority": {"type": "string", "description": "Task priority"},
+            "ActivityDate": {"type": "string", "description": "Due date (YYYY-MM-DD)"}
+        },
+        "required": ["Subject"]
+    },
+    "response_schema": {"type": "object", "properties": {"id": {"type": "string"}, "success": {"type": "boolean"}}},
+    "requires_approval": true,
+    "read_only": false,
+    "idempotent": false,
+    "pii_fields": []
+}
