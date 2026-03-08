@@ -31,7 +31,10 @@ class MemorySettingsService
      *
      * @var array<string>
      */
-    private const SENSITIVE_KEYS = [];
+    private const SENSITIVE_KEYS = [
+        'provider_key_openai',
+        'provider_key_anthropic',
+    ];
 
     /**
      * Get a setting value for a user.

@@ -14,7 +14,13 @@ class SkillDashboardController extends Controller
 {
     public function usage(Request $request): JsonResponse
     {
-        $teamId = $request->user()->currentTeam->id;
+        $team = $request->user()->currentTeam;
+
+        if (! $team) {
+            abort(403, 'No current team selected.');
+        }
+
+        $teamId = $team->id;
         $since = now()->subDays(30);
 
         $skillEvents = DB::table('telemetry_event_ledger')
@@ -58,7 +64,13 @@ class SkillDashboardController extends Controller
 
     public function health(Request $request): JsonResponse
     {
-        $teamId = $request->user()->currentTeam->id;
+        $team = $request->user()->currentTeam;
+
+        if (! $team) {
+            abort(403, 'No current team selected.');
+        }
+
+        $teamId = $team->id;
 
         $skills = AgentSkill::query()
             ->where(function ($query) use ($teamId) {

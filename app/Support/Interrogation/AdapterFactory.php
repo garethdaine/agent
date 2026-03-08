@@ -9,12 +9,18 @@ use InvalidArgumentException;
 
 class AdapterFactory
 {
-    public function make(string $runnerType): InterrogationRunnerAdapter
+    public function make(string $runnerType, ?string $model = null): InterrogationRunnerAdapter
     {
-        return match ($runnerType) {
+        $adapter = match ($runnerType) {
             'claude' => app(ClaudeAdapter::class),
             'codex' => app(CodexAdapter::class),
             default => throw new InvalidArgumentException(sprintf('Unsupported interrogation runner type: %s', $runnerType)),
         };
+
+        if ($model !== null && $model !== '') {
+            $adapter->setModelOverride($model);
+        }
+
+        return $adapter;
     }
 }

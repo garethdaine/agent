@@ -12,11 +12,12 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeft, Search } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
-import { reactive, ref } from 'vue';
+import { reactive, ref, watch } from 'vue';
 
 const form = reactive({
     name: '',
     runner_type: 'claude',
+    model: '',
     project_directory: '/Users/garethdaine/Code/agent',
     interrogation_type: 'feature',
     feature_brief: '',
@@ -25,6 +26,33 @@ const form = reactive({
 const submitting = ref(false);
 const error = ref('');
 const validation = ref({});
+const availableModels = ref([]);
+const loadingModels = ref(false);
+const defaultModel = ref('');
+
+const fetchModels = async (runnerType) => {
+    loadingModels.value = true;
+    availableModels.value = [];
+    form.model = '';
+
+    try {
+        const { data } = await axios.get('/agent/api/v1/interrogation/runner-models', {
+            params: { runner_type: runnerType },
+        });
+        availableModels.value = data?.data ?? [];
+        defaultModel.value = data?.default ?? '';
+        form.model = defaultModel.value;
+    } catch {
+        availableModels.value = [];
+        defaultModel.value = '';
+    } finally {
+        loadingModels.value = false;
+    }
+};
+
+watch(() => form.runner_type, (runnerType) => {
+    fetchModels(runnerType);
+}, { immediate: true });
 
 const submit = async () => {
     submitting.value = true;
@@ -116,6 +144,22 @@ const submit = async () => {
                                 </select>
                                 <p v-if="validation.runner_type" class="mt-1 text-sm text-destructive">{{ validation.runner_type[0] }}</p>
                             </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium">Model</label>
+                            <select
+                                v-model="form.model"
+                                :disabled="loadingModels"
+                                class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                            >
+                                <option v-if="loadingModels" value="">Loading models...</option>
+                                <option v-for="m in availableModels" :key="m.id" :value="m.id">
+                                    {{ m.name }}{{ m.id === defaultModel ? ' (default)' : '' }}
+                                </option>
+                            </select>
+                            <p class="mt-1 text-xs text-muted-foreground">Model used for discovery and build runs.</p>
+                            <p v-if="validation.model" class="mt-1 text-sm text-destructive">{{ validation.model[0] }}</p>
                         </div>
 
                         <div>

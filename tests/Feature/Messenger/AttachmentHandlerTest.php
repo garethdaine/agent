@@ -56,6 +56,16 @@ class AttachmentHandlerTest extends TestCase
             ->forSession($this->session)
             ->create();
 
+        // Clean up any stale temp files from previous runs
+        $tempDir = storage_path('app/messenger/temp');
+        if (is_dir($tempDir)) {
+            foreach (glob($tempDir . '/*') as $file) {
+                if (is_file($file)) {
+                    @unlink($file);
+                }
+            }
+        }
+
         $this->handler = new AttachmentHandler;
 
         // Default config for tests

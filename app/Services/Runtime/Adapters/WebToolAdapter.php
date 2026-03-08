@@ -5,10 +5,17 @@ namespace App\Services\Runtime\Adapters;
 use App\DTOs\Runtime\RuntimeContext;
 use App\DTOs\Runtime\ToolResult;
 use App\Enums\Runtime\RuntimeMode;
+use App\Services\Security\ExfiltrationDetector;
 use Illuminate\Support\Facades\Http;
 
 class WebToolAdapter extends AbstractToolAdapter
 {
+    private ?ExfiltrationDetector $exfiltrationDetector = null;
+
+    public function setExfiltrationDetector(ExfiltrationDetector $detector): void
+    {
+        $this->exfiltrationDetector = $detector;
+    }
     public function name(): string
     {
         return 'web';
@@ -76,6 +83,16 @@ class WebToolAdapter extends AbstractToolAdapter
 
         $headers = is_array($args['headers'] ?? null) ? $args['headers'] : [];
         $body = isset($args['body']) && is_string($args['body']) ? $args['body'] : null;
+
+        if ($this->exfiltrationDetector !== null && in_array($method, ['POST', 'PUT', 'PATCH'], true) && $body !== null) {
+            $inspection = $this->exfiltrationDetector->inspect($method, $url, $body, $context->session->id ?? null);
+            if ($inspection->blocked) {
+                return ToolResult::failure(
+                    'Request blocked: potential data exfiltration detected ('.implode(', ', array_map(fn ($p) => $p->value, $inspection->matchedPatterns)).')',
+                    $this->duration($startTime)
+                );
+            }
+        }
         $timeout = config('runtime.web.timeout_seconds', 30);
 
         try {

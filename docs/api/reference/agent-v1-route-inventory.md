@@ -21,7 +21,7 @@ setting_keys:
 feature_flags:
   - docs_center_enabled
 locale: en
-reviewed_at: 2026-03-06
+reviewed_at: 2026-03-08
 ---
 
 ## Settings
@@ -129,6 +129,7 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | GET | `agent/api/v1/health` | `-` | `Closure` | `api, App\Http\Middleware\AgentApiVersionHeader` |
 | GET | `agent/api/v1/health/messenger` | `-` | `MessengerHealthController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/health/scheduler` | `-` | `AgentRunController@schedulerHealth` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| GET | `agent/api/v1/interrogation/runner-models` | `-` | `RunnerModelsController` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/interrogation/sessions` | `-` | `InterrogationSessionController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | POST | `agent/api/v1/interrogation/sessions` | `-` | `InterrogationSessionController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:interrogation` |
 | GET | `agent/api/v1/interrogation/sessions/{id}` | `-` | `InterrogationSessionController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
@@ -234,6 +235,8 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | DELETE | `agent/api/v1/org/councils/{id}` | `-` | `OrgCouncilController@destroy` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, org, throttle:agent-mutations` |
 | GET | `agent/api/v1/org/escalations` | `-` | `OrgEscalationController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, org` |
 | POST | `agent/api/v1/org/escalations/{id}/resolve` | `-` | `OrgEscalationController@resolve` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, org, throttle:agent-mutations` |
+| POST | `agent/api/v1/org/nl-apply` | `-` | `NlOrgController@apply` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, org, throttle:agent-mutations` |
+| POST | `agent/api/v1/org/nl-parse` | `-` | `NlOrgController@parse` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, org, throttle:agent-mutations` |
 | GET | `agent/api/v1/org/ritual-runs` | `-` | `OrgRitualRunController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, org` |
 | GET | `agent/api/v1/org/ritual-runs/{id}` | `-` | `OrgRitualRunController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, org` |
 | POST | `agent/api/v1/org/ritual-runs/{id}/retry` | `-` | `OrgRitualRunController@retry` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, org, throttle:agent-mutations` |
@@ -254,6 +257,16 @@ If an expected endpoint is missing, verify route registration in `routes/api.php
 | POST | `agent/api/v1/runs/{id}/stop` | `-` | `AgentRunController@stop` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | GET | `agent/api/v1/runtime/policy` | `-` | `RuntimePolicyController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | GET | `agent/api/v1/security/audit` | `-` | `SecurityAuditController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| GET | `agent/api/v1/skills` | `-` | `SkillController@index` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| GET | `agent/api/v1/skills/dashboard/health` | `-` | `SkillDashboardController@health` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| GET | `agent/api/v1/skills/dashboard/usage` | `-` | `SkillDashboardController@usage` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| POST | `agent/api/v1/skills/install` | `-` | `SkillController@install` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
+| GET | `agent/api/v1/skills/library` | `-` | `SkillController@library` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| POST | `agent/api/v1/skills/library/{slug}/install` | `-` | `SkillController@installFromLibrary` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
+| GET | `agent/api/v1/skills/{id}` | `-` | `SkillController@show` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
+| PATCH | `agent/api/v1/skills/{id}` | `-` | `SkillController@update` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
+| DELETE | `agent/api/v1/skills/{id}` | `-` | `SkillController@destroy` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
+| POST | `agent/api/v1/skills/{id}/validate` | `-` | `SkillController@revalidate` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | POST | `agent/api/v1/system/directory-picker` | `-` | `SystemDirectoryPickerController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |
 | GET | `agent/api/v1/telemetry/replay/active-build` | `-` | `ProjectionReplayBuildController@activeBuild` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license` |
 | POST | `agent/api/v1/telemetry/replay/builds` | `-` | `ProjectionReplayBuildController@store` | `api, App\Http\Middleware\AgentApiVersionHeader, auth:sanctum, license, throttle:agent-mutations` |

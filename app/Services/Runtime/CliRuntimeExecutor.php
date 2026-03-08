@@ -3,8 +3,12 @@
 namespace App\Services\Runtime;
 
 use App\Enums\Messenger\ApprovalMode;
+use App\Enums\Runtime\RuntimeMode;
+use App\Enums\Security\InjectionAction;
 use App\Models\Runtime\RuntimeSession;
 use App\Services\Credentials\CredentialsManager;
+use App\Services\Security\InjectionDetectionEngine;
+use App\Services\Security\SecurityEventLogger;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
@@ -20,6 +24,8 @@ class CliRuntimeExecutor
 {
     public function __construct(
         private CredentialsManager $credentialsManager,
+        private ?InjectionDetectionEngine $injectionDetector = null,
+        private ?SecurityEventLogger $securityLogger = null,
     ) {}
 
     /**
@@ -59,6 +65,19 @@ class CliRuntimeExecutor
                 'status' => 'failed',
                 'error' => "Runtime CLI runner '{$runnerType}' is not configured (runner_executables).",
             ];
+        }
+
+        if ($this->injectionDetector !== null && $systemPrompt !== null) {
+            $mode = RuntimeMode::tryFrom($session->mode ?? 'safe') ?? RuntimeMode::Safe;
+            $scanResult = $this->injectionDetector->scan($userMessage, $mode);
+            if ($scanResult->recommendedAction === InjectionAction::Block) {
+                $this->securityLogger?->logInjectionDetected($scanResult->score, 'cli.messenger_input', $userMessage, (string) $session->id, null);
+
+                return ['status' => 'failed', 'error' => 'Message blocked by security policy: potential prompt injection detected.'];
+            }
+            if ($scanResult->score > 0) {
+                $this->securityLogger?->logInjectionDetected($scanResult->score, 'cli.messenger_input', $userMessage, (string) $session->id, null);
+            }
         }
 
         $workingDir = $session->workspace_root !== null && $session->workspace_root !== ''

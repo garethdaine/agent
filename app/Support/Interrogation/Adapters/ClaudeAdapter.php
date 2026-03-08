@@ -8,13 +8,20 @@ use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 
 class ClaudeAdapter implements InterrogationRunnerAdapter
 {
+    private ?string $modelOverride = null;
+
+    public function setModelOverride(string $model): void
+    {
+        $this->modelOverride = $model;
+    }
+
     /**
      * @return array<int, string>
      */
     public function buildDiscoveryCommand(InterrogationSession $session, string $discoveryPrompt, string $systemPrompt): array
     {
         return [
-            $this->executable(),
+            ...$this->baseCommand(),
             '-p',
             '--verbose',
             '--output-format',
@@ -32,7 +39,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
     public function buildQuestionCommand(InterrogationSession $session, string $userMessage, string $systemPrompt): array
     {
         $command = [
-            $this->executable(),
+            ...$this->baseCommand(),
             '-p',
         ];
 
@@ -59,7 +66,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
     public function buildQuestionBankCommand(InterrogationSession $session, string $userMessage, string $systemPrompt): array
     {
         $command = [
-            $this->executable(),
+            ...$this->baseCommand(),
             '-p',
         ];
 
@@ -86,7 +93,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
     public function buildSummaryCommand(InterrogationSession $session, string $summaryPrompt, string $systemPrompt): array
     {
         $command = [
-            $this->executable(),
+            ...$this->baseCommand(),
             '-p',
         ];
 
@@ -113,7 +120,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
     public function buildPlanCommand(InterrogationSession $session, string $planningPrompt, string $systemPrompt): array
     {
         $command = [
-            $this->executable(),
+            ...$this->baseCommand(),
             '-p',
         ];
 
@@ -140,7 +147,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
     public function buildBuildTasksCommand(InterrogationSession $session, string $prompt, string $systemPrompt): array
     {
         $command = [
-            $this->executable(),
+            ...$this->baseCommand(),
             '-p',
         ];
 
@@ -167,7 +174,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
     public function buildReconstructCommand(InterrogationSession $session, string $conversationHistory, string $systemPrompt): array
     {
         return [
-            $this->executable(),
+            ...$this->baseCommand(),
             '-p',
             '--output-format',
             'json',
@@ -845,6 +852,34 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
         return (string) (config('agent.runner_executables.claude') ?: 'claude');
     }
 
+    /**
+     * @return array<int, string>
+     */
+    private function baseCommand(): array
+    {
+        $command = [$this->executable()];
+
+        $model = $this->model();
+        if ($model !== '') {
+            $command[] = '--model';
+            $command[] = $model;
+        }
+
+        return $command;
+    }
+
+    private function model(): string
+    {
+        if ($this->modelOverride !== null && $this->modelOverride !== '') {
+            return $this->modelOverride;
+        }
+
+        return trim((string) (
+            config('agent.interrogation.claude_model')
+            ?: config('agent.runner_models.claude')
+        ));
+    }
+
     private function questionSchema(): string
     {
         return json_encode([
@@ -1019,7 +1054,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
         $schemaJson = json_encode($this->reviewerSchema(), JSON_UNESCAPED_SLASHES);
 
         return [
-            $this->executable(),
+            ...$this->baseCommand(),
             '-p',
             '--output-format',
             'json',

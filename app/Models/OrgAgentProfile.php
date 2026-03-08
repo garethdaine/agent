@@ -29,6 +29,7 @@ class OrgAgentProfile extends Model
         'default_output_schema',
         'parent_agent_id',
         'archived_at',
+        'soul_json',
     ];
 
     protected function casts(): array
@@ -39,6 +40,7 @@ class OrgAgentProfile extends Model
             'skill_access_profile' => 'array',
             'default_output_schema' => 'array',
             'archived_at' => 'datetime',
+            'soul_json' => 'array',
         ];
     }
 

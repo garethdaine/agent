@@ -21,7 +21,7 @@ class BuildTaskRunFactory
 
     public function create(InterrogationSession $session, InterrogationBuildTask $task): AgentJobRun
     {
-        $commandTemplate = $this->resolveCommandTemplate($session->runner_type);
+        $commandTemplate = $this->resolveCommandTemplate($session->runner_type, $session->model);
 
         if ($commandTemplate === '') {
             throw new RuntimeException(sprintf('No default command template configured for runner [%s].', $session->runner_type));
@@ -123,14 +123,27 @@ class BuildTaskRunFactory
             ->first();
     }
 
-    private function resolveCommandTemplate(string $runnerType): string
+    private function resolveCommandTemplate(string $runnerType, ?string $sessionModel): string
     {
         $buildTemplate = trim((string) (config('agent.interrogation.build_execution_templates.'.$runnerType) ?: ''));
-        if ($buildTemplate !== '') {
+        if ($buildTemplate === '') {
+            $buildTemplate = trim((string) (config('agent.default_templates.'.$runnerType) ?: ''));
+        }
+
+        if ($buildTemplate === '' || $sessionModel === null || trim($sessionModel) === '') {
             return $buildTemplate;
         }
 
-        return trim((string) (config('agent.default_templates.'.$runnerType) ?: ''));
+        $sessionModel = trim($sessionModel);
+
+        // Replace existing --model / -m flag value with the session-specific model
+        if ($runnerType === 'claude') {
+            $buildTemplate = preg_replace('/--model\s+\S+/', '--model '.$sessionModel, $buildTemplate) ?? $buildTemplate;
+        } elseif ($runnerType === 'codex') {
+            $buildTemplate = preg_replace('/-m\s+\S+/', '-m '.$sessionModel, $buildTemplate) ?? $buildTemplate;
+        }
+
+        return $buildTemplate;
     }
 
     private function buildTaskMarkdown(InterrogationSession $session, InterrogationBuildTask $task): string

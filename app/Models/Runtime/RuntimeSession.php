@@ -37,6 +37,8 @@ class RuntimeSession extends Model
         'total_input_tokens',
         'total_output_tokens',
         'total_cost_usd',
+        'security_config_json',
+        'file_provenance',
     ];
 
     protected function casts(): array
@@ -52,6 +54,8 @@ class RuntimeSession extends Model
             'total_output_tokens' => 'integer',
             'total_cost_usd' => 'decimal:6',
             'spawn_depth' => 'integer',
+            'security_config_json' => 'array',
+            'file_provenance' => 'array',
         ];
     }
 

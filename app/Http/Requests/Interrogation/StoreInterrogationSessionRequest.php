@@ -35,6 +35,7 @@ class StoreInterrogationSessionRequest extends FormRequest
         return [
             'name' => ['nullable', 'string', 'max:255'],
             'runner_type' => ['required', Rule::in(['claude', 'codex'])],
+            'model' => ['nullable', 'string', 'max:128'],
             'project_directory' => ['required', 'string', 'max:1024'],
             'interrogation_type' => ['required', Rule::in([InterrogationSession::TYPE_FEATURE, InterrogationSession::TYPE_GENERAL])],
             'feature_brief' => ['nullable', 'string', 'max:'.$maxTextLength, 'required_if:interrogation_type,'.InterrogationSession::TYPE_FEATURE],

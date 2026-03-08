@@ -134,7 +134,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                 }
             }
 
-            $adapter = $adapterFactory->make((string) $session->runner_type);
+            $adapter = $adapterFactory->make((string) $session->runner_type, $session->model);
             $systemPrompt = $promptResolver->resolveForPhase($session, 'interrogation');
             $roundPrompt = $this->buildRoundPromptWithAnsweredContext($session, $this->userMessage, $questionPayloadGuard);
             $questionResult = $this->runAndParseQuestion(
@@ -1290,7 +1290,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             : [];
 
         if ($questionBank === []) {
-            $adapter = $adapterFactory->make((string) $session->runner_type);
+            $adapter = $adapterFactory->make((string) $session->runner_type, $session->model);
             $systemPrompt = $promptResolver->resolveForPhase($session, 'interrogation');
             $generated = $questionBankGenerator->generate($session, $adapter, $systemPrompt);
 

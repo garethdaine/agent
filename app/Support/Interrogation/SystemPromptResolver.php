@@ -8,6 +8,10 @@ use App\Models\InterrogationSetting;
 
 class SystemPromptResolver
 {
+    public function __construct(
+        private ?PromptIsolationService $promptIsolation = null,
+    ) {}
+
     public function resolveForPhase(InterrogationSession $session, string $phase): string
     {
         $base = $this->basePrompt($session);
@@ -51,13 +55,17 @@ class SystemPromptResolver
         $context = "\n\nSession Context:\nInterrogation Type: {$typeLabel}";
 
         if ($brief !== '') {
-            $briefLabel = $type === InterrogationSession::TYPE_FEATURE ? 'Feature Brief' : 'Session Brief';
-            $context .= "\n\n{$briefLabel}:\n{$brief}";
+            if ($this->promptIsolation !== null) {
+                $context .= "\n\n".$this->promptIsolation->wrapFeatureBrief($brief);
+            } else {
+                $briefLabel = $type === InterrogationSession::TYPE_FEATURE ? 'Feature Brief' : 'Session Brief';
+                $context .= "\n\n{$briefLabel}:\n{$brief}";
+            }
         }
 
         $techStacks = $session->techStacks()->ordered()->get(['name', 'documentation_url']);
         if ($techStacks->isNotEmpty()) {
-            $context .= "\n\nSelected Tech Stack:\n";
+            $techStackString = '';
 
             foreach ($techStacks as $stack) {
                 $name = trim((string) $stack->name);
@@ -67,16 +75,28 @@ class SystemPromptResolver
                     continue;
                 }
 
-                $context .= sprintf("- %s: %s\n", $name, $documentationUrl);
+                $techStackString .= sprintf("- %s: %s\n", $name, $documentationUrl);
             }
 
-            $context = rtrim($context);
+            $techStackString = rtrim($techStackString);
+
+            if ($techStackString !== '') {
+                if ($this->promptIsolation !== null) {
+                    $context .= "\n\n".$this->promptIsolation->wrapTechStack($techStackString);
+                } else {
+                    $context .= "\n\nSelected Tech Stack:\n".$techStackString;
+                }
+            }
         }
 
         if ($phase !== 'discovery') {
             $discoveryFindings = $this->recentDiscoveryFindings($session);
             if ($discoveryFindings !== []) {
-                $context .= "\n\nRecent Discovery Findings:\n- ".implode("\n- ", $discoveryFindings);
+                if ($this->promptIsolation !== null) {
+                    $context .= "\n\n".$this->promptIsolation->wrapDiscoveryFindings($discoveryFindings);
+                } else {
+                    $context .= "\n\nRecent Discovery Findings:\n- ".implode("\n- ", $discoveryFindings);
+                }
             }
         }
 
@@ -138,11 +158,21 @@ class SystemPromptResolver
         $setting = InterrogationSetting::getForUser((int) $session->user_id, 'interrogation.system_prompt');
 
         if (is_string($setting) && trim($setting) !== '') {
+            if ($this->promptIsolation !== null) {
+                $setting = $this->promptIsolation->validateUserPrompt($setting);
+            }
+
             return $setting;
         }
 
         if (is_array($setting) && isset($setting['text']) && is_string($setting['text']) && trim($setting['text']) !== '') {
-            return $setting['text'];
+            $text = $setting['text'];
+
+            if ($this->promptIsolation !== null) {
+                $text = $this->promptIsolation->validateUserPrompt($text);
+            }
+
+            return $text;
         }
 
         return <<<'PROMPT'

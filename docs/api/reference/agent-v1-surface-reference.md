@@ -21,7 +21,7 @@ setting_keys:
 feature_flags:
   - docs_center_enabled
 locale: en
-reviewed_at: 2026-03-06
+reviewed_at: 2026-03-08
 ---
 
 ## Settings
@@ -247,10 +247,11 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ### Interrogation
 
-**46 endpoint(s)** registered under `/agent/api/v1/interrogation`.
+**47 endpoint(s)** registered under `/agent/api/v1/interrogation`.
 
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/interrogation/runner-models` | `-` | `RunnerModelsController` | `auth:sanctum` |
 | GET | `agent/api/v1/interrogation/sessions` | `-` | `InterrogationSessionController@index` | `auth:sanctum` |
 | POST | `agent/api/v1/interrogation/sessions` | `-` | `InterrogationSessionController@store` | `auth:sanctum` |
 | GET | `agent/api/v1/interrogation/sessions/{id}` | `-` | `InterrogationSessionController@show` | `auth:sanctum` |
@@ -394,7 +395,7 @@ When onboarding an integration, validate read endpoints first, then mutation end
 
 ### Org
 
-**26 endpoint(s)** registered under `/agent/api/v1/org`.
+**28 endpoint(s)** registered under `/agent/api/v1/org`.
 
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
@@ -412,6 +413,8 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | DELETE | `agent/api/v1/org/councils/{id}` | `-` | `OrgCouncilController@destroy` | `auth:sanctum` |
 | GET | `agent/api/v1/org/escalations` | `-` | `OrgEscalationController@index` | `auth:sanctum` |
 | POST | `agent/api/v1/org/escalations/{id}/resolve` | `-` | `OrgEscalationController@resolve` | `auth:sanctum` |
+| POST | `agent/api/v1/org/nl-apply` | `-` | `NlOrgController@apply` | `auth:sanctum` |
+| POST | `agent/api/v1/org/nl-parse` | `-` | `NlOrgController@parse` | `auth:sanctum` |
 | GET | `agent/api/v1/org/ritual-runs` | `-` | `OrgRitualRunController@index` | `auth:sanctum` |
 | GET | `agent/api/v1/org/ritual-runs/{id}` | `-` | `OrgRitualRunController@show` | `auth:sanctum` |
 | POST | `agent/api/v1/org/ritual-runs/{id}/retry` | `-` | `OrgRitualRunController@retry` | `auth:sanctum` |
@@ -453,6 +456,23 @@ When onboarding an integration, validate read endpoints first, then mutation end
 | Method | URI | Route Name | Controller | Auth |
 | --- | --- | --- | --- | --- |
 | GET | `agent/api/v1/security/audit` | `-` | `SecurityAuditController@index` | `auth:sanctum` |
+
+### Skills
+
+**10 endpoint(s)** registered under `/agent/api/v1/skills`.
+
+| Method | URI | Route Name | Controller | Auth |
+| --- | --- | --- | --- | --- |
+| GET | `agent/api/v1/skills` | `-` | `SkillController@index` | `auth:sanctum` |
+| GET | `agent/api/v1/skills/dashboard/health` | `-` | `SkillDashboardController@health` | `auth:sanctum` |
+| GET | `agent/api/v1/skills/dashboard/usage` | `-` | `SkillDashboardController@usage` | `auth:sanctum` |
+| POST | `agent/api/v1/skills/install` | `-` | `SkillController@install` | `auth:sanctum` |
+| GET | `agent/api/v1/skills/library` | `-` | `SkillController@library` | `auth:sanctum` |
+| POST | `agent/api/v1/skills/library/{slug}/install` | `-` | `SkillController@installFromLibrary` | `auth:sanctum` |
+| GET | `agent/api/v1/skills/{id}` | `-` | `SkillController@show` | `auth:sanctum` |
+| PATCH | `agent/api/v1/skills/{id}` | `-` | `SkillController@update` | `auth:sanctum` |
+| DELETE | `agent/api/v1/skills/{id}` | `-` | `SkillController@destroy` | `auth:sanctum` |
+| POST | `agent/api/v1/skills/{id}/validate` | `-` | `SkillController@revalidate` | `auth:sanctum` |
 
 ### System
 

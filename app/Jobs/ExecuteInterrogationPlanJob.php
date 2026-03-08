@@ -72,7 +72,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                 $session->refresh();
             }
 
-            $adapter = $adapterFactory->make((string) $session->runner_type);
+            $adapter = $adapterFactory->make((string) $session->runner_type, $session->model);
             $systemPrompt = $promptResolver->resolveForPhase($session, 'planning');
 
             if ($isRevisionRequest) {

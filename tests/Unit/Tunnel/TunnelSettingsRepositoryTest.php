@@ -19,6 +19,10 @@ class TunnelSettingsRepositoryTest extends TestCase
     {
         parent::setUp();
 
+        // AppServiceProvider may auto-create a row via mergeTunnelHostnameIntoConfig.
+        // Truncate to ensure a clean slate for each test.
+        TunnelSetting::query()->delete();
+
         $this->repository = new TunnelSettingsRepository;
     }
 
@@ -48,7 +52,7 @@ class TunnelSettingsRepositoryTest extends TestCase
 
     public function test_get_merges_config_defaults_for_missing_keys(): void
     {
-        config(['tunnel.origin_url' => 'http://localhost:8000']);
+        config(['tunnel.origin_url' => 'http://localhost:8000', 'app.url' => 'http://localhost:8000']);
 
         TunnelSetting::create([
             'settings' => ['hostname' => 'test.example.com'],
@@ -91,6 +95,7 @@ class TunnelSettingsRepositoryTest extends TestCase
     public function test_get_settings_returns_merged_array(): void
     {
         config([
+            'app.url' => 'http://localhost:8000',
             'tunnel.origin_url' => 'http://localhost:8000',
             'tunnel.protocol' => 'http2',
             'tunnel.hostname' => '',

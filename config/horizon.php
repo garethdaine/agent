@@ -112,6 +112,9 @@ return [
         'redis:code-analysis' => 60,
         'redis:skill-validation' => 30,
         'redis:tunnel' => 30,
+        'redis:connector-credentials' => 30,
+        'redis:connector-webhooks' => 15,
+        'redis:connector-approvals' => 15,
         'redis:default' => 30,
     ],
 
@@ -365,6 +368,48 @@ return [
             'timeout' => 0,
             'nice' => 0,
         ],
+        'supervisor-connector-credentials' => [
+            'connection' => 'redis',
+            'queue' => ['connector-credentials'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(4, (int) env('HORIZON_CONNECTOR_CREDENTIALS_MAX_PROCESSES', 2))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'backoff' => [10, 30, 60],
+            'timeout' => 60,
+            'nice' => 0,
+        ],
+        'supervisor-connector-webhooks' => [
+            'connection' => 'redis',
+            'queue' => ['connector-webhooks'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(8, (int) env('HORIZON_CONNECTOR_WEBHOOKS_MAX_PROCESSES', 2))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'backoff' => [5, 15, 45],
+            'timeout' => 30,
+            'nice' => 0,
+        ],
+        'supervisor-connector-approvals' => [
+            'connection' => 'redis',
+            'queue' => ['connector-approvals'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => max(1, min(2, (int) env('HORIZON_CONNECTOR_APPROVALS_MAX_PROCESSES', 1))),
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'backoff' => [5, 15, 30],
+            'timeout' => 30,
+            'nice' => 0,
+        ],
         'supervisor-default' => [
             'connection' => 'redis',
             'queue' => ['default'],
@@ -433,6 +478,21 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-connector-credentials' => [
+                'maxProcesses' => max(1, min(4, (int) env('HORIZON_CONNECTOR_CREDENTIALS_MAX_PROCESSES', 2))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-connector-webhooks' => [
+                'maxProcesses' => max(1, min(8, (int) env('HORIZON_CONNECTOR_WEBHOOKS_MAX_PROCESSES', 2))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-connector-approvals' => [
+                'maxProcesses' => max(1, min(2, (int) env('HORIZON_CONNECTOR_APPROVALS_MAX_PROCESSES', 1))),
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
             'supervisor-tunnel' => [
                 'maxProcesses' => 1,
             ],
@@ -474,6 +534,15 @@ return [
                 //
             ],
             'supervisor-skill-validation' => [
+                //
+            ],
+            'supervisor-connector-credentials' => [
+                //
+            ],
+            'supervisor-connector-webhooks' => [
+                //
+            ],
+            'supervisor-connector-approvals' => [
                 //
             ],
             'supervisor-tunnel' => [

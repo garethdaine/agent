@@ -65,7 +65,7 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
             : [];
 
         try {
-            $adapter = $adapterFactory->make((string) $session->runner_type);
+            $adapter = $adapterFactory->make((string) $session->runner_type, $session->model);
             $systemPrompt = $promptResolver->resolveForPhase($session, 'summary');
             $history = $reconstructor->reconstruct($session);
             $summaryPrompt = 'Produce a structured summary JSON for this discovery session. '

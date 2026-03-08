@@ -62,7 +62,7 @@ class ExecuteInterrogationDiscoveryJob implements ShouldQueue
         ]);
 
         try {
-            $adapter = $adapterFactory->make((string) $session->runner_type);
+            $adapter = $adapterFactory->make((string) $session->runner_type, $session->model);
             $systemPrompt = $promptResolver->resolveForPhase($session, 'discovery');
             $discoveryPrompt = 'Inspect this project for requirements interrogation prep. Focus on app/, routes/, resources/js/, config/, database/migrations/, docs/, and tests/. '
                 .'Do not scan vendor/, node_modules/, storage/, or bootstrap/cache/. Emit concise human-readable progress updates only.';
@@ -211,7 +211,7 @@ class ExecuteInterrogationDiscoveryJob implements ShouldQueue
             $buffer = '';
         }
 
-        $adapter = $adapterFactory->make((string) $session->runner_type);
+        $adapter = $adapterFactory->make((string) $session->runner_type, $session->model);
 
         foreach ($parts as $line) {
             $line = trim((string) $line);

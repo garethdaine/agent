@@ -38,6 +38,10 @@ class PathPolicy
             return 'The task_markdown_path must point to a UTF-8 text-like file.';
         }
 
+        // Trim any trailing incomplete UTF-8 multi-byte sequence caused by the
+        // fixed-length read splitting a character at the boundary.
+        $snippet = $this->trimIncompleteUtf8Tail($snippet);
+
         if (function_exists('mb_check_encoding') && ! mb_check_encoding($snippet, 'UTF-8')) {
             return 'The task_markdown_path must point to a UTF-8 text-like file.';
         }
@@ -162,5 +166,49 @@ class PathPolicy
         }
 
         return implode(', ', $allowedBases);
+    }
+
+    /**
+     * Trim trailing bytes that form an incomplete UTF-8 multi-byte sequence.
+     *
+     * When reading a fixed number of bytes from a file, the read boundary may
+     * land in the middle of a multi-byte character (e.g. 4096 bytes cuts an
+     * em-dash 0xE2 0x80 0x94 after just 0xE2). This causes mb_check_encoding
+     * to reject otherwise valid UTF-8 content.
+     */
+    private function trimIncompleteUtf8Tail(string $data): string
+    {
+        $len = strlen($data);
+        if ($len === 0) {
+            return $data;
+        }
+
+        // Walk backwards to find the start of the last character.
+        // UTF-8 continuation bytes are 10xxxxxx (0x80..0xBF).
+        $i = $len - 1;
+        while ($i >= 0 && $i >= $len - 4 && (ord($data[$i]) & 0xC0) === 0x80) {
+            $i--;
+        }
+
+        if ($i < 0 || $i < $len - 4) {
+            return $data;
+        }
+
+        $leadByte = ord($data[$i]);
+        $expectedLength = match (true) {
+            ($leadByte & 0x80) === 0x00 => 1, // 0xxxxxxx — ASCII
+            ($leadByte & 0xE0) === 0xC0 => 2, // 110xxxxx
+            ($leadByte & 0xF0) === 0xE0 => 3, // 1110xxxx
+            ($leadByte & 0xF8) === 0xF0 => 4, // 11110xxx
+            default => 1, // Invalid lead byte, treat as single byte
+        };
+
+        $actualLength = $len - $i;
+
+        if ($actualLength < $expectedLength) {
+            return substr($data, 0, $i);
+        }
+
+        return $data;
     }
 }

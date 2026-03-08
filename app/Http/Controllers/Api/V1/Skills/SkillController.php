@@ -38,7 +38,7 @@ class SkillController extends Controller
         $file = $request->file('file');
         $result = $this->installer->installFromFile(
             filePath: $file->getRealPath(),
-            teamId: $request->user()->currentTeam->id,
+            teamId: $this->requireCurrentTeamId($request),
             userId: $request->user()->id,
         );
 
@@ -68,7 +68,7 @@ class SkillController extends Controller
     {
         $this->ensureSkillsEnabled();
 
-        $teamId = $request->user()->currentTeam->id;
+        $teamId = $this->requireCurrentTeamId($request);
         $perPage = min((int) $request->query('per_page', 25), 100);
 
         $query = AgentSkill::query()
@@ -98,7 +98,7 @@ class SkillController extends Controller
     {
         $this->ensureSkillsEnabled();
 
-        $teamId = $request->user()->currentTeam->id;
+        $teamId = $this->requireCurrentTeamId($request);
 
         $skill = AgentSkill::where(function ($q) use ($teamId) {
             $q->where('team_id', $teamId)
@@ -122,7 +122,7 @@ class SkillController extends Controller
         $this->ensureSkillsEnabled();
         $this->authorizeTeamAdmin($request);
 
-        $skill = AgentSkill::where('team_id', $request->user()->currentTeam->id)->find($id);
+        $skill = AgentSkill::where('team_id', $this->requireCurrentTeamId($request))->find($id);
 
         if (! $skill) {
             return response()->json([
@@ -178,7 +178,7 @@ class SkillController extends Controller
         $this->ensureSkillsEnabled();
         $this->authorizeTeamAdmin($request);
 
-        $skill = AgentSkill::where('team_id', $request->user()->currentTeam->id)->find($id);
+        $skill = AgentSkill::where('team_id', $this->requireCurrentTeamId($request))->find($id);
 
         if (! $skill) {
             return response()->json([
@@ -199,7 +199,7 @@ class SkillController extends Controller
         $this->ensureSkillsEnabled();
         $this->authorizeTeamAdmin($request);
 
-        $skill = AgentSkill::where('team_id', $request->user()->currentTeam->id)->find($id);
+        $skill = AgentSkill::where('team_id', $this->requireCurrentTeamId($request))->find($id);
 
         if (! $skill) {
             return response()->json([
@@ -303,7 +303,7 @@ class SkillController extends Controller
         $result = $this->installer->installFromLibrary(
             slug: $slug,
             filePath: $filePath,
-            teamId: $request->user()->currentTeam->id,
+            teamId: $this->requireCurrentTeamId($request),
             userId: $request->user()->id,
         );
 
@@ -334,9 +334,24 @@ class SkillController extends Controller
         }
     }
 
+    private function requireCurrentTeamId(Request $request): int
+    {
+        $team = $request->user()->currentTeam;
+
+        if (! $team) {
+            abort(403, 'No current team selected.');
+        }
+
+        return (int) $team->id;
+    }
+
     private function authorizeTeamAdmin(Request $request): void
     {
         $team = $request->user()->currentTeam;
+
+        if (! $team) {
+            abort(403, 'No current team selected.');
+        }
 
         if (! $request->user()->ownsTeam($team) && ! $request->user()->hasTeamRole($team, 'admin')) {
             abort(403, 'Team owner or admin role required.');

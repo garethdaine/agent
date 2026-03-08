@@ -191,7 +191,7 @@ class BuildTaskGenerator
         string $systemPrompt,
     ): array {
         $timeoutSeconds = max(self::MIN_TIMEOUT_SECONDS, (int) config('agent.interrogation.build_task_generation_timeout_seconds', 7200));
-        $adapter = $this->adapterFactory->make((string) $session->runner_type);
+        $adapter = $this->adapterFactory->make((string) $session->runner_type, $session->model);
 
         $process = new Process(
             $adapter->buildBuildTasksCommand($session, $prompt, $systemPrompt),

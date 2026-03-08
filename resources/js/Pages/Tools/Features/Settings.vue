@@ -125,7 +125,10 @@ onMounted(load);
                                             <Badge v-if="flag.is_overridden" variant="secondary">Overridden</Badge>
                                         </div>
                                     </div>
-                                    <input v-model="flag.is_enabled" type="checkbox" class="mt-1 rounded border-input" />
+                                    <div class="flex items-center gap-2">
+                                        <Badge v-if="flag.is_immutable" variant="outline" class="text-xs whitespace-nowrap">Always On</Badge>
+                                        <input v-model="flag.is_enabled" type="checkbox" class="mt-1 rounded border-input" :disabled="flag.is_immutable" />
+                                    </div>
                                 </label>
                             </CardContent>
                         </Card>

@@ -29,7 +29,7 @@ class AgentWebRouteAuthTest extends TestCase
 
     public function test_authenticated_user_can_access_agent_and_dashboard_pages(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['onboarding_completed_at' => now()]);
         $this->actingAs($user);
 
         $routes = [

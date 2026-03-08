@@ -114,6 +114,14 @@ The following API endpoints are available for this feature:
   - Controller: `OrgEscalationController@resolve`
   - Auth: `auth:sanctum`
   - Rate limit: `throttle:agent-mutations`
+- **`POST agent/api/v1/org/nl-apply`**
+  - Controller: `NlOrgController@apply`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
+- **`POST agent/api/v1/org/nl-parse`**
+  - Controller: `NlOrgController@parse`
+  - Auth: `auth:sanctum`
+  - Rate limit: `throttle:agent-mutations`
 - **`GET agent/api/v1/org/ritual-runs`**
   - Controller: `OrgRitualRunController@index`
   - Auth: `auth:sanctum`

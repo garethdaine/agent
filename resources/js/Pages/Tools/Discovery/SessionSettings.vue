@@ -38,7 +38,12 @@ const validation = ref({});
 const form = reactive({
     name: '',
     feature_brief: '',
+    model: '',
 });
+
+const availableModels = ref([]);
+const loadingModels = ref(false);
+const defaultModel = ref('');
 
 const techStackDraft = reactive({
     name: '',
@@ -80,6 +85,24 @@ const firstValidationError = (field) => {
     return Array.isArray(messages) && messages.length > 0 ? messages[0] : '';
 };
 
+const fetchModels = async (runnerType) => {
+    loadingModels.value = true;
+    availableModels.value = [];
+
+    try {
+        const { data } = await axios.get('/agent/api/v1/interrogation/runner-models', {
+            params: { runner_type: runnerType },
+        });
+        availableModels.value = data?.data ?? [];
+        defaultModel.value = data?.default ?? '';
+    } catch {
+        availableModels.value = [];
+        defaultModel.value = '';
+    } finally {
+        loadingModels.value = false;
+    }
+};
+
 const loadSession = async () => {
     loading.value = true;
     error.value = '';
@@ -93,6 +116,10 @@ const loadSession = async () => {
         session.value = data?.data ?? null;
         form.name = String(session.value?.name ?? '');
         form.feature_brief = String(session.value?.feature_brief ?? '');
+        form.model = String(session.value?.model ?? '');
+
+        const runnerType = String(session.value?.runner_type ?? 'claude');
+        await fetchModels(runnerType);
         syncProviderProjectDraftFromSession();
 
         if (linearProvider.value) {
@@ -157,6 +184,7 @@ const saveSession = async () => {
         await axios.patch(`/agent/api/v1/interrogation/sessions/${props.sessionId}`, {
             name: form.name,
             feature_brief: form.feature_brief,
+            model: form.model || null,
         });
 
         notice.value = 'Session settings updated.';
@@ -423,6 +451,32 @@ watch(() => providerTeamForm.team_id, (nextTeamId) => {
                                     :error="!!firstValidationError('feature_brief')"
                                 />
                                 <p v-if="firstValidationError('feature_brief')" class="mt-1 text-xs text-destructive">{{ firstValidationError('feature_brief') }}</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium">Runner</label>
+                                    <div class="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-muted/50 px-3 text-sm text-muted-foreground">
+                                        {{ session?.runner_type ?? 'claude' }}
+                                    </div>
+                                    <p class="mt-1 text-xs text-muted-foreground">Runner type is set at session creation.</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium">Model</label>
+                                    <select
+                                        v-model="form.model"
+                                        :disabled="loadingModels"
+                                        class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                                    >
+                                        <option v-if="loadingModels" value="">Loading models...</option>
+                                        <option v-for="m in availableModels" :key="m.id" :value="m.id">
+                                            {{ m.name }}{{ m.id === defaultModel ? ' (default)' : '' }}
+                                        </option>
+                                    </select>
+                                    <p class="mt-1 text-xs text-muted-foreground">Model used for discovery and build runs.</p>
+                                    <p v-if="firstValidationError('model')" class="mt-1 text-xs text-destructive">{{ firstValidationError('model') }}</p>
+                                </div>
                             </div>
 
                             <div class="flex justify-end">

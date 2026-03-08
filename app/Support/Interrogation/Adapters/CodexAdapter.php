@@ -887,8 +887,19 @@ class CodexAdapter implements InterrogationRunnerAdapter
         return $command;
     }
 
+    private ?string $modelOverride = null;
+
+    public function setModelOverride(string $model): void
+    {
+        $this->modelOverride = $model;
+    }
+
     private function model(): string
     {
+        if ($this->modelOverride !== null && $this->modelOverride !== '') {
+            return $this->modelOverride;
+        }
+
         return trim((string) (
             config('agent.interrogation.codex_model')
             ?: config('agent.runner_models.codex')

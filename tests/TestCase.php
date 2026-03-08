@@ -14,6 +14,24 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->assertTestingEnvironmentIsSafeAfterBoot();
+
+        $this->ensureWorkingDirectoryBasesConfigured();
+    }
+
+    /**
+     * Ensure allowed_working_directory_bases is configured for tests.
+     *
+     * When the env var AGENT_WORKING_DIRECTORY_BASES is not set (common in
+     * CI/testing environments), fall back to base_path() so that tests using
+     * base_path() as the project directory pass path-policy validation.
+     */
+    private function ensureWorkingDirectoryBasesConfigured(): void
+    {
+        $bases = config('agent.allowed_working_directory_bases', []);
+
+        if (empty($bases)) {
+            config()->set('agent.allowed_working_directory_bases', [base_path()]);
+        }
     }
 
     private function assertTestingEnvironmentIsSafeBeforeBoot(): void

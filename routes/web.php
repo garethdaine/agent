@@ -131,8 +131,7 @@ Route::middleware([
         ->name('agent.deployments.index');
     Route::get('/agent/deployments/{workflowKey}', [OperatorPageController::class, 'deployment'])
         ->name('agent.deployments.show');
-    // Legacy route: redirect to unified dashboard.
-    Route::get('/agent/system-overview', fn () => redirect()->route('dashboard'))
+    Route::get('/agent/system-overview', [OperatorPageController::class, 'systemOverview'])
         ->name('agent.system-overview.index');
     Route::get('/agent/escalations', [OperatorPageController::class, 'escalations'])
         ->name('agent.escalations.index');

@@ -631,3 +631,39 @@ Use this file to capture correction-driven lessons.
 - Pattern: Routing freeform patch grammar through shell wrappers introduces avoidable workflow warnings and risks malformed patch handling.
 - Prevention rule: For any file patch, call `functions.apply_patch` directly; reserve shell commands for read-only inspection, command execution, and non-patch file operations.
 - Applied in: Task workflow discipline (`tasks/todo.md` execution process)
+
+### [2026-03-07T02:11:24+00:00] [auto_failure_extraction]
+Agent run failed with error RUN_PATH_NOT_FOUND: The task_markdown_path must point to a UTF-8 text-like file.
+
+**Context:**
+- Task: Interrogation Build S1 T03
+- Category: unknown
+- Runner: claude
+### [2026-03-07T02:20:50+00:00] [auto_failure_extraction]
+Agent run failed with error RUN_PATH_NOT_FOUND: The task_markdown_path must point to a UTF-8 text-like file.
+
+**Context:**
+- Task: Interrogation Build S1 T03
+- Category: unknown
+- Runner: claude
+### [2026-03-07T02:20:50+00:00] [auto_failure_extraction]
+Agent run failed with error RUN_PATH_NOT_FOUND: The task_markdown_path must point to a UTF-8 text-like file.
+
+**Context:**
+- Task: Interrogation Build S1 T03
+- Category: unknown
+- Runner: claude
+### [2026-03-07T02:22:15+00:00] [auto_failure_extraction]
+Agent run failed with error RUN_PATH_NOT_FOUND: The task_markdown_path must point to a UTF-8 text-like file.
+
+**Context:**
+- Task: Interrogation Build S1 T03
+- Category: unknown
+- Runner: claude
+### [2026-03-07T02:22:15+00:00] [auto_failure_extraction]
+Agent run failed with error RUN_PATH_NOT_FOUND: The task_markdown_path must point to a UTF-8 text-like file.
+
+**Context:**
+- Task: Interrogation Build S1 T03
+- Category: unknown
+- Runner: claude

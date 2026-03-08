@@ -19,6 +19,8 @@ $claudeExecutable = env('AGENT_RUNNER_CLAUDE_PATH', '');
 $codexExecutable = env('AGENT_RUNNER_CODEX_PATH', '');
 $codexModel = trim((string) env('AGENT_RUNNER_CODEX_MODEL', 'gpt-5.3-codex'));
 $codexModelArgs = $codexModel !== '' ? ' -m '.$codexModel : '';
+$claudeModel = trim((string) env('AGENT_RUNNER_CLAUDE_MODEL', 'claude-opus-4-6'));
+$claudeModelArgs = $claudeModel !== '' ? ' --model '.$claudeModel : '';
 
 return [
     'version' => '1.0.0',
@@ -51,7 +53,7 @@ return [
     'allowed_task_markdown_bases' => array_values(array_unique(array_filter(array_merge(
         $parseEnvCsvList('AGENT_TASK_MARKDOWN_BASES'),
         $parseEnvCsvList('AGENT_ADDITIONAL_TASK_MARKDOWN_BASES'),
-        [storage_path('app/skills')],
+        [storage_path('app/skills'), storage_path('app/memory/context')],
     )))),
 
     'runner_executables' => [
@@ -60,6 +62,7 @@ return [
         'custom' => env('AGENT_RUNNER_CUSTOM_PATH', ''),
     ],
     'runner_models' => [
+        'claude' => $claudeModel,
         'codex' => $codexModel,
     ],
 
@@ -120,14 +123,15 @@ return [
     ],
 
     'default_templates' => [
-        'claude' => trim($claudeExecutable.' --verbose -p --output-format stream-json --include-partial-messages {{task_markdown_path}}'),
+        'claude' => trim($claudeExecutable.$claudeModelArgs.' --verbose -p --output-format stream-json --include-partial-messages {{task_markdown_path}}'),
         'codex' => trim($codexExecutable.$codexModelArgs.' exec --json {{task_markdown_path}}'),
     ],
 
     'interrogation' => [
+        'claude_model' => trim((string) env('AGENT_INTERROGATION_CLAUDE_MODEL', $claudeModel)),
         'codex_model' => trim((string) env('AGENT_INTERROGATION_CODEX_MODEL', $codexModel)),
         'build_execution_templates' => [
-            'claude' => trim((string) env('AGENT_INTERROGATION_BUILD_TEMPLATE_CLAUDE', $claudeExecutable.' --dangerously-skip-permissions --verbose -p --output-format stream-json --include-partial-messages {{task_markdown_path}}')),
+            'claude' => trim((string) env('AGENT_INTERROGATION_BUILD_TEMPLATE_CLAUDE', $claudeExecutable.$claudeModelArgs.' --dangerously-skip-permissions --verbose -p --output-format stream-json --include-partial-messages {{task_markdown_path}}')),
             'codex' => trim((string) env('AGENT_INTERROGATION_BUILD_TEMPLATE_CODEX', trim($codexExecutable.$codexModelArgs.' --dangerously-bypass-approvals-and-sandbox --search exec --json {{task_markdown_path}}'))),
         ],
         'build_task_generation_timeout_seconds' => (int) env('AGENT_INTERROGATION_BUILD_TASK_GENERATION_TIMEOUT_SECONDS', 7200),
@@ -248,6 +252,12 @@ return [
         'max_input_length' => (int) env('NL_PARSE_MAX_INPUT_LENGTH', 200),
         'min_interval_minutes' => (int) env('NL_PARSE_MIN_INTERVAL_MINUTES', 1),
         'retention_days' => (int) env('NL_PARSE_RETENTION_DAYS', 90),
+    ],
+
+    'nl_org' => [
+        'max_input_length' => (int) env('NL_ORG_MAX_INPUT_LENGTH', 2000),
+        'confidence_threshold' => (float) env('NL_ORG_CONFIDENCE_THRESHOLD', 0.7),
+        'max_chat_history_turns' => (int) env('NL_ORG_MAX_CHAT_HISTORY_TURNS', 10),
     ],
 
     'roles' => [

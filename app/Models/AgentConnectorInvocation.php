@@ -1,0 +1,60 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+/**
+ * @mixin Builder
+ */
+class AgentConnectorInvocation extends Model
+{
+    use HasFactory, HasUuids;
+
+    public $timestamps = false;
+
+    public const OUTCOME_SUCCESS = 'success';
+
+    public const OUTCOME_FAILED = 'failed';
+
+    public const OUTCOME_TIMEOUT = 'timeout';
+
+    public const OUTCOME_RATE_LIMITED = 'rate_limited';
+
+    public const OUTCOME_AUTH_FAILED = 'auth_failed';
+
+    protected $fillable = [
+        'connection_id',
+        'connector_id',
+        'action_name',
+        'run_attempt_id',
+        'delegatee_id',
+        'workflow_key',
+        'http_method',
+        'http_status',
+        'duration_ms',
+        'request_size_bytes',
+        'response_size_bytes',
+        'token_usage',
+        'retry_count',
+        'outcome',
+        'error_message',
+        'created_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+        ];
+    }
+
+    public function connection(): BelongsTo
+    {
+        return $this->belongsTo(AgentConnectorConnection::class, 'connection_id');
+    }
+}

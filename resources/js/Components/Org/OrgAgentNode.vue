@@ -12,6 +12,7 @@ const props = defineProps({
 const label = computed(() => props.data?.name ?? props.data?.label ?? 'Agent');
 const role = computed(() => props.data?.role_slug ?? props.data?.role_description ?? '');
 const isNew = computed(() => props.data?.isNew === true);
+const diffState = computed(() => props.data?.diffState ?? null);
 
 const roleDescription = computed(() => props.data?.role_description ?? '');
 const parentAgentName = computed(() => props.data?.parentAgentName ?? null);
@@ -59,9 +60,15 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onClickOutside
     <div
         :class="[
             'group relative rounded-lg border px-3 py-2 min-w-[140px] shadow-sm',
-            isNew
-                ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
-                : 'bg-background border-border',
+            diffState === 'add'
+                ? 'border-green-500 bg-green-50 border-dashed'
+                : diffState === 'update'
+                    ? 'border-amber-500 bg-amber-50'
+                    : diffState === 'remove'
+                        ? 'border-red-500 bg-red-50 opacity-60'
+                        : isNew
+                            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
+                            : 'bg-background border-border',
         ]"
     >
         <Handle id="top-source" type="source" position="top" class="!w-2 !h-2 !bg-primary" />
@@ -86,7 +93,12 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onClickOutside
 
         <div class="flex items-start justify-between gap-1">
             <div class="min-w-0 flex-1">
-                <div class="text-sm font-medium text-foreground truncate max-w-[160px]">
+                <div
+                    :class="[
+                        'text-sm font-medium text-foreground truncate max-w-[160px]',
+                        diffState === 'remove' ? 'line-through' : '',
+                    ]"
+                >
                     {{ label }}
                 </div>
                 <div v-if="role" class="text-xs text-muted-foreground truncate max-w-[160px] mt-0.5">

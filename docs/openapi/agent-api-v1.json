@@ -384,6 +384,9 @@
                                                     "is_overridden": {
                                                         "type": "boolean"
                                                     },
+                                                    "is_immutable": {
+                                                        "type": "boolean"
+                                                    },
                                                     "updated_at": {
                                                         "type": [
                                                             "string",
@@ -398,6 +401,7 @@
                                                     "default_enabled",
                                                     "is_enabled",
                                                     "is_overridden",
+                                                    "is_immutable",
                                                     "updated_at"
                                                 ]
                                             }
@@ -461,6 +465,9 @@
                                                     "is_overridden": {
                                                         "type": "boolean"
                                                     },
+                                                    "is_immutable": {
+                                                        "type": "boolean"
+                                                    },
                                                     "updated_at": {
                                                         "type": [
                                                             "string",
@@ -475,6 +482,7 @@
                                                     "default_enabled",
                                                     "is_enabled",
                                                     "is_overridden",
+                                                    "is_immutable",
                                                     "updated_at"
                                                 ]
                                             }
@@ -3556,6 +3564,15 @@
                                                         },
                                                         "window_succeeded_total": {
                                                             "type": "string"
+                                                        },
+                                                        "skill_failure_rate": {
+                                                            "type": "number"
+                                                        },
+                                                        "skill_token_spend": {
+                                                            "type": "integer"
+                                                        },
+                                                        "skill_escalations": {
+                                                            "type": "string"
                                                         }
                                                     },
                                                     "required": [
@@ -3565,7 +3582,10 @@
                                                         "backlog_count",
                                                         "oldest_queued_age_seconds",
                                                         "window_terminal_total",
-                                                        "window_succeeded_total"
+                                                        "window_succeeded_total",
+                                                        "skill_failure_rate",
+                                                        "skill_token_spend",
+                                                        "skill_escalations"
                                                     ]
                                                 },
                                                 "scheduler": {
@@ -11692,6 +11712,12 @@
                                                     "runner_type": {
                                                         "type": "string"
                                                     },
+                                                    "model": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
                                                     "project_directory": {
                                                         "type": "string"
                                                     },
@@ -12519,6 +12545,7 @@
                                                     "user_id",
                                                     "name",
                                                     "runner_type",
+                                                    "model",
                                                     "project_directory",
                                                     "interrogation_type",
                                                     "feature_brief",
@@ -12681,6 +12708,12 @@
                                                 },
                                                 "runner_type": {
                                                     "type": "string"
+                                                },
+                                                "model": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
                                                 },
                                                 "project_directory": {
                                                     "type": "string"
@@ -13509,6 +13542,7 @@
                                                 "user_id",
                                                 "name",
                                                 "runner_type",
+                                                "model",
                                                 "project_directory",
                                                 "interrogation_type",
                                                 "feature_brief",
@@ -13604,6 +13638,12 @@
                                                 },
                                                 "runner_type": {
                                                     "type": "string"
+                                                },
+                                                "model": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
                                                 },
                                                 "project_directory": {
                                                     "type": "string"
@@ -14435,6 +14475,7 @@
                                                 "user_id",
                                                 "name",
                                                 "runner_type",
+                                                "model",
                                                 "project_directory",
                                                 "interrogation_type",
                                                 "feature_brief",
@@ -14524,6 +14565,12 @@
                                                 },
                                                 "runner_type": {
                                                     "type": "string"
+                                                },
+                                                "model": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
                                                 },
                                                 "project_directory": {
                                                     "type": "string"
@@ -15352,6 +15399,7 @@
                                                 "user_id",
                                                 "name",
                                                 "runner_type",
+                                                "model",
                                                 "project_directory",
                                                 "interrogation_type",
                                                 "feature_brief",
@@ -19347,6 +19395,12 @@
                                                 "runner_type": {
                                                     "type": "string"
                                                 },
+                                                "model": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
                                                 "project_directory": {
                                                     "type": "string"
                                                 },
@@ -20174,6 +20228,7 @@
                                                 "user_id",
                                                 "name",
                                                 "runner_type",
+                                                "model",
                                                 "project_directory",
                                                 "interrogation_type",
                                                 "feature_brief",
@@ -23602,6 +23657,157 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/org\/nl-parse": {
+            "post": {
+                "operationId": "nlOrg.parse",
+                "tags": [
+                    "NlOrg"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "input": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                    },
+                                    "chat_history": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "role": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "user",
+                                                        "assistant"
+                                                    ]
+                                                },
+                                                "content": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "input"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "parse_attempt_id": {
+                                            "type": "string"
+                                        },
+                                        "changeset": {
+                                            "type": "string"
+                                        },
+                                        "annotations": {
+                                            "type": "string"
+                                        },
+                                        "confidence": {
+                                            "type": "string"
+                                        },
+                                        "resolved_references": {
+                                            "type": "string"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "parse_attempt_id",
+                                        "changeset",
+                                        "annotations",
+                                        "confidence",
+                                        "resolved_references",
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#\/components\/responses\/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/org\/nl-apply": {
+            "post": {
+                "operationId": "nlOrg.apply",
+                "tags": [
+                    "NlOrg"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application\/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "parse_attempt_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    }
+                                },
+                                "required": [
+                                    "parse_attempt_id"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "applied_at": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "applied_at"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#\/components\/responses\/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#\/components\/responses\/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
                     }
                 }
             }
@@ -28072,6 +28278,229 @@
                 }
             }
         },
+        "\/agent\/api\/v1\/interrogation\/runner-models": {
+            "get": {
+                "operationId": "v1.runnerModels",
+                "tags": [
+                    "RunnerModels"
+                ],
+                "parameters": [
+                    {
+                        "name": "runner_type",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "claude",
+                                "codex"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "anyOf": [
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "data": {
+                                                            "type": "array",
+                                                            "prefixItems": [
+                                                                {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                        "id": {
+                                                                            "type": "string",
+                                                                            "const": "gpt-5.3-codex"
+                                                                        },
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "const": "GPT-5.3 Codex"
+                                                                        }
+                                                                    },
+                                                                    "required": [
+                                                                        "id",
+                                                                        "name"
+                                                                    ]
+                                                                },
+                                                                {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                        "id": {
+                                                                            "type": "string",
+                                                                            "const": "o3"
+                                                                        },
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "const": "o3"
+                                                                        }
+                                                                    },
+                                                                    "required": [
+                                                                        "id",
+                                                                        "name"
+                                                                    ]
+                                                                },
+                                                                {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                        "id": {
+                                                                            "type": "string",
+                                                                            "const": "o4-mini"
+                                                                        },
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "const": "o4-mini"
+                                                                        }
+                                                                    },
+                                                                    "required": [
+                                                                        "id",
+                                                                        "name"
+                                                                    ]
+                                                                }
+                                                            ],
+                                                            "minItems": 3,
+                                                            "maxItems": 3,
+                                                            "additionalItems": false
+                                                        },
+                                                        "default": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "data",
+                                                        "default"
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "data": {
+                                                            "type": "array",
+                                                            "prefixItems": [
+                                                                {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                        "id": {
+                                                                            "type": "string",
+                                                                            "const": "claude-opus-4-6"
+                                                                        },
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "const": "Claude Opus 4.6"
+                                                                        }
+                                                                    },
+                                                                    "required": [
+                                                                        "id",
+                                                                        "name"
+                                                                    ]
+                                                                },
+                                                                {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                        "id": {
+                                                                            "type": "string",
+                                                                            "const": "claude-sonnet-4-6"
+                                                                        },
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "const": "Claude Sonnet 4.6"
+                                                                        }
+                                                                    },
+                                                                    "required": [
+                                                                        "id",
+                                                                        "name"
+                                                                    ]
+                                                                },
+                                                                {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                        "id": {
+                                                                            "type": "string",
+                                                                            "const": "claude-haiku-4-5-20251001"
+                                                                        },
+                                                                        "name": {
+                                                                            "type": "string",
+                                                                            "const": "Claude Haiku 4.5"
+                                                                        }
+                                                                    },
+                                                                    "required": [
+                                                                        "id",
+                                                                        "name"
+                                                                    ]
+                                                                }
+                                                            ],
+                                                            "minItems": 3,
+                                                            "maxItems": 3,
+                                                            "additionalItems": false
+                                                        },
+                                                        "default": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "data",
+                                                        "default"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": [
+                                                "object",
+                                                "null"
+                                            ],
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "string"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "id",
+                                                            "name"
+                                                        ]
+                                                    }
+                                                },
+                                                "default": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "data",
+                                                "default"
+                                            ]
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#\/components\/responses\/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
         "\/agent\/api\/v1\/runtime\/policy": {
             "get": {
                 "operationId": "runtimePolicy.index",
@@ -28592,6 +29021,917 @@
                                     },
                                     "required": [
                                         "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/skills\/install": {
+            "post": {
+                "operationId": "skill.install",
+                "tags": [
+                    "Skill"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart\/form-data": {
+                            "schema": {
+                                "$ref": "#\/components\/schemas\/InstallSkillRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`SkillResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#\/components\/schemas\/SkillResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#\/components\/responses\/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/skills": {
+            "get": {
+                "operationId": "skill.index",
+                "tags": [
+                    "Skill"
+                ],
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "risk_level",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "industry",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `SkillResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#\/components\/schemas\/SkillResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "from": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "links": {
+                                                    "type": "array",
+                                                    "description": "Generated paginator links.",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "url": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "active": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "url",
+                                                            "label",
+                                                            "active"
+                                                        ]
+                                                    }
+                                                },
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "to": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "description": "Number of the last item in the slice.",
+                                                    "minimum": 1
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "description": "Total number of items being paginated.",
+                                                    "minimum": 0
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "from",
+                                                "last_page",
+                                                "links",
+                                                "path",
+                                                "per_page",
+                                                "to",
+                                                "total"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/skills\/library": {
+            "get": {
+                "operationId": "skill.library",
+                "tags": [
+                    "Skill"
+                ],
+                "parameters": [
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "industry",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `SkillLibraryResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#\/components\/schemas\/SkillLibraryResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "const": "FEATURE_DISABLED"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Skills library is not enabled."
+                                                }
+                                            },
+                                            "required": [
+                                                "code",
+                                                "message"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/skills\/library\/{slug}\/install": {
+            "post": {
+                "operationId": "skill.installFromLibrary",
+                "tags": [
+                    "Skill"
+                ],
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "`SkillResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#\/components\/schemas\/SkillResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "const": "SKILL_VALIDATION_FAILED"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Library skill installation failed."
+                                                },
+                                                "details": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "errors": {
+                                                            "type": "string"
+                                                        },
+                                                        "warnings": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "errors",
+                                                        "warnings"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "code",
+                                                "message",
+                                                "details"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "const": "NOT_FOUND"
+                                                },
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "code",
+                                                "message"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "const": "FEATURE_DISABLED"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Skills library is not enabled."
+                                                }
+                                            },
+                                            "required": [
+                                                "code",
+                                                "message"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/skills\/{id}": {
+            "get": {
+                "operationId": "skill.show",
+                "tags": [
+                    "Skill"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`SkillResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#\/components\/schemas\/SkillResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "const": "NOT_FOUND"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Skill not found."
+                                                }
+                                            },
+                                            "required": [
+                                                "code",
+                                                "message"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "skill.update",
+                "tags": [
+                    "Skill"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart\/form-data": {
+                            "schema": {
+                                "$ref": "#\/components\/schemas\/UpdateSkillRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`SkillResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#\/components\/schemas\/SkillResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#\/components\/responses\/ValidationException"
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "const": "NOT_FOUND"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Skill not found."
+                                                }
+                                            },
+                                            "required": [
+                                                "code",
+                                                "message"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "skill.destroy",
+                "tags": [
+                    "Skill"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "const": "NOT_FOUND"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Skill not found."
+                                                }
+                                            },
+                                            "required": [
+                                                "code",
+                                                "message"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/skills\/{id}\/validate": {
+            "post": {
+                "operationId": "skill.revalidate",
+                "tags": [
+                    "Skill"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`SkillResource`",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#\/components\/schemas\/SkillResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "error": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "code": {
+                                                            "type": "string",
+                                                            "const": "SKILL_MD_MISSING"
+                                                        },
+                                                        "message": {
+                                                            "type": "string",
+                                                            "const": "SKILL.md not found in skill directory."
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "code",
+                                                        "message"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "error"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "error": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "code": {
+                                                            "type": "string",
+                                                            "const": "SKILL_PATH_MISSING"
+                                                        },
+                                                        "message": {
+                                                            "type": "string",
+                                                            "const": "Skill files not found on disk."
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "code",
+                                                        "message"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "error"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "const": "NOT_FOUND"
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "const": "Skill not found."
+                                                }
+                                            },
+                                            "required": [
+                                                "code",
+                                                "message"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/skills\/dashboard\/usage": {
+            "get": {
+                "operationId": "skillDashboard.usage",
+                "tags": [
+                    "SkillDashboard"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": "No current team selected."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#\/components\/responses\/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "\/agent\/api\/v1\/skills\/dashboard\/health": {
+            "get": {
+                "operationId": "skillDashboard.health",
+                "tags": [
+                    "SkillDashboard"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application\/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": "No current team selected."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
                                     ]
                                 }
                             }
@@ -29904,6 +31244,34 @@
                 ],
                 "title": "ChatActionResource"
             },
+            "ContentTrustLevel": {
+                "type": "string",
+                "enum": [
+                    "trusted",
+                    "contextual",
+                    "untrusted"
+                ],
+                "title": "ContentTrustLevel"
+            },
+            "InstallSkillRequest": {
+                "type": "object",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application\/octet-stream",
+                        "maxLength": 10240
+                    },
+                    "url": {
+                        "type": "string",
+                        "format": "uri"
+                    }
+                },
+                "required": [
+                    "file"
+                ],
+                "title": "InstallSkillRequest"
+            },
             "InterrogationSetting": {
                 "type": "object",
                 "properties": {
@@ -30111,9 +31479,17 @@
                     },
                     "soul_json": {
                         "type": [
-                            "string",
+                            "array",
                             "null"
-                        ]
+                        ],
+                        "items": {}
+                    },
+                    "skill_access_profile": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
                     }
                 },
                 "required": [
@@ -30130,7 +31506,8 @@
                     "archived_at",
                     "created_at",
                     "updated_at",
-                    "soul_json"
+                    "soul_json",
+                    "skill_access_profile"
                 ],
                 "title": "OrgAgentProfile"
             },
@@ -30385,6 +31762,13 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "required_skills": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
                     }
                 },
                 "required": [
@@ -30405,7 +31789,8 @@
                     "is_paused",
                     "archived_at",
                     "created_at",
-                    "updated_at"
+                    "updated_at",
+                    "required_skills"
                 ],
                 "title": "OrgRitualTemplate"
             },
@@ -30589,6 +31974,31 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "content_trust_level": {
+                        "anyOf": [
+                            {
+                                "$ref": "#\/components\/schemas\/ContentTrustLevel"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "injection_score": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "injection_action": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "content_sanitized": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
@@ -30602,7 +32012,11 @@
                     "requires_approval",
                     "approved_at",
                     "created_at",
-                    "updated_at"
+                    "updated_at",
+                    "content_trust_level",
+                    "injection_score",
+                    "injection_action",
+                    "content_sanitized"
                 ],
                 "title": "RuntimeToolCall"
             },
@@ -30617,6 +32031,142 @@
                     "failed"
                 ],
                 "title": "RuntimeToolCallStatus"
+            },
+            "SkillLibraryResource": {
+                "type": "object",
+                "properties": {
+                    "slug": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "author": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string"
+                    },
+                    "industries": {
+                        "type": "string"
+                    },
+                    "risk_level": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "slug",
+                    "name",
+                    "description",
+                    "version",
+                    "author",
+                    "category",
+                    "industries",
+                    "risk_level"
+                ],
+                "title": "SkillLibraryResource"
+            },
+            "SkillResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "author": {
+                        "type": "string"
+                    },
+                    "risk_level": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "industries": {
+                        "type": "string"
+                    },
+                    "memory_blocks": {
+                        "type": "string"
+                    },
+                    "mcp_dependencies": {
+                        "type": "string"
+                    },
+                    "tools_required": {
+                        "type": "string"
+                    },
+                    "trigger_keywords": {
+                        "type": "string"
+                    },
+                    "run_after": {
+                        "type": "string"
+                    },
+                    "requires_approval": {
+                        "type": "string"
+                    },
+                    "is_global": {
+                        "type": "string"
+                    },
+                    "validation_result": {
+                        "type": "string"
+                    },
+                    "invocation_count": {
+                        "type": "string"
+                    },
+                    "last_invoked_at": {
+                        "type": "string"
+                    },
+                    "installed_by": {
+                        "type": "string"
+                    },
+                    "installed_at": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "slug",
+                    "description",
+                    "version",
+                    "author",
+                    "risk_level",
+                    "status",
+                    "industries",
+                    "memory_blocks",
+                    "mcp_dependencies",
+                    "tools_required",
+                    "trigger_keywords",
+                    "run_after",
+                    "requires_approval",
+                    "is_global",
+                    "validation_result",
+                    "invocation_count",
+                    "last_invoked_at",
+                    "installed_by",
+                    "installed_at",
+                    "updated_at"
+                ],
+                "title": "SkillResource"
             },
             "StoreAgentJobRequest": {
                 "type": "object",
@@ -30772,6 +32322,13 @@
                             "claude",
                             "codex"
                         ]
+                    },
+                    "model": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 128
                     },
                     "project_directory": {
                         "type": "string",
@@ -31463,6 +33020,13 @@
                             "null"
                         ],
                         "maxLength": 60000
+                    },
+                    "model": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 128
                     }
                 },
                 "title": "UpdateInterrogationSessionRequest"
@@ -31805,6 +33369,25 @@
                     "value"
                 ],
                 "title": "UpdateSettingsRequest"
+            },
+            "UpdateSkillRequest": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "paused"
+                        ]
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "contentMediaType": "application\/octet-stream",
+                        "maxLength": 10240
+                    }
+                },
+                "title": "UpdateSkillRequest"
             }
         },
         "responses": {

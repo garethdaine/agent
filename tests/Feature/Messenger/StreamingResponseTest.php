@@ -6,6 +6,7 @@ use App\Contracts\Messenger\ConnectorAdapterInterface;
 use App\DTOs\Messenger\ProviderResponse;
 use App\Enums\Messenger\ChatActionType;
 use App\Jobs\Messenger\ProcessChatIntent;
+use App\Jobs\Messenger\SendOutboundMessage;
 use App\Jobs\Runtime\ProcessRuntimeTurnJob;
 use App\Models\ChatAction;
 use App\Models\ChatMessage;
@@ -124,7 +125,7 @@ class StreamingResponseTest extends TestCase
         $adapterMock->shouldReceive('supportsReactions')->andReturn(false);
         $adapterMock->shouldReceive('supportsMessageEditing')->andReturn(false);
         $adapterMock->shouldNotReceive('editMessage');
-        $adapterMock->shouldReceive('sendMessage')->once()->andReturn(
+        $adapterMock->shouldReceive('sendMessage')->zeroOrMoreTimes()->andReturn(
             ProviderResponse::success('direct-msg-id')
         );
 
@@ -154,11 +155,9 @@ class StreamingResponseTest extends TestCase
 
         Queue::assertPushed(ProcessRuntimeTurnJob::class);
 
-        $outboundMessage = ChatMessage::where('chat_session_id', $this->session->id)
-            ->where('direction', ChatMessage::DIRECTION_OUTBOUND)
-            ->first();
-        $this->assertNotNull($outboundMessage);
-        $this->assertStringContainsString('Processing request', $outboundMessage->content);
+        Queue::assertPushed(SendOutboundMessage::class, function (SendOutboundMessage $job) {
+            return str_contains($job->content, 'Processing request');
+        });
     }
 
     public function test_general_task_routes_to_runtime_without_executor(): void

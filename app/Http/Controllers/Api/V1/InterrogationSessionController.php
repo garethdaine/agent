@@ -145,6 +145,7 @@ class InterrogationSessionController extends Controller
         $session = $request->user()->interrogationSessions()->create([
             'name' => $validated['name'] ?? null,
             'runner_type' => $validated['runner_type'],
+            'model' => $validated['model'] ?? null,
             'project_directory' => $validated['project_directory'],
             'interrogation_type' => $validated['interrogation_type'],
             'feature_brief' => $validated['feature_brief'] ?? null,
@@ -161,9 +162,9 @@ class InterrogationSessionController extends Controller
             targetType: 'interrogation_session',
             targetId: (int) $session->id,
             ownerUserId: (int) $session->user_id,
-            changedFields: ['name', 'runner_type', 'project_directory', 'interrogation_type', 'feature_brief', 'status', 'phase'],
+            changedFields: ['name', 'runner_type', 'model', 'project_directory', 'interrogation_type', 'feature_brief', 'status', 'phase'],
             before: null,
-            after: $session->only(['id', 'name', 'runner_type', 'project_directory', 'interrogation_type', 'status', 'phase']),
+            after: $session->only(['id', 'name', 'runner_type', 'model', 'project_directory', 'interrogation_type', 'status', 'phase']),
         );
 
         return response()->json([
@@ -181,6 +182,7 @@ class InterrogationSessionController extends Controller
         $before = [
             'name' => $session->name,
             'feature_brief' => $session->feature_brief,
+            'model' => $session->model,
         ];
 
         if (array_key_exists('name', $validated)) {
@@ -191,6 +193,10 @@ class InterrogationSessionController extends Controller
             $session->feature_brief = $validated['feature_brief'];
         }
 
+        if (array_key_exists('model', $validated)) {
+            $session->model = $validated['model'];
+        }
+
         $session->save();
 
         $changedFields = [];
@@ -199,6 +205,9 @@ class InterrogationSessionController extends Controller
         }
         if ($before['feature_brief'] !== $session->feature_brief) {
             $changedFields[] = 'feature_brief';
+        }
+        if ($before['model'] !== $session->model) {
+            $changedFields[] = 'model';
         }
 
         if ($changedFields !== []) {
@@ -213,6 +222,7 @@ class InterrogationSessionController extends Controller
                 after: [
                     'name' => $session->name,
                     'feature_brief' => $session->feature_brief,
+                    'model' => $session->model,
                 ],
             );
         }
@@ -2710,6 +2720,7 @@ class InterrogationSessionController extends Controller
             'user_id' => $session->user_id,
             'name' => $session->name,
             'runner_type' => $session->runner_type,
+            'model' => $session->model,
             'project_directory' => $session->project_directory,
             'interrogation_type' => $session->interrogation_type,
             'feature_brief' => $includeLargePayloads ? $session->feature_brief : null,

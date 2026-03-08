@@ -90,7 +90,7 @@ class TunnelRunJobTest extends TestCase
         Redis::del($redisKey);
         $now = time();
         for ($i = 0; $i < 4; $i++) {
-            Redis::rpush($redisKey, [(string) ($now - $i * 60)]);
+            Redis::rpush($redisKey, (string) ($now - $i * 60));
         }
 
         $job = new TunnelRunJob;
@@ -127,7 +127,7 @@ class TunnelRunJobTest extends TestCase
         // Add old timestamps outside the 10-minute window
         $oldTime = time() - 700; // 11+ minutes ago
         for ($i = 0; $i < 4; $i++) {
-            Redis::rpush($redisKey, [(string) ($oldTime - $i)]);
+            Redis::rpush($redisKey, (string) ($oldTime - $i));
         }
 
         $job = new TunnelRunJob;

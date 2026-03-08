@@ -5,8 +5,11 @@ namespace App\Services\Runtime;
 use App\Contracts\Runtime\ToolAdapterInterface;
 use App\DTOs\Runtime\RuntimeContext;
 use App\DTOs\Runtime\ToolResult;
+use App\DTOs\Security\SecurityToolResult;
 use App\Enums\Runtime\RuntimeToolCallStatus;
 use App\Models\Runtime\RuntimeToolCall;
+use App\Services\Security\ContentSecurityMiddleware;
+use App\Services\Security\TurnSecurityContext;
 use App\Support\Agent\AuditLogger;
 
 class ToolGateway
@@ -18,11 +21,18 @@ class ToolGateway
      */
     private array $adapters = [];
 
+    private ?ContentSecurityMiddleware $securityMiddleware = null;
+
     public function __construct(
         private PolicyEngine $policyEngine,
         private ApprovalGate $approvalGate,
         private AuditLogger $auditLogger,
     ) {}
+
+    public function setSecurityMiddleware(ContentSecurityMiddleware $middleware): void
+    {
+        $this->securityMiddleware = $middleware;
+    }
 
     /**
      * Register a tool adapter with the gateway.
@@ -111,7 +121,7 @@ class ToolGateway
      * @param  array  $args  Arguments to pass to the tool
      * @return ToolResult The result of the tool call
      */
-    public function call(string $toolName, RuntimeContext $context, array $args): ToolResult
+    public function call(string $toolName, RuntimeContext $context, array $args, ?TurnSecurityContext $turnContext = null): ToolResult
     {
         $startTime = hrtime(true);
 
@@ -139,8 +149,18 @@ class ToolGateway
             );
         }
 
+        // Pre-execution security firewall check
+        if ($this->securityMiddleware !== null && $turnContext !== null) {
+            $firewallResult = $this->securityMiddleware->checkPreExecution($qualifiedName, $args, $context, $turnContext);
+            if ($firewallResult !== null) {
+                $this->recordSuccess($toolCall, $firewallResult, $startTime);
+
+                return $firewallResult;
+            }
+        }
+
         // Check if approval is required via ApprovalGate
-        if ($this->approvalGate->requiresApproval($context->mode, $qualifiedName, $args)) {
+        if ($this->approvalGate->requiresApproval($context->mode, $qualifiedName, $args, null, $turnContext)) {
             $toolCall->update([
                 'status' => RuntimeToolCallStatus::PendingApproval,
                 'requires_approval' => true,
@@ -161,7 +181,7 @@ class ToolGateway
             );
         }
 
-        return $this->executeTool($adapter, $toolCall, $context, $args, $startTime);
+        return $this->executeTool($adapter, $toolCall, $context, $args, $startTime, $turnContext);
     }
 
     /**
@@ -213,12 +233,26 @@ class ToolGateway
         RuntimeToolCall $toolCall,
         RuntimeContext $context,
         array $args,
-        int $startTime
+        int $startTime,
+        ?TurnSecurityContext $turnContext = null,
     ): ToolResult {
         $toolCall->update(['status' => RuntimeToolCallStatus::Running]);
 
         try {
             $result = $adapter->execute($context, $args);
+
+            // Post-execution security processing
+            if ($this->securityMiddleware !== null && $turnContext !== null) {
+                $securityResult = $this->securityMiddleware->processResult(
+                    $result,
+                    $toolCall->tool_name,
+                    $args,
+                    $context,
+                    $turnContext,
+                );
+                $this->updateSecurityMetadata($toolCall, $securityResult);
+            }
+
             $this->recordSuccess($toolCall, $result, $startTime);
 
             $this->auditLogger->recordSystemAction(
@@ -241,6 +275,16 @@ class ToolGateway
 
             return $this->recordFailure($toolCall, $e->getMessage(), $startTime);
         }
+    }
+
+    private function updateSecurityMetadata(RuntimeToolCall $toolCall, SecurityToolResult $securityResult): void
+    {
+        $toolCall->update([
+            'content_trust_level' => $securityResult->contentTrustLevel,
+            'injection_score' => $securityResult->injectionScore,
+            'injection_action' => $securityResult->injectionAction->value,
+            'content_sanitized' => $securityResult->sanitized,
+        ]);
     }
 
     /**

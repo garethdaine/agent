@@ -63,7 +63,8 @@ class SessionProcessManagerFragmentLoggingTest extends TestCase
         $this->injectFakeProcess($manager, $sessionId);
 
         $logged = false;
-        Log::shouldReceive('debug')
+        $channelLogger = \Mockery::mock(\Psr\Log\LoggerInterface::class);
+        $channelLogger->shouldReceive('debug')
             ->withArgs(function (string $message, array $context = []) use (&$logged) {
                 if ($message === 'SessionProcessManager: turn activity') {
                     $logged = true;
@@ -76,6 +77,11 @@ class SessionProcessManagerFragmentLoggingTest extends TestCase
                 return true;
             })
             ->zeroOrMoreTimes();
+        $channelLogger->shouldReceive('info')->withAnyArgs()->zeroOrMoreTimes();
+        $channelLogger->shouldReceive('warning')->withAnyArgs()->zeroOrMoreTimes();
+        $channelLogger->shouldReceive('error')->withAnyArgs()->zeroOrMoreTimes();
+        Log::shouldReceive('channel')->with('runtime')->andReturn($channelLogger)->zeroOrMoreTimes();
+        Log::shouldReceive('debug')->withAnyArgs()->zeroOrMoreTimes();
         Log::shouldReceive('info')->withAnyArgs()->zeroOrMoreTimes();
         Log::shouldReceive('warning')->withAnyArgs()->zeroOrMoreTimes();
 

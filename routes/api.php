@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\InterrogationSettingsController;
 use App\Http\Controllers\Api\V1\InterrogationTaskProviderController;
 use App\Http\Controllers\Api\V1\InterrogationTechStackController;
 use App\Http\Controllers\Api\V1\LogTailController;
+use App\Http\Controllers\Api\V1\RunnerModelsController;
 use App\Http\Controllers\Api\V1\Memory\MemoryCoreBlockController;
 use App\Http\Controllers\Api\V1\Memory\MemoryDiagnosticsController;
 use App\Http\Controllers\Api\V1\Memory\MemoryRetrievalController;
@@ -199,6 +200,8 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::patch('/interrogation/sessions/{id}/annotations', [InterrogationSessionController::class, 'updateAnnotation'])->middleware('throttle:interrogation');
             Route::post('/interrogation/sessions/{id}/export-summary', [InterrogationSessionController::class, 'exportSummary'])->middleware('throttle:interrogation');
             Route::post('/interrogation/sessions/{id}/export-plan', [InterrogationSessionController::class, 'exportPlan'])->middleware('throttle:interrogation');
+
+            Route::get('/interrogation/runner-models', RunnerModelsController::class);
 
             Route::get('/interrogation/settings', [InterrogationSettingsController::class, 'index']);
             Route::get('/interrogation/settings/{key}', [InterrogationSettingsController::class, 'show']);
@@ -400,6 +403,12 @@ Route::middleware([AgentApiVersionHeader::class])
                     // Escalations
                     Route::get('/escalations', [Org\OrgEscalationController::class, 'index']);
                     Route::post('/escalations/{id}/resolve', [Org\OrgEscalationController::class, 'resolve'])
+                        ->middleware('throttle:agent-mutations');
+
+                    // NL Org parsing
+                    Route::post('/nl-parse', [Org\NlOrgController::class, 'parse'])
+                        ->middleware('throttle:agent-mutations');
+                    Route::post('/nl-apply', [Org\NlOrgController::class, 'apply'])
                         ->middleware('throttle:agent-mutations');
                 });
 

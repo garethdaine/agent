@@ -19,6 +19,18 @@ use Inertia\Response;
 
 class OperatorPageController extends Controller
 {
+    public function systemOverview(): Response
+    {
+        return Inertia::render('Agent/SystemOverview/Show', [
+            'navigation' => [
+                'deployments' => '/agent/deployments',
+                'dashboard' => '/dashboard',
+                'escalations' => '/agent/escalations',
+                'budgets' => '/agent/budgets',
+            ],
+        ]);
+    }
+
     public function deployments(
         ActiveProjectionBuildStateService $buildStateService,
         ActiveBuildFreshnessService $freshnessService,
@@ -124,6 +136,7 @@ class OperatorPageController extends Controller
             'freshness' => $freshness,
             'navigation' => [
                 'dashboard' => '/dashboard',
+                'systemOverview' => '/agent/system-overview',
                 'escalations' => '/agent/escalations',
                 'budgets' => '/agent/budgets',
                 'replayBuilds' => '/agent/replay-builds',

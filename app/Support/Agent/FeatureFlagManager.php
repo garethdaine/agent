@@ -85,6 +85,32 @@ class FeatureFlagManager
 
     public const SKILLS_VALIDATION_STRICT_MODE = 'skills.validation.strict_mode';
 
+    // Connector flag constants
+    public const CONNECTORS_ENABLED = 'connectors.enabled';
+
+    public const CONNECTORS_UI_ENABLED = 'connectors.ui_enabled';
+
+    public const CONNECTORS_WEBHOOKS_ENABLED = 'connectors.webhooks_enabled';
+
+    public const CONNECTORS_AUTO_RESOLVE = 'connectors.auto_resolve';
+
+    public const CONNECTORS_WRITE_ACTIONS = 'connectors.write_actions';
+
+    public const CONNECTORS_CREDENTIAL_REFRESH = 'connectors.credential_refresh';
+
+    // Security flag constants (immutable — always enabled)
+    public const SECURITY_CONTENT_TRUST = 'security.content_trust';
+
+    public const SECURITY_INJECTION_DETECTION = 'security.injection_detection';
+
+    public const SECURITY_EXFILTRATION_DETECTION = 'security.exfiltration_detection';
+
+    private const IMMUTABLE_SECURITY_FLAGS = [
+        self::SECURITY_CONTENT_TRUST,
+        self::SECURITY_INJECTION_DETECTION,
+        self::SECURITY_EXFILTRATION_DETECTION,
+    ];
+
     /**
      * @var array<string, array{label: string, description: string}>
      */
@@ -238,6 +264,46 @@ class FeatureFlagManager
             'label' => 'Skills Strict Validation',
             'description' => 'Block skill installation on any validation warning, not just errors.',
         ],
+
+        // Connectors
+        self::CONNECTORS_ENABLED => [
+            'label' => 'Connectors',
+            'description' => 'Enable the external service connector system for agent integrations with SaaS platforms and APIs.',
+        ],
+        self::CONNECTORS_UI_ENABLED => [
+            'label' => 'Connectors UI',
+            'description' => 'Enable connector management pages in the web interface. Requires Connectors to be enabled.',
+        ],
+        self::CONNECTORS_WEBHOOKS_ENABLED => [
+            'label' => 'Connector Webhooks',
+            'description' => 'Enable push-based webhook ingestion from connected external services. Requires Connectors to be enabled.',
+        ],
+        self::CONNECTORS_AUTO_RESOLVE => [
+            'label' => 'Connector Auto-Resolve',
+            'description' => 'Enable automatic connector discovery and matching during agent delegation. Requires Connectors to be enabled.',
+        ],
+        self::CONNECTORS_WRITE_ACTIONS => [
+            'label' => 'Connector Write Actions',
+            'description' => 'Enable write/mutate actions on connected services. When disabled, only read-only actions are permitted. Requires Connectors to be enabled.',
+        ],
+        self::CONNECTORS_CREDENTIAL_REFRESH => [
+            'label' => 'Connector Credential Refresh',
+            'description' => 'Enable automatic background token refresh for OAuth-connected services. Requires Connectors to be enabled.',
+        ],
+
+        // Security (immutable)
+        self::SECURITY_CONTENT_TRUST => [
+            'label' => 'Content Trust Classification',
+            'description' => 'Enable content trust classification for all tool results. Immutable: cannot be disabled.',
+        ],
+        self::SECURITY_INJECTION_DETECTION => [
+            'label' => 'Injection Detection',
+            'description' => 'Enable prompt injection detection engine for untrusted content. Immutable: cannot be disabled.',
+        ],
+        self::SECURITY_EXFILTRATION_DETECTION => [
+            'label' => 'Exfiltration Detection',
+            'description' => 'Enable outbound request monitoring for data exfiltration patterns. Immutable: cannot be disabled.',
+        ],
     ];
 
     private ?bool $storeAvailable = null;
@@ -283,8 +349,39 @@ class FeatureFlagManager
         ];
     }
 
+    /**
+     * Returns all connector-related flag keys.
+     *
+     * @return array<int, string>
+     */
+    public static function getConnectorsFlags(): array
+    {
+        return [
+            self::CONNECTORS_ENABLED,
+            self::CONNECTORS_UI_ENABLED,
+            self::CONNECTORS_WEBHOOKS_ENABLED,
+            self::CONNECTORS_AUTO_RESOLVE,
+            self::CONNECTORS_WRITE_ACTIONS,
+            self::CONNECTORS_CREDENTIAL_REFRESH,
+        ];
+    }
+
+    /**
+     * Returns all security-related flag keys (immutable).
+     *
+     * @return array<int, string>
+     */
+    public static function getSecurityFlags(): array
+    {
+        return self::IMMUTABLE_SECURITY_FLAGS;
+    }
+
     public function enabled(string $key): bool
     {
+        if (in_array($key, self::IMMUTABLE_SECURITY_FLAGS, true)) {
+            return true;
+        }
+
         if (! $this->isManagedKey($key)) {
             return (bool) config($key, false);
         }
@@ -334,13 +431,19 @@ class FeatureFlagManager
             $storedRow = $stored[$key] ?? null;
             $isOverridden = $storedRow !== null;
 
+            $isImmutable = in_array($key, self::IMMUTABLE_SECURITY_FLAGS, true);
+            $isEnabled = $isImmutable
+                ? true
+                : ($isOverridden ? (bool) $storedRow['is_enabled'] : $this->defaultValue($key));
+
             $rows[] = [
                 'key' => $key,
                 'label' => $definition['label'],
                 'description' => $definition['description'],
-                'default_enabled' => $this->defaultValue($key),
-                'is_enabled' => $isOverridden ? (bool) $storedRow['is_enabled'] : $this->defaultValue($key),
+                'default_enabled' => $isImmutable ? true : $this->defaultValue($key),
+                'is_enabled' => $isEnabled,
                 'is_overridden' => $isOverridden,
+                'is_immutable' => $isImmutable,
                 'updated_at' => $isOverridden ? $storedRow['updated_at']?->toIso8601String() : null,
             ];
         }
@@ -363,10 +466,15 @@ class FeatureFlagManager
                 continue;
             }
 
+            // Security flags are immutable — always force true
+            $effectiveValue = in_array($key, self::IMMUTABLE_SECURITY_FLAGS, true)
+                ? true
+                : (bool) $enabled;
+
             AgentFeatureSetting::query()->updateOrCreate(
                 ['key' => $key],
                 [
-                    'is_enabled' => (bool) $enabled,
+                    'is_enabled' => $effectiveValue,
                     'updated_by_user_id' => $updatedByUserId,
                 ],
             );

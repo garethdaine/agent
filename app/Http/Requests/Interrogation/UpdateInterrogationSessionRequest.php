@@ -41,6 +41,7 @@ class UpdateInterrogationSessionRequest extends FormRequest
         return [
             'name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'feature_brief' => ['sometimes', 'nullable', 'string', 'max:'.$maxTextLength],
+            'model' => ['sometimes', 'nullable', 'string', 'max:128'],
         ];
     }
 }

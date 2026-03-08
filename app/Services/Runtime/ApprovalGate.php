@@ -10,6 +10,8 @@ use App\Models\Runtime\RuntimeApproval;
 use App\Models\Runtime\RuntimeSession;
 use App\Models\Runtime\RuntimeToolCall;
 use App\Models\User;
+use App\Services\Security\SecurityConfigProvider;
+use App\Services\Security\TurnSecurityContext;
 use App\Support\Agent\AuditLogger;
 use Illuminate\Support\Collection;
 
@@ -54,6 +56,7 @@ class ApprovalGate
     public function __construct(
         private PolicyEngine $policyEngine,
         private AuditLogger $auditLogger,
+        private ?SecurityConfigProvider $securityConfig = null,
     ) {}
 
     /**
@@ -63,18 +66,34 @@ class ApprovalGate
      * Standard mode: Approve all mutations
      * Full mode: Approve mutations + external calls
      */
-    public function requiresApproval(RuntimeMode $mode, string $toolName, array $args = [], ?RuntimeSession $session = null): bool
+    public function requiresApproval(RuntimeMode $mode, string $toolName, array $args = [], ?RuntimeSession $session = null, ?TurnSecurityContext $turnContext = null): bool
     {
         if ($mode === RuntimeMode::Safe) {
             return false;
         }
 
+        $isMutation = in_array($toolName, self::MUTATION_TOOLS, true);
+        $isExternal = in_array($toolName, self::EXTERNAL_TOOLS, true);
+
+        // Security-aware escalation: tainted turn + default_deny overrides auto-approve
+        if ($this->securityConfig !== null && $turnContext !== null) {
+            if ($turnContext->isTainted() && $this->securityConfig->get('default_deny_external')) {
+                if ($isMutation || $isExternal) {
+                    return true;
+                }
+            }
+        }
+
+        // Messenger high-impact confirmation (independent of taint state)
+        if ($this->securityConfig !== null && $this->securityConfig->get('messenger_high_impact_confirmation')) {
+            if ($mode === RuntimeMode::Standard && $isMutation) {
+                return true;
+            }
+        }
+
         if ($session?->isToolAutoApproved($toolName)) {
             return false;
         }
-
-        $isMutation = in_array($toolName, self::MUTATION_TOOLS, true);
-        $isExternal = in_array($toolName, self::EXTERNAL_TOOLS, true);
 
         if ($mode === RuntimeMode::Standard && $isMutation) {
             return $this->policyEngine->requiresApproval($mode, 'mutations');

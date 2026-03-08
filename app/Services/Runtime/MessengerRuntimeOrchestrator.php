@@ -9,6 +9,8 @@ use App\Enums\Runtime\RuntimeTurnStatus;
 use App\Models\Runtime\RuntimeSession;
 use App\Models\Runtime\RuntimeTurn;
 use App\Services\Credentials\CredentialsManager;
+use App\Services\Security\MessengerSecurityGuard;
+use App\Services\Security\TurnSecurityContext;
 use Illuminate\Support\Facades\Log;
 
 class MessengerRuntimeOrchestrator
@@ -21,6 +23,7 @@ class MessengerRuntimeOrchestrator
         private CliRuntimeExecutor $cliExecutor,
         private SessionProcessManager $sessionProcessManager,
         private CredentialsManager $credentialsManager,
+        private ?MessengerSecurityGuard $securityGuard = null,
     ) {}
 
     /**
@@ -75,6 +78,10 @@ class MessengerRuntimeOrchestrator
                 }
             }
 
+            if ($this->securityGuard !== null && isset($result['text'])) {
+                $result['text'] = $this->securityGuard->sanitizeResponse($result['text']);
+            }
+
             $summary = $result['text'] ?? $result['error'] ?? null;
             $turn->update([
                 'status' => $result['status'] === 'completed' ? RuntimeTurnStatus::Completed : RuntimeTurnStatus::Failed,
@@ -98,6 +105,7 @@ class MessengerRuntimeOrchestrator
         $systemPrompt = $this->buildSystemPrompt($context);
         $totalInputTokens = 0;
         $totalOutputTokens = 0;
+        $turnSecurityContext = new TurnSecurityContext();
 
         try {
             for ($iter = 0; $iter < self::MAX_TOOL_ITERATIONS; $iter++) {
@@ -112,6 +120,9 @@ class MessengerRuntimeOrchestrator
 
                 if ($stopReason === 'end_turn' || $toolUses === []) {
                     $finalText = implode("\n", $textBlocks);
+                    if ($this->securityGuard !== null) {
+                        $finalText = $this->securityGuard->sanitizeResponse($finalText);
+                    }
                     $turn->update([
                         'status' => RuntimeTurnStatus::Completed,
                         'summary' => mb_strlen($finalText) > 500 ? mb_substr($finalText, 0, 497).'...' : $finalText,
@@ -131,7 +142,7 @@ class MessengerRuntimeOrchestrator
                     $toolId = $toolUse['id'] ?? '';
                     $args = is_array($toolUse['input'] ?? null) ? $toolUse['input'] : [];
 
-                    $result = $this->toolGateway->call($toolName, $context, $args);
+                    $result = $this->toolGateway->call($toolName, $context, $args, $turnSecurityContext);
 
                     $toolResults[] = [
                         'type' => 'tool_result',

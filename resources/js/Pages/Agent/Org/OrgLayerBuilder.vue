@@ -8,7 +8,8 @@ import { GraphCanvas } from '@/Components/GraphCanvas';
 import OrgAgentNode from '@/Components/Org/OrgAgentNode.vue';
 import OrgAgentConfigPanel from '@/Components/Org/OrgAgentConfigPanel.vue';
 import DelegateeProfileCreateModal from '@/Components/Delegation/DelegateeProfileCreateModal.vue';
-import { ArrowLeft, Plus, Users } from 'lucide-vue-next';
+import NlOrgChat from '@/Components/Org/NlOrgChat.vue';
+import { ArrowLeft, Plus, Users, MessageSquare } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 
 const nodeTypes = { orgAgent: markRaw(OrgAgentNode) };
@@ -22,6 +23,8 @@ const error = ref('');
 const validationError = ref('');
 const selectedNodeId = ref(null);
 const showCreateProfileModal = ref(false);
+const showNlSidebar = ref(false);
+const pendingChangeset = ref(null);
 
 /**
  * Compute hierarchical positions for org nodes.
@@ -430,6 +433,112 @@ watch(
         if (oldVal && newVal !== oldVal) scheduleAutosave();
     },
 );
+
+// --- NL Sidebar: diff preview handlers ---
+const originalNodeStyles = ref(new Map());
+
+const onPreviewChangeset = (changeset) => {
+    // Save original node data so we can restore on discard
+    originalNodeStyles.value = new Map(
+        nodes.value.map((n) => [n.id, { ...n.data }])
+    );
+
+    const overlayNodes = [];
+    const overlayEdges = [];
+
+    for (const entry of changeset) {
+        if (entry.entity_type === 'org_agent_profile') {
+            if (entry.operation === 'add') {
+                const tempId = entry.temp_id ?? `nl-temp-${Date.now()}-${Math.random()}`;
+                overlayNodes.push({
+                    id: tempId,
+                    type: 'orgAgent',
+                    position: { x: 120 + (nodes.value.length + overlayNodes.length) % 4 * 260, y: 80 },
+                    draggable: false,
+                    data: {
+                        ...entry.payload,
+                        name: entry.payload.name ?? 'New Agent',
+                        role_slug: entry.payload.role_slug ?? 'agent',
+                        diffState: 'add',
+                    },
+                });
+            } else if (entry.operation === 'update') {
+                const targetId = entry.payload.id;
+                nodes.value = nodes.value.map((n) =>
+                    n.id === targetId
+                        ? { ...n, data: { ...n.data, diffState: 'update' } }
+                        : n
+                );
+            } else if (entry.operation === 'remove') {
+                const targetId = entry.payload.id;
+                nodes.value = nodes.value.map((n) =>
+                    n.id === targetId
+                        ? { ...n, data: { ...n.data, diffState: 'remove' } }
+                        : n
+                );
+            }
+        } else if (entry.entity_type === 'org_reporting_edge') {
+            if (entry.operation === 'add') {
+                overlayEdges.push({
+                    id: `nl-edge-${Date.now()}-${Math.random()}`,
+                    source: entry.payload.subordinate_agent_id,
+                    target: entry.payload.manager_agent_id,
+                    sourceHandle: 'bottom-source',
+                    targetHandle: 'top-target',
+                    style: { stroke: '#22c55e', strokeDasharray: '5 5' },
+                });
+            } else if (entry.operation === 'remove') {
+                const src = entry.payload.subordinate_agent_id;
+                const tgt = entry.payload.manager_agent_id;
+                edges.value = edges.value.map((e) =>
+                    e.source === src && e.target === tgt
+                        ? { ...e, style: { stroke: '#ef4444', strokeDasharray: '5 5' } }
+                        : e
+                );
+            }
+        }
+    }
+
+    if (overlayNodes.length > 0) {
+        nodes.value = [...nodes.value, ...overlayNodes];
+    }
+    if (overlayEdges.length > 0) {
+        edges.value = [...edges.value, ...overlayEdges];
+    }
+
+    pendingChangeset.value = changeset;
+};
+
+const onApplyChangeset = () => {
+    pendingChangeset.value = null;
+    originalNodeStyles.value = new Map();
+    loadAgentsAndDelegatees();
+};
+
+const onDiscardChangeset = () => {
+    // Remove overlay nodes (nl-temp-*) and restore original node styles
+    nodes.value = nodes.value
+        .filter((n) => !String(n.id).startsWith('nl-temp-'))
+        .map((n) => {
+            const orig = originalNodeStyles.value.get(n.id);
+            if (orig) {
+                const { diffState, ...rest } = orig;
+                return { ...n, data: { ...rest, onDeleteNode: deleteAgent } };
+            }
+            return n;
+        });
+
+    // Remove overlay edges and restore original edge styles
+    edges.value = edges.value
+        .filter((e) => !String(e.id).startsWith('nl-edge-'))
+        .map((e) => {
+            const { style, ...rest } = e;
+            return rest;
+        });
+
+    pendingChangeset.value = null;
+    originalNodeStyles.value = new Map();
+};
 </script>
 
 <template>
@@ -467,53 +576,86 @@ watch(
                     <Plus class="mr-2 h-4 w-4" />
                     Add agent
                 </Button>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    :class="showNlSidebar ? 'bg-primary/10' : ''"
+                    @click="showNlSidebar = !showNlSidebar"
+                >
+                    <MessageSquare class="mr-2 h-4 w-4" />
+                    Workforce Chat
+                </Button>
                 <span v-if="saving" class="text-xs text-muted-foreground">Saving…</span>
             </div>
 
             <p v-if="error" class="mb-2 text-sm text-destructive">{{ error }}</p>
             <p v-if="validationError" class="mb-2 text-sm text-amber-600 dark:text-amber-400">{{ validationError }}</p>
 
-            <div class="relative min-h-0 flex-1 rounded-lg border border-border">
-                <GraphCanvas
-                    v-if="!loading"
-                    v-model:nodes="nodes"
-                    v-model:edges="edges"
-                    :edit-mode="true"
-                    :fit-view="true"
-                    :node-types="nodeTypes"
-                    @nodes-change="onNodesChange"
-                    @edges-change="onEdgesChange"
-                    @connect="onConnect"
-                    @node-click="onNodeClick"
-                />
-                <div v-else class="flex h-full items-center justify-center text-muted-foreground">
-                    Loading agents…
-                </div>
+            <div class="relative min-h-0 flex-1">
+                <div class="relative h-full rounded-lg border border-border">
+                    <GraphCanvas
+                        v-if="!loading"
+                        v-model:nodes="nodes"
+                        v-model:edges="edges"
+                        :edit-mode="true"
+                        :fit-view="true"
+                        :node-types="nodeTypes"
+                        @nodes-change="onNodesChange"
+                        @edges-change="onEdgesChange"
+                        @connect="onConnect"
+                        @node-click="onNodeClick"
+                    />
+                    <div v-else class="flex h-full items-center justify-center text-muted-foreground">
+                        Loading agents…
+                    </div>
 
-                <!-- Config panel slides over the graph -->
-                <Transition
-                    enter-active-class="transition-transform duration-200 ease-out"
-                    leave-active-class="transition-transform duration-150 ease-in"
-                    enter-from-class="translate-x-full"
-                    enter-to-class="translate-x-0"
-                    leave-from-class="translate-x-0"
-                    leave-to-class="translate-x-full"
-                >
-                    <aside
-                        v-if="selectedNode"
-                        class="absolute right-3 top-3 z-10 w-80 max-h-[calc(100%-1.5rem)] overflow-y-auto"
+                    <!-- Config panel slides over the graph -->
+                    <Transition
+                        enter-active-class="transition-transform duration-200 ease-out"
+                        leave-active-class="transition-transform duration-150 ease-in"
+                        enter-from-class="translate-x-full"
+                        enter-to-class="translate-x-0"
+                        leave-from-class="translate-x-0"
+                        leave-to-class="translate-x-full"
                     >
-                        <OrgAgentConfigPanel
-                            :node="selectedNode"
-                            :delegatee-profiles="delegateeProfiles"
-                            :agents="agentListForPanel"
-                            @close="selectedNodeId = null"
-                            @update="onAgentConfigUpdate"
-                            @delete="deleteAgent"
-                            @create-profile="showCreateProfileModal = true"
-                        />
-                    </aside>
-                </Transition>
+                        <aside
+                            v-if="selectedNode"
+                            class="absolute right-3 top-3 z-10 w-80 max-h-[calc(100%-1.5rem)] overflow-y-auto"
+                        >
+                            <OrgAgentConfigPanel
+                                :node="selectedNode"
+                                :delegatee-profiles="delegateeProfiles"
+                                :agents="agentListForPanel"
+                                @close="selectedNodeId = null"
+                                @update="onAgentConfigUpdate"
+                                @delete="deleteAgent"
+                                @create-profile="showCreateProfileModal = true"
+                            />
+                        </aside>
+                    </Transition>
+
+                    <!-- Workforce Chat panel floats over the graph -->
+                    <Transition
+                        enter-active-class="transition-transform duration-200 ease-out"
+                        leave-active-class="transition-transform duration-150 ease-in"
+                        enter-from-class="translate-x-full"
+                        enter-to-class="translate-x-0"
+                        leave-from-class="translate-x-0"
+                        leave-to-class="translate-x-full"
+                    >
+                        <aside
+                            v-if="showNlSidebar"
+                            class="absolute right-3 top-3 bottom-3 z-10 w-96"
+                        >
+                            <NlOrgChat
+                                @close="showNlSidebar = false"
+                                @preview-changeset="onPreviewChangeset"
+                                @apply-changeset="onApplyChangeset"
+                                @discard-changeset="onDiscardChangeset"
+                            />
+                        </aside>
+                    </Transition>
+                </div>
             </div>
         </div>
 

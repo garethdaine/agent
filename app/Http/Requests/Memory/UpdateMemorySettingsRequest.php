@@ -39,6 +39,8 @@ class UpdateMemorySettingsRequest extends FormRequest
         'openai_tpm',
         'anthropic_rpm',
         'anthropic_tpm',
+        'provider_key_openai',
+        'provider_key_anthropic',
     ];
 
     public function authorize(): bool

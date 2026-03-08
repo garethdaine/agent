@@ -3,6 +3,7 @@
 namespace App\Models\Runtime;
 
 use App\Enums\Runtime\RuntimeToolCallStatus;
+use App\Enums\Security\ContentTrustLevel;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,10 @@ class RuntimeToolCall extends Model
         'duration_ms',
         'requires_approval',
         'approved_at',
+        'content_trust_level',
+        'injection_score',
+        'injection_action',
+        'content_sanitized',
     ];
 
     protected function casts(): array
@@ -34,6 +39,10 @@ class RuntimeToolCall extends Model
             'duration_ms' => 'integer',
             'requires_approval' => 'boolean',
             'approved_at' => 'datetime',
+            'content_trust_level' => ContentTrustLevel::class,
+            'injection_score' => 'float',
+            'injection_action' => 'string',
+            'content_sanitized' => 'boolean',
         ];
     }
 

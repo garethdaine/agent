@@ -5,6 +5,7 @@ use App\Jobs\Memory\MemoryPruneJob;
 use App\Jobs\Org\OrgDispatchDueRitualsJob;
 use App\Jobs\Org\OrgEscalationTimeoutJob;
 use App\Jobs\RecalculateTrustScoresJob;
+use App\Jobs\Security\SecurityMaintenanceJob;
 use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -101,6 +102,18 @@ Schedule::command('skill:drift-check')
     ->daily()
     ->withoutOverlapping()
     ->when(fn () => app(FeatureFlagManager::class)->enabled(FeatureFlagManager::SKILLS_ENABLED));
+
+// Security maintenance: purge expired security events and file provenance records
+Schedule::job(new SecurityMaintenanceJob)
+    ->dailyAt('03:45')
+    ->withoutOverlapping()
+    ->name('security:maintenance');
+
+// Refresh expiring connector credentials (every minute when credential refresh enabled)
+Schedule::job(new \App\Jobs\Connectors\RefreshConnectorCredentialsJob)
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->when(fn () => config('connectors.credential_refresh'));
 
 // Projection auto-maintenance: activate parity-passed builds and trigger rebuilds when stale
 Schedule::call(fn () => app(\App\Services\Telemetry\ProjectionBuildManager::class)->autoMaintain(

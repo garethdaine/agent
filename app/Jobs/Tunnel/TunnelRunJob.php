@@ -77,7 +77,7 @@ class TunnelRunJob implements ShouldQueue
 
         $settings->update(['last_error' => $exception->getMessage()], 'stopped');
 
-        Redis::rpush(self::RESTART_ATTEMPTS_KEY, [(string) $now]);
+        Redis::rpush(self::RESTART_ATTEMPTS_KEY, (string) $now);
 
         $attempts = Redis::lrange(self::RESTART_ATTEMPTS_KEY, 0, -1);
         $cutoff = $now - self::RESTART_WINDOW_SECONDS;
@@ -86,7 +86,7 @@ class TunnelRunJob implements ShouldQueue
 
         Redis::del(self::RESTART_ATTEMPTS_KEY);
         if (! empty($recentAttempts)) {
-            Redis::rpush(self::RESTART_ATTEMPTS_KEY, array_values($recentAttempts));
+            Redis::rpush(self::RESTART_ATTEMPTS_KEY, ...array_values($recentAttempts));
         }
 
         if (count($recentAttempts) >= self::MAX_RESTART_ATTEMPTS) {

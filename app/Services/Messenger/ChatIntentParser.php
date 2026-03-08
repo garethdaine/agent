@@ -7,6 +7,8 @@ use App\Enums\Messenger\ChatActionType;
 use App\Models\ChatAttachment;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
+use App\Enums\Runtime\RuntimeMode;
+use App\Services\Security\MessengerSecurityGuard;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
@@ -15,6 +17,10 @@ use Illuminate\Support\Facades\Storage;
 class ChatIntentParser
 {
     private const CONFIDENCE_THRESHOLD = 0.7;
+
+    public function __construct(
+        private ?MessengerSecurityGuard $securityGuard = null,
+    ) {}
 
     /**
      * Parse a chat message into a structured action.
@@ -295,6 +301,12 @@ PROMPT;
                 try {
                     $contents = $disk->get($attachment->storage_path);
                     if ($contents !== null && mb_check_encoding($contents, 'UTF-8')) {
+                        if ($this->securityGuard !== null) {
+                            $scanResult = $this->securityGuard->scanAttachment($contents, RuntimeMode::Safe);
+                            if ($scanResult->sanitized) {
+                                $contents = $scanResult->content;
+                            }
+                        }
                         $entry .= "\n```\n".trim($contents)."\n```";
                     }
                 } catch (\Throwable $e) {

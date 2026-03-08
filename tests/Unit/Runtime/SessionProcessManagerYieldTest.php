@@ -48,6 +48,19 @@ class SessionProcessManagerYieldTest extends TestCase
         $prop->setValue(null, $existing);
     }
 
+    private function mockLogWithChannel(): void
+    {
+        $channelLogger = \Mockery::mock(\Psr\Log\LoggerInterface::class);
+        $channelLogger->shouldReceive('debug')->withAnyArgs()->zeroOrMoreTimes();
+        $channelLogger->shouldReceive('info')->withAnyArgs()->zeroOrMoreTimes();
+        $channelLogger->shouldReceive('warning')->withAnyArgs()->zeroOrMoreTimes();
+        $channelLogger->shouldReceive('error')->withAnyArgs()->zeroOrMoreTimes();
+        Log::shouldReceive('channel')->with('runtime')->andReturn($channelLogger)->zeroOrMoreTimes();
+        Log::shouldReceive('debug')->withAnyArgs()->zeroOrMoreTimes();
+        Log::shouldReceive('info')->withAnyArgs()->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->withAnyArgs()->zeroOrMoreTimes();
+    }
+
     private function cleanupAllFakeProcesses(): void
     {
         $reflection = new ReflectionClass($this->manager);
@@ -82,9 +95,7 @@ class SessionProcessManagerYieldTest extends TestCase
         $sessionId = 'yield-disabled-session';
         $this->injectFakeProcess($sessionId);
 
-        Log::shouldReceive('debug')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('info')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('warning')->withAnyArgs()->zeroOrMoreTimes();
+        $this->mockLogWithChannel();
 
         $result = $this->manager->readTurnResponse($sessionId, 1);
 
@@ -103,9 +114,7 @@ class SessionProcessManagerYieldTest extends TestCase
         $sessionId = 'yield-enabled-session';
         $this->injectFakeProcess($sessionId);
 
-        Log::shouldReceive('debug')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('info')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('warning')->withAnyArgs()->zeroOrMoreTimes();
+        $this->mockLogWithChannel();
 
         $result = $this->manager->readTurnResponse($sessionId, 10, null, 1);
 
@@ -124,9 +133,7 @@ class SessionProcessManagerYieldTest extends TestCase
         $sessionId = 'yield-buffer-session';
         $this->injectFakeProcess($sessionId);
 
-        Log::shouldReceive('debug')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('info')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('warning')->withAnyArgs()->zeroOrMoreTimes();
+        $this->mockLogWithChannel();
 
         $this->manager->readTurnResponse($sessionId, 10, null, 1);
 
@@ -148,9 +155,7 @@ class SessionProcessManagerYieldTest extends TestCase
         $sessionId = 'yield-callback-session';
         $this->injectFakeProcess($sessionId);
 
-        Log::shouldReceive('debug')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('info')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('warning')->withAnyArgs()->zeroOrMoreTimes();
+        $this->mockLogWithChannel();
 
         $callbackInvoked = false;
         $progress = function (array $state) use (&$callbackInvoked) {
@@ -186,9 +191,7 @@ class SessionProcessManagerYieldTest extends TestCase
             'runtime.cli.yield_after_seconds' => 1,
         ]);
 
-        Log::shouldReceive('debug')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('info')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('warning')->withAnyArgs()->zeroOrMoreTimes();
+        $this->mockLogWithChannel();
 
         $result = $this->manager->resumeReadTurnResponse($sessionId, 2);
 
@@ -208,9 +211,7 @@ class SessionProcessManagerYieldTest extends TestCase
 
         config(['runtime.cli.yield_enabled' => false]);
 
-        Log::shouldReceive('debug')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('info')->withAnyArgs()->zeroOrMoreTimes();
-        Log::shouldReceive('warning')->withAnyArgs()->zeroOrMoreTimes();
+        $this->mockLogWithChannel();
 
         $result = $this->manager->resumeReadTurnResponse($sessionId, 1);
 
