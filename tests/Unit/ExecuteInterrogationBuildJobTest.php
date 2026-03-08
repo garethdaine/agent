@@ -925,6 +925,84 @@ class ExecuteInterrogationBuildJobTest extends TestCase
         $this->assertSame('running', data_get($session->metadata_json, 'build.status'));
     }
 
+    public function test_build_tick_detects_active_retry_run_and_keeps_task_in_progress(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ]);
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build job with retry',
+            'cron_expression' => '0 0 1 1 0',
+            'timezone' => 'UTC',
+            'is_enabled' => false,
+            'max_runtime_seconds' => 300,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => (string) config('agent.default_templates.claude'),
+            'task_markdown_path' => base_path('README.md'),
+            'working_directory' => base_path(),
+        ]);
+
+        // Original run failed
+        $failedRun = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_FAILED,
+            'metadata_json' => ['source' => 'interrogation_build'],
+        ]);
+
+        // Retry run is active (simulates TargetedRetryService having not
+        // yet updated the task pointer — narrow race window).
+        $retryRun = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_RUNNING,
+            'metadata_json' => [
+                'source' => 'interrogation_build',
+                'retry_of_run_id' => $failedRun->id,
+                'retry_count' => 1,
+            ],
+        ]);
+
+        // Task still points to the original failed run (race condition).
+        $task = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Task with active retry',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $failedRun->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $buildJob = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$buildJob, 'handle']);
+
+        $task->refresh();
+        $session->refresh();
+
+        // Task must remain in-progress with pointer updated to retry run
+        $this->assertSame(InterrogationBuildTask::STATUS_IN_PROGRESS, (string) $task->status);
+        $this->assertSame((int) $retryRun->id, (int) $task->agent_job_run_id);
+
+        // Build must still be running
+        $this->assertSame('running', data_get($session->metadata_json, 'build.status'));
+
+        // A follow-up tick should have been dispatched
+        Queue::assertPushed(ExecuteInterrogationBuildJob::class);
+    }
+
     public function test_failed_handler_ignores_stale_failure_when_build_not_running(): void
     {
         $user = User::factory()->create();

@@ -5,6 +5,8 @@ namespace App\Support\Interrogation;
 use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
 use App\Models\InterrogationSetting;
+use App\Support\Agent\EngineeringRulesInjector;
+use Illuminate\Support\Facades\Log;
 
 class SystemPromptResolver
 {
@@ -38,7 +40,25 @@ class SystemPromptResolver
         $runnerInstructions = $this->runnerInstructions($session, $phase);
         $sessionContext = $this->sessionContext($session, $phase);
 
-        return trim($base)."\n\n".$phaseInstructions.$runnerInstructions.$sessionContext;
+        $result = trim($base)."\n\n".$phaseInstructions.$runnerInstructions.$sessionContext;
+
+        // Engineering rules injection for interrogation system prompt (non-blocking)
+        try {
+            $rulesInjector = app(EngineeringRulesInjector::class);
+            if ($rulesInjector->isEnabled()) {
+                $profileKey = 'agent.engineering_rules.profiles.interrogation_'.$phase;
+                $rulesProfile = (string) config($profileKey, 'interrogation');
+                $result = $rulesInjector->injectIntoSystemPrompt($result, $rulesProfile);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Engineering rules injection failed for interrogation', [
+                'session_id' => $session->id,
+                'phase' => $phase,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $result;
     }
 
     private function sessionContext(InterrogationSession $session, string $phase): string

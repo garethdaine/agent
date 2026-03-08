@@ -66,6 +66,31 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
                 return;
             }
 
+            // Defence-in-depth: before finalising a failed task, check whether
+            // a targeted retry run is already in flight for the same agent job.
+            // The TargetedRetryService updates the task pointer, but there is a
+            // narrow race window between the original run transitioning to
+            // "failed" and the pointer update.  If we see a newer active run,
+            // update the pointer and keep polling instead of killing the build.
+            if ($run !== null && in_array((string) $run->status, [AgentJobRun::STATUS_FAILED], true)) {
+                $activeRetryRun = AgentJobRun::query()
+                    ->where('agent_job_id', $run->agent_job_id)
+                    ->whereIn('status', AgentJobRun::ACTIVE_STATUSES)
+                    ->where('id', '>', $run->id)
+                    ->orderByDesc('id')
+                    ->first();
+
+                if ($activeRetryRun !== null) {
+                    $activeTask->agent_job_run_id = $activeRetryRun->id;
+                    $activeTask->save();
+
+                    $this->persistActivePointers($session, $activeTask, $activeRetryRun);
+                    $this->dispatchFollowUpBuildTick((int) $session->id, 2, $writer);
+
+                    return;
+                }
+            }
+
             $finalized = $this->finalizeTaskFromRun($session, $activeTask, $run, $writer, $policyService);
 
             if ($finalized) {

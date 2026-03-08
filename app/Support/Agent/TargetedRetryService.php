@@ -5,6 +5,7 @@ namespace App\Support\Agent;
 use App\Jobs\ExecuteAgentRunJob;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
+use App\Models\InterrogationBuildTask;
 use Illuminate\Support\Facades\Log;
 
 class TargetedRetryService
@@ -118,6 +119,22 @@ MD;
         // Ensure job is loaded for user_id
         $failedRun->loadMissing('job');
 
+        // Carry forward build-context keys so the safety-net listener
+        // (DispatchBuildTickOnRunFinished) can recognise the retry run as
+        // part of the same build and dispatch a follow-up tick when it
+        // finishes.
+        $retryMetadata = [
+            'retry_of_run_id' => $failedRun->id,
+            'retry_count' => ($originalMetadata['retry_count'] ?? 0) + 1,
+            'retry_prompt' => $retryPrompt,
+        ];
+
+        foreach (['interrogation_session_id', 'interrogation_build_task_id', 'source'] as $key) {
+            if (isset($originalMetadata[$key])) {
+                $retryMetadata[$key] = $originalMetadata[$key];
+            }
+        }
+
         // Create new run
         $retryRun = AgentJobRun::create([
             'agent_job_id' => $failedRun->agent_job_id,
@@ -125,12 +142,18 @@ MD;
             'initiated_by_user_id' => $failedRun->initiated_by_user_id,
             'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
             'status' => AgentJobRun::STATUS_QUEUED,
-            'metadata_json' => [
-                'retry_of_run_id' => $failedRun->id,
-                'retry_count' => ($originalMetadata['retry_count'] ?? 0) + 1,
-                'retry_prompt' => $retryPrompt,
-            ],
+            'metadata_json' => $retryMetadata,
         ]);
+
+        // Update the build task's run pointer so the build tick sees the
+        // active retry run instead of the stale failed original.
+        $buildTaskId = (int) ($originalMetadata['interrogation_build_task_id'] ?? 0);
+        if ($buildTaskId > 0) {
+            InterrogationBuildTask::query()
+                ->where('id', $buildTaskId)
+                ->where('agent_job_run_id', $failedRun->id)
+                ->update(['agent_job_run_id' => $retryRun->id]);
+        }
 
         // Dispatch job
         ExecuteAgentRunJob::dispatch($retryRun->id);
@@ -139,6 +162,7 @@ MD;
             'original_run_id' => $failedRun->id,
             'retry_run_id' => $retryRun->id,
             'retry_count' => $retryRun->metadata_json['retry_count'],
+            'build_task_id' => $buildTaskId > 0 ? $buildTaskId : null,
         ]);
 
         return $retryRun;

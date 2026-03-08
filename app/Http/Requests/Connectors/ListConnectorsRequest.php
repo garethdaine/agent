@@ -16,7 +16,7 @@ class ListConnectorsRequest extends FormRequest
         return [
             'category' => ['nullable', 'string'],
             'industry' => ['nullable', 'string'],
-            'status' => ['nullable', 'string', 'in:available,deprecated'],
+            'status' => ['nullable', 'string', 'in:available,deprecated,connected,pending,degraded,disconnected,error'],
         ];
     }
 }

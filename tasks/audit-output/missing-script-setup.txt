@@ -1,0 +1,5 @@
+resources/js/Components/ApplicationLogo.vue
+resources/js/Components/ApplicationMark.vue
+resources/js/Components/AuthenticationCard.vue
+resources/js/Components/SectionBorder.vue
+resources/js/Components/SectionTitle.vue

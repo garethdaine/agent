@@ -73,6 +73,11 @@ const isRulesMode = computed(() => props.mode === 'rules');
 const isTasksMode = computed(() => props.mode === 'tasks');
 const isExecutionMode = computed(() => props.mode === 'execution');
 
+function normalizeEscapedNewlines(text) {
+    if (!text) return '';
+    return String(text).replace(/\\n/g, '\n');
+}
+
 const tasks = computed(() => (Array.isArray(props.build?.tasks) ? props.build.tasks : []));
 const status = computed(() => String(props.build?.status ?? 'idle'));
 const activeTask = computed(() => props.build?.active_task ?? null);
@@ -1386,7 +1391,9 @@ defineExpose({ activeRunEvents });
         <div v-if="isExecutionMode && flags.rate_limit_detected" class="mt-4 rounded border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
             <p class="font-semibold">Rate limit detected.</p>
             <p v-if="flags.rate_limit_reset_at" class="mt-1">Reset at: {{ flags.rate_limit_reset_at }}</p>
-            <p v-if="flags.rate_limit_excerpt" class="mt-1 whitespace-pre-wrap">{{ flags.rate_limit_excerpt }}</p>
+            <div v-if="flags.rate_limit_excerpt" class="mt-1 prose prose-xs prose-neutral dark:prose-invert max-w-none">
+                <MarkdownRenderer :markdown="normalizeEscapedNewlines(flags.rate_limit_excerpt)" :normalize="false" />
+            </div>
         </div>
 
         <div v-if="isExecutionMode && (hasActiveRunPresentation || activeRunEventsLoading || activeRunEventsError)" class="mt-4">

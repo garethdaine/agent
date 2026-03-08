@@ -5,6 +5,9 @@ namespace Tests\Unit\Support\Agent;
 use App\Jobs\ExecuteAgentRunJob;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
+use App\Models\InterrogationBuildTask;
+use App\Models\InterrogationSession;
+use App\Models\User;
 use App\Support\Agent\TargetedRetryService;
 use App\Support\Agent\UsageLimitState;
 use Carbon\CarbonImmutable;
@@ -395,5 +398,67 @@ class TargetedRetryServiceTest extends TestCase
 
         $prompt3 = $this->service->buildRetryPrompt($run3);
         $this->assertStringContainsString('Ensure each ACTION step directly advances', $prompt3);
+    }
+
+    public function test_dispatch_retry_carries_forward_build_metadata_and_updates_task_pointer(): void
+    {
+        Queue::fake();
+        config(['agent.targeted_retry.enabled' => true]);
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $session = InterrogationSession::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Build session',
+            'runner_type' => 'claude',
+            'project_directory' => base_path(),
+            'interrogation_type' => InterrogationSession::TYPE_FEATURE,
+            'status' => InterrogationSession::STATUS_COMPLETED,
+            'phase' => InterrogationSession::PHASE_BUILD_EXECUTION,
+            'metadata_json' => ['build' => ['status' => 'running']],
+        ]);
+
+        $job = AgentJob::factory()->create(['targeted_retry_enabled' => true]);
+        $failedRun = AgentJobRun::factory()->for($job, 'job')->create([
+            'status' => 'failed',
+            'metadata_json' => [
+                'reasoning_summary' => [
+                    'steps' => [
+                        'situation' => ['content' => 'Context'],
+                        'task' => ['content' => 'Task goal'],
+                    ],
+                ],
+                'retry_count' => 0,
+                'interrogation_session_id' => $session->id,
+                'interrogation_build_task_id' => 0, // placeholder, updated below
+                'source' => 'interrogation_build',
+            ],
+        ]);
+
+        $buildTask = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Task under retry',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $failedRun->id,
+        ]);
+
+        // Update the failed run metadata with the real build task ID
+        $meta = $failedRun->metadata_json;
+        $meta['interrogation_build_task_id'] = $buildTask->id;
+        $failedRun->metadata_json = $meta;
+        $failedRun->save();
+
+        $retryRun = $this->service->dispatchRetry($failedRun);
+
+        // Build-context keys must be carried forward
+        $retryMeta = $retryRun->metadata_json;
+        $this->assertEquals($session->id, $retryMeta['interrogation_session_id']);
+        $this->assertEquals($buildTask->id, $retryMeta['interrogation_build_task_id']);
+        $this->assertEquals('interrogation_build', $retryMeta['source']);
+
+        // Build task pointer must point to the new retry run
+        $buildTask->refresh();
+        $this->assertEquals($retryRun->id, $buildTask->agent_job_run_id);
     }
 }

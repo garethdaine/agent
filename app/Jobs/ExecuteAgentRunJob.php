@@ -12,6 +12,7 @@ use App\Services\Cost\WorkflowBudgetEnforcer;
 use App\Support\Agent\CommandTemplateRenderer;
 use App\Support\Agent\DatabaseIsolationEnvironment;
 use App\Support\Agent\Duration;
+use App\Support\Agent\EngineeringRulesInjector;
 use App\Support\Agent\EnvPolicy;
 use App\Support\Agent\FailureModeClassifier;
 use App\Support\Agent\FeatureFlagManager;
@@ -176,6 +177,26 @@ class ExecuteAgentRunJob implements ShouldQueue
                 }
             }
             $this->updateMetadata($run, ['memory_context_applied' => $memoryContextApplied]);
+
+            // Engineering Rules Injection (after memory, before STAR)
+            $engineeringRulesApplied = false;
+            if (app(FeatureFlagManager::class)->enabled(FeatureFlagManager::ENGINEERING_RULES_ENABLED)) {
+                try {
+                    $rulesInjector = app(EngineeringRulesInjector::class);
+                    $profile = (string) config('agent.engineering_rules.default_profile', 'full');
+                    $currentPath = $this->enhancedTaskPath ?? $run->job->task_markdown_path;
+                    $currentContent = File::get($currentPath);
+                    $enhancedContent = $rulesInjector->inject($currentContent, $profile);
+                    $this->prepareEnhancedTaskMarkdownFromContent($run, $enhancedContent);
+                    $engineeringRulesApplied = true;
+                } catch (\Throwable $e) {
+                    Log::warning('Engineering rules injection failed', [
+                        'run_id' => $run->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            $this->updateMetadata($run, ['engineering_rules_applied' => $engineeringRulesApplied]);
 
             // STAR Preamble Injection
             $starGenerator = app(StarPreambleGenerator::class);
@@ -567,6 +588,18 @@ class ExecuteAgentRunJob implements ShouldQueue
         $incomingMetadata = (array) ($extra['metadata_json'] ?? []);
         $mergedMetadata = array_merge($baseMetadata, $incomingMetadata);
 
+        // Post-hoc rate limit detection: when the process actually died, scan
+        // the tail output for plain-text rate-limit signals.  During active
+        // execution only structured JSON error events set this flag — output
+        // content is never scanned because the agent routinely writes code and
+        // documentation that mentions rate-limiting terminology.
+        if ($status === AgentJobRun::STATUS_FAILED && ($mergedMetadata['rate_limit_detected'] ?? false) !== true) {
+            $postHocResult = (new RunEventWriter($run))->scanRecentOutputForRateLimit();
+            if ($postHocResult !== null) {
+                $mergedMetadata = array_merge($mergedMetadata, $postHocResult);
+            }
+        }
+
         if ($status === AgentJobRun::STATUS_FAILED && ($mergedMetadata['rate_limit_detected'] ?? false) === true) {
             $holdUntil = $this->resolveRateLimitHoldUntil($mergedMetadata, $finishedAt);
             $mergedMetadata['rate_limit_hold_until'] = $holdUntil->toIso8601String();
@@ -937,7 +970,7 @@ class ExecuteAgentRunJob implements ShouldQueue
             $metadata['clarification_resolution'] = 'runner_exception';
         }
 
-        $transitions->transition(
+        $transitioned = $transitions->transition(
             (int) $run->id,
             AgentJobRun::ACTIVE_STATUSES,
             AgentJobRun::STATUS_FAILED,
@@ -949,6 +982,18 @@ class ExecuteAgentRunJob implements ShouldQueue
                 'metadata_json' => $metadata,
             ]
         );
+
+        // Dispatch the same lifecycle events that finalizeTerminal() emits so
+        // the build safety-net listener can restart the tick loop.  Without
+        // this, exception-driven failures silently break the build chain.
+        if ($transitioned) {
+            $run->refresh();
+            AgentJobRunFinished::dispatch($run, AgentJobRun::STATUS_FAILED);
+
+            if ($run->user_id) {
+                event(RunStatusChanged::fromRun($run, AgentJobRun::STATUS_FAILED));
+            }
+        }
     }
 
     /**

@@ -8,6 +8,7 @@ use App\Enums\Security\InjectionAction;
 use App\Models\Runtime\RuntimeSession;
 use App\Services\Credentials\CredentialsManager;
 use App\Services\Security\InjectionDetectionEngine;
+use App\Support\Agent\EngineeringRulesInjector;
 use App\Services\Security\SecurityEventLogger;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
@@ -83,6 +84,20 @@ class CliRuntimeExecutor
         $workingDir = $session->workspace_root !== null && $session->workspace_root !== ''
             ? $session->workspace_root
             : (config('agent.allowed_working_directory_bases', [])[0] ?? base_path());
+
+        // Engineering rules injection for sub-agent system prompt (non-blocking)
+        try {
+            $rulesInjector = app(EngineeringRulesInjector::class);
+            if ($rulesInjector->isEnabled()) {
+                $rulesProfile = (string) config('agent.engineering_rules.profiles.sub_agent', 'core');
+                $systemPrompt = $rulesInjector->injectIntoSystemPrompt($systemPrompt ?? '', $rulesProfile);
+            }
+        } catch (\Throwable $e) {
+            Log::channel('runtime')->warning('Engineering rules injection failed for runtime turn', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         $sessionResumeEnabled = (bool) config('runtime.cli.session_resume', true);
         $useResume = $sessionResumeEnabled && $runnerSessionId !== null && $runnerSessionId !== '';

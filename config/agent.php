@@ -231,6 +231,25 @@ return [
         'ab_test_treatment_percent' => (int) env('AGENT_STAR_AB_TEST_PERCENT', 50),
     ],
 
+    'engineering_rules' => [
+        'enabled' => (bool) env('AGENT_ENGINEERING_RULES_ENABLED', false),
+        'source_path' => base_path('docs/refactoring/agent-ops-engineering-rules.md'),
+        'cache_ttl_seconds' => (int) env('AGENT_ENGINEERING_RULES_CACHE_TTL', 3600),
+        'default_profile' => env('AGENT_ENGINEERING_RULES_DEFAULT_PROFILE', 'full'),
+        'max_tokens' => [
+            'full' => 8000,
+            'core' => 4000,
+            'interrogation' => 3000,
+            'build' => 6000,
+        ],
+        'profiles' => [
+            'sub_agent' => 'core',
+            'interrogation_discovery' => 'interrogation',
+            'interrogation_round' => 'interrogation',
+            'interrogation_build' => 'build',
+        ],
+    ],
+
     'targeted_retry' => [
         'enabled' => (bool) env('AGENT_TARGETED_RETRY_ENABLED', false),
         'max_retries' => (int) env('AGENT_TARGETED_RETRY_MAX', 1),

@@ -9,6 +9,7 @@ use App\Http\Requests\Connectors\ListConnectorsRequest;
 use App\Http\Resources\Connectors\ConnectorDetailResource;
 use App\Http\Resources\Connectors\ConnectorResource;
 use App\Models\AgentConnector;
+use App\Models\AgentConnectorConnection;
 use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -31,6 +32,26 @@ class ConnectorLibraryController extends Controller
 
         if ($request->filled('industry')) {
             $query->whereJsonContains('industries', $request->validated('industry'));
+        }
+
+        $connectionStatuses = ['connected', 'pending', 'degraded', 'disconnected', 'error'];
+        $status = $request->validated('status');
+
+        if ($status && in_array($status, $connectionStatuses, true)) {
+            $team = $request->user()->currentTeam;
+
+            if ($team) {
+                $connectorIds = AgentConnectorConnection::where('team_id', $team->id)
+                    ->where('status', $status)
+                    ->pluck('agent_connector_id');
+
+                $query->whereIn('id', $connectorIds);
+            } else {
+                // No team means no connections — return empty
+                $query->whereRaw('1 = 0');
+            }
+        } elseif ($status) {
+            $query->where('status', $status);
         }
 
         return ConnectorResource::collection($query->orderBy('name')->get());

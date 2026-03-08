@@ -1984,6 +1984,237 @@ SH;
         $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
     }
 
+    public function test_rate_limit_terms_inside_markdown_documentation_do_not_trigger_detection(): void
+    {
+        $docExec = $this->sandboxBase.'/bin/rate-limit-markdown-doc-runner';
+        $script = <<<'SH'
+#!/bin/sh
+cat <<'OUT'
+- rate_limit_headroom: remaining_quota / daily_limit
+- Status mapping: ≥0.8 healthy, ≥0.5 degraded, <0.5 unhealthy
+- retry_after_seconds: backoff duration from the API response
+
+### 2.13 ConnectorExecutionPipeline
+Create 'app/Services/Connectors/ConnectorExecutionPipeline.php' with retry-after handling and 429 status support.
+
+### 2.14 HealthScorer
+Create 'app/Services/Connectors/HealthScorer.php' to calculate connector health from rate-limited responses.
+OUT
+exit 0
+SH;
+        file_put_contents($docExec, $script);
+        chmod($docExec, 0755);
+
+        config()->set('agent.runner_executables', [
+            'claude' => $docExec,
+            'codex' => $docExec,
+            'custom' => $docExec,
+        ]);
+        config()->set('agent.default_templates', [
+            'claude' => $docExec.' -p {{task_markdown_path}}',
+            'codex' => $docExec.' exec {{task_markdown_path}}',
+        ]);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/rate-limit-doc.md';
+        file_put_contents($taskFile, "# Build Connector\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Markdown Doc Runner',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+        $state = AgentSystemState::query()->find(sprintf('job_rate_limit_hold_until:%d', $job->id));
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['rate_limit_detected'] ?? false));
+        $this->assertNull($metadata['rate_limit_hold_until'] ?? null);
+        $this->assertNull($state);
+    }
+
+    public function test_engineering_rules_metadata_tracked_when_enabled(): void
+    {
+        config()->set('agent.engineering_rules.enabled', true);
+        config()->set('agent.engineering_rules.source_path', base_path('docs/refactoring/agent-ops-engineering-rules.md'));
+        config()->set('agent.engineering_rules.default_profile', 'full');
+        config()->set('agent.engineering_rules.max_tokens.full', 8000);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/eng-rules-enabled.md';
+        file_put_contents($taskFile, "# Engineering Rules Test\nDo something useful.\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Engineering Rules Enabled',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertTrue((bool) ($metadata['engineering_rules_applied'] ?? false));
+    }
+
+    public function test_engineering_rules_not_applied_when_disabled(): void
+    {
+        config()->set('agent.engineering_rules.enabled', false);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/eng-rules-disabled.md';
+        file_put_contents($taskFile, "# Engineering Rules Disabled Test\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Engineering Rules Disabled',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+        $metadata = (array) ($run->metadata_json ?? []);
+
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+        $this->assertFalse((bool) ($metadata['engineering_rules_applied'] ?? false));
+    }
+
+    public function test_engineering_rules_failure_does_not_block_execution(): void
+    {
+        config()->set('agent.engineering_rules.enabled', true);
+        config()->set('agent.engineering_rules.source_path', '/nonexistent/path/rules.md');
+        config()->set('agent.engineering_rules.default_profile', 'full');
+        config()->set('agent.engineering_rules.max_tokens.full', 8000);
+
+        $user = User::factory()->create();
+        $taskFile = $this->sandboxBase.'/tasks/eng-rules-failure.md';
+        file_put_contents($taskFile, "# Engineering Rules Failure Test\n");
+
+        $job = AgentJob::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Engineering Rules Failure',
+            'description' => null,
+            'cron_expression' => '0 0 1 1 1',
+            'timezone' => 'UTC',
+            'is_enabled' => true,
+            'max_runtime_seconds' => 60,
+            'cooldown_seconds' => 0,
+            'runner_type' => 'claude',
+            'command_template' => config('agent.default_templates.claude'),
+            'task_markdown_path' => $taskFile,
+            'working_directory' => $this->sandboxBase.'/work',
+        ]);
+
+        $run = AgentJobRun::query()->create([
+            'agent_job_id' => $job->id,
+            'user_id' => $user->id,
+            'initiated_by_user_id' => $user->id,
+            'trigger_type' => AgentJobRun::TRIGGER_MANUAL,
+            'status' => AgentJobRun::STATUS_QUEUED,
+            'duration_ms' => 0,
+            'stdout_bytes_pre' => 0,
+            'stdout_bytes_post' => 0,
+            'stderr_bytes_pre' => 0,
+            'stderr_bytes_post' => 0,
+            'metadata_json' => [
+                'output_truncated' => false,
+                'redaction_count' => 0,
+            ],
+        ]);
+
+        $this->runExecuteAgentRunJob($run->id);
+
+        $run->refresh();
+
+        // Run should still succeed even when rules injection fails
+        $this->assertSame(AgentJobRun::STATUS_SUCCEEDED, $run->status);
+    }
+
     private function runExecuteAgentRunJob(int $runId): void
     {
         $job = new ExecuteAgentRunJob($runId);

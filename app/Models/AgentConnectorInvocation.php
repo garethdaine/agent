@@ -57,4 +57,9 @@ class AgentConnectorInvocation extends Model
     {
         return $this->belongsTo(AgentConnectorConnection::class, 'connection_id');
     }
+
+    public function connector(): BelongsTo
+    {
+        return $this->belongsTo(AgentConnector::class, 'connector_id');
+    }
 }

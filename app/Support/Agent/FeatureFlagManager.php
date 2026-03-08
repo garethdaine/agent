@@ -83,6 +83,9 @@ class FeatureFlagManager
 
     public const SKILLS_VALIDATION_LLM_REVIEW = 'skills.validation.llm_review';
 
+    // Engineering rules flag constants
+    public const ENGINEERING_RULES_ENABLED = 'agent.engineering_rules.enabled';
+
     public const SKILLS_VALIDATION_STRICT_MODE = 'skills.validation.strict_mode';
 
     // Connector flag constants
@@ -217,6 +220,10 @@ class FeatureFlagManager
         self::SUBAGENTS_ENABLED => [
             'label' => 'Sub-Agents',
             'description' => 'Enable spawning of sub-agent processes from messenger runtime sessions.',
+        ],
+        self::ENGINEERING_RULES_ENABLED => [
+            'label' => 'Engineering Rules Injection',
+            'description' => 'Inject AgentOps engineering rules into agent task context for structured quality enforcement.',
         ],
 
         // Messenger

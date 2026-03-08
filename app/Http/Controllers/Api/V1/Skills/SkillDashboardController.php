@@ -17,7 +17,7 @@ class SkillDashboardController extends Controller
         $team = $request->user()->currentTeam;
 
         if (! $team) {
-            abort(403, 'No current team selected.');
+            return response()->json(['data' => []]);
         }
 
         $teamId = $team->id;
@@ -67,7 +67,7 @@ class SkillDashboardController extends Controller
         $team = $request->user()->currentTeam;
 
         if (! $team) {
-            abort(403, 'No current team selected.');
+            return response()->json(['data' => []]);
         }
 
         $teamId = $team->id;

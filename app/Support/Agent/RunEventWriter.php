@@ -39,9 +39,7 @@ class RunEventWriter
 
     private const CLARIFICATION_PATTERN = '/\b(?:could|can)\s+you\s+clarify\b|\b(?:i|we)\s+need\s+(?:your\s+)?clarification\b|\bneed\s+clarification\s+from\s+you\b|\bplease\s+clarify\b|\bquestion\s+for\s+you\b|\bcan\s+you\s+confirm\b|\bshould\s+i\s+(?:proceed|continue|use|do)\b/i';
 
-    private const RATE_LIMIT_PATTERN = '/\bhit(?:ting)?\s+(?:your\s+)?limit\b|\brate[-\s]?limited\b|\btoo many requests\b|\bquota exceeded\b|\b(?:status|code|error|http)\s*[:=]?\s*429\b|\bretry[-\s]?after\b/i';
-
-    private const RATE_LIMIT_FALSE_POSITIVE_PATTERN = '/\brate limit handling\b|\brate limits? handling\b|\berror handling\s*\([^)]*rate limits?[^)]*\)|\b(?:parent::)?__construct\s*\(.*(?:rate.?limit|retry.?after)|\bclass\s+\w*(?:RateLimit|Throttle)\w*\b|\b(?:throw\s+new|catch\s*\()\s*\w*(?:RateLimit|Throttle)\w*|\$\w*(?:retryAfter|rate_limit)\w*\b|\bextends\s+\w*Exception\b.*(?:rate.?limit|retry.?after)/is';
+    public const RATE_LIMIT_PATTERN = '/\bhit(?:ting)?\s+(?:your\s+)?limit\b|\brate[-\s]?limited\b|\btoo many requests\b|\bquota exceeded\b|\b(?:status|code|error|http)\s*[:=]?\s*429\b|\bretry[-\s]?after\b/i';
 
     private const LINE_NUMBERED_SNIPPET_PATTERN = '/(?:^|\n|(?:\\\\)+n)\s*\d+\s*(?:→|->|=>)/u';
 
@@ -710,68 +708,72 @@ class RunEventWriter
         return true;
     }
 
+    /**
+     * During active execution, only detect rate limits from structured error
+     * events (machine-generated JSON with type "error" / "turn.failed").
+     *
+     * Plain-text output is NOT scanned here because the agent frequently
+     * writes code and documentation that mentions rate-limiting terminology.
+     * Plain-text detection is deferred to {@see scanRecentOutputForRateLimit()}
+     * which runs only after a failed process exit — the only time plain-text
+     * patterns are a reliable signal.
+     */
     private function shouldMarkRateLimitDetected(string $chunk): bool
     {
-        if ($this->isStructuredRateLimitErrorEvent($chunk)) {
-            return true;
-        }
-
-        if ($this->isStructuredStreamEvent($chunk)) {
-            return false;
-        }
-
-        if (preg_match(self::RATE_LIMIT_PATTERN, $chunk) !== 1) {
-            return false;
-        }
-
-        if (preg_match(self::RATE_LIMIT_FALSE_POSITIVE_PATTERN, $chunk) === 1) {
-            return false;
-        }
-
-        if ($this->looksLikeSourceCodeWithRateLimitString($chunk)) {
-            return false;
-        }
-
-        return true;
+        return $this->isStructuredRateLimitErrorEvent($chunk);
     }
 
-    private function looksLikeSourceCodeWithRateLimitString(string $chunk): bool
+    /**
+     * Post-hoc scan of the tail output events for a *failed* run.
+     *
+     * Call this at run finalization when the process exited non-zero and
+     * no structured error event already set the rate-limit flag.  Because
+     * the process actually died, plain-text rate-limit phrases in the final
+     * output are a reliable signal rather than noise from code/docs.
+     *
+     * @return array<string, mixed>|null  Metadata entries to merge, or null.
+     */
+    public function scanRecentOutputForRateLimit(): ?array
     {
-        $codeSignals = 0;
+        $events = AgentRunEvent::query()
+            ->where('agent_job_run_id', $this->run->id)
+            ->whereIn('event_type', ['stdout', 'stderr'])
+            ->orderByDesc('sequence')
+            ->limit(10)
+            ->get();
 
-        // PHP class/method signatures and constructs
-        if (preg_match('/\b(?:parent::)?__construct\s*\(/', $chunk) === 1) {
-            $codeSignals += 2;
+        foreach ($events as $event) {
+            $payload = $event->payload ?? '';
+
+            // Expand JSON-wrapped text chunks produced by the chunker.
+            $decoded = json_decode($payload, true);
+            if (is_array($decoded) && is_string($decoded['text'] ?? null)) {
+                $payload = $decoded['text'];
+            }
+
+            if (preg_match(self::RATE_LIMIT_PATTERN, $payload) !== 1) {
+                continue;
+            }
+
+            $now = CarbonImmutable::now('UTC');
+            $excerpt = substr(trim($payload), 0, 1000);
+
+            $result = [
+                'rate_limit_detected' => true,
+                'rate_limit_detected_at' => $now->toIso8601String(),
+                'rate_limit_excerpt' => $excerpt,
+            ];
+
+            $reset = $this->extractRateLimitReset($excerpt);
+            if ($reset !== null) {
+                $result['rate_limit_reset_at'] = $reset['reset_at']->toIso8601String();
+                $result['rate_limit_reset_timezone'] = $reset['timezone'];
+            }
+
+            return $result;
         }
 
-        if (preg_match('/\b(?:public|protected|private)\s+(?:static\s+)?function\b/', $chunk) === 1) {
-            $codeSignals += 2;
-        }
-
-        if (preg_match('/\bclass\s+\w+/', $chunk) === 1) {
-            $codeSignals++;
-        }
-
-        if (preg_match('/\bextends\s+\w+/', $chunk) === 1) {
-            $codeSignals++;
-        }
-
-        // PHP variables alongside the rate limit phrase
-        if (preg_match('/\$\w*(?:retry|message|seconds|exception)\w*\b/i', $chunk) === 1) {
-            $codeSignals++;
-        }
-
-        // throw/catch exception patterns
-        if (preg_match('/\b(?:throw\s+new|catch\s*\()\s*\w*Exception/', $chunk) === 1) {
-            $codeSignals += 2;
-        }
-
-        // String interpolation or concatenation around the match
-        if (preg_match('/[\'"].*(?:rate.?limit|retry.?after).*[\'"]\s*[.;)]/i', $chunk) === 1) {
-            $codeSignals++;
-        }
-
-        return $codeSignals >= 2;
+        return null;
     }
 
     private function isStructuredStreamEvent(string $chunk): bool
