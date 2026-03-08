@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Unit\Support\Compliance\DTOs;
 
 use App\Enums\TaskCategory;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'required_locale' => 'en',
     'required_entry_status' => 'published',

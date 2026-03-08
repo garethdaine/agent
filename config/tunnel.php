@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'enabled' => env('TUNNEL_ENABLED', false),
     'tunnel_name' => env('TUNNEL_NAME', ''),

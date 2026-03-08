@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature\Messenger\Reliability;
 
 use App\Messenger\Reliability\CircuitBreaker;

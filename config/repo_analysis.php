@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 $defaultMaxActiveSessionsPerUser = 2;
 $defaultTaskArtifactsTtlDays = 30;
 $defaultAiTaskTimeoutSeconds = 3600;

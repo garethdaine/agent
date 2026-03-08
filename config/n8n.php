@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'enabled' => (bool) env('N8N_INTEGRATION_ENABLED', false),
 

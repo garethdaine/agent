@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Contracts\Runtime;
 
 use App\DTOs\Runtime\RuntimeContext;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs\Messenger;
 
 use App\DTOs\Messenger\OutboundPayload;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature\NlSchedule;
 
 use App\Models\NlParseAttempt;

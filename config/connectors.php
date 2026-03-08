@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'enabled' => env('CONNECTORS_ENABLED', false),
     'ui_enabled' => env('CONNECTORS_UI_ENABLED', false),

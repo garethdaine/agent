@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'enabled' => (bool) env('DELEGATION_ENABLED', false),
     'ui_enabled' => (bool) env('DELEGATION_UI_ENABLED', false),

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Mocks\Messenger;
 
 use Illuminate\Http\Client\Response;

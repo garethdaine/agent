@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Unit\Runtime\Adapters;
 
 use App\DTOs\Runtime\RuntimeContext;

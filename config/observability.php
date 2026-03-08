@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'ingest_lag_warning_seconds' => (int) env('OBSERVABILITY_INGEST_LAG_WARNING', 300),
 

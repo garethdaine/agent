@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\AgentJobRun;
 use App\Models\DelegationGraph;
 use App\Models\InterrogationSession;

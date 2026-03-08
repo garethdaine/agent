@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support\TaskProviders;
 
 use App\Support\TaskProviders\Contracts\TaskManagementProviderDriver;

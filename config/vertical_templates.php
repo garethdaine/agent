@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'templates' => [
         'accountancy_client_reporting' => [

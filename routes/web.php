@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Http\Controllers\Agent\OperatorPageController;
 use App\Http\Controllers\Api\TunnelStatusController;
 use App\Http\Controllers\Docs\DocsPageController;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'auto_protect_enabled' => (bool) env('OUTAGE_AUTO_PROTECT_ENABLED', false),
 

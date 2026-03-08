@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support\Messenger;
 
 use App\Services\Messenger\AccountLinkTokenService;

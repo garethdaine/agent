@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 $parseEnvCsvList = static function (string $key): array {
     $raw = env($key, '');
 

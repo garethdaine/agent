@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Unit\Skills\Validation;
 
 use App\Services\Skills\Validation\CodeSafetyValidator;

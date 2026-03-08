@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Runtime\Adapters;
 
 use App\Contracts\Runtime\ToolAdapterInterface;

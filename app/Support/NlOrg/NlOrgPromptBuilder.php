@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support\NlOrg;
 
 use App\Support\NlOrg\Exceptions\NlOrgContextOverflowException;

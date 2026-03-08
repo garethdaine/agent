@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Skills;
 
 use App\Services\Skills\DTOs\SkillParseResult;

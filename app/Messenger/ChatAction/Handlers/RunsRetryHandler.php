@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Messenger\ChatAction\Handlers;
 
 use App\Jobs\ExecuteAgentRunJob;

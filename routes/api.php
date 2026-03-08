@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Http\Controllers\Api\V1\AgentBackupSettingsController;
 use App\Http\Controllers\Api\V1\AgentFeatureSettingsController;
 use App\Http\Controllers\Api\V1\AgentJobController;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Support\Str;
 
 $repoAnalysisAiTimeout = max(60, (int) env('REPO_ANALYSIS_AI_TASK_TIMEOUT_SECONDS', 3600));

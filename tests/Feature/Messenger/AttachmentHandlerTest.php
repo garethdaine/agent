@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature\Messenger;
 
 use App\Exceptions\AttachmentRejectionException;

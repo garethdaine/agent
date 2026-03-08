@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Support\Delegation\DTOs;
 
 readonly class TrustScore

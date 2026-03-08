@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'driver' => env('RUNTIME_MODE_DRIVER', 'api'),
 

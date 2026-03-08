@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature\Connectors\Webhooks;
 
 use App\Jobs\Connectors\ProcessConnectorWebhookJob;
