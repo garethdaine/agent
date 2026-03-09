@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -28,9 +29,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Carbon\CarbonInterface|null $created_at
  * @property \Carbon\CarbonInterface|null $updated_at
  * @property array|null $soul_json
+ * @property array|null $capability_profile
  * @property-read \App\Models\User|null $user
  * @property-read \App\Models\DelegateeMetric|null $metric
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationCapability> $capabilities
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\TrustScoreHistory> $trustScoreHistories
  *
  * @mixin \Illuminate\Database\Eloquent\Builder
  */
@@ -49,6 +52,7 @@ class DelegateeProfile extends Model
         'config_json',
         'is_active',
         'soul_json',
+        'capability_profile',
     ];
 
     protected function casts(): array
@@ -57,6 +61,7 @@ class DelegateeProfile extends Model
             'env_json' => 'array',
             'config_json' => 'array',
             'soul_json' => 'array',
+            'capability_profile' => 'array',
             'is_active' => 'boolean',
             'trust_score' => 'decimal:2',
             'trust_updated_at' => 'datetime',
@@ -107,7 +112,7 @@ class DelegateeProfile extends Model
             }
 
             if (strlen($value) > self::SOUL_MAX_LENGTH) {
-                throw new \InvalidArgumentException("Soul field '{$field}' exceeds maximum length of " . self::SOUL_MAX_LENGTH . ' characters.');
+                throw new \InvalidArgumentException("Soul field '{$field}' exceeds maximum length of ".self::SOUL_MAX_LENGTH.' characters.');
             }
 
             foreach (self::CREDENTIAL_PATTERNS as $pattern) {
@@ -144,6 +149,11 @@ class DelegateeProfile extends Model
     public function metric(): HasOne
     {
         return $this->hasOne(DelegateeMetric::class);
+    }
+
+    public function trustScoreHistories(): HasMany
+    {
+        return $this->hasMany(TrustScoreHistory::class);
     }
 
     public function scopeActive(Builder $query): Builder

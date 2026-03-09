@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Org;
 
+use App\Actions\Organization\FindOrgRitualTemplateAction;
+use App\Actions\Organization\ListOrgRitualTemplatesAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\StoreOrgRitualRequest;
 use App\Http\Requests\Org\UpdateOrgRitualRequest;
 use App\Jobs\Org\OrgExecuteRitualJob;
-use App\Models\OrgRitualTemplate;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Org\OrgRitualRunService;
 use App\Support\Org\OrgRitualTemplateService;
@@ -25,6 +26,8 @@ class OrgRitualController extends Controller
     public function __construct(
         private readonly OrgRitualTemplateService $templateService,
         private readonly OrgRitualRunService $runService,
+        private readonly ListOrgRitualTemplatesAction $listTemplates,
+        private readonly FindOrgRitualTemplateAction $findTemplate,
     ) {}
 
     /**
@@ -39,14 +42,11 @@ class OrgRitualController extends Controller
         }
 
         try {
-            $query = OrgRitualTemplate::forUser($request->user()->id);
-
-            if (! $request->boolean('include_archived')) {
-                $query->active();
-            }
-
             return response()->json([
-                'data' => $query->get(),
+                'data' => $this->listTemplates->execute(
+                    $request->user()->id,
+                    $request->boolean('include_archived'),
+                ),
             ]);
         } catch (Throwable $e) {
             report($e);
@@ -75,7 +75,7 @@ class OrgRitualController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        $template = OrgRitualTemplate::find($id);
+        $template = $this->findTemplate->execute($id);
 
         if ($template === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Ritual template not found.', 404);
@@ -93,7 +93,7 @@ class OrgRitualController extends Controller
      */
     public function update(UpdateOrgRitualRequest $request, string $id): JsonResponse
     {
-        $template = OrgRitualTemplate::find($id);
+        $template = $this->findTemplate->execute($id);
 
         if ($template === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Ritual template not found.', 404);
@@ -111,7 +111,7 @@ class OrgRitualController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
-        $template = OrgRitualTemplate::find($id);
+        $template = $this->findTemplate->execute($id);
 
         if ($template === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Ritual template not found.', 404);
@@ -129,7 +129,7 @@ class OrgRitualController extends Controller
      */
     public function restore(string $id): JsonResponse
     {
-        $template = OrgRitualTemplate::find($id);
+        $template = $this->findTemplate->execute($id);
 
         if ($template === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Ritual template not found.', 404);
@@ -147,7 +147,7 @@ class OrgRitualController extends Controller
      */
     public function run(string $id): JsonResponse
     {
-        $template = OrgRitualTemplate::find($id);
+        $template = $this->findTemplate->execute($id);
 
         if ($template === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Ritual template not found.', 404);
@@ -167,7 +167,7 @@ class OrgRitualController extends Controller
      */
     public function pause(string $id): JsonResponse
     {
-        $template = OrgRitualTemplate::find($id);
+        $template = $this->findTemplate->execute($id);
 
         if ($template === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Ritual template not found.', 404);
@@ -185,7 +185,7 @@ class OrgRitualController extends Controller
      */
     public function resume(string $id): JsonResponse
     {
-        $template = OrgRitualTemplate::find($id);
+        $template = $this->findTemplate->execute($id);
 
         if ($template === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Ritual template not found.', 404);

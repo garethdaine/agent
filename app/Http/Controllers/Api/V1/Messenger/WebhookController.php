@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Messenger;
 
+use App\Actions\Connector\FindWhatsAppAccountByVerifyTokenAction;
 use App\Http\Controllers\Controller;
 use App\Jobs\Messenger\ProcessInboundMessage;
 use App\Models\ConnectorAccount;
@@ -14,6 +15,10 @@ use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
 {
+    public function __construct(
+        private readonly FindWhatsAppAccountByVerifyTokenAction $findWhatsAppAccountByVerifyToken,
+    ) {}
+
     private const DISCORD_TYPE_PING = 1;
 
     private const DISCORD_TYPE_APPLICATION_COMMAND = 2;
@@ -252,14 +257,7 @@ class WebhookController extends Controller
         // Check verify token against all WhatsApp accounts
         // This is necessary because WhatsApp sends verification requests
         // before the account is fully associated
-        $validAccount = ConnectorAccount::where('provider', ConnectorAccount::PROVIDER_WHATSAPP)
-            ->get()
-            ->first(function (ConnectorAccount $account) use ($verifyToken): bool {
-                $credentials = $account->credentials;
-                $expectedToken = $credentials['verify_token'] ?? null;
-
-                return $expectedToken !== null && $verifyToken === $expectedToken;
-            });
+        $validAccount = $this->findWhatsAppAccountByVerifyToken->execute((string) $verifyToken);
 
         if ($validAccount !== null) {
             Log::channel('messenger')->info('WhatsApp verification successful', [

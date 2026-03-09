@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Messenger;
 
+use App\Actions\Connector\FindDeadLetterAction;
+use App\Actions\Connector\ListConnectorAccountSummariesAction;
+use App\Actions\Connector\ListDeadLettersAction;
 use App\Http\Controllers\Controller;
 use App\Messenger\Reliability\DeadLetterManager;
-use App\Models\ConnectorAccount;
-use App\Models\MessengerDeadLetter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,10 @@ use Inertia\Response as InertiaResponse;
 class DeadLetterController extends Controller
 {
     public function __construct(
-        private readonly DeadLetterManager $manager
+        private readonly DeadLetterManager $manager,
+        private readonly ListDeadLettersAction $listDeadLetters,
+        private readonly FindDeadLetterAction $findDeadLetter,
+        private readonly ListConnectorAccountSummariesAction $listConnectorAccountSummaries,
     ) {}
 
     /**
@@ -35,24 +39,11 @@ class DeadLetterController extends Controller
      */
     public function index(Request $request): InertiaResponse
     {
-        $deadLetters = MessengerDeadLetter::query()
-            ->when(
-                $request->query('connector'),
-                fn ($query, $connectorId) => $query->where('connector_account_id', $connectorId)
-            )
-            ->with('connectorAccount')
-            ->orderByDesc('failed_at')
-            ->paginate(25)
-            ->withQueryString();
+        $deadLetters = $this->listDeadLetters->execute(
+            $request->query('connector'),
+        );
 
-        $connectors = ConnectorAccount::query()
-            ->orderBy('name')
-            ->get(['id', 'name', 'provider'])
-            ->map(fn ($c) => [
-                'id' => $c->id,
-                'name' => $c->name,
-                'provider' => $c->provider,
-            ]);
+        $connectors = $this->listConnectorAccountSummaries->execute();
 
         return Inertia::render('Messenger/DeadLetters/Index', [
             'deadLetters' => $deadLetters,
@@ -68,8 +59,7 @@ class DeadLetterController extends Controller
      */
     public function show(int $id): InertiaResponse
     {
-        $deadLetter = MessengerDeadLetter::with('connectorAccount')
-            ->findOrFail($id);
+        $deadLetter = $this->findDeadLetter->execute($id);
 
         return Inertia::render('Messenger/DeadLetters/Show', [
             'deadLetter' => $deadLetter,

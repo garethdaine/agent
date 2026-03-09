@@ -84,4 +84,11 @@ class DelegationTaskFactory extends Factory
             'sequence_order' => $order,
         ]);
     }
+
+    public function withParent(DelegationTask|int $parent): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'parent_delegation_task_id' => $parent instanceof DelegationTask ? $parent->id : $parent,
+        ]);
+    }
 }

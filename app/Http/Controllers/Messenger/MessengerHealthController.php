@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Messenger;
 
+use App\Actions\Connector\CountDeadLettersAction;
+use App\Actions\Connector\ListAllConnectorAccountsAction;
 use App\Http\Controllers\Controller;
 use App\Messenger\Gateway\Enums\WorkerHealthStatus;
 use App\Models\ConnectorAccount;
-use App\Models\MessengerDeadLetter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -26,9 +27,14 @@ use Inertia\Response;
  */
 class MessengerHealthController extends Controller
 {
+    public function __construct(
+        private readonly ListAllConnectorAccountsAction $listAllConnectorAccounts,
+        private readonly CountDeadLettersAction $countDeadLetters,
+    ) {}
+
     public function index(): JsonResponse
     {
-        $connectors = ConnectorAccount::all();
+        $connectors = $this->listAllConnectorAccounts->execute();
 
         $summary = [
             'total_connectors' => $connectors->count(),
@@ -160,7 +166,7 @@ class MessengerHealthController extends Controller
      */
     public function dashboard(): Response
     {
-        $connectors = ConnectorAccount::all();
+        $connectors = $this->listAllConnectorAccounts->execute();
 
         $summary = [
             'total_connectors' => $connectors->count(),
@@ -182,7 +188,7 @@ class MessengerHealthController extends Controller
 
         $status = $this->determineAggregateStatus($summary);
         $gatewayRunning = $this->checkGatewayProcess();
-        $deadLetterCount = MessengerDeadLetter::count();
+        $deadLetterCount = $this->countDeadLetters->execute();
 
         return Inertia::render('Messenger/Health/Index', [
             'health' => [

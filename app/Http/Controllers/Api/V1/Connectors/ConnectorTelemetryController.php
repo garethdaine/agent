@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Connectors;
 
+use App\Actions\Connector\FindConnectorConnectionAction;
+use App\Actions\Connector\ListInvocationsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Connectors\InvocationResource;
-use App\Models\AgentConnectorConnection;
-use App\Models\AgentConnectorInvocation;
 use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -17,6 +17,8 @@ class ConnectorTelemetryController extends Controller
 {
     public function __construct(
         private readonly FeatureFlagManager $flags,
+        private readonly FindConnectorConnectionAction $findConnectorConnection,
+        private readonly ListInvocationsAction $listInvocations,
     ) {}
 
     public function index(Request $request, string $id): AnonymousResourceCollection
@@ -30,16 +32,11 @@ class ConnectorTelemetryController extends Controller
             abort(403, 'No current team selected.');
         }
 
-        $connection = AgentConnectorConnection::where('team_id', $team->id)
-            ->where('connector_id', $id)
-            ->firstOrFail();
+        $connection = $this->findConnectorConnection->findByTeamAndConnector($team->id, $id);
 
         Gate::authorize('manage', $connection);
 
-        $invocations = AgentConnectorInvocation::where('connector_id', $id)
-            ->where('connection_id', $connection->id)
-            ->orderByDesc('created_at')
-            ->get();
+        $invocations = $this->listInvocations->execute($id, $connection->id);
 
         return InvocationResource::collection($invocations);
     }

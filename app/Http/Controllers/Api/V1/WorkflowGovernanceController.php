@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Agent\FindWorkflowJobAction;
 use App\Http\Controllers\Controller;
 use App\Models\AgentJob;
 use App\Services\Escalation\WorkflowGovernanceService;
@@ -15,12 +16,16 @@ use Illuminate\Support\Facades\Validator;
 
 class WorkflowGovernanceController extends Controller
 {
+    public function __construct(
+        private readonly FindWorkflowJobAction $findJob,
+    ) {}
+
     public function pause(
         Request $request,
         string $workflowKey,
         WorkflowGovernanceService $governanceService,
     ): JsonResponse {
-        $job = $this->findJob($workflowKey);
+        $job = $this->findJob->execute($workflowKey);
 
         if ($job === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Workflow not found.', 404, [
@@ -69,7 +74,7 @@ class WorkflowGovernanceController extends Controller
         string $workflowKey,
         WorkflowGovernanceService $governanceService,
     ): JsonResponse {
-        $job = $this->findJob($workflowKey);
+        $job = $this->findJob->execute($workflowKey);
 
         if ($job === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Workflow not found.', 404, [
@@ -137,14 +142,6 @@ class WorkflowGovernanceController extends Controller
         $validated = $validator->validated();
 
         return $validated;
-    }
-
-    private function findJob(string $workflowKey): ?AgentJob
-    {
-        return AgentJob::query()
-            ->whereNull('deleted_at')
-            ->where('workflow_key', $workflowKey)
-            ->first();
     }
 
     /**

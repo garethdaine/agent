@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Pairing\FindMessengerIdentityLinkAction;
+use App\Actions\Pairing\ListMessengerIdentityLinksAction;
 use App\Http\Controllers\Controller;
 use App\Models\MessengerIdentityLink;
 use Illuminate\Http\JsonResponse;
@@ -11,24 +13,21 @@ use Illuminate\Http\Request;
 
 class PairingController extends Controller
 {
+    public function __construct(
+        private readonly ListMessengerIdentityLinksAction $listLinks,
+        private readonly FindMessengerIdentityLinkAction $findLink,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
-        $query = MessengerIdentityLink::query()
-            ->with('connectorAccount:id,name,provider')
-            ->orderByDesc('created_at');
-
-        if ($request->filled('status')) {
-            $query->statusFilter($request->input('status'));
-        }
-
-        if ($request->filled('connector_account_id')) {
-            $query->forConnector($request->input('connector_account_id'));
-        }
-
-        $perPage = min((int) $request->input('per_page', 50), 200);
+        $paginator = $this->listLinks->execute([
+            'status' => $request->input('status'),
+            'connector_account_id' => $request->input('connector_account_id'),
+            'per_page' => (int) $request->input('per_page', 50),
+        ]);
 
         return response()->json([
-            'data' => $query->paginate($perPage)->through(fn (MessengerIdentityLink $link) => [
+            'data' => $paginator->through(fn (MessengerIdentityLink $link) => [
                 'id' => $link->id,
                 'user_id' => $link->user_id,
                 'connector_account_id' => $link->connector_account_id,
@@ -41,14 +40,14 @@ class PairingController extends Controller
                 'created_at' => $link->created_at?->toIso8601String(),
             ])->items(),
             'meta' => [
-                'total' => $query->count(),
+                'total' => $paginator->total(),
             ],
         ]);
     }
 
     public function approve(string $id): JsonResponse
     {
-        $link = MessengerIdentityLink::findOrFail($id);
+        $link = $this->findLink->execute($id);
 
         if (! $link->isPending()) {
             return response()->json([
@@ -63,7 +62,7 @@ class PairingController extends Controller
 
     public function revoke(string $id): JsonResponse
     {
-        $link = MessengerIdentityLink::findOrFail($id);
+        $link = $this->findLink->execute($id);
 
         if ($link->isRevoked()) {
             return response()->json([

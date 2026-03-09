@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Connectors;
 
+use App\Actions\Connector\CheckWebhookEventExistsAction;
+use App\Actions\Connector\CreateWebhookEventAction;
+use App\Actions\Connector\FindAgentConnectorAction;
+use App\Actions\Connector\FindConnectorConnectionAction;
 use App\Http\Controllers\Controller;
 use App\Jobs\Connectors\ProcessConnectorWebhookJob;
-use App\Models\AgentConnector;
-use App\Models\AgentConnectorConnection;
 use App\Models\AgentConnectorWebhookEvent;
 use App\Support\Connectors\Webhooks\WebhookSignatureVerifier;
 use Illuminate\Http\JsonResponse;
@@ -15,6 +17,13 @@ use Illuminate\Http\Request;
 
 class ConnectorWebhookController extends Controller
 {
+    public function __construct(
+        private readonly FindAgentConnectorAction $findAgentConnector,
+        private readonly FindConnectorConnectionAction $findConnectorConnection,
+        private readonly CheckWebhookEventExistsAction $checkWebhookEventExists,
+        private readonly CreateWebhookEventAction $createWebhookEvent,
+    ) {}
+
     public function __invoke(
         Request $request,
         WebhookSignatureVerifier $verifier,
@@ -25,16 +34,14 @@ class ConnectorWebhookController extends Controller
             return response()->json(['error' => 'Webhooks disabled'], 404);
         }
 
-        $connector = AgentConnector::where('name', $connectorName)->first();
+        $connector = $this->findAgentConnector->findByName($connectorName);
 
         if (! $connector) {
             // Return 200 for unknown connectors to prevent providers from disabling webhooks
             return response()->json(['received' => true]);
         }
 
-        $connection = AgentConnectorConnection::where('connector_id', $connector->id)
-            ->where('status', AgentConnectorConnection::STATUS_CONNECTED)
-            ->first();
+        $connection = $this->findConnectorConnection->findConnectedForConnector($connector->id);
 
         if (! $connection) {
             return response()->json(['received' => true]);
@@ -59,15 +66,11 @@ class ConnectorWebhookController extends Controller
         $externalEventId = $request->header('X-Webhook-Event-Id', (string) \Illuminate\Support\Str::uuid());
 
         // Deduplicate by (connection_id, external_event_id)
-        $existing = AgentConnectorWebhookEvent::where('connection_id', $connection->id)
-            ->where('external_event_id', $externalEventId)
-            ->exists();
-
-        if ($existing) {
+        if ($this->checkWebhookEventExists->execute($connection->id, $externalEventId)) {
             return response()->json(['received' => true, 'deduplicated' => true]);
         }
 
-        $webhookEvent = AgentConnectorWebhookEvent::create([
+        $webhookEvent = $this->createWebhookEvent->execute([
             'connection_id' => $connection->id,
             'connector_id' => $connector->id,
             'event_type' => $event,

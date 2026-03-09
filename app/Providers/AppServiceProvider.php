@@ -85,6 +85,7 @@ use App\Support\Interrogation\InterrogationBuildCommandGuard;
 use App\Support\Interrogation\ReviewerContextBuilder;
 use App\Support\Interrogation\ReviewerPayloadGuard;
 use App\Support\Interrogation\ReviewerPayloadNormalizer;
+use App\Support\Observability\LlmTelemetry;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
@@ -138,6 +139,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\Skills\SkillLibrary::class, fn ($app) => new \App\Services\Skills\SkillLibrary(
             config('agent.skills.library_manifest_path'),
         ));
+
+        $this->app->singleton(LlmTelemetry::class);
     }
 
     /**
@@ -210,6 +213,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('viewAgent', fn ($user) => true);
+
+        Gate::define('viewPulse', fn ($user) => $user->hasRole('admin'));
 
         Gate::define('workflow.pause', [WorkflowGovernancePolicy::class, 'pause']);
         Gate::define('workflow.resume', [WorkflowGovernancePolicy::class, 'resume']);

@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Messenger;
 
+use App\Actions\Connector\CountDeadLettersAction;
+use App\Actions\Connector\GetRecentErrorRateAction;
+use App\Actions\Connector\ListAllConnectorAccountsAction;
 use App\Http\Controllers\Controller;
-use App\Models\ChatAction;
 use App\Models\ConnectorAccount;
-use App\Models\MessengerDeadLetter;
 use App\Support\Messenger\MetricsCollector;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Queue;
@@ -15,19 +16,20 @@ use Illuminate\Support\Facades\Queue;
 class MessengerHealthController extends Controller
 {
     public function __construct(
-        private readonly MetricsCollector $metricsCollector // @phpstan-ignore property.onlyWritten
+        private readonly MetricsCollector $metricsCollector, // @phpstan-ignore property.onlyWritten
+        private readonly ListAllConnectorAccountsAction $listAllConnectorAccounts,
+        private readonly CountDeadLettersAction $countDeadLetters,
+        private readonly GetRecentErrorRateAction $getRecentErrorRate,
     ) {}
 
     public function index(): JsonResponse
     {
-        $connectors = ConnectorAccount::query()
-            ->select('id', 'provider', 'name', 'status', 'connection_mode', 'runtime_state')
-            ->get();
+        $connectors = $this->listAllConnectorAccounts->execute(['id', 'provider', 'name', 'status', 'connection_mode', 'runtime_state']);
 
         $status = $this->determineOverallStatus($connectors);
         $queueBacklog = $this->getQueueBacklogSize();
-        $recentErrorRate = $this->calculateRecentErrorRate();
-        $deadLetterCount = $this->getDeadLetterCount();
+        $recentErrorRate = $this->getRecentErrorRate->execute();
+        $deadLetterCount = $this->countDeadLetters->execute();
 
         return response()->json([
             'status' => $status,
@@ -93,30 +95,5 @@ class MessengerHealthController extends Controller
         } catch (\Throwable) {
             return 0;
         }
-    }
-
-    private function calculateRecentErrorRate(): float
-    {
-        $recentActions = ChatAction::query()
-            ->where('created_at', '>=', now()->subHour())
-            ->whereIn('status', [ChatAction::STATUS_COMPLETED, ChatAction::STATUS_FAILED])
-            ->selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status');
-
-        $completed = $recentActions->get(ChatAction::STATUS_COMPLETED, 0);
-        $failed = $recentActions->get(ChatAction::STATUS_FAILED, 0);
-        $total = $completed + $failed;
-
-        if ($total === 0) {
-            return 0.0;
-        }
-
-        return round(($failed / $total) * 100, 2);
-    }
-
-    private function getDeadLetterCount(): int
-    {
-        return MessengerDeadLetter::count();
     }
 }

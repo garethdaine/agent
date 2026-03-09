@@ -4,6 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Agent\CheckAgentJobNameUniqueAction;
+use App\Actions\Agent\CheckAgentJobWorkflowKeyUniqueAction;
+use App\Actions\Agent\CheckRunOverlapAction;
+use App\Actions\Agent\CreateAgentJobAction;
+use App\Actions\Agent\CreateAgentJobRunAction;
+use App\Actions\Agent\DeleteAgentJobAction;
+use App\Actions\Agent\FindAgentJobAction;
+use App\Actions\Agent\FindAgentJobByWorkflowKeyAction;
+use App\Actions\Agent\ListAgentJobsAction;
+use App\Actions\Agent\RestoreAgentJobAction;
+use App\Actions\Agent\ToggleAgentJobAction;
+use App\Actions\Agent\UpdateAgentJobAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Agent\StoreAgentJobRequest;
 use App\Http\Requests\Agent\UpdateAgentJobRequest;
@@ -25,74 +37,34 @@ class AgentJobController extends Controller
 {
     public function __construct(private UsageLimitState $usageLimitState) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ListAgentJobsAction $listJobs): JsonResponse
     {
-        $query = AgentJob::query()->forUser($request->user());
-
         $deleted = $request->string('deleted')->toString();
-        if ($deleted === '1' || $deleted === 'true') {
-            $query->onlyTrashed();
-        } elseif ($deleted === 'all') {
-            $query->withTrashed();
-        }
-
         $q = trim($request->string('q')->toString());
-        if ($q !== '') {
-            $query->where(function ($builder) use ($q): void {
-                $builder->where('name', 'like', "%{$q}%")
-                    ->orWhere('description', 'like', "%{$q}%");
-            });
-        }
-
-        if ($request->filled('is_enabled')) {
-            $query->where('is_enabled', filter_var($request->input('is_enabled'), FILTER_VALIDATE_BOOL));
-        }
-
-        if ($request->filled('runner_type')) {
-            $query->where('runner_type', $request->string('runner_type')->toString());
-        }
-
-        $workflowKey = trim($request->string('workflow_key')->toString());
-        if ($workflowKey !== '') {
-            $query->where('workflow_key', $workflowKey);
-        }
-
         $source = strtolower(trim($request->string('source')->toString()));
-        if ($source === 'build') {
-            $query->where(function ($builder): void {
-                $builder->where('name', 'like', 'Interrogation Build S%')
-                    ->orWhere('env_json->AGENT_JOB_SOURCE', 'interrogation_build');
-            });
-        } elseif ($source === 'delegation') {
-            $query->where('name', 'like', 'Delegation: %');
-        } elseif ($source === 'user') {
-            $query->where(function ($builder): void {
-                $builder->where('name', 'not like', 'Interrogation Build S%')
-                    ->where('name', 'not like', 'Delegation: %')
-                    ->where(function ($inner): void {
-                        $inner->whereNull('env_json->AGENT_JOB_SOURCE')
-                            ->orWhere('env_json->AGENT_JOB_SOURCE', '!=', 'interrogation_build');
-                    });
-            });
-        } else {
+
+        if (! in_array($source, ['build', 'delegation', 'user'], true)) {
             $source = '';
         }
 
         $sort = $request->string('sort', 'name')->toString();
         $dir = strtolower($request->string('dir', 'asc')->toString()) === 'desc' ? 'desc' : 'asc';
 
-        if (! in_array($sort, ['name', 'updated_at', 'created_at', 'is_enabled'], true)) {
-            $sort = 'name';
-        }
-
-        if ($sort === 'is_enabled') {
-            $query->orderBy('is_enabled', 'desc')->orderBy('name', 'asc');
-        } else {
-            $query->orderBy($sort, $dir);
-        }
-
-        $perPage = min(100, max(1, (int) $request->integer('per_page', 25)));
-        $jobs = $query->paginate($perPage)->withQueryString();
+        $jobs = $listJobs->execute($request->user(), [
+            'deleted' => $deleted,
+            'q' => $q,
+            'is_enabled' => $request->filled('is_enabled')
+                ? filter_var($request->input('is_enabled'), FILTER_VALIDATE_BOOL)
+                : null,
+            'runner_type' => $request->filled('runner_type')
+                ? $request->string('runner_type')->toString()
+                : '',
+            'workflow_key' => trim($request->string('workflow_key')->toString()),
+            'source' => $source,
+            'sort' => $sort,
+            'dir' => $dir,
+            'per_page' => (int) $request->integer('per_page', 25),
+        ]);
 
         $data = collect($jobs->items())->map(fn (AgentJob $job): array => $this->transformJob($job, false))->values();
 
@@ -125,10 +97,9 @@ class AgentJobController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, int $id, FindAgentJobAction $findJob): JsonResponse
     {
-        /** @var AgentJob $job */
-        $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
+        $job = $findJob->execute($request->user(), $id, withTrashed: true);
         $this->authorize('view', $job);
         $includeTaskContent = $request->boolean('include_task_content', false);
 
@@ -137,13 +108,12 @@ class AgentJobController extends Controller
         ]);
     }
 
-    public function showByWorkflowKey(Request $request, string $workflowKey): JsonResponse
-    {
-        /** @var AgentJob $job */
-        $job = AgentJob::query()
-            ->forUser($request->user())
-            ->where('workflow_key', $workflowKey)
-            ->firstOrFail();
+    public function showByWorkflowKey(
+        Request $request,
+        string $workflowKey,
+        FindAgentJobByWorkflowKeyAction $findByKey
+    ): JsonResponse {
+        $job = $findByKey->execute($request->user(), $workflowKey);
         $this->authorize('view', $job);
 
         return response()->json([
@@ -154,7 +124,10 @@ class AgentJobController extends Controller
     public function store(
         StoreAgentJobRequest $request,
         AuditLogger $auditLogger,
-        TaskMarkdownStorage $taskMarkdownStorage
+        TaskMarkdownStorage $taskMarkdownStorage,
+        CheckAgentJobNameUniqueAction $checkName,
+        CheckAgentJobWorkflowKeyUniqueAction $checkWorkflowKey,
+        CreateAgentJobAction $createJob
     ): JsonResponse {
         $validated = $request->validated();
         $workflowKey = WorkflowKey::resolve(
@@ -162,23 +135,13 @@ class AgentJobController extends Controller
             (string) $validated['name']
         );
 
-        $existing = $request->user()->agentJobs()
-            ->whereNull('deleted_at')
-            ->where('name', $validated['name'])
-            ->exists();
-
-        if ($existing) {
+        if ($checkName->execute($request->user(), $validated['name'])) {
             return ErrorEnvelope::make('VALIDATION_ERROR', 'The given data was invalid.', 422, [
                 'name' => ['The name has already been taken.'],
             ]);
         }
 
-        $workflowKeyExists = $request->user()->agentJobs()
-            ->whereNull('deleted_at')
-            ->where('workflow_key', $workflowKey)
-            ->exists();
-
-        if ($workflowKeyExists) {
+        if ($checkWorkflowKey->execute($request->user(), $workflowKey)) {
             return ErrorEnvelope::make('VALIDATION_ERROR', 'The given data was invalid.', 422, [
                 'workflow_key' => ['The workflow key has already been taken.'],
             ]);
@@ -186,8 +149,7 @@ class AgentJobController extends Controller
 
         $taskMarkdownPath = $this->resolveTaskMarkdownPath($request, $validated, $taskMarkdownStorage);
 
-        /** @var AgentJob $job */
-        $job = $request->user()->agentJobs()->create([
+        $job = $createJob->execute($request->user(), [
             'name' => $validated['name'],
             'workflow_key' => $workflowKey,
             'description' => $validated['description'] ?? null,
@@ -240,10 +202,13 @@ class AgentJobController extends Controller
         UpdateAgentJobRequest $request,
         int $id,
         AuditLogger $auditLogger,
-        TaskMarkdownStorage $taskMarkdownStorage
+        TaskMarkdownStorage $taskMarkdownStorage,
+        FindAgentJobAction $findJob,
+        CheckAgentJobNameUniqueAction $checkName,
+        CheckAgentJobWorkflowKeyUniqueAction $checkWorkflowKey,
+        UpdateAgentJobAction $updateJob
     ): JsonResponse {
-        /** @var AgentJob $job */
-        $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
+        $job = $findJob->execute($request->user(), $id, withTrashed: true);
         $this->authorize('update', $job);
         $before = $job->only([
             'name',
@@ -264,13 +229,7 @@ class AgentJobController extends Controller
         ]);
         $validated = $request->validated();
 
-        $existing = $request->user()->agentJobs()
-            ->whereNull('deleted_at')
-            ->where('name', $validated['name'])
-            ->where('id', '!=', $job->id)
-            ->exists();
-
-        if ($existing) {
+        if ($checkName->execute($request->user(), $validated['name'], (int) $job->id)) {
             return ErrorEnvelope::make('VALIDATION_ERROR', 'The given data was invalid.', 422, [
                 'name' => ['The name has already been taken.'],
             ]);
@@ -282,13 +241,7 @@ class AgentJobController extends Controller
             (int) $job->id
         );
 
-        $workflowKeyExists = $request->user()->agentJobs()
-            ->whereNull('deleted_at')
-            ->where('workflow_key', $workflowKey)
-            ->where('id', '!=', $job->id)
-            ->exists();
-
-        if ($workflowKeyExists) {
+        if ($checkWorkflowKey->execute($request->user(), $workflowKey, (int) $job->id)) {
             return ErrorEnvelope::make('VALIDATION_ERROR', 'The given data was invalid.', 422, [
                 'workflow_key' => ['The workflow key has already been taken.'],
             ]);
@@ -330,8 +283,7 @@ class AgentJobController extends Controller
             $data['max_retries'] = $validated['max_retries'];
         }
 
-        $job->fill($data);
-        $job->save();
+        $job = $updateJob->execute($job, $data);
 
         $after = $job->only(array_keys($before));
         $changedFields = [];
@@ -359,14 +311,17 @@ class AgentJobController extends Controller
         ]);
     }
 
-    public function toggle(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
-    {
-        /** @var AgentJob $job */
-        $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
+    public function toggle(
+        Request $request,
+        int $id,
+        AuditLogger $auditLogger,
+        FindAgentJobAction $findJob,
+        ToggleAgentJobAction $toggleJob
+    ): JsonResponse {
+        $job = $findJob->execute($request->user(), $id, withTrashed: true);
         $this->authorize('update', $job);
         $before = ['is_enabled' => (bool) $job->is_enabled];
-        $job->is_enabled = ! $job->is_enabled;
-        $job->save();
+        $job = $toggleJob->execute($job);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -384,13 +339,17 @@ class AgentJobController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
-    {
-        /** @var AgentJob $job */
-        $job = AgentJob::query()->forUser($request->user())->findOrFail($id);
+    public function destroy(
+        Request $request,
+        int $id,
+        AuditLogger $auditLogger,
+        FindAgentJobAction $findJob,
+        DeleteAgentJobAction $deleteJob
+    ): JsonResponse {
+        $job = $findJob->execute($request->user(), $id);
         $this->authorize('delete', $job);
         $before = ['deleted_at' => optional($job->deleted_at)?->toIso8601String()];
-        $job->delete();
+        $deleteJob->execute($job);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -411,16 +370,18 @@ class AgentJobController extends Controller
         ]);
     }
 
-    public function restore(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
-    {
-        /** @var AgentJob $job */
-        $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
+    public function restore(
+        Request $request,
+        int $id,
+        AuditLogger $auditLogger,
+        FindAgentJobAction $findJob,
+        RestoreAgentJobAction $restoreJob
+    ): JsonResponse {
+        $job = $findJob->execute($request->user(), $id, withTrashed: true);
         $this->authorize('restore', $job);
         $before = ['deleted_at' => optional($job->deleted_at)?->toIso8601String()];
 
-        if ($job->trashed()) {
-            $job->restore();
-        }
+        $freshJob = $restoreJob->execute($job);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -430,21 +391,17 @@ class AgentJobController extends Controller
             ownerUserId: (int) $job->user_id,
             changedFields: ['deleted_at'],
             before: $before,
-            after: ['deleted_at' => optional($job->deleted_at)?->toIso8601String()],
+            after: ['deleted_at' => optional($freshJob->deleted_at)?->toIso8601String()],
         );
-
-        /** @var AgentJob $freshJob */
-        $freshJob = $job->fresh();
 
         return response()->json([
             'data' => $this->transformJob($freshJob),
         ]);
     }
 
-    public function runs(Request $request, int $id): JsonResponse
+    public function runs(Request $request, int $id, FindAgentJobAction $findJob): JsonResponse
     {
-        /** @var AgentJob $job */
-        $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
+        $job = $findJob->execute($request->user(), $id, withTrashed: true);
         $this->authorize('view', $job);
 
         $runs = $job->runs()
@@ -462,10 +419,15 @@ class AgentJobController extends Controller
         ]);
     }
 
-    public function runNow(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
-    {
-        /** @var AgentJob $job */
-        $job = AgentJob::query()->forUser($request->user())->withTrashed()->findOrFail($id);
+    public function runNow(
+        Request $request,
+        int $id,
+        AuditLogger $auditLogger,
+        FindAgentJobAction $findJob,
+        CheckRunOverlapAction $checkOverlap,
+        CreateAgentJobRunAction $createRun
+    ): JsonResponse {
+        $job = $findJob->execute($request->user(), $id, withTrashed: true);
         $this->authorize('update', $job);
         $ignoreRateLimitHold = $request->boolean('ignore_rate_limit_hold', false);
 
@@ -522,12 +484,7 @@ class AgentJobController extends Controller
             );
         }
 
-        $hasOverlap = AgentJobRun::query()
-            ->where('agent_job_id', $job->id)
-            ->whereIn('status', AgentJobRun::ACTIVE_STATUSES)
-            ->exists();
-
-        if ($hasOverlap) {
+        if ($checkOverlap->execute((int) $job->id)) {
             return ErrorEnvelope::make(
                 'RUN_OVERLAP_ACTIVE',
                 'An active run already exists for this job.',
@@ -537,7 +494,7 @@ class AgentJobController extends Controller
         }
 
         try {
-            $run = AgentJobRun::query()->create([
+            $run = $createRun->execute([
                 'agent_job_id' => $job->id,
                 'user_id' => $job->user_id,
                 'team_id' => $job->team_id,

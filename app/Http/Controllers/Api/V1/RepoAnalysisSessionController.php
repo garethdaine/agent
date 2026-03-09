@@ -4,60 +4,54 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\RepoAnalysis\CreateRepoAnalysisSessionAction;
+use App\Actions\RepoAnalysis\DeleteRepoAnalysisSessionAction;
+use App\Actions\RepoAnalysis\FindRepoAnalysisSessionAction;
+use App\Actions\RepoAnalysis\GetLatestEventSequenceAction;
+use App\Actions\RepoAnalysis\ListRepoAnalysisArtifactsAction;
+use App\Actions\RepoAnalysis\ListRepoAnalysisReportsAction;
+use App\Actions\RepoAnalysis\ListRepoAnalysisSessionsAction;
+use App\Actions\RepoAnalysis\ListRepoAnalysisTasksAction;
+use App\Actions\RepoAnalysis\PurgeRepoAnalysisSessionAction;
+use App\Actions\RepoAnalysis\RestoreRepoAnalysisSessionAction;
+use App\Actions\RepoAnalysis\UpdateRepoAnalysisSessionAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Agent\RepoAnalysis\RepoAnalysisEventsRequest;
 use App\Http\Requests\Agent\RepoAnalysis\RetryRepoAnalysisTaskRequest;
 use App\Http\Requests\Agent\RepoAnalysis\StoreRepoAnalysisSessionRequest;
 use App\Http\Requests\Agent\RepoAnalysis\UpdateRepoAnalysisSessionRequest;
-use App\Jobs\RepoAnalysis\ExecuteRepoAnalysisTaskJob;
-use App\Jobs\RepoAnalysis\GenerateRepoAnalysisReportJob;
-use App\Jobs\RepoAnalysis\GenerateRepoSnapshotJob;
-use App\Jobs\RepoAnalysis\PlanRepoAnalysisTasksJob;
-use App\Jobs\RepoAnalysis\ValidateRepoAnalysisCoverageJob;
-use App\Models\RepoAnalysisArtifact;
-use App\Models\RepoAnalysisEvent;
-use App\Models\RepoAnalysisReport;
 use App\Models\RepoAnalysisSession;
-use App\Models\RepoAnalysisTask;
+use App\Services\RepoAnalysis\RepoAnalysisReportService;
+use App\Services\RepoAnalysis\RepoAnalysisWorkflowService;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\RepoAnalysis\EventWriter;
 use App\Support\RepoAnalysis\SessionStateTransitionService;
-use Carbon\Carbon;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
 
 class RepoAnalysisSessionController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function __construct(
+        private RepoAnalysisWorkflowService $workflow,
+        private RepoAnalysisReportService $reportService,
+        private FindRepoAnalysisSessionAction $findSession,
+    ) {}
+
+    public function index(Request $request, ListRepoAnalysisSessionsAction $listSessions): JsonResponse
     {
-        $query = RepoAnalysisSession::query();
-
-        if (! $request->user()?->hasRole('admin')) {
-            $query->where('user_id', (int) $request->user()->id);
-        }
-
-        $deleted = $request->string('deleted')->toString();
-        if ($deleted === '1' || $deleted === 'true') {
-            $query->onlyTrashed();
-        } elseif ($deleted === 'all') {
-            $query->withTrashed();
-        }
-
-        $status = trim($request->string('status')->toString());
-        if ($status !== '') {
-            $query->where('status', $status);
-        }
-
-        $perPage = min(100, max(1, (int) $request->integer('per_page', 25)));
-        $sessions = $query->latest()->paginate($perPage)->withQueryString();
+        $sessions = $listSessions->execute([
+            'user_id' => (int) $request->user()->id,
+            'is_admin' => $request->user()?->hasRole('admin'),
+            'deleted' => $request->string('deleted')->toString(),
+            'status' => trim($request->string('status')->toString()),
+            'per_page' => (int) $request->integer('per_page', 25),
+        ]);
 
         return response()->json([
             'data' => collect($sessions->items())
-                ->map(fn (RepoAnalysisSession $session): array => $this->transformSession($session))
+                ->map(fn (RepoAnalysisSession $session): array => $this->reportService->transformSession($session))
                 ->values(),
             'meta' => [
                 'current_page' => $sessions->currentPage(),
@@ -76,33 +70,25 @@ class RepoAnalysisSessionController extends Controller
 
     public function show(Request $request, int $id): JsonResponse
     {
-        $session = $this->resolveSession($request, $id, true);
+        $session = $this->findSession->execute($id, true);
         if ($forbidden = $this->forbiddenIfCannot($request, 'view', $session)) {
             return $forbidden;
         }
 
         return response()->json([
-            'data' => $this->transformSession($session),
+            'data' => $this->reportService->transformSession($session),
         ]);
     }
 
-    public function store(StoreRepoAnalysisSessionRequest $request, AuditLogger $auditLogger): JsonResponse
-    {
-        $validated = $request->validated();
-
-        $session = RepoAnalysisSession::query()->create([
-            'user_id' => (int) $request->user()->id,
-            'name' => array_key_exists('name', $validated) ? ($validated['name'] ?: null) : null,
-            'project_directory' => (string) $validated['project_directory'],
-            'analyzer_profile' => (string) ($validated['analyzer_profile'] ?? 'default'),
-            'runner_type' => (string) ($validated['runner_type'] ?? 'claude'),
-            'status' => SessionStateTransitionService::STATUS_SETUP,
-            'phase' => 0,
-            'metadata_json' => [
-                'source' => 'api',
-                'auto_start_on_open' => true,
-            ],
-        ]);
+    public function store(
+        StoreRepoAnalysisSessionRequest $request,
+        CreateRepoAnalysisSessionAction $createSession,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $createSession->execute(
+            (int) $request->user()->id,
+            $request->validated(),
+        );
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -116,76 +102,53 @@ class RepoAnalysisSessionController extends Controller
         );
 
         return response()->json([
-            'data' => $this->transformSession($session),
+            'data' => $this->reportService->transformSession($session),
         ], 202);
     }
 
     public function update(
         UpdateRepoAnalysisSessionRequest $request,
         int $id,
+        UpdateRepoAnalysisSessionAction $updateSession,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $this->resolveSession($request, $id, true);
+        $session = $this->findSession->execute($id, true);
         if ($forbidden = $this->forbiddenIfCannot($request, 'update', $session)) {
             return $forbidden;
         }
 
-        $validated = $request->validated();
-        $before = $session->only(['name', 'project_directory', 'analyzer_profile', 'runner_type']);
+        $result = $updateSession->execute($session, $request->validated());
 
-        if (array_key_exists('name', $validated)) {
-            $session->name = $validated['name'] ?: null;
-        }
-
-        if (array_key_exists('project_directory', $validated)) {
-            $session->project_directory = (string) $validated['project_directory'];
-        }
-
-        if (array_key_exists('analyzer_profile', $validated)) {
-            $session->analyzer_profile = $validated['analyzer_profile'] ?: 'default';
-        }
-
-        if (array_key_exists('runner_type', $validated)) {
-            $session->runner_type = in_array($validated['runner_type'], ['claude', 'codex'], true)
-                ? $validated['runner_type']
-                : 'claude';
-        }
-
-        $session->save();
-
-        $changedFields = [];
-        foreach (['name', 'project_directory', 'analyzer_profile', 'runner_type'] as $field) {
-            if (data_get($before, $field) !== data_get($session, $field)) {
-                $changedFields[] = $field;
-            }
-        }
-
-        if ($changedFields !== []) {
+        if ($result['changed_fields'] !== []) {
             $auditLogger->recordUserAction(
                 request: $request,
                 action: 'repo_analysis.session.update',
                 targetType: 'repo_analysis_session',
-                targetId: (int) $session->id,
-                ownerUserId: (int) $session->user_id,
-                changedFields: $changedFields,
-                before: $before,
-                after: $session->only(['name', 'project_directory', 'analyzer_profile', 'runner_type']),
+                targetId: (int) $result['session']->id,
+                ownerUserId: (int) $result['session']->user_id,
+                changedFields: $result['changed_fields'],
+                before: $result['before'],
+                after: $result['session']->only(['name', 'project_directory', 'analyzer_profile', 'runner_type']),
             );
         }
 
         return response()->json([
-            'data' => $this->transformSession($session),
+            'data' => $this->reportService->transformSession($result['session']),
         ]);
     }
 
-    public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
-    {
-        $session = $this->resolveSession($request, $id);
+    public function destroy(
+        Request $request,
+        int $id,
+        DeleteRepoAnalysisSessionAction $deleteSession,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $this->findSession->execute($id);
         if ($forbidden = $this->forbiddenIfCannot($request, 'delete', $session)) {
             return $forbidden;
         }
 
-        $session->delete();
+        $deleteSession->execute($session);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -206,23 +169,27 @@ class RepoAnalysisSessionController extends Controller
         ]);
     }
 
-    public function purge(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
-    {
-        $session = $this->resolveSession($request, $id, true);
+    public function purge(
+        Request $request,
+        int $id,
+        PurgeRepoAnalysisSessionAction $purgeSession,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $this->findSession->execute($id, true);
         if ($forbidden = $this->forbiddenIfCannot($request, 'forceDelete', $session)) {
             return $forbidden;
         }
 
-        $projectRoot = $this->resolvedProjectRoot((string) $session->project_directory);
+        $projectRoot = $this->reportService->resolvedProjectRoot((string) $session->project_directory);
         $storageRoot = realpath(storage_path()) ?: storage_path();
         $allowedRoots = array_values(array_filter([$projectRoot, $storageRoot], static fn (?string $path): bool => is_string($path) && $path !== ''));
 
-        $pathsToDelete = $this->collectSessionFilePaths($session);
+        $pathsToDelete = $this->reportService->collectSessionFilePaths($session);
         $deletedFileCount = 0;
         $missingFileCount = 0;
 
         foreach ($pathsToDelete as $path) {
-            $deleted = $this->deletePathIfAllowed($path, $allowedRoots);
+            $deleted = $this->reportService->deletePathIfAllowed($path, $allowedRoots);
             if ($deleted) {
                 $deletedFileCount++;
 
@@ -246,7 +213,7 @@ class RepoAnalysisSessionController extends Controller
             ],
         ];
 
-        $session->forceDelete();
+        $purgeSession->execute($session);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -273,14 +240,18 @@ class RepoAnalysisSessionController extends Controller
         ]);
     }
 
-    public function restore(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
-    {
-        $session = RepoAnalysisSession::query()->withTrashed()->findOrFail($id);
+    public function restore(
+        Request $request,
+        int $id,
+        RestoreRepoAnalysisSessionAction $restoreSession,
+        AuditLogger $auditLogger,
+    ): JsonResponse {
+        $session = $this->findSession->execute($id, true);
         if ($forbidden = $this->forbiddenIfCannot($request, 'restore', $session)) {
             return $forbidden;
         }
 
-        $session->restore();
+        $restoreSession->execute($session);
         $session->refresh();
 
         $auditLogger->recordUserAction(
@@ -295,35 +266,20 @@ class RepoAnalysisSessionController extends Controller
         );
 
         return response()->json([
-            'data' => $this->transformSession($session),
+            'data' => $this->reportService->transformSession($session),
         ]);
     }
 
     public function startSnapshot(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $session = $this->resolveSession($request, $id);
+        $session = $this->findSession->execute($id);
         if ($forbidden = $this->forbiddenIfCannot($request, 'update', $session)) {
             return $forbidden;
         }
 
-        if ((int) $session->phase !== 0 || (string) $session->status !== SessionStateTransitionService::STATUS_SETUP) {
-            return ErrorEnvelope::make(
-                'RUN_TRANSITION_CONFLICT',
-                'Snapshot can only be started from setup phase.',
-                409
-            );
+        if ($error = $this->workflow->startSnapshot($session)) {
+            return $error;
         }
-
-        if ($limitError = $this->activeSessionLimitEnvelope((int) $session->user_id, (int) $session->id)) {
-            return $limitError;
-        }
-
-        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
-        unset($metadata['auto_start_on_open']);
-        $session->metadata_json = $metadata;
-        $session->save();
-
-        GenerateRepoSnapshotJob::dispatch($session->id);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -346,16 +302,14 @@ class RepoAnalysisSessionController extends Controller
 
     public function plan(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $session = $this->resolveSession($request, $id);
+        $session = $this->findSession->execute($id);
         if ($forbidden = $this->forbiddenIfCannot($request, 'update', $session)) {
             return $forbidden;
         }
 
-        if ((int) $session->phase !== 2) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Planning is only available in phase 2.', 409);
+        if ($error = $this->workflow->plan($session)) {
+            return $error;
         }
-
-        PlanRepoAnalysisTasksJob::dispatch($session->id);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -375,20 +329,14 @@ class RepoAnalysisSessionController extends Controller
 
     public function execute(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $session = $this->resolveSession($request, $id);
+        $session = $this->findSession->execute($id);
         if ($forbidden = $this->forbiddenIfCannot($request, 'update', $session)) {
             return $forbidden;
         }
 
-        if ((int) $session->phase !== 3) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Execution is only available in phase 3.', 409);
+        if ($error = $this->workflow->execute($session)) {
+            return $error;
         }
-
-        if ($limitError = $this->activeSessionLimitEnvelope((int) $session->user_id, (int) $session->id)) {
-            return $limitError;
-        }
-
-        ExecuteRepoAnalysisTaskJob::dispatch($session->id);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -412,56 +360,17 @@ class RepoAnalysisSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $this->resolveSession($request, $id);
+        $session = $this->findSession->execute($id);
         if ($forbidden = $this->forbiddenIfCannot($request, 'update', $session)) {
             return $forbidden;
         }
 
         $taskId = (int) $request->validated('task_id');
-        $task = RepoAnalysisTask::query()
-            ->where('repo_analysis_session_id', $session->id)
-            ->findOrFail($taskId);
+        $result = $this->workflow->retryTask($session, $taskId, $transitions);
 
-        if ((string) $task->status !== 'failed') {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Only failed tasks can be retried.', 409);
+        if ($result instanceof JsonResponse) {
+            return $result;
         }
-
-        $task->update([
-            'status' => 'pending',
-            'error_code' => null,
-            'error_summary' => null,
-            'started_at' => null,
-            'finished_at' => null,
-        ]);
-
-        if ((int) $session->phase === 3) {
-            $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
-            if (($metadata['operator_action_required'] ?? null) === 'task_retry_decision_required') {
-                unset($metadata['operator_action_required'], $metadata['operator_action_details']);
-            }
-
-            $transitionPayload = [
-                'error_code' => null,
-                'error_summary' => null,
-                'metadata_json' => $metadata,
-            ];
-
-            if ((string) $session->status === SessionStateTransitionService::STATUS_PAUSED) {
-                $resumed = $transitions->resume($session->id, $transitionPayload);
-                if (! $resumed) {
-                    return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot resume from its current state.', 409);
-                }
-                $session->refresh();
-            } elseif ((string) $session->status === SessionStateTransitionService::STATUS_FAILED) {
-                $retried = $transitions->retry($session->id, $transitionPayload);
-                if (! $retried) {
-                    return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot retry from its current state.', 409);
-                }
-                $session->refresh();
-            }
-        }
-
-        ExecuteRepoAnalysisTaskJob::dispatch((int) $session->id);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -485,16 +394,14 @@ class RepoAnalysisSessionController extends Controller
 
     public function validateCoverage(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $session = $this->resolveSession($request, $id);
+        $session = $this->findSession->execute($id);
         if ($forbidden = $this->forbiddenIfCannot($request, 'update', $session)) {
             return $forbidden;
         }
 
-        if ((int) $session->phase !== 4) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Coverage validation is only available in phase 4.', 409);
+        if ($error = $this->reportService->validateCoverage($session)) {
+            return $error;
         }
-
-        ValidateRepoAnalysisCoverageJob::dispatch((int) $session->id);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -514,16 +421,14 @@ class RepoAnalysisSessionController extends Controller
 
     public function generateReport(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $session = $this->resolveSession($request, $id);
+        $session = $this->findSession->execute($id);
         if ($forbidden = $this->forbiddenIfCannot($request, 'update', $session)) {
             return $forbidden;
         }
 
-        if ((int) $session->phase !== 5) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Report generation is only available in phase 5.', 409);
+        if ($error = $this->reportService->generateReport($session)) {
+            return $error;
         }
-
-        GenerateRepoAnalysisReportJob::dispatch((int) $session->id);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -547,19 +452,16 @@ class RepoAnalysisSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $this->resolveSession($request, $id);
+        $session = $this->findSession->execute($id);
         if ($forbidden = $this->forbiddenIfCannot($request, 'update', $session)) {
             return $forbidden;
         }
 
         $before = ['phase' => (int) $session->phase, 'status' => (string) $session->status];
-        $paused = $transitions->pause($session->id);
 
-        if (! $paused) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot be paused from its current state.', 409);
+        if ($error = $this->workflow->pause($session, $transitions)) {
+            return $error;
         }
-
-        $session->refresh();
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -573,7 +475,7 @@ class RepoAnalysisSessionController extends Controller
         );
 
         return response()->json([
-            'data' => $this->transformSession($session),
+            'data' => $this->reportService->transformSession($session),
         ]);
     }
 
@@ -583,43 +485,19 @@ class RepoAnalysisSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $this->resolveSession($request, $id);
+        $session = $this->findSession->execute($id);
         if ($forbidden = $this->forbiddenIfCannot($request, 'update', $session)) {
             return $forbidden;
         }
 
-        if ((string) $session->status !== SessionStateTransitionService::STATUS_PAUSED) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot be resumed from its current state.', 409);
-        }
-
-        if ($limitError = $this->activeSessionLimitEnvelope((int) $session->user_id, (int) $session->id)) {
-            return $limitError;
-        }
-
         $before = ['phase' => (int) $session->phase, 'status' => (string) $session->status];
-        $transitionPayload = [
-            'error_code' => null,
-            'error_summary' => null,
-        ];
+        $result = $this->workflow->resume($session, $transitions);
 
-        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
-        $requiresDriftDecision = (($metadata['operator_action_required'] ?? null) === 'drift_decision_required')
-            || ((string) $session->error_code === 'SNAPSHOT_DRIFT_DETECTED');
-
-        if ($requiresDriftDecision) {
-            $metadata['drift_decision'] = 'continue_old_snapshot';
-            unset($metadata['operator_action_required'], $metadata['operator_action_details']);
-            $transitionPayload['metadata_json'] = $metadata;
+        if ($result instanceof JsonResponse) {
+            return $result;
         }
 
-        $resumed = $transitions->resume($session->id, $transitionPayload);
-
-        if (! $resumed) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session state changed while resuming.', 409);
-        }
-
-        $session->refresh();
-        $queued = $this->dispatchByPhase((int) $session->phase, (int) $session->id);
+        $queued = (bool) $result;
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -646,31 +524,19 @@ class RepoAnalysisSessionController extends Controller
         SessionStateTransitionService $transitions,
         AuditLogger $auditLogger,
     ): JsonResponse {
-        $session = $this->resolveSession($request, $id);
+        $session = $this->findSession->execute($id);
         if ($forbidden = $this->forbiddenIfCannot($request, 'update', $session)) {
             return $forbidden;
         }
 
-        if ((string) $session->status !== SessionStateTransitionService::STATUS_FAILED) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot be retried from its current state.', 409);
-        }
-
-        if ($limitError = $this->activeSessionLimitEnvelope((int) $session->user_id, (int) $session->id)) {
-            return $limitError;
-        }
-
         $before = ['phase' => (int) $session->phase, 'status' => (string) $session->status];
-        $retried = $transitions->retry($session->id, [
-            'error_code' => null,
-            'error_summary' => null,
-        ]);
+        $result = $this->workflow->retry($session, $transitions);
 
-        if (! $retried) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot be retried from its current state.', 409);
+        if ($result instanceof JsonResponse) {
+            return $result;
         }
 
-        $session->refresh();
-        $queued = $this->dispatchByPhase((int) $session->phase, (int) $session->id);
+        $queued = (bool) $result;
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -693,49 +559,16 @@ class RepoAnalysisSessionController extends Controller
 
     public function restartFromBeginning(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
     {
-        $session = $this->resolveSession($request, $id);
+        $session = $this->findSession->execute($id);
         if ($forbidden = $this->forbiddenIfCannot($request, 'update', $session)) {
             return $forbidden;
         }
 
-        if (in_array((string) $session->status, [
-            SessionStateTransitionService::STATUS_SNAPSHOTTING,
-            SessionStateTransitionService::STATUS_PLANNING,
-            SessionStateTransitionService::STATUS_EXECUTING,
-            SessionStateTransitionService::STATUS_VALIDATING,
-            SessionStateTransitionService::STATUS_REPORTING,
-        ], true)) {
-            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Session cannot restart while running.', 409);
-        }
-
-        if ($limitError = $this->activeSessionLimitEnvelope((int) $session->user_id, (int) $session->id)) {
-            return $limitError;
-        }
-
         $before = ['phase' => (int) $session->phase, 'status' => (string) $session->status];
-        $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
-        $metadata['restart_count'] = ((int) ($metadata['restart_count'] ?? 0)) + 1;
-        unset($metadata['operator_action_required'], $metadata['operator_action_details'], $metadata['drift_decision']);
 
-        $session->events()->delete();
-        $session->tasks()->delete();
-        $session->artifacts()->delete();
-        $session->reports()->delete();
-
-        $session->update([
-            'phase' => 0,
-            'status' => SessionStateTransitionService::STATUS_SETUP,
-            'snapshot_hash' => null,
-            'manifest_stats_json' => [],
-            'report_summary_json' => [],
-            'error_code' => null,
-            'error_summary' => null,
-            'started_at' => null,
-            'finished_at' => null,
-            'metadata_json' => $metadata,
-        ]);
-
-        GenerateRepoSnapshotJob::dispatch((int) $session->id);
+        if ($error = $this->workflow->restartFromBeginning($session)) {
+            return $error;
+        }
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -756,9 +589,12 @@ class RepoAnalysisSessionController extends Controller
         ], 202);
     }
 
-    public function events(RepoAnalysisEventsRequest $request, int $id): JsonResponse
-    {
-        $session = $this->resolveSession($request, $id, true);
+    public function events(
+        RepoAnalysisEventsRequest $request,
+        int $id,
+        GetLatestEventSequenceAction $getLatestSequence,
+    ): JsonResponse {
+        $session = $this->findSession->execute($id, true);
         if ($forbidden = $this->forbiddenIfCannot($request, 'view', $session)) {
             return $forbidden;
         }
@@ -767,9 +603,7 @@ class RepoAnalysisSessionController extends Controller
         $limit = (int) ($request->validated()['limit'] ?? 100);
 
         $events = EventWriter::readSinceSequence((int) $session->id, $sinceSequence, $limit);
-        $latestSequence = (int) (RepoAnalysisEvent::query()
-            ->where('repo_analysis_session_id', $session->id)
-            ->max('sequence') ?? 0);
+        $latestSequence = $getLatestSequence->execute((int) $session->id);
 
         return response()->json([
             'data' => $events->map(fn ($event): array => [
@@ -791,258 +625,63 @@ class RepoAnalysisSessionController extends Controller
         ]);
     }
 
-    public function tasks(Request $request, int $id): JsonResponse
+    public function tasks(Request $request, int $id, ListRepoAnalysisTasksAction $listTasks): JsonResponse
     {
-        $session = $this->resolveSession($request, $id, true);
+        $session = $this->findSession->execute($id, true);
         if ($forbidden = $this->forbiddenIfCannot($request, 'view', $session)) {
             return $forbidden;
         }
 
-        $this->reconcileStaleRunningTasks($session);
+        $this->reportService->reconcileStaleRunningTasks($session);
 
-        $limit = min(200, max(1, (int) $request->integer('limit', 100)));
-
-        $tasks = RepoAnalysisTask::query()
-            ->where('repo_analysis_session_id', $session->id)
-            ->orderBy('id')
-            ->limit($limit)
-            ->get();
+        $limit = (int) $request->integer('limit', 100);
+        $tasks = $listTasks->execute((int) $session->id, $limit);
 
         return response()->json([
             'data' => $tasks->values(),
             'meta' => [
                 'returned' => $tasks->count(),
-                'limit' => $limit,
+                'limit' => min(200, max(1, $limit)),
             ],
         ]);
     }
 
-    public function artifacts(Request $request, int $id): JsonResponse
+    public function artifacts(Request $request, int $id, ListRepoAnalysisArtifactsAction $listArtifacts): JsonResponse
     {
-        $session = $this->resolveSession($request, $id, true);
+        $session = $this->findSession->execute($id, true);
         if ($forbidden = $this->forbiddenIfCannot($request, 'view', $session)) {
             return $forbidden;
         }
-        $limit = min(200, max(1, (int) $request->integer('limit', 100)));
 
-        $artifacts = RepoAnalysisArtifact::query()
-            ->where('repo_analysis_session_id', $session->id)
-            ->orderBy('id')
-            ->limit($limit)
-            ->get();
+        $limit = (int) $request->integer('limit', 100);
+        $artifacts = $listArtifacts->execute((int) $session->id, $limit);
 
         return response()->json([
             'data' => $artifacts->values(),
             'meta' => [
                 'returned' => $artifacts->count(),
-                'limit' => $limit,
+                'limit' => min(200, max(1, $limit)),
             ],
         ]);
     }
 
-    public function reports(Request $request, int $id): JsonResponse
+    public function reports(Request $request, int $id, ListRepoAnalysisReportsAction $listReports): JsonResponse
     {
-        $session = $this->resolveSession($request, $id, true);
+        $session = $this->findSession->execute($id, true);
         if ($forbidden = $this->forbiddenIfCannot($request, 'view', $session)) {
             return $forbidden;
         }
-        $limit = min(200, max(1, (int) $request->integer('limit', 100)));
 
-        $reports = RepoAnalysisReport::query()
-            ->where('repo_analysis_session_id', $session->id)
-            ->latest('id')
-            ->limit($limit)
-            ->get();
+        $limit = (int) $request->integer('limit', 100);
+        $reports = $listReports->execute((int) $session->id, $limit);
 
         return response()->json([
             'data' => $reports->values(),
             'meta' => [
                 'returned' => $reports->count(),
-                'limit' => $limit,
+                'limit' => min(200, max(1, $limit)),
             ],
         ]);
-    }
-
-    private function resolveSession(Request $request, int $id, bool $withTrashed = false): RepoAnalysisSession
-    {
-        $query = RepoAnalysisSession::query();
-        if ($withTrashed) {
-            $query->withTrashed();
-        }
-
-        /** @var RepoAnalysisSession $session */
-        $session = $query->findOrFail($id);
-
-        return $session;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function collectSessionFilePaths(RepoAnalysisSession $session): array
-    {
-        $paths = [];
-
-        foreach ($session->reports()->get(['markdown_export_path', 'json_export_path']) as $report) {
-            foreach ([(string) ($report->markdown_export_path ?? ''), (string) ($report->json_export_path ?? '')] as $path) {
-                if ($path !== '') {
-                    $paths[] = $path;
-                }
-            }
-        }
-
-        foreach ($session->artifacts()->get(['storage_path', 'payload_json']) as $artifact) {
-            $storagePath = (string) ($artifact->storage_path ?? '');
-            if ($storagePath !== '') {
-                $paths[] = $storagePath;
-            }
-
-            $warningArtifactPath = (string) data_get($artifact->payload_json, 'warning_artifact_path', ''); // @phpstan-ignore property.notFound
-            if ($warningArtifactPath !== '') {
-                $paths[] = $warningArtifactPath;
-            }
-        }
-
-        foreach ([
-            (string) data_get($session->report_summary_json, 'markdown_export_path', ''),
-            (string) data_get($session->report_summary_json, 'json_export_path', ''),
-        ] as $path) {
-            if ($path !== '') {
-                $paths[] = $path;
-            }
-        }
-
-        return array_values(array_unique($paths));
-    }
-
-    /**
-     * @param  array<int, string>  $allowedRoots
-     */
-    private function deletePathIfAllowed(string $path, array $allowedRoots): bool
-    {
-        $normalizedPath = trim($path);
-        if ($normalizedPath === '' || ! str_starts_with($normalizedPath, '/')) {
-            return false;
-        }
-
-        $normalizedPath = rtrim($normalizedPath, '/');
-        if ($normalizedPath === '') {
-            return false;
-        }
-
-        if (! $this->isPathWithinRoots($normalizedPath, $allowedRoots)) {
-            return false;
-        }
-
-        foreach ($allowedRoots as $root) {
-            if ($normalizedPath === rtrim($root, '/')) {
-                return false;
-            }
-        }
-
-        if (is_file($normalizedPath)) {
-            return File::delete($normalizedPath);
-        }
-
-        if (is_dir($normalizedPath)) {
-            return File::deleteDirectory($normalizedPath);
-        }
-
-        return false;
-    }
-
-    /**
-     * @param  array<int, string>  $allowedRoots
-     */
-    private function isPathWithinRoots(string $path, array $allowedRoots): bool
-    {
-        foreach ($allowedRoots as $root) {
-            $normalizedRoot = rtrim($root, '/');
-            if ($normalizedRoot === '') {
-                continue;
-            }
-
-            if ($path === $normalizedRoot || str_starts_with($path, $normalizedRoot.'/')) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function resolvedProjectRoot(string $projectDirectory): ?string
-    {
-        if ($projectDirectory === '' || ! str_starts_with($projectDirectory, '/')) {
-            return null;
-        }
-
-        $resolved = realpath($projectDirectory);
-        if ($resolved === false || ! is_dir($resolved)) {
-            return null;
-        }
-
-        return rtrim($resolved, '/');
-    }
-
-    private function transformSession(RepoAnalysisSession $session): array
-    {
-        return [
-            'id' => (int) $session->id,
-            'user_id' => (int) $session->user_id,
-            'name' => $session->name,
-            'project_directory' => $session->project_directory,
-            'analyzer_profile' => $session->analyzer_profile,
-            'runner_type' => $session->runner_type,
-            'phase' => (int) $session->phase,
-            'status' => (string) $session->status,
-            'snapshot_hash' => $session->snapshot_hash,
-            'error_code' => $session->error_code,
-            'error_summary' => $session->error_summary,
-            'manifest_stats' => $session->manifest_stats_json ?? [],
-            'report_summary' => $session->report_summary_json ?? [],
-            'metadata' => $session->metadata_json ?? [],
-            'started_at' => optional($session->started_at)?->toIso8601String(),
-            'finished_at' => optional($session->finished_at)?->toIso8601String(),
-            'created_at' => optional($session->created_at)?->toIso8601String(),
-            'updated_at' => optional($session->updated_at)?->toIso8601String(),
-            'deleted_at' => optional($session->deleted_at)?->toIso8601String(),
-        ];
-    }
-
-    private function activeSessionLimitEnvelope(int $ownerUserId, int $excludeSessionId): ?JsonResponse
-    {
-        $maxActiveSessions = max(1, (int) config('repo_analysis.user.max_active_sessions_per_user', 2));
-
-        $activeCount = RepoAnalysisSession::query()
-            ->where('user_id', $ownerUserId)
-            ->where('id', '!=', $excludeSessionId)
-            ->whereNotIn('status', [
-                SessionStateTransitionService::STATUS_COMPLETED,
-                SessionStateTransitionService::STATUS_FAILED,
-            ])
-            ->count();
-
-        if ($activeCount < $maxActiveSessions) {
-            return null;
-        }
-
-        return ErrorEnvelope::make(
-            'ACTIVE_SESSION_LIMIT_REACHED',
-            sprintf('You already have %d active code analysis sessions.', $maxActiveSessions),
-            409
-        );
-    }
-
-    private function dispatchByPhase(int $phase, int $sessionId): bool
-    {
-        return match ($phase) {
-            1 => (bool) GenerateRepoSnapshotJob::dispatch($sessionId),
-            2 => (bool) PlanRepoAnalysisTasksJob::dispatch($sessionId),
-            3 => (bool) ExecuteRepoAnalysisTaskJob::dispatch($sessionId),
-            4 => (bool) ValidateRepoAnalysisCoverageJob::dispatch($sessionId),
-            5 => (bool) GenerateRepoAnalysisReportJob::dispatch($sessionId),
-            default => false,
-        };
     }
 
     private function forbiddenIfCannot(Request $request, string $ability, RepoAnalysisSession $session): ?JsonResponse
@@ -1057,64 +696,5 @@ class RepoAnalysisSessionController extends Controller
         }
 
         return null;
-    }
-
-    private function reconcileStaleRunningTasks(RepoAnalysisSession $session): void
-    {
-        if (! in_array((string) $session->status, [
-            SessionStateTransitionService::STATUS_PAUSED,
-            SessionStateTransitionService::STATUS_FAILED,
-            SessionStateTransitionService::STATUS_COMPLETED,
-        ], true)) {
-            return;
-        }
-
-        $runningTasks = RepoAnalysisTask::query()
-            ->where('repo_analysis_session_id', $session->id)
-            ->where('status', 'running')
-            ->orderBy('id')
-            ->get();
-
-        if ($runningTasks->isEmpty()) {
-            return;
-        }
-
-        $writer = new EventWriter($session);
-        $defaultErrorCode = (string) $session->error_code === 'EXECUTE_TASK_TIMEOUT'
-            ? 'EXECUTE_TASK_TIMEOUT'
-            : 'EXECUTE_TASK_INTERRUPTED';
-
-        foreach ($runningTasks as $task) {
-            $metadata = is_array($task->metadata_json) ? $task->metadata_json : [];
-            $metadata['state_reconciled_at'] = CarbonImmutable::now('UTC')->toIso8601String();
-            $metadata['state_reconciled_reason'] = 'stale_running_task_while_session_not_executing';
-
-            $errorCode = (string) ($task->error_code ?: $defaultErrorCode);
-            $errorSummary = (string) ($task->error_summary ?: sprintf(
-                'Task %s was still marked running while session is %s. Status reconciled to failed.',
-                (string) $task->task_key,
-                (string) $session->status
-            ));
-
-            $task->status = 'failed';
-            $task->attempt_count = max(1, (int) $task->attempt_count);
-            $task->error_code = $errorCode;
-            $task->error_summary = $errorSummary;
-            $task->finished_at = Carbon::now('UTC');
-            $task->metadata_json = $metadata;
-            $task->save();
-
-            $writer->append('task_failed', [
-                'task_key' => (string) $task->task_key,
-                'failure_class' => 'state_reconciled',
-                'failure_message' => $errorSummary,
-                'timed_out' => $errorCode === 'EXECUTE_TASK_TIMEOUT',
-            ], [
-                'phase' => (int) $session->phase,
-                'status' => (string) $session->status,
-                'error_code' => $errorCode,
-                'error_summary' => $errorSummary,
-            ]);
-        }
     }
 }

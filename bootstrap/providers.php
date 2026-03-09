@@ -8,4 +8,5 @@ return [
     App\Providers\ConnectorServiceProvider::class,
     App\Providers\MemoryServiceProvider::class,
     App\Providers\MessengerServiceProvider::class,
+    App\Providers\OpenTelemetryServiceProvider::class,
 ];

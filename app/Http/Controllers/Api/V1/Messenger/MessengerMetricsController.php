@@ -4,31 +4,23 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Messenger;
 
+use App\Actions\Connector\ListConnectorStatusByProviderAction;
 use App\Http\Controllers\Controller;
-use App\Models\ConnectorAccount;
 use App\Support\Messenger\MetricsCollector;
 use Illuminate\Http\JsonResponse;
 
 class MessengerMetricsController extends Controller
 {
     public function __construct(
-        private readonly MetricsCollector $metricsCollector
+        private readonly MetricsCollector $metricsCollector,
+        private readonly ListConnectorStatusByProviderAction $listConnectorStatusByProvider,
     ) {}
 
     public function index(): JsonResponse
     {
         $metrics = $this->metricsCollector->getMetrics();
 
-        $connectorStatus = ConnectorAccount::query()
-            ->select('id', 'provider', 'name', 'status')
-            ->get()
-            ->groupBy('provider')
-            ->map(fn ($accounts) => $accounts->map(fn ($account) => [
-                'id' => $account->id,
-                'name' => $account->name,
-                'status' => $account->status,
-            ])->values())
-            ->toArray();
+        $connectorStatus = $this->listConnectorStatusByProvider->execute();
 
         return response()->json([
             'data' => [

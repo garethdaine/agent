@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Connectors;
 
+use App\Actions\Connector\CreateConnectorConnectionAction;
+use App\Actions\Connector\EnsureTeamVaultKeyAction;
+use App\Actions\Connector\FindAgentConnectorAction;
+use App\Actions\Connector\FindConnectorConnectionAction;
+use App\Actions\Connector\UpdateConnectorConnectionAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Connectors\ConnectRequest;
 use App\Http\Resources\Connectors\ConnectionHealthResource;
 use App\Http\Resources\Connectors\ConnectionResource;
-use App\Models\AgentConnector;
 use App\Models\AgentConnectorConnection;
 use App\Support\Agent\FeatureFlagManager;
 use App\Support\Connectors\Auth\ApiKeyAuthManager;
@@ -18,7 +22,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 
 class ConnectorConnectionController extends Controller
 {
@@ -27,13 +30,18 @@ class ConnectorConnectionController extends Controller
         private readonly OAuthFlowManager $oauthManager,
         private readonly ApiKeyAuthManager $apiKeyManager,
         private readonly ConnectorVaultEncrypter $encrypter,
+        private readonly FindAgentConnectorAction $findAgentConnector,
+        private readonly CreateConnectorConnectionAction $createConnectorConnection,
+        private readonly FindConnectorConnectionAction $findConnectorConnection,
+        private readonly UpdateConnectorConnectionAction $updateConnectorConnection,
+        private readonly EnsureTeamVaultKeyAction $ensureTeamVaultKey,
     ) {}
 
     public function connect(ConnectRequest $request, string $id): JsonResponse
     {
         $this->ensureConnectorsEnabled();
 
-        $connector = AgentConnector::findOrFail($id);
+        $connector = $this->findAgentConnector->execute($id);
         /** @var \App\Models\User $user */
         $user = $request->user();
         $team = $user->currentTeam;
@@ -43,16 +51,13 @@ class ConnectorConnectionController extends Controller
         }
 
         // Ensure team has a vault key
-        if (! $team->connector_vault_key) {
-            $team->update(['connector_vault_key' => Str::random(64)]);
-            $team->refresh();
-        }
+        $this->ensureTeamVaultKey->execute($team);
 
         if ($this->isOAuthConnector($connector)) {
             $authUrl = $this->oauthManager->generateAuthorizationUrl($connector, $team, $user);
 
             // Create pending connection
-            AgentConnectorConnection::create([
+            $this->createConnectorConnection->execute([
                 'team_id' => $team->id,
                 'connector_id' => $connector->id,
                 'status' => AgentConnectorConnection::STATUS_PENDING,
@@ -73,7 +78,7 @@ class ConnectorConnectionController extends Controller
             apiSecret: $request->validated('api_secret'),
         );
 
-        $connection = AgentConnectorConnection::create([
+        $connection = $this->createConnectorConnection->execute([
             'team_id' => $team->id,
             'connector_id' => $connector->id,
             'status' => AgentConnectorConnection::STATUS_CONNECTED,
@@ -98,14 +103,11 @@ class ConnectorConnectionController extends Controller
             abort(403, 'No current team selected.');
         }
 
-        $connection = AgentConnectorConnection::where('team_id', $team->id)
-            ->where('connector_id', $id)
-            ->whereNot('status', AgentConnectorConnection::STATUS_DISCONNECTED)
-            ->firstOrFail();
+        $connection = $this->findConnectorConnection->findActiveByTeamAndConnector($team->id, $id);
 
         Gate::authorize('manage', $connection);
 
-        $connection->update([
+        $this->updateConnectorConnection->execute($connection, [
             'status' => AgentConnectorConnection::STATUS_DISCONNECTED,
             'disconnected_by' => $user->id,
             'disconnected_at' => now(),
@@ -126,9 +128,7 @@ class ConnectorConnectionController extends Controller
             abort(403, 'No current team selected.');
         }
 
-        $connection = AgentConnectorConnection::where('team_id', $team->id)
-            ->where('connector_id', $id)
-            ->firstOrFail();
+        $connection = $this->findConnectorConnection->findByTeamAndConnector($team->id, $id);
 
         $connector = $connection->connector;
         $startTime = microtime(true);
@@ -172,9 +172,7 @@ class ConnectorConnectionController extends Controller
             abort(403, 'No current team selected.');
         }
 
-        $connection = AgentConnectorConnection::where('team_id', $team->id)
-            ->where('connector_id', $id)
-            ->firstOrFail();
+        $connection = $this->findConnectorConnection->findByTeamAndConnector($team->id, $id);
 
         return (new ConnectionHealthResource($connection))->response();
     }

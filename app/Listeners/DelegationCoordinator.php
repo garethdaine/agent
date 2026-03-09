@@ -12,6 +12,7 @@ use App\Events\Office\AgentActivityChanged;
 use App\Models\DelegationAttempt;
 use App\Models\DelegationGraph;
 use App\Models\DelegationTask;
+use App\Services\Delegation\PermissionAttenuationService;
 use App\Support\Agent\FeatureFlagManager;
 use App\Support\Delegation\AttemptSpawner;
 use App\Support\Delegation\DelegateeAssigner;
@@ -42,7 +43,8 @@ class DelegationCoordinator
         private readonly AttemptSpawner $spawner,
         private readonly VerificationPipeline $pipeline,
         private readonly TaskStateTransitionService $taskTransition,
-        private readonly GraphStateTransitionService $graphTransition
+        private readonly GraphStateTransitionService $graphTransition,
+        private readonly PermissionAttenuationService $permissionAttenuation,
     ) {}
 
     /**
@@ -351,6 +353,46 @@ class DelegationCoordinator
         if ($transitioned) {
             event(new DelegationGraphCompleted($graph->fresh(), $finalStatus));
         }
+    }
+
+    /**
+     * Create a sub-delegation task under a parent task.
+     *
+     * Applies permission attenuation at the delegation boundary
+     * to ensure the child never exceeds the parent's permissions.
+     *
+     * @param  array<string, mixed>  $childContract
+     * @return DelegationTask|null The created child task, or null if max depth exceeded or validation failed
+     */
+    public function createSubDelegation(
+        DelegationTask $parentTask,
+        array $childContract,
+        string $childName,
+        int $maxDepth = 3
+    ): ?DelegationTask {
+        // Check delegation depth limit
+        $currentDepth = $parentTask->getDelegationDepth();
+        if ($currentDepth >= $maxDepth) {
+            return null;
+        }
+
+        // Validate permissions don't exceed parent
+        $parentContract = $parentTask->contract_json ?? [];
+        $violations = $this->permissionAttenuation->validate($parentContract, $childContract);
+        if ($violations !== []) {
+            // Auto-attenuate instead of rejecting
+            $childContract = $this->permissionAttenuation->attenuate($parentContract, $childContract);
+        }
+
+        // Create the child task
+        return DelegationTask::create([
+            'delegation_graph_id' => $parentTask->delegation_graph_id,
+            'parent_delegation_task_id' => $parentTask->id,
+            'name' => $childName,
+            'status' => DelegationTask::STATUS_READY,
+            'sequence_order' => $parentTask->sequence_order,
+            'contract_json' => $childContract,
+        ]);
     }
 
     private function broadcastTaskCompleted(DelegationTask $task): void

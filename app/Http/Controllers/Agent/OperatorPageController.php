@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Agent;
 
+use App\Actions\Agent\FindWorkflowJobAction;
 use App\Http\Controllers\Controller;
-use App\Models\AgentJob;
 use App\Repositories\Projection\WorkflowReliabilityCurrentRepository;
 use App\Services\Reliability\WorkflowGovernanceSnapshotService;
 use App\Services\Telemetry\ActiveBuildFreshnessService;
@@ -163,10 +163,7 @@ class OperatorPageController extends Controller
             activeProjectionBuildId: $activeBuildId,
         );
 
-        $job = AgentJob::query()
-            ->whereNull('deleted_at')
-            ->where('workflow_key', $workflowKey)
-            ->first();
+        $job = app(FindWorkflowJobAction::class)->execute($workflowKey);
 
         $canPauseResume = $job !== null && Gate::forUser($request->user())->allows('workflow.resume', $job);
 

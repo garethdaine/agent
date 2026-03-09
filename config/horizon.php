@@ -217,7 +217,7 @@ return [
     */
 
     'defaults' => [
-        'supervisor-1' => [
+        'supervisor-long-running' => [
             'connection' => 'redis',
             'queue' => ['agent'],
             'balance' => 'auto',
@@ -225,10 +225,10 @@ return [
             'maxProcesses' => max(1, min(8, (int) env('HORIZON_AGENT_MAX_PROCESSES', 2))),
             'maxTime' => 0,
             'maxJobs' => 0,
-            'memory' => 128,
+            'memory' => 256, // 256MB: agent runs are long-lived processes with large context windows
             'tries' => 1,
             'backoff' => 0,
-            'timeout' => 86500,
+            'timeout' => 86500, // ~24h: agent runs may execute multi-hour autonomous sessions
             'nice' => 0,
         ],
         'supervisor-interrogation' => [
@@ -239,10 +239,10 @@ return [
             'maxProcesses' => max(1, min(8, (int) env('HORIZON_INTERROGATION_MAX_PROCESSES', 2))),
             'maxTime' => 0,
             'maxJobs' => 0,
-            'memory' => 128,
+            'memory' => 256, // 256MB: interrogation sessions process large codebases with AI analysis
             'tries' => 1,
             'backoff' => 0,
-            'timeout' => (int) env('HORIZON_INTERROGATION_TIMEOUT', 7800),
+            'timeout' => (int) env('HORIZON_INTERROGATION_TIMEOUT', 7800), // ~2h: full codebase interrogation with multiple AI passes
             'nice' => 0,
         ],
         'supervisor-messenger' => [
@@ -323,10 +323,10 @@ return [
             'maxProcesses' => max(1, min(4, (int) env('HORIZON_REPO_ANALYSIS_MAX_PROCESSES', 2))),
             'maxTime' => 0,
             'maxJobs' => 0,
-            'memory' => 128,
+            'memory' => 256, // 256MB: repo analysis loads full file trees and AST data into memory
             'tries' => 1,
             'backoff' => 0,
-            'timeout' => (int) env('HORIZON_REPO_ANALYSIS_TIMEOUT', $defaultRepoAnalysisTimeout),
+            'timeout' => (int) env('HORIZON_REPO_ANALYSIS_TIMEOUT', $defaultRepoAnalysisTimeout), // Dynamic: AI task timeout + buffer, up to 6h for large repos
             'nice' => 0,
         ],
         'supervisor-subagent' => [
@@ -337,10 +337,10 @@ return [
             'maxProcesses' => max(1, min(4, (int) env('HORIZON_SUBAGENT_MAX_PROCESSES', 2))),
             'maxTime' => 0,
             'maxJobs' => 0,
-            'memory' => 128,
+            'memory' => 256, // 256MB: subagent processes mirror parent agent memory requirements
             'tries' => 1,
             'backoff' => 0,
-            'timeout' => (int) env('HORIZON_SUBAGENT_TIMEOUT', 3600),
+            'timeout' => (int) env('HORIZON_SUBAGENT_TIMEOUT', 3600), // 1h: subagent tasks are scoped portions of parent agent work
             'nice' => 0,
         ],
         'supervisor-skill-validation' => [
@@ -360,7 +360,7 @@ return [
         'supervisor-tunnel' => [
             'connection' => 'redis',
             'queue' => ['tunnel'],
-            'balance' => 'false',
+            'balance' => false,
             'maxProcesses' => 1,
             'maxTime' => 0,
             'maxJobs' => 0,
@@ -430,7 +430,7 @@ return [
 
     'environments' => [
         'production' => [
-            'supervisor-1' => [
+            'supervisor-long-running' => [
                 'maxProcesses' => 10,
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
@@ -506,7 +506,7 @@ return [
         ],
 
         'local' => [
-            'supervisor-1' => [
+            'supervisor-long-running' => [
                 //
             ],
             'supervisor-interrogation' => [

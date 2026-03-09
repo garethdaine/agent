@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * @property int $id
  * @property int $delegation_graph_id
+ * @property int|null $parent_delegation_task_id
  * @property string $name
  * @property string $status
  * @property int $sequence_order
@@ -33,6 +33,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read \App\Models\DelegateeProfile|null $assignedProfile
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationTask> $dependencies
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationTask> $dependents
+ * @property-read \App\Models\DelegationTask|null $parentTask
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\DelegationTask> $childTasks
  *
  * @mixin \Illuminate\Database\Eloquent\Builder
  */
@@ -42,6 +44,7 @@ class DelegationTask extends Model
 
     protected $fillable = [
         'delegation_graph_id',
+        'parent_delegation_task_id',
         'name',
         'status',
         'sequence_order',
@@ -105,6 +108,57 @@ class DelegationTask extends Model
     public function assignedProfile(): BelongsTo
     {
         return $this->belongsTo(DelegateeProfile::class, 'assigned_delegatee_profile_id');
+    }
+
+    /**
+     * The parent task in a sub-delegation chain.
+     */
+    public function parentTask(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_delegation_task_id');
+    }
+
+    /**
+     * Child tasks created via sub-delegation.
+     */
+    public function childTasks(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_delegation_task_id');
+    }
+
+    /**
+     * Get the delegation depth (0 = root task, 1 = first sub-delegation, etc.)
+     */
+    public function getDelegationDepth(): int
+    {
+        $depth = 0;
+        $task = $this;
+        while ($task->parent_delegation_task_id !== null) {
+            $depth++;
+            $task = $task->parentTask;
+            if ($task === null) {
+                break;
+            }
+        }
+
+        return $depth;
+    }
+
+    /**
+     * Get the root task of the delegation chain.
+     */
+    public function getRootTask(): self
+    {
+        $task = $this;
+        while ($task->parent_delegation_task_id !== null) {
+            $parent = $task->parentTask;
+            if ($parent === null) {
+                break;
+            }
+            $task = $parent;
+        }
+
+        return $task;
     }
 
     /**

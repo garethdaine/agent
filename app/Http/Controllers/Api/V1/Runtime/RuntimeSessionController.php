@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Runtime;
 
+use App\Actions\Runtime\FindRuntimeSessionAction;
+use App\Actions\Runtime\ListRuntimeSessionsAction;
 use App\Http\Controllers\Controller;
-use App\Models\Runtime\RuntimeSession;
 use App\Services\Runtime\RuntimeSessionManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,9 @@ use Illuminate\Http\Request;
 class RuntimeSessionController extends Controller
 {
     public function __construct(
-        private RuntimeSessionManager $sessionManager
+        private readonly RuntimeSessionManager $sessionManager,
+        private readonly ListRuntimeSessionsAction $listSessions,
+        private readonly FindRuntimeSessionAction $findSession,
     ) {}
 
     /**
@@ -21,12 +24,10 @@ class RuntimeSessionController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = RuntimeSession::query()
-            ->forUser($request->user())
-            ->orderBy('started_at', 'desc');
-
-        $perPage = min(100, max(1, $request->integer('per_page', 20)));
-        $sessions = $query->paginate($perPage)->withQueryString();
+        $sessions = $this->listSessions->execute(
+            $request->user(),
+            $request->integer('per_page', 20),
+        );
 
         return response()->json([
             'data' => $sessions->items(),
@@ -50,10 +51,11 @@ class RuntimeSessionController extends Controller
      */
     public function show(Request $request, string $id): JsonResponse
     {
-        $session = RuntimeSession::query()
-            ->forUser($request->user())
-            ->with(['turns.toolCalls', 'policySnapshots'])
-            ->findOrFail($id);
+        $session = $this->findSession->execute(
+            $request->user(),
+            $id,
+            ['turns.toolCalls', 'policySnapshots'],
+        );
 
         return response()->json([
             'data' => $session,
@@ -65,7 +67,7 @@ class RuntimeSessionController extends Controller
      */
     public function stop(Request $request, string $id): JsonResponse
     {
-        $session = RuntimeSession::query()->forUser($request->user())->findOrFail($id);
+        $session = $this->findSession->execute($request->user(), $id);
 
         $this->sessionManager->stopSession($session);
 

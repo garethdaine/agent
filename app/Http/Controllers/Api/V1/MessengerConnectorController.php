@@ -4,6 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Connector\CheckDuplicateConnectorAction;
+use App\Actions\Connector\CreateConnectorAccountAction;
+use App\Actions\Connector\DeleteConnectorAccountAction;
+use App\Actions\Connector\FindConnectorAccountAction;
+use App\Actions\Connector\FindDuplicateConnectorWithTrashedAction;
+use App\Actions\Connector\ForceDeleteConnectorAccountAction;
+use App\Actions\Connector\ListConnectorAccountsAction;
+use App\Actions\Connector\UpdateConnectorAccountAction;
+use App\Actions\Connector\UpdateConnectorStatusAction;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MessengerConnectorResource;
 use App\Models\ConnectorAccount;
@@ -18,6 +27,18 @@ use Illuminate\Validation\Rule;
 
 class MessengerConnectorController extends Controller
 {
+    public function __construct(
+        private readonly ListConnectorAccountsAction $listConnectorAccounts,
+        private readonly FindConnectorAccountAction $findConnectorAccount,
+        private readonly CheckDuplicateConnectorAction $checkDuplicateConnector,
+        private readonly CreateConnectorAccountAction $createConnectorAccount,
+        private readonly UpdateConnectorAccountAction $updateConnectorAccount,
+        private readonly DeleteConnectorAccountAction $deleteConnectorAccount,
+        private readonly UpdateConnectorStatusAction $updateConnectorStatus,
+        private readonly FindDuplicateConnectorWithTrashedAction $findDuplicateWithTrashed,
+        private readonly ForceDeleteConnectorAccountAction $forceDeleteConnectorAccount,
+    ) {}
+
     public function schema(ConnectorCredentialManager $credentialManager): JsonResponse
     {
         return response()->json([
@@ -27,34 +48,6 @@ class MessengerConnectorController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = ConnectorAccount::query();
-
-        $provider = $request->string('provider')->toString();
-        $validProviders = [
-            ConnectorAccount::PROVIDER_SLACK,
-            ConnectorAccount::PROVIDER_TELEGRAM,
-            ConnectorAccount::PROVIDER_DISCORD,
-            ConnectorAccount::PROVIDER_WHATSAPP,
-        ];
-        if (in_array($provider, $validProviders, true)) {
-            $query->where('provider', $provider);
-        }
-
-        $status = $request->string('status')->toString();
-        $validStatuses = [
-            ConnectorAccount::STATUS_CONNECTED,
-            ConnectorAccount::STATUS_DISCONNECTED,
-            ConnectorAccount::STATUS_ERROR,
-        ];
-        if (in_array($status, $validStatuses, true)) {
-            $query->where('status', $status);
-        }
-
-        $connectionMode = $request->string('connection_mode')->toString();
-        if (in_array($connectionMode, [ConnectorAccount::MODE_LOCAL, ConnectorAccount::MODE_WEBHOOK], true)) {
-            $query->where('connection_mode', $connectionMode);
-        }
-
         $sort = $request->string('sort', 'created_at')->toString();
         $dir = strtolower($request->string('dir', 'desc')->toString()) === 'asc' ? 'asc' : 'desc';
 
@@ -62,14 +55,15 @@ class MessengerConnectorController extends Controller
             $sort = 'created_at';
         }
 
-        $query->orderBy($sort, $dir);
-
-        if ($request->boolean('with_session_count')) {
-            $query->withCount('sessions');
-        }
-
-        $perPage = min(100, max(1, $request->integer('per_page', 25)));
-        $connectors = $query->paginate($perPage)->withQueryString();
+        $connectors = $this->listConnectorAccounts->execute([
+            'provider' => $request->string('provider')->toString(),
+            'status' => $request->string('status')->toString(),
+            'connection_mode' => $request->string('connection_mode')->toString(),
+            'sort' => $sort,
+            'dir' => $dir,
+            'with_session_count' => $request->boolean('with_session_count'),
+            'per_page' => $request->integer('per_page', 25),
+        ]);
 
         return response()->json([
             'data' => MessengerConnectorResource::collection($connectors->items()),
@@ -141,10 +135,7 @@ class MessengerConnectorController extends Controller
             $accountKey = $credentialManager->deriveAccountKey($provider, $normalizedCredentials);
         }
 
-        $existing = ConnectorAccount::query()
-            ->where('provider', $provider)
-            ->where('account_key', $accountKey)
-            ->exists();
+        $existing = $this->checkDuplicateConnector->execute($provider, $accountKey);
 
         if ($existing) {
             return ErrorEnvelope::make('DUPLICATE_CONNECTOR', 'A connector with this provider and account key already exists.', 409, [
@@ -160,7 +151,7 @@ class MessengerConnectorController extends Controller
             $webhookSecret = (string) ($credentialManager->inferWebhookSecret($provider, $normalizedCredentials) ?? '');
         }
 
-        $connector = ConnectorAccount::create([
+        $connector = $this->createConnectorAccount->execute([
             'provider' => $provider,
             'name' => $validated['name'],
             'credentials' => $normalizedCredentials,
@@ -189,13 +180,7 @@ class MessengerConnectorController extends Controller
 
     public function show(Request $request, string $id): JsonResponse
     {
-        $query = ConnectorAccount::query();
-
-        if ($request->boolean('with_session_count')) {
-            $query->withCount('sessions');
-        }
-
-        $connector = $query->findOrFail($id);
+        $connector = $this->findConnectorAccount->execute($id, $request->boolean('with_session_count'));
 
         return response()->json([
             'data' => new MessengerConnectorResource($connector),
@@ -204,7 +189,7 @@ class MessengerConnectorController extends Controller
 
     public function update(Request $request, string $id, AuditLogger $auditLogger): JsonResponse
     {
-        $connector = ConnectorAccount::findOrFail($id);
+        $connector = $this->findConnectorAccount->execute($id);
         $credentialManager = app(ConnectorCredentialManager::class);
 
         $validator = Validator::make($request->all(), [
@@ -257,11 +242,7 @@ class MessengerConnectorController extends Controller
                 $accountKey = $credentialManager->deriveAccountKey($provider, $normalizedCredentials);
             }
 
-            $duplicate = ConnectorAccount::query()
-                ->where('provider', $provider)
-                ->where('account_key', $accountKey)
-                ->where('id', '!=', $connector->id)
-                ->exists();
+            $duplicate = $this->checkDuplicateConnector->execute($provider, $accountKey, $connector->id);
 
             if ($duplicate) {
                 return ErrorEnvelope::make('DUPLICATE_CONNECTOR', 'A connector with this provider and account key already exists.', 409, [
@@ -299,8 +280,7 @@ class MessengerConnectorController extends Controller
             }
         }
 
-        $connector->fill($validated);
-        $connector->save();
+        $this->updateConnectorAccount->execute($connector, $validated);
 
         if (count($changedFields) > 0) {
             $auditLogger->recordUserAction(
@@ -322,12 +302,12 @@ class MessengerConnectorController extends Controller
 
     public function destroy(Request $request, string $id, AuditLogger $auditLogger): JsonResponse
     {
-        $connector = ConnectorAccount::findOrFail($id);
+        $connector = $this->findConnectorAccount->execute($id);
 
         $before = $connector->only(['id', 'provider', 'name', 'status']);
         $connectorId = $connector->id;
 
-        $connector->forceDelete();
+        $this->deleteConnectorAccount->execute($connector);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -350,7 +330,7 @@ class MessengerConnectorController extends Controller
 
     public function soul(Request $request, string $id, AuditLogger $auditLogger): JsonResponse
     {
-        $connector = ConnectorAccount::findOrFail($id);
+        $connector = $this->findConnectorAccount->execute($id);
 
         if ($request->isMethod('GET')) {
             return response()->json([
@@ -390,7 +370,7 @@ class MessengerConnectorController extends Controller
 
     public function test(Request $request, string $id): JsonResponse
     {
-        $connector = ConnectorAccount::findOrFail($id);
+        $connector = $this->findConnectorAccount->execute($id);
         $provider = strtolower(trim((string) $connector->provider));
         $credentials = $connector->credentials ?? [];
         $credentialManager = app(ConnectorCredentialManager::class);
@@ -409,7 +389,7 @@ class MessengerConnectorController extends Controller
                 ],
             };
         } catch (\Throwable $throwable) {
-            $connector->update(['status' => ConnectorAccount::STATUS_ERROR]);
+            $this->updateConnectorStatus->execute($connector, ConnectorAccount::STATUS_ERROR);
 
             return response()->json([
                 'data' => [
@@ -424,33 +404,25 @@ class MessengerConnectorController extends Controller
         }
 
         if ($result['ok'] === true) {
-            $updates = [
-                'status' => ConnectorAccount::STATUS_CONNECTED,
-            ];
+            $additionalUpdates = [];
 
             $derivedAccountKey = trim((string) ($result['derived_account_key'] ?? ''));
             if ($derivedAccountKey !== '') {
-                $duplicate = ConnectorAccount::withTrashed()
-                    ->where('provider', $provider)
-                    ->where('account_key', $derivedAccountKey)
-                    ->where('id', '!=', $connector->id)
-                    ->first();
+                $duplicate = $this->findDuplicateWithTrashed->execute($provider, $derivedAccountKey, $connector->id);
 
                 if ($duplicate !== null) {
                     if ($duplicate->trashed()) {
-                        $duplicate->forceDelete();
-                        $updates['account_key'] = $derivedAccountKey;
+                        $this->forceDeleteConnectorAccount->execute($duplicate);
+                        $additionalUpdates['account_key'] = $derivedAccountKey;
                     }
                 } else {
-                    $updates['account_key'] = $derivedAccountKey;
+                    $additionalUpdates['account_key'] = $derivedAccountKey;
                 }
             }
 
-            $connector->update($updates);
-            $connector = $connector->fresh();
+            $connector = $this->updateConnectorStatus->execute($connector, ConnectorAccount::STATUS_CONNECTED, $additionalUpdates);
         } else {
-            $connector->update(['status' => ConnectorAccount::STATUS_ERROR]);
-            $connector = $connector->fresh();
+            $connector = $this->updateConnectorStatus->execute($connector, ConnectorAccount::STATUS_ERROR);
         }
 
         return response()->json([

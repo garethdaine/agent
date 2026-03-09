@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Org;
 
+use App\Actions\Organization\FindOrgEscalationAction;
+use App\Actions\Organization\ListOrgEscalationsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\ResolveEscalationRequest;
 use App\Models\OrgEscalation;
@@ -17,7 +19,9 @@ use Throwable;
 class OrgEscalationController extends Controller
 {
     public function __construct(
-        private readonly OrgEscalationService $escalationService
+        private readonly OrgEscalationService $escalationService,
+        private readonly ListOrgEscalationsAction $listEscalations,
+        private readonly FindOrgEscalationAction $findEscalation,
     ) {}
 
     /**
@@ -34,7 +38,7 @@ class OrgEscalationController extends Controller
         try {
             $user = $request->user();
 
-            $escalations = $this->escalationService->getUserPendingEscalations($user->id);
+            $escalations = $this->listEscalations->execute($user->id);
 
             return response()->json([
                 'data' => $escalations->map(fn (OrgEscalation $escalation) => [
@@ -62,7 +66,7 @@ class OrgEscalationController extends Controller
      */
     public function resolve(ResolveEscalationRequest $request, string $id): JsonResponse
     {
-        $escalation = OrgEscalation::find($id);
+        $escalation = $this->findEscalation->execute($id);
 
         if ($escalation === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Escalation not found.', 404);

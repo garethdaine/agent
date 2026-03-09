@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Org;
 
+use App\Actions\Organization\FindOrgCouncilTemplateAction;
+use App\Actions\Organization\ListOrgCouncilTemplatesAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\StoreOrgCouncilRequest;
 use App\Http\Requests\Org\UpdateOrgCouncilRequest;
-use App\Models\OrgCouncilTemplate;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Org\OrgCouncilService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -22,6 +23,8 @@ class OrgCouncilController extends Controller
 
     public function __construct(
         private readonly OrgCouncilService $councilService,
+        private readonly ListOrgCouncilTemplatesAction $listTemplates,
+        private readonly FindOrgCouncilTemplateAction $findTemplate,
     ) {}
 
     /**
@@ -36,14 +39,11 @@ class OrgCouncilController extends Controller
         }
 
         try {
-            $query = OrgCouncilTemplate::forUser($request->user()->id);
-
-            if (! $request->boolean('include_archived')) {
-                $query->active();
-            }
-
             return response()->json([
-                'data' => $query->get(),
+                'data' => $this->listTemplates->execute(
+                    $request->user()->id,
+                    $request->boolean('include_archived'),
+                ),
             ]);
         } catch (Throwable $e) {
             report($e);
@@ -76,7 +76,7 @@ class OrgCouncilController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        $template = OrgCouncilTemplate::find($id);
+        $template = $this->findTemplate->execute($id);
 
         if ($template === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Council template not found.', 404);
@@ -94,7 +94,7 @@ class OrgCouncilController extends Controller
      */
     public function update(UpdateOrgCouncilRequest $request, string $id): JsonResponse
     {
-        $template = OrgCouncilTemplate::find($id);
+        $template = $this->findTemplate->execute($id);
 
         if ($template === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Council template not found.', 404);
@@ -116,7 +116,7 @@ class OrgCouncilController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
-        $template = OrgCouncilTemplate::find($id);
+        $template = $this->findTemplate->execute($id);
 
         if ($template === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Council template not found.', 404);

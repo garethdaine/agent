@@ -4,36 +4,22 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Agent\ListAuditLogsAction;
 use App\Http\Controllers\Controller;
-use App\Models\AgentAuditLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AuditLogController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ListAuditLogsAction $listLogs): JsonResponse
     {
-        $query = AgentAuditLog::query()
-            ->orderByDesc('created_at');
-
-        if ($request->filled('action_prefix')) {
-            $query->where('action', 'like', $request->input('action_prefix').'%');
-        }
-
-        if ($request->filled('target_type')) {
-            $query->where('target_type', $request->input('target_type'));
-        }
-
-        if ($request->filled('actor_type')) {
-            $query->where('actor_type', $request->input('actor_type'));
-        }
-
-        if ($request->filled('outcome')) {
-            $query->where('outcome', $request->input('outcome'));
-        }
-
-        $perPage = min((int) $request->input('per_page', 50), 200);
-        $paginator = $query->paginate($perPage);
+        $paginator = $listLogs->execute([
+            'action_prefix' => $request->input('action_prefix'),
+            'target_type' => $request->input('target_type'),
+            'actor_type' => $request->input('actor_type'),
+            'outcome' => $request->input('outcome'),
+            'per_page' => (int) $request->input('per_page', 50),
+        ]);
 
         return response()->json([
             'data' => $paginator->items(),

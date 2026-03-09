@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\ConnectedProvider;
+use App\Actions\Connector\FindExistingConnectedProviderAction;
+use App\Actions\Connector\SaveConnectedProviderAction;
+use App\Actions\Interrogation\UpdateSessionPhaseAction;
 use App\Models\InterrogationSession;
 use App\Support\TaskProviders\ProviderOAuthStateStore;
 use App\Support\TaskProviders\TaskManagementProviderManager;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
@@ -20,6 +21,9 @@ class TaskProviderOAuthController extends Controller
         string $provider,
         TaskManagementProviderManager $providerManager,
         ProviderOAuthStateStore $oauthStateStore,
+        SaveConnectedProviderAction $saveProvider,
+        FindExistingConnectedProviderAction $findExistingProvider,
+        UpdateSessionPhaseAction $updateSessionPhase,
     ): RedirectResponse {
         $user = $request->user();
 
@@ -74,63 +78,24 @@ class TaskProviderOAuthController extends Controller
             $token = $providerDriver->exchangeAuthorizationCode($code, $redirectUri);
             $identity = $providerDriver->fetchIdentity((string) ($token['access_token'] ?? ''));
 
-            $existingProvider = ConnectedProvider::query()
-                ->where('providerable_type', InterrogationSession::class)
-                ->where('providerable_id', (int) $session->id)
-                ->where('category', 'task_management')
-                ->where('driver', $providerDriver->key())
-                ->first();
+            $existingProvider = $findExistingProvider->execute((int) $session->id, $providerDriver->key());
             $existingMetadata = is_array($existingProvider?->metadata_json) ? $existingProvider->metadata_json : [];
-            $projectSync = is_array($existingMetadata['project_sync'] ?? null) ? $existingMetadata['project_sync'] : [];
-            $projectMode = in_array(($projectSync['mode'] ?? null), ['create_new', 'existing'], true)
-                ? (string) $projectSync['mode']
-                : 'create_new';
 
-            ConnectedProvider::query()->updateOrCreate(
-                [
-                    'providerable_type' => InterrogationSession::class,
-                    'providerable_id' => (int) $session->id,
-                    'category' => 'task_management',
-                    'driver' => $providerDriver->key(),
-                ],
-                [
-                    'user_id' => (int) $user->id,
-                    'provider_user_id' => $identity['provider_user_id'] ?? null,
-                    'provider_workspace_id' => $identity['workspace_id'] ?? null,
-                    'provider_workspace_name' => $identity['workspace_name'] ?? null,
-                    'access_token' => $token['access_token'] ?? null,
-                    'refresh_token' => $token['refresh_token'] ?? null,
-                    'token_type' => $token['token_type'] ?? null,
-                    'expires_at' => $token['expires_at'] ?? null,
-                    'scopes_json' => $token['scopes'] ?? [],
-                    'metadata_json' => [
-                        'provider' => $providerDriver->key(),
-                        'connected_at' => CarbonImmutable::now('UTC')->toIso8601String(),
-                        'team_id' => $identity['team_id'] ?? null,
-                        'team_name' => $identity['team_name'] ?? null,
-                        'team_key' => $identity['team_key'] ?? null,
-                        'identity' => $identity,
-                        'project_sync' => [
-                            'mode' => $projectMode,
-                            'selected_project_id' => $projectMode === 'existing'
-                                ? (is_string($projectSync['selected_project_id'] ?? null) ? trim((string) $projectSync['selected_project_id']) : null)
-                                : null,
-                            'selected_project_name' => $projectMode === 'existing'
-                                ? ($projectSync['selected_project_name'] ?? null)
-                                : null,
-                            'selected_project_url' => $projectMode === 'existing'
-                                ? ($projectSync['selected_project_url'] ?? null)
-                                : null,
-                            'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
-                        ],
-                    ],
-                ],
+            $saveProvider->execute(
+                sessionId: (int) $session->id,
+                userId: (int) $user->id,
+                driverKey: $providerDriver->key(),
+                token: $token,
+                identity: $identity,
+                existingMetadata: $existingMetadata,
             );
 
             if ((int) $session->phase < InterrogationSession::PHASE_PROVIDER_SETUP) {
-                $session->phase = InterrogationSession::PHASE_PROVIDER_SETUP;
-                $session->status = InterrogationSession::STATUS_SETUP;
-                $session->save();
+                $updateSessionPhase->execute(
+                    $session,
+                    InterrogationSession::PHASE_PROVIDER_SETUP,
+                    InterrogationSession::STATUS_SETUP,
+                );
             }
         } catch (\Throwable $throwable) {
             report($throwable);

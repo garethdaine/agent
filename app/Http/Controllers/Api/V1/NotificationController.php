@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Notification\ClearAllNotificationsAction;
+use App\Actions\Notification\FindUserNotificationAction;
+use App\Actions\Notification\GetUnreadNotificationCountAction;
+use App\Actions\Notification\ListUserNotificationsAction;
+use App\Actions\Notification\MarkAllNotificationsReadAction;
+use App\Actions\Notification\MarkNotificationReadAction;
 use App\Http\Controllers\Controller;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Notifications\NotificationPresenter;
@@ -14,8 +20,12 @@ use Illuminate\Support\Facades\Schema;
 
 class NotificationController extends Controller
 {
-    public function index(Request $request, NotificationPresenter $presenter): JsonResponse
-    {
+    public function index(
+        Request $request,
+        NotificationPresenter $presenter,
+        ListUserNotificationsAction $listNotifications,
+        GetUnreadNotificationCountAction $unreadCount,
+    ): JsonResponse {
         if (! $this->notificationsTableExists()) {
             return response()->json([
                 'data' => [
@@ -26,12 +36,9 @@ class NotificationController extends Controller
         }
 
         $user = $request->user();
-        $limit = max(1, min((int) $request->integer('limit', 20), 50));
+        $limit = (int) $request->integer('limit', 20);
 
-        $notifications = $user->notifications()
-            ->latest()
-            ->limit($limit)
-            ->get();
+        $notifications = $listNotifications->execute($user, $limit);
 
         return response()->json([
             'data' => [
@@ -39,38 +46,40 @@ class NotificationController extends Controller
                     ->map(fn (DatabaseNotification $notification): array => $presenter->present($notification))
                     ->values()
                     ->all(),
-                'unread_count' => $user->unreadNotifications()->count(),
+                'unread_count' => $unreadCount->execute($user),
             ],
         ]);
     }
 
-    public function markAsRead(string $id, Request $request): JsonResponse
-    {
+    public function markAsRead(
+        string $id,
+        Request $request,
+        FindUserNotificationAction $findNotification,
+        MarkNotificationReadAction $markRead,
+        GetUnreadNotificationCountAction $unreadCount,
+    ): JsonResponse {
         if (! $this->notificationsTableExists()) {
             return ErrorEnvelope::make('NOT_FOUND', 'Notification not found.', 404);
         }
 
-        $notification = $request->user()
-            ->notifications()
-            ->whereKey($id)
-            ->first();
+        $notification = $findNotification->execute($request->user(), $id);
 
         if ($notification === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Notification not found.', 404);
         }
 
-        $notification->markAsRead();
+        $markRead->execute($notification);
 
         return response()->json([
             'data' => [
                 'id' => (string) $notification->id,
                 'read_at' => $notification->read_at?->toIso8601String(),
-                'unread_count' => $request->user()->unreadNotifications()->count(),
+                'unread_count' => $unreadCount->execute($request->user()),
             ],
         ]);
     }
 
-    public function markAllAsRead(Request $request): JsonResponse
+    public function markAllAsRead(Request $request, MarkAllNotificationsReadAction $markAllRead): JsonResponse
     {
         if (! $this->notificationsTableExists()) {
             return response()->json([
@@ -80,9 +89,7 @@ class NotificationController extends Controller
             ]);
         }
 
-        $request->user()
-            ->unreadNotifications()
-            ->update(['read_at' => now()]);
+        $markAllRead->execute($request->user());
 
         return response()->json([
             'data' => [
@@ -91,7 +98,7 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function clearAll(Request $request): JsonResponse
+    public function clearAll(Request $request, ClearAllNotificationsAction $clearAll): JsonResponse
     {
         if (! $this->notificationsTableExists()) {
             return response()->json([
@@ -102,7 +109,7 @@ class NotificationController extends Controller
             ]);
         }
 
-        $request->user()->notifications()->delete();
+        $clearAll->execute($request->user());
 
         return response()->json([
             'data' => [

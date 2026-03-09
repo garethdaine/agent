@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Onboarding;
 
+use App\Actions\Onboarding\CompleteOnboardingAction;
+use App\Actions\Onboarding\GetOnboardingStateAction;
 use App\Http\Controllers\Controller;
-use App\Models\ConnectorAccount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,15 +14,19 @@ use Inertia\Response;
 
 class OnboardingController extends Controller
 {
+    public function __construct(
+        private readonly GetOnboardingStateAction $getOnboardingState,
+        private readonly CompleteOnboardingAction $completeOnboarding,
+    ) {}
+
     public function welcome(Request $request): Response
     {
-        $connectorCount = ConnectorAccount::count();
-        $connectedCount = ConnectorAccount::where('status', ConnectorAccount::STATUS_CONNECTED)->count();
+        $state = $this->getOnboardingState->execute();
 
         return Inertia::render('Onboarding/Welcome', [
             'hasJobs' => $request->user()->agentJobs()->exists(),
-            'hasConnectors' => $connectorCount > 0,
-            'hasConnectedChannel' => $connectedCount > 0,
+            'hasConnectors' => $state['has_connectors'],
+            'hasConnectedChannel' => $state['has_connected_channel'],
         ]);
     }
 
@@ -36,10 +41,7 @@ class OnboardingController extends Controller
 
     public function complete(Request $request): RedirectResponse
     {
-        $user = $request->user();
-        if (! $user->hasCompletedOnboarding()) {
-            $user->forceFill(['onboarding_completed_at' => now()])->save();
-        }
+        $this->completeOnboarding->execute($request->user());
 
         return redirect()->route('dashboard')->with('onboarding_completed', true);
     }

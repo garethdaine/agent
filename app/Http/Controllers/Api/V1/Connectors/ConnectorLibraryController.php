@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Connectors;
 
+use App\Actions\Connector\FindAgentConnectorAction;
+use App\Actions\Connector\ListAvailableConnectorsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Connectors\ListConnectorsRequest;
 use App\Http\Resources\Connectors\ConnectorDetailResource;
 use App\Http\Resources\Connectors\ConnectorResource;
-use App\Models\AgentConnector;
-use App\Models\AgentConnectorConnection;
 use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -18,50 +18,31 @@ class ConnectorLibraryController extends Controller
 {
     public function __construct(
         private readonly FeatureFlagManager $flags,
+        private readonly ListAvailableConnectorsAction $listAvailableConnectors,
+        private readonly FindAgentConnectorAction $findAgentConnector,
     ) {}
 
     public function index(ListConnectorsRequest $request): AnonymousResourceCollection
     {
         $this->ensureConnectorsEnabled();
 
-        $query = AgentConnector::query()->available();
+        $team = $request->user()->currentTeam;
 
-        if ($request->filled('category')) {
-            $query->byCategory($request->validated('category'));
-        }
+        $connectors = $this->listAvailableConnectors->execute([
+            'category' => $request->filled('category') ? $request->validated('category') : null,
+            'industry' => $request->filled('industry') ? $request->validated('industry') : null,
+            'status' => $request->validated('status'),
+            'team_id' => $team?->id,
+        ]);
 
-        if ($request->filled('industry')) {
-            $query->whereJsonContains('industries', $request->validated('industry'));
-        }
-
-        $connectionStatuses = ['connected', 'pending', 'degraded', 'disconnected', 'error'];
-        $status = $request->validated('status');
-
-        if ($status && in_array($status, $connectionStatuses, true)) {
-            $team = $request->user()->currentTeam;
-
-            if ($team) {
-                $connectorIds = AgentConnectorConnection::where('team_id', $team->id)
-                    ->where('status', $status)
-                    ->pluck('agent_connector_id');
-
-                $query->whereIn('id', $connectorIds);
-            } else {
-                // No team means no connections — return empty
-                $query->whereRaw('1 = 0');
-            }
-        } elseif ($status) {
-            $query->where('status', $status);
-        }
-
-        return ConnectorResource::collection($query->orderBy('name')->get());
+        return ConnectorResource::collection($connectors);
     }
 
     public function show(string $id): ConnectorDetailResource|JsonResponse
     {
         $this->ensureConnectorsEnabled();
 
-        $connector = AgentConnector::find($id);
+        $connector = $this->findAgentConnector->find($id);
 
         if (! $connector) {
             return response()->json([
@@ -79,7 +60,7 @@ class ConnectorLibraryController extends Controller
     {
         $this->ensureConnectorsEnabled();
 
-        $connector = AgentConnector::find($id);
+        $connector = $this->findAgentConnector->find($id);
 
         if (! $connector) {
             return response()->json([

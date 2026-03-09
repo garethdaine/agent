@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Skills;
 
+use App\Actions\Skills\EmptySkillPaginatorAction;
+use App\Actions\Skills\FindSkillByIdAction;
+use App\Actions\Skills\FindSkillForTeamAction;
+use App\Actions\Skills\ListSkillsAction;
+use App\Actions\Skills\RevalidateSkillAction;
+use App\Actions\Skills\UpdateSkillStatusAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Skills\InstallSkillRequest;
 use App\Http\Requests\Skills\UpdateSkillRequest;
 use App\Http\Resources\Skills\SkillLibraryResource;
 use App\Http\Resources\Skills\SkillResource;
-use App\Models\AgentSkill;
 use App\Services\Skills\SkillInstaller;
 use App\Services\Skills\SkillLibrary;
 use App\Services\Skills\SkillParser;
@@ -28,6 +33,12 @@ class SkillController extends Controller
         private readonly SkillLibrary $library,
         private readonly SkillParser $parser,
         private readonly SkillValidator $validator,
+        private readonly ListSkillsAction $listSkills,
+        private readonly FindSkillForTeamAction $findSkill,
+        private readonly FindSkillByIdAction $findSkillById,
+        private readonly EmptySkillPaginatorAction $emptySkillPaginator,
+        private readonly UpdateSkillStatusAction $updateSkillStatus,
+        private readonly RevalidateSkillAction $revalidateSkill,
     ) {}
 
     public function install(InstallSkillRequest $request): JsonResponse|SkillResource
@@ -57,7 +68,7 @@ class SkillController extends Controller
             ], 422);
         }
 
-        $skill = AgentSkill::findOrFail($result->skillId);
+        $skill = $this->findSkillById->execute($result->skillId);
 
         return (new SkillResource($skill))
             ->response()
@@ -71,31 +82,15 @@ class SkillController extends Controller
         $team = $request->user()->currentTeam;
 
         if (! $team) {
-            return SkillResource::collection(AgentSkill::query()->whereRaw('1 = 0')->paginate(25));
+            return SkillResource::collection($this->emptySkillPaginator->execute());
         }
 
-        $teamId = (int) $team->id;
-        $perPage = min((int) $request->query('per_page', 25), 100);
-
-        $query = AgentSkill::query()
-            ->where(function ($q) use ($teamId) {
-                $q->where('team_id', $teamId)
-                    ->orWhere('is_global', true);
-            });
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->query('status'));
-        }
-
-        if ($request->filled('risk_level')) {
-            $query->where('risk_level', $request->query('risk_level'));
-        }
-
-        if ($request->filled('industry')) {
-            $query->whereJsonContains('industries', $request->query('industry'));
-        }
-
-        $skills = $query->orderBy('name')->paginate($perPage);
+        $skills = $this->listSkills->execute((int) $team->id, [
+            'status' => $request->query('status'),
+            'risk_level' => $request->query('risk_level'),
+            'industry' => $request->query('industry'),
+            'per_page' => (int) $request->query('per_page', 25),
+        ]);
 
         return SkillResource::collection($skills);
     }
@@ -105,11 +100,7 @@ class SkillController extends Controller
         $this->ensureSkillsEnabled();
 
         $teamId = $this->requireCurrentTeamId($request);
-
-        $skill = AgentSkill::where(function ($q) use ($teamId) {
-            $q->where('team_id', $teamId)
-                ->orWhere('is_global', true);
-        })->find($id);
+        $skill = $this->findSkill->execute($id, $teamId);
 
         if (! $skill) {
             return response()->json([
@@ -128,7 +119,7 @@ class SkillController extends Controller
         $this->ensureSkillsEnabled();
         $this->authorizeTeamAdmin($request);
 
-        $skill = AgentSkill::where('team_id', $this->requireCurrentTeamId($request))->find($id);
+        $skill = $this->findSkill->execute($id, $this->requireCurrentTeamId($request), false);
 
         if (! $skill) {
             return response()->json([
@@ -140,17 +131,7 @@ class SkillController extends Controller
         }
 
         if ($request->has('status')) {
-            $updates = ['status' => $request->input('status'), 'updated_by' => $request->user()->id, 'updated_at' => now()];
-
-            if ($request->input('status') === AgentSkill::STATUS_PAUSED) {
-                $updates['paused_by'] = $request->user()->id;
-                $updates['paused_at'] = now();
-            } elseif ($request->input('status') === AgentSkill::STATUS_ACTIVE) {
-                $updates['paused_by'] = null;
-                $updates['paused_at'] = null;
-            }
-
-            $skill->update($updates);
+            $this->updateSkillStatus->execute($skill, $request->input('status'), $request->user()->id);
         }
 
         if ($request->hasFile('file')) {
@@ -184,7 +165,7 @@ class SkillController extends Controller
         $this->ensureSkillsEnabled();
         $this->authorizeTeamAdmin($request);
 
-        $skill = AgentSkill::where('team_id', $this->requireCurrentTeamId($request))->find($id);
+        $skill = $this->findSkill->execute($id, $this->requireCurrentTeamId($request), false);
 
         if (! $skill) {
             return response()->json([
@@ -205,7 +186,7 @@ class SkillController extends Controller
         $this->ensureSkillsEnabled();
         $this->authorizeTeamAdmin($request);
 
-        $skill = AgentSkill::where('team_id', $this->requireCurrentTeamId($request))->find($id);
+        $skill = $this->findSkill->execute($id, $this->requireCurrentTeamId($request), false);
 
         if (! $skill) {
             return response()->json([
@@ -243,14 +224,7 @@ class SkillController extends Controller
             $skill->team_id,
         );
 
-        $newStatus = $validation->overallPass ? AgentSkill::STATUS_ACTIVE : AgentSkill::STATUS_FAILED_VALIDATION;
-
-        $skill->update([
-            'validation_result' => $validation->toArray(),
-            'status' => $newStatus,
-            'updated_by' => $request->user()->id,
-            'updated_at' => now(),
-        ]);
+        $skill = $this->revalidateSkill->execute($skill, $validation->toArray(), $validation->overallPass, $request->user()->id);
 
         return new SkillResource($skill);
     }
@@ -326,7 +300,7 @@ class SkillController extends Controller
             ], 422);
         }
 
-        $skill = AgentSkill::findOrFail($result->skillId);
+        $skill = $this->findSkillById->execute($result->skillId);
 
         return (new SkillResource($skill))
             ->response()

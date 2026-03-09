@@ -4,37 +4,28 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Interrogation\CreateTechStackAction;
+use App\Actions\Interrogation\DeleteTechStackAction;
+use App\Actions\Interrogation\FindInterrogationSessionAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Interrogation\StoreInterrogationTechStackRequest;
-use App\Models\InterrogationSession;
-use App\Models\InterrogationTechStack;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class InterrogationTechStackController extends Controller
 {
+    public function __construct(
+        private readonly FindInterrogationSessionAction $findSession,
+        private readonly CreateTechStackAction $createTechStack,
+        private readonly DeleteTechStackAction $deleteTechStack,
+    ) {}
+
     public function store(StoreInterrogationTechStackRequest $request, int $id): JsonResponse
     {
-        /** @var InterrogationSession $session */
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        $session = $this->findSession->execute($request->user()->id, $id);
         $validated = $request->validated();
 
-        $maxSequence = (int) $session->techStacks()->max('sequence');
-        /** @var InterrogationTechStack $stack */
-        $stack = $session->techStacks()->create([
-            'sequence' => $maxSequence + 1,
-            'name' => $validated['name'],
-            'documentation_url' => $validated['documentation_url'],
-            'metadata_json' => [
-                'source' => 'manual',
-            ],
-        ]);
-
-        if ((int) $session->phase <= InterrogationSession::PHASE_PROVIDER_SETUP) {
-            $session->phase = InterrogationSession::PHASE_TECH_STACK_SETUP;
-            $session->status = InterrogationSession::STATUS_SETUP;
-            $session->save();
-        }
+        $stack = $this->createTechStack->execute($session, $validated);
 
         return response()->json([
             'data' => [
@@ -48,15 +39,9 @@ class InterrogationTechStackController extends Controller
 
     public function destroy(Request $request, int $id, int $stackId): JsonResponse
     {
-        /** @var InterrogationSession $session */
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        $session = $this->findSession->execute($request->user()->id, $id);
 
-        $stack = InterrogationTechStack::query()
-            ->where('interrogation_session_id', $session->id)
-            ->whereKey($stackId)
-            ->firstOrFail();
-
-        $stack->delete();
+        $this->deleteTechStack->execute($session, $stackId);
 
         return response()->json([
             'data' => [

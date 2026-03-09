@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Internal;
 
+use App\Actions\Organization\FindNlScheduleParseAttemptAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\NlSchedule\ParseScheduleRequest;
-use App\Models\NlParseAttempt;
 use App\Support\NlSchedule\NlScheduleParserService;
 use Illuminate\Http\JsonResponse;
 
@@ -27,9 +27,9 @@ class NlScheduleController extends Controller
         return response()->json($result);
     }
 
-    public function show(string $parseAttemptId): JsonResponse
+    public function show(string $parseAttemptId, FindNlScheduleParseAttemptAction $findAttempt): JsonResponse
     {
-        $attempt = NlParseAttempt::findOrFail($parseAttemptId);
+        $attempt = $findAttempt->execute($parseAttemptId);
 
         if ($attempt->user_id !== auth()->id()) {
             abort(403, 'Access denied');

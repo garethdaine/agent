@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Org;
 
+use App\Actions\Organization\FindOrgAgentProfileAction;
+use App\Actions\Organization\ListOrgAgentProfilesAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\StoreOrgAgentRequest;
 use App\Http\Requests\Org\UpdateOrgAgentRequest;
-use App\Models\OrgAgentProfile;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Org\OrgAgentProfileService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -21,7 +22,9 @@ class OrgAgentController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        private readonly OrgAgentProfileService $service
+        private readonly OrgAgentProfileService $service,
+        private readonly ListOrgAgentProfilesAction $listProfiles,
+        private readonly FindOrgAgentProfileAction $findProfile,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -33,19 +36,17 @@ class OrgAgentController extends Controller
         }
 
         try {
-            $query = OrgAgentProfile::forUser($request->user()->id);
-
-            if (! $request->boolean('include_archived')) {
-                $query->active();
-            }
-
             $with = ['delegateeProfile'];
             if ($request->boolean('with_reporting')) {
                 $with[] = 'reportingEdge';
             }
 
             return response()->json([
-                'data' => $query->with($with)->get(),
+                'data' => $this->listProfiles->execute(
+                    $request->user()->id,
+                    $request->boolean('include_archived'),
+                    $with,
+                ),
             ]);
         } catch (Throwable $e) {
             report($e);
@@ -68,7 +69,7 @@ class OrgAgentController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        $profile = OrgAgentProfile::find($id);
+        $profile = $this->findProfile->execute($id);
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);
@@ -83,7 +84,7 @@ class OrgAgentController extends Controller
 
     public function update(UpdateOrgAgentRequest $request, string $id): JsonResponse
     {
-        $profile = OrgAgentProfile::find($id);
+        $profile = $this->findProfile->execute($id);
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);
@@ -98,7 +99,7 @@ class OrgAgentController extends Controller
 
     public function destroy(string $id): JsonResponse
     {
-        $profile = OrgAgentProfile::find($id);
+        $profile = $this->findProfile->execute($id);
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);
@@ -113,7 +114,7 @@ class OrgAgentController extends Controller
 
     public function restore(string $id): JsonResponse
     {
-        $profile = OrgAgentProfile::find($id);
+        $profile = $this->findProfile->execute($id);
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);

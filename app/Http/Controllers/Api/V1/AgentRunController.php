@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Agent\FindAgentJobRunAction;
+use App\Actions\Agent\GetDashboardMetricsAction;
+use App\Actions\Agent\GetSchedulerHeartbeatAction;
+use App\Actions\Agent\GetSkillMetricsAction;
+use App\Actions\Agent\ListAgentJobRunsAction;
+use App\Actions\Agent\UpdateAgentJobRunAction;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ComplianceSummaryResource;
 use App\Models\AgentJobRun;
-use App\Models\SchedulerHeartbeat;
 use App\Services\Telemetry\ActiveBuildFreshnessService;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\Duration;
@@ -19,12 +24,15 @@ use App\Support\Compliance\LessonsManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class AgentRunController extends Controller
 {
-    public function dashboardMetrics(Request $request): JsonResponse
-    {
+    public function dashboardMetrics(
+        Request $request,
+        GetDashboardMetricsAction $getMetrics,
+        GetSkillMetricsAction $getSkillMetrics,
+        GetSchedulerHeartbeatAction $getHeartbeat
+    ): JsonResponse {
         $window = strtolower($request->string('window', '24h')->toString());
         $windowHours = [
             '24h' => 24,
@@ -40,46 +48,9 @@ class AgentRunController extends Controller
         $hours = $windowHours[$window];
         $now = CarbonImmutable::now('UTC');
         $windowStart = $now->subHours($hours);
-        $todayStart = $now->startOfDay();
 
-        $baseQuery = AgentJobRun::query()->forUser($request->user());
-        $windowTerminalQuery = AgentJobRun::query()
-            ->forUser($request->user())
-            ->where('created_at', '>=', $windowStart)
-            ->whereIn('status', [
-                AgentJobRun::STATUS_SUCCEEDED,
-                AgentJobRun::STATUS_FAILED,
-                AgentJobRun::STATUS_KILLED,
-                AgentJobRun::STATUS_TIMED_OUT,
-            ]);
-
-        $runsToday = (clone $baseQuery)
-            ->where('created_at', '>=', $todayStart)
-            ->count();
-
-        $backlogCount = (clone $baseQuery)
-            ->where('status', AgentJobRun::STATUS_QUEUED)
-            ->count();
-
-        $oldestQueuedAt = (clone $baseQuery)
-            ->where('status', AgentJobRun::STATUS_QUEUED)
-            ->min('created_at');
-
-        $oldestQueuedAgeSeconds = 0;
-        if ($oldestQueuedAt !== null) {
-            $oldestQueuedAgeSeconds = CarbonImmutable::parse($oldestQueuedAt, 'UTC')
-                ->diffInSeconds($now);
-        }
-
-        $windowTerminalTotal = (clone $windowTerminalQuery)->count();
-        $windowSucceeded = (clone $windowTerminalQuery)
-            ->where('status', AgentJobRun::STATUS_SUCCEEDED)
-            ->count();
-        $windowAverageDurationMs = (float) ((clone $windowTerminalQuery)->avg('duration_ms') ?? 0);
-
-        $successRatePercent = $windowTerminalTotal > 0
-            ? round(($windowSucceeded / $windowTerminalTotal) * 100, 1)
-            : 0.0;
+        $metrics = $getMetrics->execute($request->user(), $hours);
+        $skillMetrics = $getSkillMetrics->execute($windowStart);
 
         return response()->json([
             'data' => [
@@ -93,31 +64,18 @@ class AgentRunController extends Controller
                         ['key' => '7d', 'label' => 'Last 7 days'],
                     ],
                 ],
-                'metrics' => array_merge([
-                    'runs_today' => $runsToday,
-                    'success_rate_percent' => $successRatePercent,
-                    'average_duration_ms' => (int) round($windowAverageDurationMs),
-                    'backlog_count' => $backlogCount,
-                    'oldest_queued_age_seconds' => $oldestQueuedAgeSeconds,
-                    'window_terminal_total' => $windowTerminalTotal,
-                    'window_succeeded_total' => $windowSucceeded,
-                ], $this->skillMetrics($windowStart)),
-                'scheduler' => $this->schedulerHealthSnapshot(),
+                'metrics' => array_merge($metrics, $skillMetrics),
+                'scheduler' => $this->schedulerHealthSnapshot($getHeartbeat),
             ],
         ]);
     }
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ListAgentJobRunsAction $listRuns): JsonResponse
     {
         $hours = min(24 * 7, max(1, (int) $request->integer('hours', 24)));
         $limit = min(200, max(1, (int) $request->integer('limit', 50)));
 
-        $runs = AgentJobRun::query()
-            ->forUser($request->user())
-            ->where('created_at', '>=', CarbonImmutable::now('UTC')->subHours($hours))
-            ->latest('created_at')
-            ->limit($limit)
-            ->get();
+        $runs = $listRuns->execute($request->user(), $hours, $limit);
 
         return response()->json([
             'data' => $runs,
@@ -129,9 +87,9 @@ class AgentRunController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, int $id, FindAgentJobRunAction $findRun): JsonResponse
     {
-        $run = AgentJobRun::query()->with('job')->find($id);
+        $run = $findRun->execute($id, ['job']);
 
         if ($run === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Resource not found.', 404);
@@ -205,9 +163,9 @@ class AgentRunController extends Controller
         return array_intersect_key($metadata, array_flip($complianceKeys));
     }
 
-    public function events(Request $request, int $id): JsonResponse
+    public function events(Request $request, int $id, FindAgentJobRunAction $findRun): JsonResponse
     {
-        $run = AgentJobRun::query()->find($id);
+        $run = $findRun->execute($id);
 
         if ($run === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Resource not found.', 404);
@@ -253,9 +211,10 @@ class AgentRunController extends Controller
         Request $request,
         int $id,
         RunStateTransitionService $transitions,
-        AuditLogger $auditLogger
+        AuditLogger $auditLogger,
+        FindAgentJobRunAction $findRun
     ): JsonResponse {
-        $run = AgentJobRun::query()->find($id);
+        $run = $findRun->execute($id);
 
         if ($run === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Resource not found.', 404);
@@ -264,28 +223,11 @@ class AgentRunController extends Controller
         $this->authorize('update', $run);
 
         if (in_array($run->status, AgentJobRun::TERMINAL_STATUSES, true)) {
-            return response()->json([
-                'data' => [
-                    'run_id' => $run->id,
-                    'status' => $run->status,
-                    'accepted' => false,
-                    'already_terminal' => true,
-                ],
-            ]);
+            return $this->alreadyTerminalResponse($run);
         }
 
         if ($run->status === AgentJobRun::STATUS_STOPPING) {
-            return response()->json([
-                'data' => [
-                    'run_id' => $run->id,
-                    'status' => AgentJobRun::STATUS_STOPPING,
-                    'accepted' => true,
-                    'already_requested' => true,
-                    'poll_after_ms' => 1000,
-                    'requested_by_user_id' => $request->user()->id,
-                    'accepted_at' => CarbonImmutable::now('UTC')->toIso8601String(),
-                ],
-            ], 202);
+            return $this->alreadyStoppingResponse($run, $request);
         }
 
         if (! in_array($run->status, [AgentJobRun::STATUS_QUEUED, AgentJobRun::STATUS_STARTING, AgentJobRun::STATUS_RUNNING], true)) {
@@ -295,82 +237,76 @@ class AgentRunController extends Controller
         $previousStatus = (string) $run->status;
 
         if ($run->pid === null) {
-            $metadata = (array) ($run->metadata_json ?? []);
-            $metadata['termination_mode'] = 'pid_missing';
-            $metadata['pid_not_found'] = true;
-
-            $finishedAt = CarbonImmutable::now('UTC');
-            $durationMs = Duration::millisecondsBetween($run->started_at, $finishedAt);
-            if (($metadata['approval_required'] ?? false) === true) {
-                $metadata['approval_required'] = false;
-                $metadata['approval_resolved_at'] = $finishedAt->toIso8601String();
-                $metadata['approval_resolution'] = AgentJobRun::STATUS_KILLED;
-            }
-
-            $transitioned = $transitions->transition(
-                (int) $run->id,
-                AgentJobRun::ACTIVE_STATUSES,
-                AgentJobRun::STATUS_KILLED,
-                [
-                    'finished_at' => $finishedAt,
-                    'duration_ms' => $durationMs,
-                    'metadata_json' => $metadata,
-                ]
-            );
-
-            if (! $transitioned) {
-                $run->refresh();
-
-                if (in_array($run->status, AgentJobRun::TERMINAL_STATUSES, true)) {
-                    return response()->json([
-                        'data' => [
-                            'run_id' => $run->id,
-                            'status' => $run->status,
-                            'accepted' => false,
-                            'already_terminal' => true,
-                        ],
-                    ]);
-                }
-
-                return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Run state changed while processing stop.', 409);
-            }
-
-            $run->refresh();
-            $writer = new RunEventWriter($run);
-            $writer->appendLifecycle([
-                'type' => 'state_transition',
-                'to' => AgentJobRun::STATUS_KILLED,
-                'at' => $finishedAt->toIso8601String(),
-                'reason' => 'pid_missing',
-            ]);
-
-            $auditLogger->recordUserAction(
-                request: $request,
-                action: 'run.stop',
-                targetType: 'agent_job_run',
-                targetId: (int) $run->id,
-                ownerUserId: (int) $run->user_id,
-                changedFields: ['status', 'finished_at', 'metadata_json'],
-                before: ['status' => $previousStatus],
-                after: [
-                    'status' => AgentJobRun::STATUS_KILLED,
-                    'finished_at' => $this->toRfc3339Millis($run->finished_at),
-                    'metadata_json' => $run->metadata_json,
-                ],
-            );
-
-            return response()->json([
-                'data' => [
-                    'run_id' => $run->id,
-                    'status' => AgentJobRun::STATUS_KILLED,
-                    'accepted' => true,
-                    'poll_after_ms' => 1000,
-                    'requested_by_user_id' => $request->user()->id,
-                    'accepted_at' => CarbonImmutable::now('UTC')->toIso8601String(),
-                ],
-            ], 202);
+            return $this->terminateOrphanedProcess($run, $previousStatus, $transitions, $auditLogger, $request);
         }
 
+        return $this->terminateRunningProcess($run, $previousStatus, $transitions, $auditLogger, $request);
+    }
+
+    private function terminateOrphanedProcess(
+        AgentJobRun $run,
+        string $previousStatus,
+        RunStateTransitionService $transitions,
+        AuditLogger $auditLogger,
+        Request $request,
+    ): JsonResponse {
+        $metadata = (array) ($run->metadata_json ?? []);
+        $metadata['termination_mode'] = 'pid_missing';
+        $metadata['pid_not_found'] = true;
+
+        $finishedAt = CarbonImmutable::now('UTC');
+        $durationMs = Duration::millisecondsBetween($run->started_at, $finishedAt);
+        if (($metadata['approval_required'] ?? false) === true) {
+            $metadata['approval_required'] = false;
+            $metadata['approval_resolved_at'] = $finishedAt->toIso8601String();
+            $metadata['approval_resolution'] = AgentJobRun::STATUS_KILLED;
+        }
+
+        $transitioned = $transitions->transition(
+            (int) $run->id,
+            AgentJobRun::ACTIVE_STATUSES,
+            AgentJobRun::STATUS_KILLED,
+            [
+                'finished_at' => $finishedAt,
+                'duration_ms' => $durationMs,
+                'metadata_json' => $metadata,
+            ]
+        );
+
+        if (! $transitioned) {
+            $run->refresh();
+
+            if (in_array($run->status, AgentJobRun::TERMINAL_STATUSES, true)) {
+                return $this->alreadyTerminalResponse($run);
+            }
+
+            return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Run state changed while processing stop.', 409);
+        }
+
+        $run->refresh();
+
+        $this->recordStopEvent($run, $finishedAt, 'pid_missing');
+        $this->recordStopAudit($auditLogger, $request, $run, $previousStatus, AgentJobRun::STATUS_KILLED, ['status', 'finished_at', 'metadata_json']);
+
+        return response()->json([
+            'data' => [
+                'run_id' => $run->id,
+                'status' => AgentJobRun::STATUS_KILLED,
+                'accepted' => true,
+                'poll_after_ms' => 1000,
+                'requested_by_user_id' => $request->user()->id,
+                'accepted_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ],
+        ], 202);
+    }
+
+    private function terminateRunningProcess(
+        AgentJobRun $run,
+        string $previousStatus,
+        RunStateTransitionService $transitions,
+        AuditLogger $auditLogger,
+        Request $request,
+    ): JsonResponse {
         $transitioned = $transitions->transition(
             (int) $run->id,
             [AgentJobRun::STATUS_QUEUED, AgentJobRun::STATUS_STARTING, AgentJobRun::STATUS_RUNNING],
@@ -381,28 +317,11 @@ class AgentRunController extends Controller
             $run->refresh();
 
             if ($run->status === AgentJobRun::STATUS_STOPPING) {
-                return response()->json([
-                    'data' => [
-                        'run_id' => $run->id,
-                        'status' => AgentJobRun::STATUS_STOPPING,
-                        'accepted' => true,
-                        'already_requested' => true,
-                        'poll_after_ms' => 1000,
-                        'requested_by_user_id' => $request->user()->id,
-                        'accepted_at' => CarbonImmutable::now('UTC')->toIso8601String(),
-                    ],
-                ], 202);
+                return $this->alreadyStoppingResponse($run, $request);
             }
 
             if (in_array($run->status, AgentJobRun::TERMINAL_STATUSES, true)) {
-                return response()->json([
-                    'data' => [
-                        'run_id' => $run->id,
-                        'status' => $run->status,
-                        'accepted' => false,
-                        'already_terminal' => true,
-                    ],
-                ]);
+                return $this->alreadyTerminalResponse($run);
             }
 
             return ErrorEnvelope::make('RUN_TRANSITION_CONFLICT', 'Run state changed while processing stop.', 409);
@@ -414,22 +333,84 @@ class AgentRunController extends Controller
             @posix_kill((int) $run->pid, SIGTERM);
         }
 
-        $auditLogger->recordUserAction(
-            request: $request,
-            action: 'run.stop',
-            targetType: 'agent_job_run',
-            targetId: (int) $run->id,
-            ownerUserId: (int) $run->user_id,
-            changedFields: ['status'],
-            before: ['status' => $previousStatus],
-            after: ['status' => AgentJobRun::STATUS_STOPPING],
-        );
+        $this->recordStopAudit($auditLogger, $request, $run, $previousStatus, AgentJobRun::STATUS_STOPPING, ['status']);
 
         return response()->json([
             'data' => [
                 'run_id' => $run->id,
                 'status' => AgentJobRun::STATUS_STOPPING,
                 'accepted' => true,
+                'poll_after_ms' => 1000,
+                'requested_by_user_id' => $request->user()->id,
+                'accepted_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+            ],
+        ], 202);
+    }
+
+    private function recordStopEvent(AgentJobRun $run, CarbonImmutable $finishedAt, string $reason): void
+    {
+        $writer = new RunEventWriter($run);
+        $writer->appendLifecycle([
+            'type' => 'state_transition',
+            'to' => AgentJobRun::STATUS_KILLED,
+            'at' => $finishedAt->toIso8601String(),
+            'reason' => $reason,
+        ]);
+    }
+
+    /**
+     * @param  array<int, string>  $changedFields
+     */
+    private function recordStopAudit(
+        AuditLogger $auditLogger,
+        Request $request,
+        AgentJobRun $run,
+        string $previousStatus,
+        string $newStatus,
+        array $changedFields,
+    ): void {
+        $after = ['status' => $newStatus];
+
+        if (in_array('finished_at', $changedFields, true)) {
+            $after['finished_at'] = $this->toRfc3339Millis($run->finished_at);
+        }
+
+        if (in_array('metadata_json', $changedFields, true)) {
+            $after['metadata_json'] = $run->metadata_json;
+        }
+
+        $auditLogger->recordUserAction(
+            request: $request,
+            action: 'run.stop',
+            targetType: 'agent_job_run',
+            targetId: (int) $run->id,
+            ownerUserId: (int) $run->user_id,
+            changedFields: $changedFields,
+            before: ['status' => $previousStatus],
+            after: $after,
+        );
+    }
+
+    private function alreadyTerminalResponse(AgentJobRun $run): JsonResponse
+    {
+        return response()->json([
+            'data' => [
+                'run_id' => $run->id,
+                'status' => $run->status,
+                'accepted' => false,
+                'already_terminal' => true,
+            ],
+        ]);
+    }
+
+    private function alreadyStoppingResponse(AgentJobRun $run, Request $request): JsonResponse
+    {
+        return response()->json([
+            'data' => [
+                'run_id' => $run->id,
+                'status' => AgentJobRun::STATUS_STOPPING,
+                'accepted' => true,
+                'already_requested' => true,
                 'poll_after_ms' => 1000,
                 'requested_by_user_id' => $request->user()->id,
                 'accepted_at' => CarbonImmutable::now('UTC')->toIso8601String(),
@@ -463,8 +444,12 @@ class AgentRunController extends Controller
         ], 201);
     }
 
-    public function confirmSuggestedLesson(Request $request, int $id, LessonsManager $lessons): JsonResponse
-    {
+    public function confirmSuggestedLesson(
+        Request $request,
+        int $id,
+        LessonsManager $lessons,
+        UpdateAgentJobRunAction $updateRun
+    ): JsonResponse {
         $run = AgentJobRun::with('job.user')->findOrFail($id);
 
         $this->authorize('update', $run);
@@ -494,24 +479,24 @@ class AgentRunController extends Controller
         // Update metadata
         $metadata['suggested_lesson_confirmed'] = true;
         $metadata['suggested_lesson_confirmed_at'] = now()->toIso8601String();
-        $run->update(['metadata_json' => $metadata]);
+        $updateRun->execute($run, ['metadata_json' => $metadata]);
 
         return response()->json(['success' => true]);
     }
 
-    public function schedulerHealth(): JsonResponse
+    public function schedulerHealth(GetSchedulerHeartbeatAction $getHeartbeat): JsonResponse
     {
         return response()->json([
-            'data' => $this->schedulerHealthSnapshot(),
+            'data' => $this->schedulerHealthSnapshot($getHeartbeat),
         ]);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function schedulerHealthSnapshot(): array
+    private function schedulerHealthSnapshot(GetSchedulerHeartbeatAction $getHeartbeat): array
     {
-        $heartbeat = SchedulerHeartbeat::query()->where('source', 'scheduler_dispatch')->first();
+        $heartbeat = $getHeartbeat->execute();
         $freshness = app(ActiveBuildFreshnessService::class)->snapshot();
 
         if ($heartbeat === null) {
@@ -539,43 +524,6 @@ class AgentRunController extends Controller
             'age_seconds' => $ageSeconds,
             'meta' => $heartbeat->meta_json,
             'projection' => $freshness,
-        ];
-    }
-
-    /**
-     * @return array{skill_failure_rate: float, skill_token_spend: int, skill_escalations: int}
-     */
-    private function skillMetrics(CarbonImmutable $windowStart): array
-    {
-        $skillEvents = DB::table('telemetry_event_ledger')
-            ->where('event_type', 'like', 'skill.%')
-            ->where('ingested_at', '>=', $windowStart)
-            ->get();
-
-        $totalSkillEvents = $skillEvents->count();
-        $failedSkillEvents = $skillEvents->where('event_type', 'skill.failed')->count();
-
-        $skillFailureRate = $totalSkillEvents > 0
-            ? round(($failedSkillEvents / $totalSkillEvents) * 100, 1)
-            : 0.0;
-
-        $skillTokenSpend = $skillEvents->sum(function ($event) {
-            $payload = json_decode($event->payload_json, true);
-
-            return $payload['token_usage'] ?? 0;
-        });
-
-        $skillEscalations = $skillEvents->filter(function ($event) {
-            $payload = json_decode($event->payload_json, true);
-
-            return ($payload['outcome'] ?? '') === 'failed'
-                && ! empty($payload['failure_reason']);
-        })->count();
-
-        return [
-            'skill_failure_rate' => $skillFailureRate,
-            'skill_token_spend' => (int) $skillTokenSpend,
-            'skill_escalations' => $skillEscalations,
         ];
     }
 

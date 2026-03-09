@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Agent\UpdateBackupSettingAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Agent\UpdateBackupSettingsRequest;
 use App\Models\AgentBackupSetting;
@@ -22,8 +23,11 @@ class AgentBackupSettingsController extends Controller
         ]);
     }
 
-    public function update(UpdateBackupSettingsRequest $request, AuditLogger $auditLogger): JsonResponse
-    {
+    public function update(
+        UpdateBackupSettingsRequest $request,
+        AuditLogger $auditLogger,
+        UpdateBackupSettingAction $updateSetting
+    ): JsonResponse {
         $setting = AgentBackupSetting::current();
 
         $before = $setting->only([
@@ -34,9 +38,7 @@ class AgentBackupSettingsController extends Controller
             'retention_days',
         ]);
 
-        $setting->fill($request->validated());
-        $setting->updated_by_user_id = $request->user()?->id;
-        $setting->save();
+        $updateSetting->execute($setting, $request->validated(), $request->user()?->id);
 
         $auditLogger->recordUserAction(
             request: $request,

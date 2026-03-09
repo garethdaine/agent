@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Connector\FindConnectorAccountAction;
 use App\Http\Controllers\Controller;
 use App\Models\ConnectorAccount;
 use Illuminate\Http\JsonResponse;
@@ -11,16 +12,20 @@ use Illuminate\Http\Request;
 
 class ConnectorPolicyController extends Controller
 {
+    public function __construct(
+        private readonly FindConnectorAccountAction $findConnectorAccount,
+    ) {}
+
     public function show(string $id): JsonResponse
     {
-        $connector = ConnectorAccount::findOrFail($id);
+        $connector = $this->findConnectorAccount->execute($id);
 
         return $this->policyResponse($connector);
     }
 
     public function update(Request $request, string $id): JsonResponse
     {
-        $connector = ConnectorAccount::findOrFail($id);
+        $connector = $this->findConnectorAccount->execute($id);
 
         $validated = $request->validate([
             'dm_policy' => ['sometimes', 'string', 'in:pairing,allowlist,open,disabled'],

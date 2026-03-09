@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Delegation\DeleteDelegationGraphAction;
+use App\Actions\Delegation\FindDelegationGraphAction;
+use App\Actions\Delegation\ListDelegationGraphEventsAction;
+use App\Actions\Delegation\ListDelegationGraphsAction;
+use App\Actions\Delegation\RestoreDelegationGraphAction;
+use App\Actions\Delegation\UpdateDelegationGraphAction;
 use App\Events\DelegationGraphStarted;
 use App\Exceptions\DelegationGraphCycleException;
 use App\Exceptions\DelegationGraphTaskLimitException;
@@ -27,38 +33,16 @@ class DelegationGraphController extends Controller
         private GraphStateTransitionService $stateTransitionService,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ListDelegationGraphsAction $action): JsonResponse
     {
-        $query = $request->user()->delegationGraphs()->newQuery();
-
-        $deleted = $request->string('deleted')->toString();
-        if ($deleted === '1' || $deleted === 'true') {
-            $query->onlyTrashed(); // @phpstan-ignore method.notFound
-        } elseif ($deleted === 'all') {
-            $query->withTrashed(); // @phpstan-ignore method.notFound
-        }
-
-        $q = trim($request->string('q')->toString());
-        if ($q !== '') {
-            $query->where(function ($builder) use ($q): void {
-                $builder->where('name', 'like', "%{$q}%")
-                    ->orWhere('description', 'like', "%{$q}%");
-            });
-        }
-
-        $status = strtolower(trim($request->string('status')->toString()));
-        if ($status !== '' && in_array($status, [
-            DelegationGraph::STATUS_DRAFT,
-            DelegationGraph::STATUS_VALIDATING,
-            DelegationGraph::STATUS_READY,
-            DelegationGraph::STATUS_RUNNING,
-            DelegationGraph::STATUS_SUCCEEDED,
-            DelegationGraph::STATUS_FAILED,
-            DelegationGraph::STATUS_PARTIAL,
-            DelegationGraph::STATUS_CANCELLED,
-        ], true)) {
-            $query->where('status', $status);
-        }
+        $graphs = $action->execute($request->user(), [
+            'q' => $request->string('q')->toString(),
+            'status' => $request->string('status')->toString(),
+            'deleted' => $request->string('deleted')->toString(),
+            'sort' => $request->string('sort', 'created_at')->toString(),
+            'dir' => $request->string('dir', 'desc')->toString(),
+            'per_page' => (int) $request->integer('per_page', 25),
+        ]);
 
         $sort = $request->string('sort', 'created_at')->toString();
         $dir = strtolower($request->string('dir', 'desc')->toString()) === 'asc' ? 'asc' : 'desc';
@@ -66,18 +50,6 @@ class DelegationGraphController extends Controller
         if (! in_array($sort, ['name', 'updated_at', 'created_at', 'status'], true)) {
             $sort = 'created_at';
         }
-
-        $query->orderBy($sort, $dir);
-
-        $perPage = min(100, max(1, (int) $request->integer('per_page', 25)));
-        $graphs = $query->withCount([
-            'tasks',
-            'tasks as tasks_completed_count' => fn ($q) => $q->whereIn('status', [
-                DelegationTask::STATUS_SUCCEEDED,
-                DelegationTask::STATUS_FAILED,
-                DelegationTask::STATUS_CANCELLED,
-            ]),
-        ])->paginate($perPage)->withQueryString();
 
         $data = collect($graphs->items())->map(fn (DelegationGraph $graph): array => $this->transformGraph($graph, false))->values(); // @phpstan-ignore argument.type
 
@@ -107,10 +79,9 @@ class DelegationGraphController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, int $id, FindDelegationGraphAction $action): JsonResponse
     {
-        /** @var DelegationGraph|null $graph */
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
+        $graph = $action->execute($request->user(), $id);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -123,7 +94,7 @@ class DelegationGraphController extends Controller
         ]);
     }
 
-    public function store(Request $request, AuditLogger $auditLogger): JsonResponse
+    public function store(Request $request, AuditLogger $auditLogger, UpdateDelegationGraphAction $updateAction): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -149,7 +120,7 @@ class DelegationGraphController extends Controller
             $graph = $this->graphBuilder->build($request->user(), $input);
 
             // Update graph with provided name and description
-            $graph->update([
+            $updateAction->execute($graph, [
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
                 'max_parallel_tasks' => $validated['max_parallel_tasks'] ?? config('delegation.default_max_parallel_tasks', 5),
@@ -178,10 +149,9 @@ class DelegationGraphController extends Controller
         }
     }
 
-    public function update(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
+    public function update(Request $request, int $id, AuditLogger $auditLogger, FindDelegationGraphAction $findAction, UpdateDelegationGraphAction $updateAction): JsonResponse
     {
-        /** @var DelegationGraph|null $graph */
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
+        $graph = $findAction->execute($request->user(), $id);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -199,8 +169,7 @@ class DelegationGraphController extends Controller
 
         $before = $graph->only(['name', 'description', 'max_parallel_tasks']);
 
-        $graph->fill($validated);
-        $graph->save();
+        $updateAction->execute($graph, $validated);
 
         $after = $graph->only(array_keys($before));
         $changedFields = [];
@@ -228,10 +197,9 @@ class DelegationGraphController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
+    public function destroy(Request $request, int $id, AuditLogger $auditLogger, FindDelegationGraphAction $findAction, DeleteDelegationGraphAction $deleteAction): JsonResponse
     {
-        /** @var DelegationGraph|null $graph */
-        $graph = $request->user()->delegationGraphs()->find($id);
+        $graph = $findAction->execute($request->user(), $id, withTrashed: false);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -242,7 +210,7 @@ class DelegationGraphController extends Controller
         }
 
         $before = ['deleted_at' => optional($graph->deleted_at)?->toIso8601String()];
-        $graph->delete();
+        $deleteAction->execute($graph);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -263,10 +231,9 @@ class DelegationGraphController extends Controller
         ]);
     }
 
-    public function restore(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
+    public function restore(Request $request, int $id, AuditLogger $auditLogger, FindDelegationGraphAction $findAction, RestoreDelegationGraphAction $restoreAction): JsonResponse
     {
-        /** @var DelegationGraph|null $graph */
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
+        $graph = $findAction->execute($request->user(), $id);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -274,9 +241,7 @@ class DelegationGraphController extends Controller
 
         $before = ['deleted_at' => optional($graph->deleted_at)?->toIso8601String()];
 
-        if ($graph->trashed()) {
-            $graph->restore();
-        }
+        $restoreAction->execute($graph);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -297,10 +262,9 @@ class DelegationGraphController extends Controller
         ]);
     }
 
-    public function validate(Request $request, int $id): JsonResponse
+    public function validate(Request $request, int $id, FindDelegationGraphAction $findAction): JsonResponse
     {
-        /** @var DelegationGraph|null $graph */
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
+        $graph = $findAction->execute($request->user(), $id);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -344,10 +308,9 @@ class DelegationGraphController extends Controller
         ]);
     }
 
-    public function start(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
+    public function start(Request $request, int $id, AuditLogger $auditLogger, FindDelegationGraphAction $findAction): JsonResponse
     {
-        /** @var DelegationGraph|null $graph */
-        $graph = $request->user()->delegationGraphs()->find($id);
+        $graph = $findAction->execute($request->user(), $id, withTrashed: false);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -388,10 +351,9 @@ class DelegationGraphController extends Controller
         ], 202);
     }
 
-    public function cancel(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
+    public function cancel(Request $request, int $id, AuditLogger $auditLogger, FindDelegationGraphAction $findAction): JsonResponse
     {
-        /** @var DelegationGraph|null $graph */
-        $graph = $request->user()->delegationGraphs()->find($id);
+        $graph = $findAction->execute($request->user(), $id, withTrashed: false);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -431,10 +393,9 @@ class DelegationGraphController extends Controller
         ], 202);
     }
 
-    public function clone(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
+    public function clone(Request $request, int $id, AuditLogger $auditLogger, FindDelegationGraphAction $findAction, UpdateDelegationGraphAction $updateAction): JsonResponse
     {
-        /** @var DelegationGraph|null $graph */
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
+        $graph = $findAction->execute($request->user(), $id);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -472,7 +433,7 @@ class DelegationGraphController extends Controller
         }
 
         $newGraph = $this->graphBuilder->build($request->user(), ['tasks' => $cloneTasks]);
-        $newGraph->update([
+        $updateAction->execute($newGraph, [
             'name' => $graph->name.' (Clone)',
             'description' => $graph->description,
             'metadata_json' => [
@@ -500,10 +461,9 @@ class DelegationGraphController extends Controller
         ], 201);
     }
 
-    public function events(Request $request, int $id): JsonResponse
+    public function events(Request $request, int $id, FindDelegationGraphAction $findAction, ListDelegationGraphEventsAction $eventsAction): JsonResponse
     {
-        /** @var DelegationGraph|null $graph */
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($id); // @phpstan-ignore method.notFound
+        $graph = $findAction->execute($request->user(), $id);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -512,12 +472,7 @@ class DelegationGraphController extends Controller
         $afterSequence = (int) $request->integer('after_sequence', 0);
         $limit = min(100, max(1, (int) $request->integer('limit', 50)));
 
-        /** @var \Illuminate\Database\Eloquent\Collection<int, DelegationEvent> $events */
-        $events = $graph->events()
-            ->where('sequence', '>', $afterSequence)
-            ->orderBy('sequence', 'asc')
-            ->take($limit)
-            ->get();
+        $events = $eventsAction->execute($graph, $afterSequence, $limit);
 
         $data = $events->map(fn (DelegationEvent $event) => [
             'id' => $event->id,

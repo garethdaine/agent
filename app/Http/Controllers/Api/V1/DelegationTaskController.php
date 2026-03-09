@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Delegation\FindDelegationGraphAction;
+use App\Actions\Delegation\ResolveVerificationResultAction;
 use App\Events\DelegationTaskVerified;
 use App\Http\Controllers\Controller;
 use App\Models\DelegationAttempt;
@@ -17,9 +19,9 @@ use Illuminate\Validation\Rule;
 
 class DelegationTaskController extends Controller
 {
-    public function index(Request $request, int $graphId): JsonResponse
+    public function index(Request $request, int $graphId, FindDelegationGraphAction $findGraphAction): JsonResponse
     {
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($graphId); // @phpstan-ignore method.notFound
+        $graph = $findGraphAction->execute($request->user(), $graphId);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -80,9 +82,9 @@ class DelegationTaskController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $graphId, int $taskId): JsonResponse
+    public function show(Request $request, int $graphId, int $taskId, FindDelegationGraphAction $findGraphAction): JsonResponse
     {
-        $graph = $request->user()->delegationGraphs()->withTrashed()->find($graphId); // @phpstan-ignore method.notFound
+        $graph = $findGraphAction->execute($request->user(), $graphId);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -101,9 +103,9 @@ class DelegationTaskController extends Controller
         ]);
     }
 
-    public function resolveVerification(Request $request, int $graphId, int $taskId, AuditLogger $auditLogger): JsonResponse
+    public function resolveVerification(Request $request, int $graphId, int $taskId, AuditLogger $auditLogger, FindDelegationGraphAction $findGraphAction, ResolveVerificationResultAction $resolveAction): JsonResponse
     {
-        $graph = $request->user()->delegationGraphs()->find($graphId);
+        $graph = $findGraphAction->execute($request->user(), $graphId, withTrashed: false);
 
         if ($graph === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
@@ -121,10 +123,7 @@ class DelegationTaskController extends Controller
             'evidence' => ['sometimes', 'array'],
         ]);
 
-        $verificationResult = DelegationVerificationResult::query()
-            ->where('delegation_task_id', $task->id)
-            ->where('id', $validated['verification_result_id'])
-            ->first();
+        $verificationResult = $resolveAction->find($task->id, $validated['verification_result_id']);
 
         if ($verificationResult === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Verification result not found.', 404);
@@ -140,11 +139,7 @@ class DelegationTaskController extends Controller
             ? DelegationVerificationResult::VERDICT_PASSED
             : DelegationVerificationResult::VERDICT_FAILED;
 
-        $verificationResult->update([
-            'verdict' => $newVerdict,
-            'evidence_json' => $validated['evidence'] ?? $verificationResult->evidence_json,
-            'finished_at' => now('UTC'),
-        ]);
+        $resolveAction->resolve($verificationResult, $newVerdict, $validated['evidence'] ?? null);
 
         $auditLogger->recordUserAction(
             request: $request,

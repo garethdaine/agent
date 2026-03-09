@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Chat\FindUserChatActionAction;
+use App\Actions\Chat\UpdateChatActionAction;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ChatActionResource;
 use App\Models\ChatAction;
-use App\Models\ChatSession;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
 use Illuminate\Http\JsonResponse;
@@ -15,9 +16,14 @@ use Illuminate\Http\Request;
 
 class ChatActionController extends Controller
 {
+    public function __construct(
+        private readonly FindUserChatActionAction $findUserChatAction,
+        private readonly UpdateChatActionAction $updateChatAction,
+    ) {}
+
     public function show(Request $request, string $id): JsonResponse
     {
-        $action = $this->findActionForUser($request, $id);
+        $action = $this->findUserChatAction->execute($request->user()->id, $id);
 
         if ($action === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Action not found.', 404);
@@ -30,7 +36,7 @@ class ChatActionController extends Controller
 
     public function status(Request $request, string $id): JsonResponse
     {
-        $action = $this->findActionForUser($request, $id);
+        $action = $this->findUserChatAction->execute($request->user()->id, $id);
 
         if ($action === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Action not found.', 404);
@@ -53,7 +59,7 @@ class ChatActionController extends Controller
 
     public function confirm(Request $request, string $id, AuditLogger $auditLogger): JsonResponse
     {
-        $action = $this->findActionForUser($request, $id);
+        $action = $this->findUserChatAction->execute($request->user()->id, $id);
 
         if ($action === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Action not found.', 404);
@@ -87,7 +93,7 @@ class ChatActionController extends Controller
 
         $before = ['confirmed_at' => null, 'status' => $action->status];
 
-        $action->update([
+        $this->updateChatAction->execute($action, [
             'confirmed_at' => now(),
         ]);
 
@@ -109,7 +115,7 @@ class ChatActionController extends Controller
 
     public function cancel(Request $request, string $id, AuditLogger $auditLogger): JsonResponse
     {
-        $action = $this->findActionForUser($request, $id);
+        $action = $this->findUserChatAction->execute($request->user()->id, $id);
 
         if ($action === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Action not found.', 404);
@@ -135,7 +141,7 @@ class ChatActionController extends Controller
 
         $before = ['status' => $action->status];
 
-        $action->update([
+        $this->updateChatAction->execute($action, [
             'status' => ChatAction::STATUS_CANCELLED,
         ]);
 
@@ -153,24 +159,6 @@ class ChatActionController extends Controller
         return response()->json([
             'data' => new ChatActionResource($action->fresh()),
         ]);
-    }
-
-    private function findActionForUser(Request $request, string $id): ?ChatAction
-    {
-        $userId = $request->user()->id;
-
-        $sessionIds = ChatSession::query()
-            ->where('user_id', $userId)
-            ->pluck('id');
-
-        $messageIds = \App\Models\ChatMessage::query()
-            ->whereIn('chat_session_id', $sessionIds)
-            ->pluck('id');
-
-        return ChatAction::query()
-            ->whereIn('chat_message_id', $messageIds)
-            ->where('id', $id)
-            ->first();
     }
 
     private function getOwnerUserId(ChatAction $action): ?int

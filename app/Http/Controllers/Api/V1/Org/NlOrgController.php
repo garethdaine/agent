@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Org;
 
+use App\Actions\Organization\CreateNlOrgParseAttemptAction;
+use App\Actions\Organization\FindNlOrgParseAttemptAction;
+use App\Actions\Organization\MarkNlOrgParseAttemptAppliedAction;
 use App\Http\Controllers\Controller;
-use App\Models\NlOrgParseAttempt;
 use App\Support\NlOrg\NlOrgDiffApplier;
 use App\Support\NlOrg\NlOrgParseResult;
 use App\Support\NlOrg\NlOrgParserService;
@@ -21,6 +23,9 @@ class NlOrgController extends Controller
     public function __construct(
         private readonly NlOrgParserService $parser,
         private readonly NlOrgDiffApplier $applier,
+        private readonly CreateNlOrgParseAttemptAction $createAttempt,
+        private readonly FindNlOrgParseAttemptAction $findAttempt,
+        private readonly MarkNlOrgParseAttemptAppliedAction $markAttemptApplied,
     ) {}
 
     public function parse(Request $request): JsonResponse
@@ -37,13 +42,7 @@ class NlOrgController extends Controller
 
         $result = $this->parser->parse($user, $validated['input'], $chatHistory);
 
-        $attempt = NlOrgParseAttempt::create([
-            'user_id' => $user->id,
-            'raw_input' => $validated['input'],
-            'parsed_result' => $result->toArray(),
-            'confidence' => $result->confidence,
-            'applied_at' => null,
-        ]);
+        $attempt = $this->createAttempt->execute($user->id, $validated['input'], $result);
 
         return response()->json([
             'parse_attempt_id' => $attempt->id,
@@ -61,7 +60,7 @@ class NlOrgController extends Controller
             'parse_attempt_id' => ['required', 'uuid', 'exists:nl_org_parse_attempts,id'],
         ]);
 
-        $attempt = NlOrgParseAttempt::findOrFail($validated['parse_attempt_id']);
+        $attempt = $this->findAttempt->execute($validated['parse_attempt_id']);
 
         $this->authorize('apply', $attempt);
 
@@ -90,11 +89,11 @@ class NlOrgController extends Controller
             ], 422);
         }
 
-        $attempt->update(['applied_at' => now()]);
+        $attempt = $this->markAttemptApplied->execute($attempt);
 
         return response()->json([
             'success' => true,
-            'applied_at' => $attempt->fresh()->applied_at->toISOString(),
+            'applied_at' => $attempt->applied_at->toISOString(),
         ]);
     }
 }

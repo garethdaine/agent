@@ -4,19 +4,27 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Interrogation\DisconnectTaskProviderAction;
+use App\Actions\Interrogation\FindInterrogationSessionAction;
+use App\Actions\Interrogation\SaveTaskProviderSettingsAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Interrogation\UpdateInterrogationTaskProviderSettingsRequest;
 use App\Models\ConnectedProvider;
 use App\Models\InterrogationSession;
 use App\Support\TaskProviders\ProviderOAuthStateStore;
 use App\Support\TaskProviders\TaskManagementProviderManager;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
 
 class InterrogationTaskProviderController extends Controller
 {
+    public function __construct(
+        private readonly FindInterrogationSessionAction $findSession,
+        private readonly DisconnectTaskProviderAction $disconnectProvider,
+        private readonly SaveTaskProviderSettingsAction $saveProviderSettings,
+    ) {}
+
     public function startOAuth(
         Request $request,
         int $id,
@@ -24,8 +32,7 @@ class InterrogationTaskProviderController extends Controller
         TaskManagementProviderManager $providerManager,
         ProviderOAuthStateStore $oauthStateStore,
     ): JsonResponse {
-        /** @var InterrogationSession $session */
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        $session = $this->findSession->execute($request->user()->id, $id);
 
         try {
             $providerDriver = $providerManager->driver($driver);
@@ -62,13 +69,9 @@ class InterrogationTaskProviderController extends Controller
 
     public function disconnect(Request $request, int $id, string $driver): JsonResponse
     {
-        /** @var InterrogationSession $session */
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        $session = $this->findSession->execute($request->user()->id, $id);
 
-        $deleted = $session->providerIntegrations()
-            ->where('category', 'task_management')
-            ->where('driver', strtolower(trim($driver)))
-            ->delete();
+        $deleted = $this->disconnectProvider->execute($session, $driver);
 
         return response()->json([
             'data' => [
@@ -84,8 +87,7 @@ class InterrogationTaskProviderController extends Controller
         string $driver,
         TaskManagementProviderManager $providerManager,
     ): JsonResponse {
-        /** @var InterrogationSession $session */
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        $session = $this->findSession->execute($request->user()->id, $id);
         $normalizedDriver = strtolower(trim($driver));
         $provider = $this->connectedProviderForSession($session, $normalizedDriver);
 
@@ -160,8 +162,7 @@ class InterrogationTaskProviderController extends Controller
         string $driver,
         TaskManagementProviderManager $providerManager,
     ): JsonResponse {
-        /** @var InterrogationSession $session */
-        $session = $request->user()->interrogationSessions()->findOrFail($id);
+        $session = $this->findSession->execute($request->user()->id, $id);
         $normalizedDriver = strtolower(trim($driver));
         $provider = $this->connectedProviderForSession($session, $normalizedDriver);
 
@@ -175,8 +176,6 @@ class InterrogationTaskProviderController extends Controller
         }
 
         $validated = $request->validated();
-        $metadata = is_array($provider->metadata_json) ? $provider->metadata_json : [];
-        $identity = is_array($metadata['identity'] ?? null) ? $metadata['identity'] : [];
         $teamId = trim((string) ($validated['team_id'] ?? ''));
 
         if ($teamId !== '') {
@@ -217,14 +216,11 @@ class InterrogationTaskProviderController extends Controller
                 ], 422);
             }
 
-            $metadata['team_id'] = trim((string) ($selectedTeam['id'] ?? '')); // @phpstan-ignore nullCoalesce.offset
-            $metadata['team_name'] = $selectedTeam['name'] ?? null;
-            $metadata['team_key'] = $selectedTeam['key'] ?? null;
-            $identity['team_id'] = $metadata['team_id'];
-            $identity['team_name'] = $metadata['team_name'];
-            $identity['team_key'] = $metadata['team_key'];
-            $metadata['identity'] = $identity;
-            $provider->metadata_json = $metadata;
+            $teamData = [
+                'team_id' => trim((string) ($selectedTeam['id'] ?? '')), // @phpstan-ignore nullCoalesce.offset
+                'team_name' => $selectedTeam['name'] ?? null,
+                'team_key' => $selectedTeam['key'] ?? null,
+            ];
         }
 
         $projectMode = (string) $validated['project_mode'];
@@ -276,16 +272,19 @@ class InterrogationTaskProviderController extends Controller
             $selectedProjectUrl = $selected['url'] ?? null;
         }
 
-        $metadata['project_sync'] = [
-            'mode' => $projectMode,
-            'selected_project_id' => $selectedProjectId,
-            'selected_project_name' => $selectedProjectName,
-            'selected_project_url' => $selectedProjectUrl,
-            'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
-        ];
+        $provider = $this->saveProviderSettings->execute(
+            $provider,
+            $teamData ?? [],
+            [
+                'mode' => $projectMode,
+                'selected_project_id' => $selectedProjectId,
+                'selected_project_name' => $selectedProjectName,
+                'selected_project_url' => $selectedProjectUrl,
+            ],
+        );
 
-        $provider->metadata_json = $metadata;
-        $provider->save();
+        $metadata = is_array($provider->metadata_json) ? $provider->metadata_json : [];
+        $identity = is_array($metadata['identity'] ?? null) ? $metadata['identity'] : [];
 
         return response()->json([
             'data' => [

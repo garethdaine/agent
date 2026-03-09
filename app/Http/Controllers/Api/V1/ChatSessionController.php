@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Chat\CreateChatMessageAction;
+use App\Actions\Chat\CreateChatSessionAction;
+use App\Actions\Chat\FindConnectorAccountAction;
+use App\Actions\Chat\FindUserChatSessionAction;
+use App\Actions\Chat\ListConnectedAccountsAction;
+use App\Actions\Chat\ListSessionActionsAction;
+use App\Actions\Chat\ListSessionMessagesAction;
+use App\Actions\Chat\ListUserChatSessionsAction;
+use App\Actions\Chat\UpdateChatMessageAction;
+use App\Actions\Chat\UpdateChatSessionAction;
 use App\DTOs\Messenger\OutboundPayload;
 use App\Http\Controllers\Controller;
 use App\Jobs\Messenger\ProcessChatIntent;
-use App\Models\ChatAction;
-use App\Models\ChatMessage;
 use App\Models\ChatSession;
-use App\Models\ConnectorAccount;
 use App\Services\Messenger\CommandRouter;
 use App\Support\Messenger\ConnectorManager;
 use Illuminate\Http\JsonResponse;
@@ -19,26 +26,25 @@ use Illuminate\Support\Str;
 
 class ChatSessionController extends Controller
 {
+    public function __construct(
+        private readonly FindConnectorAccountAction $findConnectorAccount,
+        private readonly ListConnectedAccountsAction $listConnectedAccounts,
+        private readonly FindUserChatSessionAction $findUserChatSession,
+        private readonly ListUserChatSessionsAction $listUserChatSessions,
+        private readonly CreateChatSessionAction $createChatSession,
+        private readonly UpdateChatSessionAction $updateChatSession,
+        private readonly CreateChatMessageAction $createChatMessage,
+        private readonly UpdateChatMessageAction $updateChatMessage,
+        private readonly ListSessionMessagesAction $listSessionMessages,
+        private readonly ListSessionActionsAction $listSessionActions,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
-        $query = ChatSession::with('connectorAccount:id,name,provider')
-            ->where('user_id', $request->user()->id)
-            ->withCount('messages');
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        }
-
-        if ($request->filled('provider')) {
-            $query->where('provider', $request->input('provider'));
-        }
-
-        if ($request->filled('connector_id')) {
-            $query->where('connector_account_id', $request->input('connector_id'));
-        }
-
-        $sessions = $query->orderByDesc('updated_at')
-            ->paginate(min((int) $request->input('per_page', 25), 100));
+        $sessions = $this->listUserChatSessions->execute(
+            $request->user()->id,
+            $request->only(['status', 'provider', 'connector_id', 'per_page']),
+        );
 
         return response()->json([
             'data' => $sessions->items(),
@@ -58,9 +64,9 @@ class ChatSessionController extends Controller
             'channel_id' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $connectorAccount = ConnectorAccount::findOrFail($validated['connector_account_id']);
+        $connectorAccount = $this->findConnectorAccount->execute($validated['connector_account_id']);
 
-        $session = ChatSession::create([
+        $session = $this->createChatSession->execute([
             'user_id' => $request->user()->id,
             'connector_account_id' => $connectorAccount->id,
             'provider' => $connectorAccount->provider,
@@ -77,28 +83,30 @@ class ChatSessionController extends Controller
 
     public function connectors(): JsonResponse
     {
-        $accounts = ConnectorAccount::where('status', ConnectorAccount::STATUS_CONNECTED)
-            ->orderBy('provider')
-            ->get(['id', 'name', 'provider', 'status']);
+        $accounts = $this->listConnectedAccounts->execute();
 
         return response()->json(['data' => $accounts]);
     }
 
     public function show(Request $request, string $id): JsonResponse
     {
-        $session = ChatSession::with('connectorAccount:id,name,provider')
-            ->where('user_id', $request->user()->id)
-            ->withCount('messages')
-            ->findOrFail($id);
+        $session = $this->findUserChatSession->execute(
+            $request->user()->id,
+            $id,
+            with: ['connectorAccount:id,name,provider'],
+            withMessageCount: true,
+        );
 
         return response()->json(['data' => $session]);
     }
 
     public function send(Request $request, string $id, ConnectorManager $connectorManager): JsonResponse
     {
-        $session = ChatSession::with('connectorAccount')
-            ->where('user_id', $request->user()->id)
-            ->findOrFail($id);
+        $session = $this->findUserChatSession->execute(
+            $request->user()->id,
+            $id,
+            with: ['connectorAccount'],
+        );
 
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:4000'],
@@ -109,10 +117,10 @@ class ChatSessionController extends Controller
             return response()->json(['error' => 'No connector account for this session.'], 422);
         }
 
-        $message = ChatMessage::create([
+        $message = $this->createChatMessage->execute([
             'chat_session_id' => $session->id,
             'connector_account_id' => $connector->id,
-            'direction' => ChatMessage::DIRECTION_INBOUND,
+            'direction' => \App\Models\ChatMessage::DIRECTION_INBOUND,
             'content' => $validated['content'],
             'idempotency_key' => hash('sha256', Str::uuid()->toString()),
         ]);
@@ -130,7 +138,7 @@ class ChatSessionController extends Controller
         $providerResponse = $adapter->sendMessage($session, $payload);
 
         if ($providerResponse->success && $providerResponse->providerMessageId) {
-            $message->update(['provider_message_id' => $providerResponse->providerMessageId]);
+            $this->updateChatMessage->execute($message, ['provider_message_id' => $providerResponse->providerMessageId]);
         }
 
         ProcessChatIntent::dispatch(
@@ -150,12 +158,12 @@ class ChatSessionController extends Controller
 
     public function messages(Request $request, string $id): JsonResponse
     {
-        $session = ChatSession::where('user_id', $request->user()->id)->findOrFail($id);
+        $session = $this->findUserChatSession->execute($request->user()->id, $id);
 
-        $messages = $session->messages()
-            ->orderByDesc('created_at')
-            ->limit(min((int) $request->input('per_page', 30), 200))
-            ->get(['id', 'direction', 'content', 'provider_message_id', 'created_at']);
+        $messages = $this->listSessionMessages->execute(
+            $session,
+            (int) $request->input('per_page', 30),
+        );
 
         return response()->json([
             'data' => $messages->reverse()->values(),
@@ -165,14 +173,12 @@ class ChatSessionController extends Controller
 
     public function actions(Request $request, string $id): JsonResponse
     {
-        $session = ChatSession::where('user_id', $request->user()->id)->findOrFail($id);
+        $session = $this->findUserChatSession->execute($request->user()->id, $id);
 
-        $messageIds = $session->messages()->pluck('id');
-
-        $actions = ChatAction::whereIn('chat_message_id', $messageIds)
-            ->orderByDesc('created_at')
-            ->limit(min((int) $request->input('per_page', 30), 200))
-            ->get(['id', 'action_type', 'status', 'chat_message_id', 'created_at']);
+        $actions = $this->listSessionActions->execute(
+            $session,
+            (int) $request->input('per_page', 30),
+        );
 
         return response()->json([
             'data' => $actions,
@@ -182,8 +188,8 @@ class ChatSessionController extends Controller
 
     public function archive(Request $request, string $id): JsonResponse
     {
-        $session = ChatSession::where('user_id', $request->user()->id)->findOrFail($id);
-        $session->update(['status' => ChatSession::STATUS_ARCHIVED]);
+        $session = $this->findUserChatSession->execute($request->user()->id, $id);
+        $this->updateChatSession->execute($session, ['status' => ChatSession::STATUS_ARCHIVED]);
 
         return response()->json(['data' => ['archived' => true]]);
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Memory\Adapters;
 
+use App\Support\Observability\LlmTelemetry;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Exception\GuzzleException;
@@ -95,13 +96,17 @@ abstract class GuzzleHttpAdapter
     protected function request(string $method, string $endpoint, array $options = []): ?array
     {
         $attempt = 0;
+        $startTime = microtime(true);
 
         while ($attempt < $this->maxRetries) {
             try {
                 $response = $this->client->request($method, $endpoint, $options);
                 $body = $response->getBody()->getContents();
+                $decoded = json_decode($body, true);
 
-                return json_decode($body, true);
+                $this->recordTelemetry($endpoint, $options, $decoded, $startTime);
+
+                return $decoded;
             } catch (ClientException $e) {
                 $statusCode = $e->getResponse()->getStatusCode();
 
@@ -247,5 +252,56 @@ abstract class GuzzleHttpAdapter
         $charsPerToken = config('memory.context_injection.chars_per_token', 4);
 
         return (int) ceil(strlen($text) / $charsPerToken);
+    }
+
+    /**
+     * Record LLM telemetry for a successful API call.
+     *
+     * @param  string  $endpoint  API endpoint
+     * @param  array<string, mixed>  $options  Request options (contains json payload)
+     * @param  array<string, mixed>|null  $response  Decoded response
+     * @param  float  $startTime  Request start microtime
+     */
+    private function recordTelemetry(string $endpoint, array $options, ?array $response, float $startTime): void
+    {
+        try {
+            $telemetry = app(LlmTelemetry::class);
+            $latencyMs = (microtime(true) - $startTime) * 1000;
+            $payload = $options['json'] ?? [];
+            $model = $payload['model'] ?? 'unknown';
+            $operation = $this->inferOperation($endpoint);
+
+            // Extract token usage from response
+            $usage = $response['usage'] ?? [];
+            $tokensIn = $usage['input_tokens'] ?? $usage['prompt_tokens'] ?? 0;
+            $tokensOut = $usage['output_tokens'] ?? $usage['completion_tokens'] ?? 0;
+
+            $telemetry->record(
+                $this->getProviderName(),
+                $model,
+                (int) $tokensIn,
+                (int) $tokensOut,
+                $latencyMs,
+                $operation,
+            );
+        } catch (\Throwable) {
+            // Telemetry must never break API calls
+        }
+    }
+
+    /**
+     * Infer the operation type from the API endpoint.
+     */
+    private function inferOperation(string $endpoint): string
+    {
+        if (str_contains($endpoint, 'embedding')) {
+            return 'embedding';
+        }
+
+        if (str_contains($endpoint, 'chat') || str_contains($endpoint, 'message')) {
+            return 'inference';
+        }
+
+        return 'api_call';
     }
 }

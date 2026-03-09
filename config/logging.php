@@ -50,7 +50,7 @@ return [
     |
     */
 
-    'redact_sensitive' => (bool) env('LOG_REDACT_SENSITIVE', false),
+    'redact_sensitive' => (bool) env('LOG_REDACT_SENSITIVE', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -70,7 +70,7 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'channels' => explode(',', (string) env('LOG_STACK', 'json')),
             'ignore_exceptions' => false,
         ],
 
@@ -168,6 +168,7 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'formatter' => Monolog\Formatter\JsonFormatter::class,
+            'tap' => [App\Logging\RedactSensitiveTap::class],
             'replace_placeholders' => true,
         ],
 

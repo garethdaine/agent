@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Delegation\CreateDelegateeProfileAction;
+use App\Actions\Delegation\DeleteDelegateeProfileAction;
+use App\Actions\Delegation\FindDelegateeProfileAction;
+use App\Actions\Delegation\ListDelegateeProfilesAction;
+use App\Actions\Delegation\ListDelegationCapabilitiesAction;
+use App\Actions\Delegation\RestoreDelegateeProfileAction;
+use App\Actions\Delegation\UpdateDelegateeProfileAction;
 use App\Http\Controllers\Controller;
 use App\Models\DelegateeProfile;
 use App\Models\DelegationCapability;
@@ -15,12 +22,9 @@ use Illuminate\Http\Request;
 
 class DelegateeProfileController extends Controller
 {
-    public function capabilities(Request $request): JsonResponse
+    public function capabilities(Request $request, ListDelegationCapabilitiesAction $action): JsonResponse
     {
-        $capabilities = DelegationCapability::query()
-            ->active()
-            ->orderBy('slug')
-            ->get(['id', 'slug', 'name', 'description']);
+        $capabilities = $action->execute();
 
         return response()->json([
             'data' => $capabilities->map(fn (DelegationCapability $c): array => [
@@ -32,32 +36,25 @@ class DelegateeProfileController extends Controller
         ]);
     }
 
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ListDelegateeProfilesAction $action): JsonResponse
     {
-        $query = $request->user()->delegateeProfiles()->newQuery();
-
-        $deleted = $request->string('deleted')->toString();
-        if ($deleted === '1' || $deleted === 'true') {
-            $query->onlyTrashed(); // @phpstan-ignore method.notFound
-        } elseif ($deleted === 'all') {
-            $query->withTrashed(); // @phpstan-ignore method.notFound
-        }
-
-        $q = trim($request->string('q')->toString());
-        if ($q !== '') {
-            $query->where(function ($builder) use ($q): void {
-                $builder->where('name', 'like', "%{$q}%")
-                    ->orWhere('runner_type', 'like', "%{$q}%");
-            });
-        }
+        $filters = [
+            'q' => $request->string('q')->toString(),
+            'deleted' => $request->string('deleted')->toString(),
+            'sort' => $request->string('sort', 'name')->toString(),
+            'dir' => $request->string('dir', 'asc')->toString(),
+            'per_page' => (int) $request->integer('per_page', 25),
+        ];
 
         if ($request->filled('is_active')) {
-            $query->where('is_active', filter_var($request->input('is_active'), FILTER_VALIDATE_BOOL));
+            $filters['is_active'] = filter_var($request->input('is_active'), FILTER_VALIDATE_BOOL);
         }
 
         if ($request->filled('runner_type')) {
-            $query->where('runner_type', $request->string('runner_type')->toString());
+            $filters['runner_type'] = $request->string('runner_type')->toString();
         }
+
+        $profiles = $action->execute($request->user(), $filters);
 
         $sort = $request->string('sort', 'name')->toString();
         $dir = strtolower($request->string('dir', 'asc')->toString()) === 'desc' ? 'desc' : 'asc';
@@ -65,11 +62,6 @@ class DelegateeProfileController extends Controller
         if (! in_array($sort, ['name', 'updated_at', 'created_at', 'is_active', 'runner_type'], true)) {
             $sort = 'name';
         }
-
-        $query->orderBy($sort, $dir);
-
-        $perPage = min(100, max(1, (int) $request->integer('per_page', 25)));
-        $profiles = $query->with(['capabilities', 'metric'])->paginate($perPage)->withQueryString();
 
         /** @var \Illuminate\Support\Collection<int, DelegateeProfile> $profileItems */
         $profileItems = collect($profiles->items());
@@ -102,21 +94,22 @@ class DelegateeProfileController extends Controller
         ]);
     }
 
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, int $id, FindDelegateeProfileAction $action): JsonResponse
     {
-        /** @var DelegateeProfile|null $profile */
-        $profile = $request->user()->delegateeProfiles()->withTrashed()->with(['capabilities', 'metric'])->find($id); // @phpstan-ignore method.notFound
+        $profile = $action->execute($request->user(), $id);
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);
         }
+
+        $profile->load(['capabilities', 'metric']);
 
         return response()->json([
             'data' => $this->transformProfile($profile, true),
         ]);
     }
 
-    public function store(Request $request, AuditLogger $auditLogger): JsonResponse
+    public function store(Request $request, AuditLogger $auditLogger, CreateDelegateeProfileAction $createAction): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -134,25 +127,20 @@ class DelegateeProfileController extends Controller
             'soul.user_context' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        /** @var DelegateeProfile $profile */
-        $profile = $request->user()->delegateeProfiles()->create([
-            'name' => $validated['name'],
-            'runner_type' => $validated['runner_type'],
-            'command_template' => $validated['command_template'],
-            'working_directory' => $validated['working_directory'],
-            'env_json' => $validated['env_json'] ?? null,
-            'config_json' => $validated['config_json'] ?? null,
-            'is_active' => $validated['is_active'] ?? true,
-        ]);
-
-        // Sync capabilities if provided
-        if (isset($validated['capability_ids'])) {
-            $profile->capabilities()->sync($validated['capability_ids']);
-        }
-
-        if (isset($validated['soul'])) {
-            $profile->setSoul($validated['soul']);
-        }
+        $profile = $createAction->execute(
+            user: $request->user(),
+            attributes: [
+                'name' => $validated['name'],
+                'runner_type' => $validated['runner_type'],
+                'command_template' => $validated['command_template'],
+                'working_directory' => $validated['working_directory'],
+                'env_json' => $validated['env_json'] ?? null,
+                'config_json' => $validated['config_json'] ?? null,
+                'is_active' => $validated['is_active'] ?? true,
+            ],
+            capabilityIds: $validated['capability_ids'] ?? null,
+            soul: $validated['soul'] ?? null,
+        );
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -170,10 +158,9 @@ class DelegateeProfileController extends Controller
         ], 201);
     }
 
-    public function update(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
+    public function update(Request $request, int $id, AuditLogger $auditLogger, FindDelegateeProfileAction $findAction, UpdateDelegateeProfileAction $updateAction): JsonResponse
     {
-        /** @var DelegateeProfile|null $profile */
-        $profile = $request->user()->delegateeProfiles()->withTrashed()->find($id); // @phpstan-ignore method.notFound
+        $profile = $findAction->execute($request->user(), $id);
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);
@@ -202,17 +189,12 @@ class DelegateeProfileController extends Controller
             'name', 'runner_type', 'command_template', 'working_directory', 'env_json', 'config_json', 'is_active',
         ]));
 
-        $profile->fill($updateFields);
-        $profile->save();
-
-        // Sync capabilities if provided
-        if (isset($validated['capability_ids'])) {
-            $profile->capabilities()->sync($validated['capability_ids']);
-        }
-
-        if (isset($validated['soul'])) {
-            $profile->setSoul($validated['soul']);
-        }
+        $updateAction->execute(
+            profile: $profile,
+            attributes: $updateFields,
+            capabilityIds: $validated['capability_ids'] ?? null,
+            soul: $validated['soul'] ?? null,
+        );
 
         $after = $profile->only(array_keys($before));
         $changedFields = [];
@@ -240,17 +222,16 @@ class DelegateeProfileController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
+    public function destroy(Request $request, int $id, AuditLogger $auditLogger, FindDelegateeProfileAction $findAction, DeleteDelegateeProfileAction $deleteAction): JsonResponse
     {
-        /** @var DelegateeProfile|null $profile */
-        $profile = $request->user()->delegateeProfiles()->find($id);
+        $profile = $findAction->execute($request->user(), $id, withTrashed: false);
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);
         }
 
         $before = ['deleted_at' => optional($profile->deleted_at)?->toIso8601String()];
-        $profile->delete();
+        $deleteAction->execute($profile);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -271,10 +252,9 @@ class DelegateeProfileController extends Controller
         ]);
     }
 
-    public function restore(Request $request, int $id, AuditLogger $auditLogger): JsonResponse
+    public function restore(Request $request, int $id, AuditLogger $auditLogger, FindDelegateeProfileAction $findAction, RestoreDelegateeProfileAction $restoreAction): JsonResponse
     {
-        /** @var DelegateeProfile|null $profile */
-        $profile = $request->user()->delegateeProfiles()->withTrashed()->find($id); // @phpstan-ignore method.notFound
+        $profile = $findAction->execute($request->user(), $id);
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);
@@ -282,9 +262,7 @@ class DelegateeProfileController extends Controller
 
         $before = ['deleted_at' => optional($profile->deleted_at)?->toIso8601String()];
 
-        if ($profile->trashed()) {
-            $profile->restore();
-        }
+        $restoreAction->execute($profile);
 
         $auditLogger->recordUserAction(
             request: $request,
@@ -302,9 +280,9 @@ class DelegateeProfileController extends Controller
         ]);
     }
 
-    public function trust(Request $request, int $id, TrustScoreCalculator $calculator): JsonResponse
+    public function trust(Request $request, int $id, TrustScoreCalculator $calculator, FindDelegateeProfileAction $findAction): JsonResponse
     {
-        $profile = DelegateeProfile::find($id);
+        $profile = $findAction->findById($id);
 
         if ($profile === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Profile not found.', 404);

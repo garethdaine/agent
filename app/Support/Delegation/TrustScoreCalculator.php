@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Support\Delegation;
 
 use App\Models\AgentJobRun;
+use App\Models\DelegateeProfile;
+use App\Models\TrustScoreHistory;
 use App\Models\User;
 use App\Support\Delegation\DTOs\StarMetrics;
 use App\Support\Delegation\DTOs\TrustScore;
@@ -19,6 +21,35 @@ class TrustScoreCalculator
         return Cache::remember($cacheKey, 300, function () use ($runnerType, $jobId) {
             return $this->computeScore($runnerType, $jobId);
         });
+    }
+
+    /**
+     * Recalculate trust score for a delegatee profile and persist history.
+     */
+    public function recalculateForProfile(DelegateeProfile $profile, string $reason = 'scheduled_recalculation'): TrustScore
+    {
+        $trustScore = $this->calculate($profile->runner_type);
+
+        // Persist to profile
+        $profile->update([
+            'trust_score' => $trustScore->score,
+            'trust_updated_at' => now(),
+        ]);
+
+        // Record history
+        TrustScoreHistory::create([
+            'delegatee_profile_id' => $profile->id,
+            'score' => $trustScore->score,
+            'components_json' => $trustScore->components,
+            'calculated_at' => now(),
+            'reason' => $reason,
+        ]);
+
+        // Bust cache so next calculate() gets fresh data
+        $cacheKey = "trust_score:{$profile->runner_type}:all";
+        Cache::forget($cacheKey);
+
+        return $trustScore;
     }
 
     /**

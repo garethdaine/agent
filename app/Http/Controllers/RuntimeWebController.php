@@ -4,21 +4,24 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Enums\Runtime\RuntimeApprovalState;
-use App\Models\Runtime\RuntimeApproval;
-use App\Models\Runtime\RuntimeSession;
+use App\Actions\Runtime\FindRuntimeSessionAction;
+use App\Actions\Runtime\GetPendingApprovalsAction;
+use App\Actions\Runtime\ListRuntimeSessionsAction;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RuntimeWebController extends Controller
 {
+    public function __construct(
+        private readonly ListRuntimeSessionsAction $listSessions,
+        private readonly FindRuntimeSessionAction $findSession,
+        private readonly GetPendingApprovalsAction $getPendingApprovals,
+    ) {}
+
     public function index(Request $request): Response
     {
-        $sessions = RuntimeSession::where('user_id', $request->user()->id)
-            ->with('turns')
-            ->orderBy('started_at', 'desc')
-            ->paginate(20);
+        $sessions = $this->listSessions->execute($request->user(), 20);
 
         return Inertia::render('Messenger/Runtime/Index', [
             'sessions' => $sessions,
@@ -27,13 +30,13 @@ class RuntimeWebController extends Controller
 
     public function show(Request $request, string $id): Response
     {
-        $session = RuntimeSession::where('user_id', $request->user()->id)
-            ->with(['turns.toolCalls.approval', 'policySnapshots', 'artifacts'])
-            ->findOrFail($id);
+        $session = $this->findSession->execute(
+            $request->user(),
+            $id,
+            ['turns.toolCalls.approval', 'policySnapshots', 'artifacts'],
+        );
 
-        $pendingApprovals = RuntimeApproval::whereHas('toolCall.turn', function ($q) use ($session) {
-            $q->where('runtime_session_id', $session->id);
-        })->where('state', RuntimeApprovalState::Pending)->get();
+        $pendingApprovals = $this->getPendingApprovals->execute($session);
 
         return Inertia::render('Messenger/Runtime/Show', [
             'session' => $session,

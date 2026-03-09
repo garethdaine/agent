@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Messenger;
 
+use App\Actions\Connector\FindConnectorAccountAction;
+use App\Actions\Connector\FindConnectorAccountByProviderAction;
+use App\Actions\Connector\SaveIdentityLinkAction;
 use App\Http\Controllers\Controller;
 use App\Models\ConnectorAccount;
-use App\Models\MessengerIdentityLink;
 use App\Services\Messenger\AccountLinkTokenService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +19,10 @@ use Inertia\Response as InertiaResponse;
 class AccountLinkController extends Controller
 {
     public function __construct(
-        private readonly AccountLinkTokenService $tokenService
+        private readonly AccountLinkTokenService $tokenService,
+        private readonly FindConnectorAccountAction $findConnectorAccount,
+        private readonly FindConnectorAccountByProviderAction $findConnectorAccountByProvider,
+        private readonly SaveIdentityLinkAction $saveIdentityLink,
     ) {}
 
     /**
@@ -72,12 +77,17 @@ class AccountLinkController extends Controller
         // Find the connector account
         $connectorAccount = null;
         if ($payload->connectorAccountId) {
-            $connectorAccount = ConnectorAccount::find($payload->connectorAccountId);
+            try {
+                $connectorAccount = $this->findConnectorAccount->execute($payload->connectorAccountId);
+            } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+                $connectorAccount = null;
+            }
         } else {
             // Find by provider (fallback when connectorAccountId not stored)
-            $connectorAccount = ConnectorAccount::where('provider', $payload->provider)
-                ->where('status', ConnectorAccount::STATUS_CONNECTED)
-                ->first();
+            $connectorAccount = $this->findConnectorAccountByProvider->execute(
+                $payload->provider,
+                ConnectorAccount::STATUS_CONNECTED,
+            );
         }
 
         if ($connectorAccount === null) {
@@ -89,40 +99,19 @@ class AccountLinkController extends Controller
             ]);
         }
 
-        // Check if link already exists
-        $existingLink = MessengerIdentityLink::where('connector_account_id', $connectorAccount->id)
-            ->where('provider_user_id', $payload->providerUserId)
-            ->first();
+        $this->saveIdentityLink->execute(
+            $request->user()->id,
+            $connectorAccount->id,
+            $payload->providerUserId,
+            $this->calculateExpiry($connectorAccount),
+        );
 
-        if ($existingLink !== null) {
-            // Update the existing link to point to the current user
-            $existingLink->update([
-                'user_id' => $request->user()->id,
-                'expires_at' => $this->calculateExpiry($connectorAccount),
-            ]);
-
-            Log::info('Messenger account link updated', [
-                'user_id' => $request->user()->id,
-                'connector_account_id' => $connectorAccount->id,
-                'provider' => $payload->provider,
-                'provider_user_id' => $payload->providerUserId,
-            ]);
-        } else {
-            // Create the identity link
-            MessengerIdentityLink::create([
-                'user_id' => $request->user()->id,
-                'connector_account_id' => $connectorAccount->id,
-                'provider_user_id' => $payload->providerUserId,
-                'expires_at' => $this->calculateExpiry($connectorAccount),
-            ]);
-
-            Log::info('Messenger account linked', [
-                'user_id' => $request->user()->id,
-                'connector_account_id' => $connectorAccount->id,
-                'provider' => $payload->provider,
-                'provider_user_id' => $payload->providerUserId,
-            ]);
-        }
+        Log::info('Messenger account linked', [
+            'user_id' => $request->user()->id,
+            'connector_account_id' => $connectorAccount->id,
+            'provider' => $payload->provider,
+            'provider_user_id' => $payload->providerUserId,
+        ]);
 
         // Redirect to dashboard on success
         return redirect()->route('dashboard')->with('success', 'Your messenger account has been linked successfully.');
