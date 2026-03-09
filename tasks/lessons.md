@@ -667,3 +667,12 @@ Agent run failed with error RUN_PATH_NOT_FOUND: The task_markdown_path must poin
 - Task: Interrogation Build S1 T03
 - Category: unknown
 - Runner: claude
+### [2026-03-09T13:11:21+00:00] [messenger_turn_failure]
+Messenger turn failed: Error: Claude Code cannot be launched inside another Claude Code session.
+Nested sessions share runtime resources and will crash all active sessions.
+To bypass this check, unset the CLAUDECODE environment variable.
+
+**Context:**
+- Task: Messenger Turn
+- Category: chat
+- Runner: messenger

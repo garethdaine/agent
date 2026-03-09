@@ -74,7 +74,7 @@ class BuildTaskRunFactory
             $job->cron_expression = '0 0 1 1 0';
             $job->timezone = 'UTC';
             $job->is_enabled = false;
-            $job->max_runtime_seconds = 60 * 60;
+            $job->max_runtime_seconds = (int) config('agent.interrogation.build_task_max_runtime_seconds', 7200);
             $job->cooldown_seconds = 0;
             $job->runner_type = $session->runner_type;
             $job->command_template = $commandTemplate;
@@ -343,7 +343,7 @@ class BuildTaskRunFactory
         $content[] = '';
         $content[] = '- Make concrete changes in the repository that satisfy this task.';
         $content[] = '- Run relevant tests or validation commands when possible.';
-        $content[] = '- For this repository, run tests with `php artisan test` (or `composer test` when full preflight is needed). Build runs already pin `APP_ENV=testing` and `DB_CONNECTION=pgsql_testing` to an isolated test database.';
+        $content[] = '- For this repository, run tests with `php -d memory_limit=1G artisan test` (or `composer test` when full preflight is needed). Build runs already pin `APP_ENV=testing` and `DB_CONNECTION=pgsql_testing` to an isolated test database. Always include `-d memory_limit=1G` to prevent OOM failures. Do not use `--parallel` unless explicitly instructed.';
         $content[] = '- Do not emit generic PostgreSQL disclaimers unless you actually ran a test command and captured a failing output that proves the issue.';
         $content[] = '- Include assumptions, conditions for correctness, and explicit non-goals in the final report.';
         $content[] = '- If blocked, report precise blockers and impacted files.';

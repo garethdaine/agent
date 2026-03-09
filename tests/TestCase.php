@@ -75,16 +75,28 @@ abstract class TestCase extends BaseTestCase
     private function dropCustomSchemasForFreshMigration(): void
     {
         try {
+            $database = (string) env('TEST_DB_DATABASE', 'agent_test');
+
+            // When running under ParaTest (--parallel), each worker process
+            // receives a TEST_TOKEN env var and operates on its own suffixed
+            // database (e.g. agent_test_test_1). We must connect to the
+            // correct per-worker database to drop the stale schema.
+            $token = getenv('TEST_TOKEN');
+            if ($token !== false && $token !== '') {
+                $database .= '_test_'.$token;
+            }
+
             $dsn = sprintf(
                 'pgsql:host=%s;port=%s;dbname=%s',
                 env('TEST_DB_HOST', '127.0.0.1'),
                 env('TEST_DB_PORT', '5432'),
-                env('TEST_DB_DATABASE', 'agent_test'),
+                $database,
             );
             $pdo = new \PDO($dsn, env('TEST_DB_USERNAME', 'root'), env('TEST_DB_PASSWORD', ''));
             $pdo->exec('DROP SCHEMA IF EXISTS agent_projection CASCADE');
         } catch (\Throwable) {
-            // Ignore — schema may not exist or DB may be unreachable.
+            // Ignore — schema may not exist, DB may be unreachable, or
+            // the per-worker database may not have been created yet.
         }
     }
 

@@ -161,7 +161,7 @@ class BuildTaskRunFactoryTest extends TestCase
         $this->assertStringContainsString('Do not pause for user check-ins', $markdown);
         $this->assertStringContainsString('## Mandatory Workflow', $markdown);
         $this->assertStringContainsString('Write or update tests first', $markdown);
-        $this->assertStringContainsString('run tests with `php artisan test` (or `composer test` when full preflight is needed)', $markdown);
+        $this->assertStringContainsString('run tests with `php -d memory_limit=1G artisan test` (or `composer test` when full preflight is needed)', $markdown);
         $this->assertStringContainsString('DB_CONNECTION=pgsql_testing', $markdown);
         $this->assertStringContainsString('Do not emit generic PostgreSQL disclaimers', $markdown);
         $this->assertStringContainsString('## Code Field Rules', $markdown);

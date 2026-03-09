@@ -536,6 +536,16 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $build['active_run_id'] = (int) $run->id;
             $this->saveBuildMetadata($session, $build);
 
+            $writer->appendSystem([
+                'notice' => 'build_task_blocked',
+                'task_id' => $task->id,
+                'sequence' => $task->sequence,
+                'title' => $task->title,
+                'run_id' => $run->id,
+                'reason' => 'paused_before_completion',
+                'at' => Carbon::now('UTC')->toIso8601String(),
+            ]);
+
             $this->queueTaskProviderStatusSync($session, $task, $writer);
 
             return false;
@@ -560,6 +570,17 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $build['active_run_id'] = (int) $run->id;
         $build['failed_at'] = Carbon::now('UTC')->toIso8601String();
         $this->saveBuildMetadata($session, $build);
+
+        $writer->appendSystem([
+            'notice' => 'build_task_failed',
+            'task_id' => $task->id,
+            'sequence' => $task->sequence,
+            'title' => $task->title,
+            'run_id' => $run->id,
+            'run_status' => $runStatus,
+            'error' => $task->last_error,
+            'at' => Carbon::now('UTC')->toIso8601String(),
+        ]);
 
         $writer->appendError([
             'code' => 'BUILD_TASK_FAILED',

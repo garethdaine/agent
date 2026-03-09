@@ -160,6 +160,7 @@ return [
         'review_low_confidence_threshold' => 0.6,
         'review_max_clarification_questions' => 3,
         'reviewer_model_override' => env('AGENT_REVIEWER_MODEL_OVERRIDE', null),
+        'build_task_max_runtime_seconds' => (int) env('AGENT_INTERROGATION_BUILD_TASK_MAX_RUNTIME_SECONDS', 7200),
     ],
 
     'allowed_placeholders' => [

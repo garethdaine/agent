@@ -102,6 +102,7 @@ const techStackDraft = ref({
     documentation_url: '',
 });
 let echoChannel = null;
+let echoUserChannel = null;
 const echoConnected = ref(false);
 const debouncedLoadSessionTimer = ref(null);
 
@@ -614,15 +615,26 @@ const isSignificantEvent = (event) => {
         return true;
     }
 
+    // Error events always require a session reload — they represent build/task failures.
+    if (type === 'error') {
+        return true;
+    }
+
     if (type === 'system') {
+        // These notice values must match the actual backend notice names used in
+        // ExecuteInterrogationBuildJob, InterrogationBuildService, and the controller.
         const significantNotices = [
-            'build_status_changed', 'build_started', 'build_completed', 'build_failed',
-            'build_paused', 'build_resumed', 'build_paused_task_review',
-            'task_completed', 'task_failed', 'task_started', 'task_skipped',
-            'tasks_approved', 'tasks_generated', 'tasks_regenerated',
-            'phase_changed', 'session_completed', 'session_failed',
-            'plan_ready', 'plan_generated', 'plan_revised', 'plan_approved',
-            'rate_limit_detected', 'rate_limit_resolved',
+            // Build lifecycle
+            'build_completed', 'build_failed', 'build_paused', 'build_resumed',
+            // Task lifecycle (backend uses build_task_* prefix)
+            'build_task_started', 'build_task_completed', 'build_task_failed', 'build_task_blocked',
+            // Pause reasons
+            'build_paused_rate_limit', 'build_paused_clarification',
+            'build_paused_compliance', 'build_paused_task_review',
+            // Task generation
+            'tasks_generated', 'tasks_regenerated', 'tasks_approved',
+            // Rate limit resolution (from InterrogationBuildService)
+            'rate_limit_resolved',
         ];
 
         return significantNotices.includes(notice);
@@ -720,6 +732,17 @@ const subscribeEcho = () => {
         .listen('.phase.changed', () => {
             loadSession(true);
         });
+
+    // Subscribe to user channel for run status changes (run completed/failed/timed_out).
+    // This provides an earlier signal than the build job's system events — the run
+    // terminates first, then the build job processes the result asynchronously.
+    const userId = session.value?.user_id ?? null;
+    if (userId) {
+        echoUserChannel = window.Echo.private(`user.${userId}`)
+            .listen('.run.status_changed', () => {
+                debouncedLoadSession(true);
+            });
+    }
 };
 
 const unsubscribeEcho = () => {
@@ -728,7 +751,16 @@ const unsubscribeEcho = () => {
         window.Echo.leave(`interrogation.${props.sessionId}`);
     }
 
+    if (window.Echo && echoUserChannel) {
+        const userId = session.value?.user_id ?? null;
+        if (userId) {
+            window.Echo.leave(`private-user.${userId}`);
+            window.Echo.leave(`user.${userId}`);
+        }
+    }
+
     echoChannel = null;
+    echoUserChannel = null;
     echoConnected.value = false;
 
     // Restart polling as a fallback now that Echo is disconnected.

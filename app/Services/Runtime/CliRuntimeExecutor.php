@@ -115,6 +115,21 @@ class CliRuntimeExecutor
                 $env['AGENT_BROWSER_HEADED'] = '1';
             }
 
+            // Suppress session-nesting marker env vars so the child CLI does
+            // not refuse to start. Setting the value to false makes Symfony
+            // Process treat the key as present (preventing getDefaultEnv()
+            // backfill from the parent process) while skipping it from the
+            // envPairs array passed to proc_open().
+            $env['CLAUDECODE'] = false;
+
+            // Also suppress Codex session vars when running the codex runner
+            // to prevent nested-session conflicts (same pattern as CodexAdapter).
+            if ($runnerType === 'codex') {
+                $env['CODEX_THREAD_ID'] = false;
+                $env['CODEX_SESSION_ID'] = false;
+                $env['CODEX_INTERNAL_ORIGINATOR_OVERRIDE'] = false;
+            }
+
             Log::channel('runtime')->info('CliRuntimeExecutor: Starting CLI process', [
                 'session_id' => $session->id,
                 'runner_type' => $runnerType,
