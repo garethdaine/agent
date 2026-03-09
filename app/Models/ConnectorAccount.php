@@ -6,6 +6,8 @@ namespace App\Models;
 
 use App\Enums\Messenger\ApprovalMode;
 use App\Messenger\Gateway\Enums\WorkerHealthStatus;
+use App\Observers\ConnectorAccountObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -37,6 +39,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * @mixin \Illuminate\Database\Eloquent\Builder
  */
+#[ObservedBy(ConnectorAccountObserver::class)]
 class ConnectorAccount extends Model
 {
     use HasFactory;

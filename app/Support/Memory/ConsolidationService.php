@@ -179,6 +179,7 @@ class ConsolidationService
         }
 
         // Find duplicates by content_hash
+        // SAFETY: no user input in raw query — aggregation only
         $query = MemoryEmbedding::query()
             ->select('content_hash', 'user_id', DB::raw('COUNT(*) as duplicate_count'))
             ->groupBy('content_hash', 'user_id')

@@ -2,6 +2,15 @@
 
 declare(strict_types=1);
 
+/*
+|--------------------------------------------------------------------------
+| NOTE: This application primarily uses App\Support\Agent\FeatureFlagManager
+| with the AgentFeatureSetting model for feature flags. Pennant is installed
+| but not actively used. This config is retained for potential migration to
+| Pennant in the future. Define new features in app/Providers if adopting.
+|--------------------------------------------------------------------------
+*/
+
 return [
 
     /*

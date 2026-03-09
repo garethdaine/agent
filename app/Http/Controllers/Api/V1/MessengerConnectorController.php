@@ -96,7 +96,8 @@ class MessengerConnectorController extends Controller
         $credentialManager = app(ConnectorCredentialManager::class);
         $validProviders = $credentialManager->supportedProviders();
 
-        $validator = Validator::make($request->all(), [
+        $storeFields = ['provider', 'name', 'credentials', 'webhook_secret', 'connection_mode', 'config', 'config.runner_type', 'config.approval_mode', 'config.confirmation_required', 'config.session_history_limit', 'config.default_verbosity', 'account_key'];
+        $validator = Validator::make($request->only($storeFields), [
             'provider' => ['required', 'string', Rule::in($validProviders)],
             'name' => ['required', 'string', 'min:1', 'max:255'],
             'credentials' => ['required', 'array'],
@@ -192,7 +193,8 @@ class MessengerConnectorController extends Controller
         $connector = $this->findConnectorAccount->execute($id);
         $credentialManager = app(ConnectorCredentialManager::class);
 
-        $validator = Validator::make($request->all(), [
+        $updateFields = ['name', 'credentials', 'webhook_secret', 'connection_mode', 'config', 'config.runner_type', 'config.approval_mode', 'config.confirmation_required', 'config.session_history_limit', 'config.default_verbosity', 'account_key', 'status'];
+        $validator = Validator::make($request->only($updateFields), [
             'name' => ['sometimes', 'string', 'min:1', 'max:255'],
             'credentials' => ['sometimes', 'array'],
             'webhook_secret' => ['nullable', 'string', 'max:255'],
@@ -338,7 +340,7 @@ class MessengerConnectorController extends Controller
             ]);
         }
 
-        $validator = Validator::make($request->all(), [
+        $validator = Validator::make($request->only(['name', 'personality', 'system_prompt', 'user_context']), [
             'name' => ['nullable', 'string', 'max:100'],
             'personality' => ['nullable', 'string', 'max:2000'],
             'system_prompt' => ['nullable', 'string', 'max:5000'],

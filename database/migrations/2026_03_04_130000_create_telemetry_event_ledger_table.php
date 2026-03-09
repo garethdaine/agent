@@ -60,6 +60,7 @@ return new class extends Migration
         if (! Schema::hasTable(self::MUTATION_AUDIT_TABLE)) {
             Schema::create(self::MUTATION_AUDIT_TABLE, function (Blueprint $table): void {
                 $table->bigIncrements('id');
+                // SAFETY: no user input in raw query — static default expression only
                 $table->timestamp('attempted_at')->default(DB::raw("(now() AT TIME ZONE 'UTC')"));
                 $table->string('db_user', 255);
                 $table->string('application_name', 255)->nullable();

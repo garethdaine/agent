@@ -93,6 +93,7 @@ class MemoryStatsCommand extends Command
             $query->where('user_id', $userId);
         }
 
+        // SAFETY: no user input in raw query — aggregation only
         $stats = $query
             ->select('block_type', DB::raw('COUNT(*) as count'))
             ->groupBy('block_type')
@@ -204,6 +205,7 @@ class MemoryStatsCommand extends Command
             $query->forUser($userId);
         }
 
+        // SAFETY: no user input in raw query — aggregation only
         $logs = $query
             ->select('consolidation_type', DB::raw('COUNT(*) as count'), DB::raw('SUM(source_count) as total_processed'))
             ->groupBy('consolidation_type')
@@ -236,6 +238,7 @@ class MemoryStatsCommand extends Command
             $query->where('user_id', $userId);
         }
 
+        // SAFETY: no user input in raw query — aggregation only
         $usage = $query
             ->select(
                 'provider',

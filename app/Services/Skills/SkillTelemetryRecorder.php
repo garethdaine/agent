@@ -54,6 +54,7 @@ class SkillTelemetryRecorder
 
         // Always attempt skill row update
         try {
+            // SAFETY: no user input in raw query — atomic counter increment only
             DB::table('agent_skills')
                 ->where('id', $skill->id)
                 ->update([

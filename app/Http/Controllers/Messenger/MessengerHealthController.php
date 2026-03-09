@@ -34,7 +34,10 @@ class MessengerHealthController extends Controller
 
     public function index(): JsonResponse
     {
-        $connectors = $this->listAllConnectorAccounts->execute();
+        $connectors = $this->listAllConnectorAccounts->execute([
+            'id', 'name', 'provider', 'connection_mode', 'runtime_state',
+            'last_health_check_at', 'runtime_error_message',
+        ]);
 
         $summary = [
             'total_connectors' => $connectors->count(),
@@ -166,7 +169,10 @@ class MessengerHealthController extends Controller
      */
     public function dashboard(): Response
     {
-        $connectors = $this->listAllConnectorAccounts->execute();
+        $connectors = $this->listAllConnectorAccounts->execute([
+            'id', 'name', 'provider', 'connection_mode', 'runtime_state',
+            'last_health_check_at', 'runtime_error_message',
+        ]);
 
         $summary = [
             'total_connectors' => $connectors->count(),

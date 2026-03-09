@@ -13,12 +13,14 @@ class ListAllConnectorAccountsAction
      * @param  array<int, string>|null  $columns
      * @return Collection<int, ConnectorAccount>
      */
-    public function execute(?array $columns = null): Collection
+    public function execute(?array $columns = null, int $limit = 100): Collection
     {
+        $query = ConnectorAccount::query()->limit($limit);
+
         if ($columns !== null) {
-            return ConnectorAccount::query()->select($columns)->get();
+            $query->select($columns);
         }
 
-        return ConnectorAccount::all();
+        return $query->get();
     }
 }
