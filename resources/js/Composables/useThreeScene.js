@@ -7,8 +7,6 @@ import {
     DirectionalLight,
     PCFSoftShadowMap,
 } from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-
 /**
  * Composable to init and run a Three.js scene in a container.
  * Handles scene, camera, renderer, lights, resize, animation loop, and disposal.
@@ -26,7 +24,7 @@ export function useThreeScene(containerRef, options = {}) {
     let controls = null;
     let animationFrameId = null;
 
-    function init() {
+    async function init() {
         const container = containerRef?.current ?? containerRef?.value;
         if (!container) return;
 
@@ -52,6 +50,7 @@ export function useThreeScene(containerRef, options = {}) {
         scene.add(dir);
 
         try {
+            const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
@@ -82,8 +81,8 @@ export function useThreeScene(containerRef, options = {}) {
         if (renderer && scene && camera) renderer.render(scene, camera);
     }
 
-    function start() {
-        const out = init();
+    async function start() {
+        const out = await init();
         if (out) animate();
         return out;
     }

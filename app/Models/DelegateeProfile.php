@@ -51,6 +51,8 @@ class DelegateeProfile extends Model
         'env_json',
         'config_json',
         'is_active',
+        'trust_score',
+        'trust_updated_at',
         'soul_json',
         'capability_profile',
     ];

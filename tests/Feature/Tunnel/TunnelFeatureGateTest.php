@@ -18,6 +18,8 @@ class TunnelFeatureGateTest extends TestCase
 
     public function test_returns_404_when_tunnel_feature_disabled(): void
     {
+        config()->set('tunnel.enabled', false);
+
         $middleware = app(TunnelFeatureGate::class);
         $request = Request::create('/test', 'GET');
 

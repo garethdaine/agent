@@ -512,7 +512,7 @@ class ClaudeAdapter implements InterrogationRunnerAdapter
         }
 
         return [
-            'question_id' => (string) ($decoded['question_id'] ?? 'q-'.substr(sha1($questionText), 0, 12)),
+            'question_id' => (string) ($decoded['question_id'] ?? 'q-'.substr(hash('xxh128', $questionText), 0, 12)),
             'canonical_key' => is_string($decoded['canonical_key'] ?? null) ? $decoded['canonical_key'] : null,
             'question_text' => $questionText,
             'answer_type' => (string) ($decoded['answer_type'] ?? 'freetext'),

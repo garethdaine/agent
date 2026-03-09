@@ -529,6 +529,8 @@ class InterrogationBuildService
         $build['rate_limit_detected'] = false;
         $build['rate_limit_reset_at'] = null;
         $build['rate_limit_excerpt'] = null;
+        $build['task_review_summary'] = null;
+        $build['task_review_task_id'] = null;
 
         $this->saveBuildMetadata($session, $build);
 
@@ -899,6 +901,20 @@ class InterrogationBuildService
             $activeRunPayload['effective_status'] = $this->effectiveBuildRunStatus($activeRun, $activeTask, $flags);
         }
 
+        $artefacts = [];
+        foreach ($tasks as $t) {
+            $tMeta = is_array($t->metadata_json) ? $t->metadata_json : [];
+            $taskArtefacts = is_array($tMeta['artefacts'] ?? null) ? $tMeta['artefacts'] : [];
+            foreach ($taskArtefacts as $artefact) {
+                if (is_array($artefact)) {
+                    $artefacts[] = array_merge($artefact, [
+                        'task_id' => $t->id,
+                        'task_title' => $t->title,
+                    ]);
+                }
+            }
+        }
+
         return [
             'status' => $status,
             'summary' => $summary,
@@ -908,9 +924,12 @@ class InterrogationBuildService
             'project_rules' => $this->normalizedProjectRules((array) ($build['project_rules'] ?? [])),
             'flags' => $flags,
             'issues' => $normalizedIssues,
+            'artefacts' => $artefacts,
             'pause_reason' => isset($build['pause_reason']) ? (string) $build['pause_reason'] : null,
             'error' => isset($build['error']) ? (string) $build['error'] : null,
             'completion_summary' => isset($build['completion_summary']) ? (string) $build['completion_summary'] : null,
+            'task_review_summary' => isset($build['task_review_summary']) ? (string) $build['task_review_summary'] : null,
+            'task_review_task_id' => isset($build['task_review_task_id']) ? (int) $build['task_review_task_id'] : null,
             'started_at' => isset($build['started_at']) ? (string) $build['started_at'] : null,
             'paused_at' => isset($build['paused_at']) ? (string) $build['paused_at'] : null,
             'finished_at' => isset($build['finished_at']) ? (string) $build['finished_at'] : null,

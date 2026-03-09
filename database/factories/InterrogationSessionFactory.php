@@ -75,4 +75,16 @@ class InterrogationSessionFactory extends Factory
 
         return $this->withMetadata(['git' => array_merge($defaults, $overrides)]);
     }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    public function withBuildSettings(array $overrides = []): static
+    {
+        $defaults = [
+            'auto_advance_tasks' => true,
+        ];
+
+        return $this->withMetadata(['build_settings' => array_merge($defaults, $overrides)]);
+    }
 }

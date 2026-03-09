@@ -250,6 +250,9 @@ return [
             'model' => env('RUNTIME_LLM_MODEL', 'claude-sonnet-4-20250514'),
             'max_tokens' => (int) env('RUNTIME_LLM_MAX_TOKENS', 8192),
         ],
+        'openai' => [
+            'api_key' => env('OPENAI_API_KEY'),
+        ],
     ],
 
 ];

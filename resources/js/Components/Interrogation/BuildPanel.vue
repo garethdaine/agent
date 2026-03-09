@@ -1,6 +1,7 @@
 <script setup>
 import MarkdownEditor from '@/Components/Markdown/MarkdownEditor.vue';
 import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
+import TaskReviewPanel from '@/Components/Interrogation/TaskReviewPanel.vue';
 import { formatInterrogationError } from '@/Components/Interrogation/errorFormatting';
 import { buildAgentRunEventPresentation } from '@/Support/agentRunEventFormatting';
 import { confirmDialog } from '@/Support/confirmDialog';
@@ -13,6 +14,10 @@ const props = defineProps({
     mode: {
         type: String,
         default: 'execution',
+    },
+    sessionId: {
+        type: Number,
+        default: null,
     },
     build: {
         type: Object,
@@ -109,7 +114,7 @@ const showHeartbeatEntries = ref(false);
 
 const TERMINAL_RUN_STATUSES = new Set(['succeeded', 'failed', 'killed', 'timed_out', 'skipped']);
 const ACTIVE_RUN_POLL_MS = 2000;
-const ECHO_ACTIVE_RUN_POLL_MS = 10000;
+// (Removed ECHO_ACTIVE_RUN_POLL_MS — no polling when Echo is connected)
 const echoRunChannelId = ref(null);
 const LOG_PREVIEW_CHAR_LIMIT = 800;
 
@@ -494,6 +499,11 @@ const fetchRunEvents = async (runId, { bootstrap = false } = {}) => {
     }
 };
 
+/**
+ * Schedule run-event polling ONLY when Echo is NOT connected for this run.
+ * When Echo is active, the `.events.available` listener provides real-time
+ * event delivery and no polling is needed.
+ */
 const scheduleActiveRunEventsPoll = () => {
     clearActiveRunEventsPollTimer();
 
@@ -504,11 +514,15 @@ const scheduleActiveRunEventsPoll = () => {
         return;
     }
 
-    const pollMs = echoRunChannelId.value === runId ? ECHO_ACTIVE_RUN_POLL_MS : ACTIVE_RUN_POLL_MS;
+    // Echo is connected for this run — no polling needed.
+    if (echoRunChannelId.value === runId) {
+        return;
+    }
+
     activeRunEventsPollTimer.value = setTimeout(async () => {
         await fetchRunEvents(runId, { bootstrap: false });
         scheduleActiveRunEventsPoll();
-    }, pollMs);
+    }, ACTIVE_RUN_POLL_MS);
 };
 
 watch(
@@ -554,8 +568,15 @@ watch(
 watch(
     () => activeRun.value?.log_tail,
     (nextTail) => {
+        // Skip when Echo is connected for this run — the .events.available
+        // listener already triggers fetchRunEvents with fresher data.
+        // This avoids redundant merges every time the parent session polls.
         const runId = Number(activeRunId.value ?? 0);
         if (!Number.isFinite(runId) || runId <= 0 || activeRunEventsRunId.value !== runId) {
+            return;
+        }
+
+        if (echoRunChannelId.value === runId) {
             return;
         }
 
@@ -1395,6 +1416,13 @@ defineExpose({ activeRunEvents });
                 <MarkdownRenderer :markdown="normalizeEscapedNewlines(flags.rate_limit_excerpt)" :normalize="false" />
             </div>
         </div>
+
+        <TaskReviewPanel
+            v-if="isExecutionMode && build.pause_reason === 'task_review' && build.task_review_task_id"
+            :session-id="sessionId"
+            :task-review-summary="build.task_review_summary"
+            :task-review-task-id="build.task_review_task_id"
+        />
 
         <div v-if="isExecutionMode && (hasActiveRunPresentation || activeRunEventsLoading || activeRunEventsError)" class="mt-4">
             <div class="flex items-center justify-between gap-2">

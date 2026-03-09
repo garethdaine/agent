@@ -38,6 +38,7 @@ class InterrogationBuildCommandGuardTest extends TestCase
             ['php', 'artisan', 'migrate:fresh', '--seed'],
             [
                 'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'APP_ENV' => 'production',
                 'DB_CONNECTION' => 'sqlite',
                 'DB_DATABASE' => $path,
             ],
@@ -55,6 +56,7 @@ class InterrogationBuildCommandGuardTest extends TestCase
             ['php', 'artisan', 'test'],
             [
                 'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'APP_ENV' => 'production',
                 'DB_CONNECTION' => 'pgsql',
                 'DB_DATABASE' => 'agent',
             ],
@@ -73,6 +75,7 @@ class InterrogationBuildCommandGuardTest extends TestCase
             ['php', 'artisan', 'test'],
             [
                 'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'APP_ENV' => 'production',
                 'DB_CONNECTION' => 'sqlite',
                 'DB_DATABASE' => $outsidePath,
             ],
@@ -88,6 +91,7 @@ class InterrogationBuildCommandGuardTest extends TestCase
             ['php', 'artisan', 'test'],
             [
                 'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'APP_ENV' => 'production',
                 'DB_CONNECTION' => 'sqlite',
                 'DB_DATABASE' => $path,
             ],
@@ -104,6 +108,7 @@ class InterrogationBuildCommandGuardTest extends TestCase
             ['php', 'artisan', 'test'],
             [
                 'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'APP_ENV' => 'production',
                 'DB_CONNECTION' => 'pgsql_testing',
                 'DB_DATABASE' => '/tmp/interrogation-sentinel.sqlite',
                 'TEST_DB_DATABASE' => 'agent_test',
@@ -124,6 +129,7 @@ class InterrogationBuildCommandGuardTest extends TestCase
             ['php', 'artisan', 'test'],
             [
                 'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'APP_ENV' => 'production',
                 'DB_CONNECTION' => 'pgsql_testing',
                 'DB_DATABASE' => '/tmp/interrogation-sentinel.sqlite',
                 'TEST_DB_DATABASE' => 'agent',
@@ -142,6 +148,7 @@ class InterrogationBuildCommandGuardTest extends TestCase
             ['php', 'artisan', 'test'],
             [
                 'AGENT_JOB_SOURCE' => 'interrogation_build',
+                'APP_ENV' => 'production',
                 'DB_CONNECTION' => 'pgsql_testing',
                 'DB_DATABASE' => 'agent_test',
                 'TEST_DB_DATABASE' => 'agent_test',

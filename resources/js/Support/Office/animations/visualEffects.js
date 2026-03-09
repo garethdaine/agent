@@ -1,7 +1,7 @@
 import {
-    Group, Mesh, SphereGeometry, BoxGeometry, MeshBasicMaterial,
-    CanvasTexture, SpriteMaterial, Sprite, AdditiveBlending,
-    Color, Vector3,
+    Mesh, SphereGeometry, MeshBasicMaterial,
+    CanvasTexture, SpriteMaterial, Sprite,
+    Vector3,
 } from 'three';
 
 const particlePool = [];

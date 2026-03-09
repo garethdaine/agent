@@ -56,8 +56,8 @@ const isUnconfigured = computed(() => status.value === 'unconfigured');
 const isActive = computed(() => status.value === 'active');
 
 const statusVariant = computed(() => {
-    const map = { active: 'default', stopped: 'secondary', error: 'destructive', unconfigured: 'outline' };
-    return map[status.value] ?? 'outline';
+    const map = { active: 'default', stopped: 'secondary', error: 'destructive', unconfigured: 'outline-solid' };
+    return map[status.value] ?? 'outline-solid';
 });
 
 const statusColor = computed(() => {

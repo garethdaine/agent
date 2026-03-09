@@ -212,7 +212,7 @@ abstract class GuzzleHttpAdapter
      */
     protected function getJitter(float $maxJitter): float
     {
-        return mt_rand(0, (int) ($maxJitter * 1000)) / 1000;
+        return random_int(0, (int) ($maxJitter * 1000)) / 1000;
     }
 
     /**

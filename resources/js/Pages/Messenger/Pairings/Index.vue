@@ -106,14 +106,14 @@ onMounted(load);
                                 v-for="s in STATUSES"
                                 :key="s"
                                 size="sm"
-                                :variant="statusFilter === s ? 'default' : 'outline'"
+                                :variant="statusFilter === s ? 'default' : 'outline-solid'"
                                 @click="statusFilter = s; load()"
                             >
                                 {{ s.charAt(0).toUpperCase() + s.slice(1) }}
                             </Button>
                             <Button
                                 size="sm"
-                                :variant="!statusFilter ? 'default' : 'outline'"
+                                :variant="!statusFilter ? 'default' : 'outline-solid'"
                                 @click="statusFilter = ''; load()"
                             >
                                 All

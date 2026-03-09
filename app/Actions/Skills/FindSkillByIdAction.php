@@ -8,7 +8,7 @@ use App\Models\AgentSkill;
 
 class FindSkillByIdAction
 {
-    public function execute(int $id): AgentSkill
+    public function execute(string $id): AgentSkill
     {
         return AgentSkill::findOrFail($id);
     }

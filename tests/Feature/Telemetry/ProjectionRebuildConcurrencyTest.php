@@ -6,7 +6,7 @@ namespace Tests\Feature\Telemetry;
 
 use App\Models\User;
 use Illuminate\Database\QueryException;
-use Illuminate\Foundation\Testing\DatabaseTruncation;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
@@ -14,12 +14,7 @@ use Tests\TestCase;
 
 class ProjectionRebuildConcurrencyTest extends TestCase
 {
-    use DatabaseTruncation;
-
-    protected array $tablesToTruncate = [
-        'agent_projection.telemetry_projection_builds',
-        'agent_projection.telemetry_projection_build_state',
-    ];
+    use RefreshDatabase;
 
     public function test_second_rebuild_request_returns_deterministic_conflict_response(): void
     {
@@ -76,9 +71,25 @@ class ProjectionRebuildConcurrencyTest extends TestCase
         $this->ensureBuildExists((string) str()->uuid(), 'rebuilding');
 
         try {
-            $this->ensureBuildExists((string) str()->uuid(), 'rebuilding');
-            $this->fail('Expected unique index violation for status=rebuilding.');
+            // Use a savepoint so the unique violation does not poison the
+            // outer transaction (PostgreSQL aborts all commands after an
+            // error inside a transaction block).
+            DB::beginTransaction();
+
+            try {
+                $this->ensureBuildExists((string) str()->uuid(), 'rebuilding');
+                DB::commit();
+                $this->fail('Expected unique index violation for status=rebuilding.');
+            } catch (QueryException $exception) {
+                DB::rollBack();
+
+                $this->assertStringContainsString(
+                    'telemetry_projection_builds_one_rebuilding_idx',
+                    strtolower($exception->getMessage())
+                );
+            }
         } catch (QueryException $exception) {
+            // Fallback in case beginTransaction itself is the nested savepoint
             $this->assertStringContainsString(
                 'telemetry_projection_builds_one_rebuilding_idx',
                 strtolower($exception->getMessage())

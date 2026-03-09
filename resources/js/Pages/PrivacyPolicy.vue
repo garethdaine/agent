@@ -17,6 +17,7 @@ defineProps({
                     <AuthenticationCardLogo />
                 </div>
 
+                <!-- eslint-disable-next-line vue/no-v-html -- Server-rendered Jetstream policy, no user input -->
                 <div class="w-full sm:max-w-2xl mt-6 p-6 bg-white dark:bg-gray-800 shadow-md overflow-hidden sm:rounded-lg prose dark:prose-invert" v-html="policy" />
             </div>
         </div>

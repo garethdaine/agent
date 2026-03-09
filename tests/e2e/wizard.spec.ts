@@ -5,29 +5,25 @@ test.describe('Discovery Wizard', () => {
 
   test('can navigate to wizard from discovery index', async ({ page }) => {
     await page.goto('/tools/discovery');
-    // Verify discovery page loads with heading
-    await expect(page.locator('h1, h2').filter({ hasText: /discovery|wizard/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /discovery|wizard/i })).toBeVisible();
   });
 
   test('phase stepper shows correct active phase', async ({ page }) => {
-    // Navigate to discovery index
     await page.goto('/tools/discovery');
-    // Click first session link if exists
-    const sessionLink = page.locator('a[href*="/tools/discovery/"]').first();
+    const sessionLink = page.getByRole('link', { name: /session|discovery/i }).first();
     if (await sessionLink.isVisible()) {
       await sessionLink.click();
-      // Verify phase stepper is visible (component may use data-testid or class)
       await expect(
-        page.locator('[data-testid="phase-stepper"], .phase-stepper, [class*="stepper"]')
+        page.getByRole('navigation').or(page.getByText(/phase/i)).first()
       ).toBeVisible({ timeout: 10000 });
     }
   });
 
   test('discovery index displays session list or empty state', async ({ page }) => {
     await page.goto('/tools/discovery');
-    // Should show either session list or new session prompt
     const hasContent = await page
-      .locator('a[href*="/tools/discovery/"], button:has-text("New"), [class*="empty"]')
+      .getByRole('link')
+      .or(page.getByRole('button', { name: /new/i }))
       .first()
       .isVisible();
     expect(hasContent).toBeTruthy();
@@ -35,34 +31,26 @@ test.describe('Discovery Wizard', () => {
 
   test('can navigate to create new session', async ({ page }) => {
     await page.goto('/tools/discovery/new');
-    // Verify create page loads
     await expect(
-      page.locator('h1, h2, form').first()
+      page.getByRole('heading').or(page.getByRole('form')).first()
     ).toBeVisible();
   });
 
   test('can submit answer to question', async ({ page }) => {
-    // This test requires a session in interrogation phase
-    // Skip if no appropriate session available
     test.skip(true, 'Requires session in interrogation phase');
   });
 
   test('plan section renders when in planning phase', async ({ page }) => {
-    // Skip if no session in planning phase
     test.skip(true, 'Requires session in planning phase');
   });
 
   test('wizard displays status card', async ({ page }) => {
     await page.goto('/tools/discovery');
-    const sessionLink = page.locator('a[href*="/tools/discovery/"]').first();
+    const sessionLink = page.getByRole('link', { name: /session|discovery/i }).first();
     if (await sessionLink.isVisible()) {
       await sessionLink.click();
-      // Wait for wizard page to load
       await page.waitForLoadState('networkidle');
-      // Check for status indicators (status badge, phase info, or stats)
-      const statusElements = page.locator(
-        '[class*="status"], [class*="badge"], [class*="phase"], [data-testid*="status"]'
-      );
+      const statusElements = page.getByText(/status|phase|progress/i);
       const count = await statusElements.count();
       expect(count).toBeGreaterThan(0);
     }
@@ -70,15 +58,14 @@ test.describe('Discovery Wizard', () => {
 
   test('settings page accessible from wizard', async ({ page }) => {
     await page.goto('/tools/discovery');
-    const sessionLink = page.locator('a[href*="/tools/discovery/"]').first();
+    const sessionLink = page.getByRole('link', { name: /session|discovery/i }).first();
     if (await sessionLink.isVisible()) {
-      // Extract session ID from href
       const href = await sessionLink.getAttribute('href');
       const match = href?.match(/\/tools\/discovery\/(\d+)/);
       if (match) {
         const sessionId = match[1];
         await page.goto(`/tools/discovery/${sessionId}/settings`);
-        await expect(page.locator('form, [class*="settings"]').first()).toBeVisible();
+        await expect(page.getByRole('form').or(page.getByText(/settings/i)).first()).toBeVisible();
       }
     }
   });

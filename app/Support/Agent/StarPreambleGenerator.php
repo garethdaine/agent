@@ -68,7 +68,7 @@ MD;
         }
 
         $treatmentPercent = config('agent.star_preamble.ab_test_treatment_percent', 50);
-        $random = mt_rand(1, 100);
+        $random = random_int(1, 100);
 
         return $random <= $treatmentPercent ? 'treatment' : 'control';
     }

@@ -4,8 +4,6 @@ import {
     PCFSoftShadowMap, ACESFilmicToneMapping, Fog,
     Mesh, BoxGeometry, MeshStandardMaterial,
 } from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-
 const WASD_SPEED = 12;
 const SHIFT_MULTIPLIER = 2.2;
 
@@ -27,7 +25,7 @@ export function useOfficeScene(containerRef, options = {}) {
     const ceilingLights = new Map();
     let _ceilingLightsEnabled = true;
 
-    function init() {
+    async function init() {
         const container = containerRef?.value ?? containerRef?.current;
         if (!container) return null;
 
@@ -73,6 +71,7 @@ export function useOfficeScene(containerRef, options = {}) {
         scene.add(fill);
 
         try {
+            const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.08;
@@ -260,8 +259,8 @@ export function useOfficeScene(containerRef, options = {}) {
         step();
     }
 
-    function start() {
-        const out = init();
+    async function start() {
+        const out = await init();
         if (out) animate();
         return out ?? {};
     }

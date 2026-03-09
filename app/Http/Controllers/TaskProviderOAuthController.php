@@ -16,7 +16,7 @@ use InvalidArgumentException;
 
 class TaskProviderOAuthController extends Controller
 {
-    public function callback(
+    public function store(
         Request $request,
         string $provider,
         TaskManagementProviderManager $providerManager,

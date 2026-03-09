@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Laravel\Jetstream\Membership as JetstreamMembership;
 
 /**
@@ -18,5 +19,7 @@ use Laravel\Jetstream\Membership as JetstreamMembership;
  */
 class Membership extends JetstreamMembership
 {
+    use HasFactory;
+
     public $incrementing = true;
 }

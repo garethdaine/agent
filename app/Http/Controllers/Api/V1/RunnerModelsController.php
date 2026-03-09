@@ -49,7 +49,7 @@ class RunnerModelsController
      */
     private function fetchClaudeModels(): ?array
     {
-        $apiKey = config('runtime.llm.anthropic.api_key') ?? env('ANTHROPIC_API_KEY', ''); // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
+        $apiKey = config('runtime.llm.anthropic.api_key', '');
         if (trim((string) $apiKey) === '') {
             return null;
         }
@@ -97,7 +97,7 @@ class RunnerModelsController
      */
     private function fetchCodexModels(): ?array
     {
-        $apiKey = env('OPENAI_API_KEY', ''); // @phpstan-ignore larastan.noEnvCallsOutsideOfConfig
+        $apiKey = config('runtime.llm.openai.api_key', '');
         if (trim((string) $apiKey) === '') {
             return null;
         }

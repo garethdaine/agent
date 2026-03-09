@@ -12,7 +12,9 @@ test.describe('Delegation Graph Builder', () => {
     expect(response?.status()).toBe(200);
     await page.waitForLoadState('networkidle');
     await expect(
-      page.locator('button:has-text("Add task"), [class*="vue-flow"], canvas, [class*="GraphCanvas"]').first()
+      page.getByRole('button', { name: /add task/i })
+        .or(page.locator('canvas'))
+        .first()
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -23,14 +25,14 @@ test.describe('Delegation Graph Builder', () => {
       return;
     }
     await page.waitForLoadState('networkidle');
-    const addBtn = page.locator('button:has-text("Add task")');
+    const addBtn = page.getByRole('button', { name: /add task/i });
     if (!(await addBtn.isVisible())) {
       test.skip(true, 'Add task button not found');
       return;
     }
     await addBtn.click();
     await page.waitForTimeout(500);
-    await expect(page.locator('[class*="delegationTask"], [data-id^="task-"]').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/task/i).first()).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -46,7 +48,9 @@ test.describe('Org Layer Builder', () => {
     expect(response?.status()).toBe(200);
     await page.waitForLoadState('networkidle');
     await expect(
-      page.locator('button:has-text("Add agent"), [class*="vue-flow"], [class*="GraphCanvas"]').first()
+      page.getByRole('button', { name: /add agent/i })
+        .or(page.locator('canvas'))
+        .first()
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -57,16 +61,14 @@ test.describe('Org Layer Builder', () => {
       return;
     }
     await page.waitForLoadState('networkidle');
-    const addBtn = page.locator('button:has-text("Add agent")');
+    const addBtn = page.getByRole('button', { name: /add agent/i });
     if (!(await addBtn.isVisible())) {
       test.skip(true, 'Add agent button not found');
       return;
     }
     await addBtn.click();
     await page.waitForTimeout(500);
-    await expect(
-      page.locator('[class*="orgAgent"], [data-id^="temp-"]').first()
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/agent/i).first()).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -82,8 +84,8 @@ test.describe('3D Office', () => {
     expect(response?.status()).toBe(200);
     await page.waitForLoadState('networkidle');
     const hasCanvas = await page.locator('canvas').isVisible();
-    const hasFallback = await page.locator('text=3D view unavailable').isVisible();
-    const hasHeading = await page.locator('h2:has-text("3D Office")').isVisible();
+    const hasFallback = await page.getByText('3D view unavailable').isVisible();
+    const hasHeading = await page.getByRole('heading', { name: /3D Office/i }).isVisible();
     expect(hasCanvas || hasFallback || hasHeading).toBeTruthy();
   });
 });

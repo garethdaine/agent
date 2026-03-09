@@ -157,7 +157,7 @@ abstract class AbstractConnectorAdapter implements ConnectorAdapterInterface
 
         // Apply jitter
         $jitterRange = $delay * ($jitterPercent / 100);
-        $jitter = mt_rand(-intval($jitterRange * 1000), intval($jitterRange * 1000)) / 1000;
+        $jitter = random_int(-intval($jitterRange * 1000), intval($jitterRange * 1000)) / 1000;
 
         return max(1, intval($delay + $jitter));
     }

@@ -38,6 +38,7 @@ class BuildTaskRunFactoryGitTest extends TestCase
             'env' => [],
             'branch' => null,
             'worktree_path' => null,
+            'baseline_head' => null,
         ], $overrides));
         $mock->shouldReceive('cleanupAfterTask')->andReturnNull();
 

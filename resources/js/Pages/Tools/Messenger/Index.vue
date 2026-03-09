@@ -114,7 +114,7 @@ const healthBadgeVariant = computed(() => {
     const status = String(health.value?.status ?? '').toLowerCase();
     if (status === 'healthy') return 'default';
     if (status === 'degraded') return 'secondary';
-    return 'outline';
+    return 'outline-solid';
 });
 
 const connectorCount = computed(() => connectors.value.length);
@@ -454,7 +454,7 @@ const selectSession = async (sessionId) => {
 const getConnectorStatusVariant = (status) => {
     if (status === 'connected') return 'default';
     if (status === 'error') return 'destructive';
-    return 'outline';
+    return 'outline-solid';
 };
 
 const connectorPolicies = ref({});
@@ -641,7 +641,7 @@ onMounted(async () => {
                                 Provider
                                 <select
                                     v-model="connectForm.provider"
-                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                     :disabled="schemaLoading || connectSubmitting"
                                 >
                                     <option value="" disabled>Select provider</option>
@@ -666,7 +666,7 @@ onMounted(async () => {
                                 Connection Mode
                                 <select
                                     v-model="connectForm.connection_mode"
-                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                     :disabled="connectSubmitting"
                                 >
                                     <option v-for="mode in selectedProviderModes" :key="mode" :value="mode">{{ mode }}</option>
@@ -677,7 +677,7 @@ onMounted(async () => {
                                 Runner type (CLI for chat)
                                 <select
                                     v-model="connectForm.runner_type"
-                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                     :disabled="connectSubmitting"
                                 >
                                     <option value="claude">Claude</option>
@@ -717,7 +717,7 @@ onMounted(async () => {
                                 Verbosity
                                 <select
                                     v-model="connectForm.default_verbosity"
-                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                     :disabled="connectSubmitting"
                                 >
                                     <option value="summary">summary</option>
@@ -863,7 +863,7 @@ onMounted(async () => {
                                                         Runner type (CLI for chat)
                                                         <select
                                                             v-model="editForm.runner_type"
-                                                            class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                            class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                                             :disabled="editSaving"
                                                         >
                                                             <option value="claude">Claude</option>
@@ -875,7 +875,7 @@ onMounted(async () => {
                                                         Approval Mode
                                                         <select
                                                             v-model="editForm.approval_mode"
-                                                            class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                            class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                                             :disabled="editSaving"
                                                         >
                                                             <option value="autonomous">Autonomous (auto-approve all tools)</option>
@@ -889,7 +889,7 @@ onMounted(async () => {
                                                     <textarea
                                                         v-model="editForm.soul.personality"
                                                         rows="2"
-                                                        class="mt-1 flex w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                        class="mt-1 flex w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                                         :disabled="editSaving"
                                                         placeholder="Describe the agent's personality and tone..."
                                                     ></textarea>
@@ -899,7 +899,7 @@ onMounted(async () => {
                                                     <textarea
                                                         v-model="editForm.soul.system_prompt"
                                                         rows="4"
-                                                        class="mt-1 flex w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                        class="mt-1 flex w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                                         :disabled="editSaving"
                                                         placeholder="Additional system instructions for the agent..."
                                                     ></textarea>
@@ -909,7 +909,7 @@ onMounted(async () => {
                                                     <textarea
                                                         v-model="editForm.soul.user_context"
                                                         rows="2"
-                                                        class="mt-1 flex w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                                        class="mt-1 flex w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                                         :disabled="editSaving"
                                                         placeholder="Context about the user (name, role, preferences)..."
                                                     ></textarea>
@@ -1007,9 +1007,9 @@ onMounted(async () => {
                                                 v-if="isLikelyMarkdown(message.content)"
                                                 :markdown="String(message.content ?? '')"
                                                 :normalize="false"
-                                                class="messenger-message-markdown prose prose-sm mt-1 max-w-none break-words text-muted-foreground dark:prose-invert prose-headings:mb-2 prose-headings:mt-3 prose-p:my-1.5 prose-li:my-0.5 prose-code:rounded prose-code:bg-accent prose-code:px-1 prose-code:py-0.5"
+                                                class="messenger-message-markdown prose prose-sm mt-1 max-w-none wrap-break-word text-muted-foreground dark:prose-invert prose-headings:mb-2 prose-headings:mt-3 prose-p:my-1.5 prose-li:my-0.5 prose-code:rounded prose-code:bg-accent prose-code:px-1 prose-code:py-0.5"
                                             />
-                                            <p v-else class="mt-1 whitespace-pre-wrap break-words text-muted-foreground">{{ message.content }}</p>
+                                            <p v-else class="mt-1 whitespace-pre-wrap wrap-break-word text-muted-foreground">{{ message.content }}</p>
                                         </div>
                                         <p v-if="sessionMessages.length === 0" class="text-sm text-muted-foreground">No messages found for this session.</p>
                                     </div>

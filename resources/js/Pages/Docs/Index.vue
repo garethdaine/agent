@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import DOMPurify from 'dompurify';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import MarkdownRenderer from '@/Components/Markdown/MarkdownRenderer.vue';
@@ -554,7 +555,7 @@ function onGlobalKeydown(event) {
                                         :markdown="selectedBodyMarkdown"
                                         :normalize="false"
                                     />
-                                    <div v-else-if="selectedBodyHtml.trim() !== ''" v-html="selectedBodyHtml" />
+                                    <div v-else-if="selectedBodyHtml.trim() !== ''" v-html="DOMPurify.sanitize(selectedBodyHtml)" />
                                     <p v-else class="text-sm text-muted-foreground">No markdown body is available for this entry.</p>
                                 </div>
                             </template>

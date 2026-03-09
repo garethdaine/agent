@@ -46,6 +46,14 @@ class BuildTaskRunFactory
         // Prepare git environment (branching, worktrees, env vars)
         $gitPrep = $this->gitOperationsService->prepareForTask($session, $task);
 
+        // Store baseline HEAD in task metadata for post-task enforcement
+        if ($gitPrep['baseline_head'] !== null) {
+            $taskMetadata = is_array($task->metadata_json) ? $task->metadata_json : [];
+            $taskMetadata['git_baseline_head'] = $gitPrep['baseline_head'];
+            $task->metadata_json = $taskMetadata;
+            $task->save();
+        }
+
         $markdownPath = $this->taskMarkdownStorage->persistInlineContent(
             $this->buildTaskMarkdown($session, $task),
             (int) $session->user_id,

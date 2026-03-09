@@ -33,6 +33,7 @@ use App\Services\Interrogation\InterrogationPlanService;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\ErrorEnvelope;
 use App\Support\Agent\RunStateTransitionService;
+use App\Support\Interrogation\GitOperationsService;
 use App\Support\Interrogation\InterrogationEventWriter;
 use App\Support\Interrogation\SessionStateTransitionService;
 use App\Support\Interrogation\SummaryOpenQuestionQueueService;
@@ -146,6 +147,10 @@ class InterrogationSessionController extends Controller
         if (is_array($gitInput) && $gitInput !== []) {
             $metadata['git'] = $this->normalizeGitSettings($gitInput);
         }
+        $buildSettingsInput = $validated['build_settings'] ?? null;
+        if (is_array($buildSettingsInput) && $buildSettingsInput !== []) {
+            $metadata['build_settings'] = $this->normalizeBuildSettings($buildSettingsInput);
+        }
 
         $session = $this->createSession->execute($request->user()->id, $validated, $metadata);
 
@@ -154,6 +159,10 @@ class InterrogationSessionController extends Controller
         if (isset($metadata['git'])) {
             $changedFields[] = 'git_settings';
             $afterSnapshot['git_settings'] = $session->gitSettings();
+        }
+        if (isset($metadata['build_settings'])) {
+            $changedFields[] = 'build_settings';
+            $afterSnapshot['build_settings'] = $session->buildSettings();
         }
 
         $auditLogger->recordUserAction(
@@ -184,6 +193,7 @@ class InterrogationSessionController extends Controller
             'feature_brief' => $session->feature_brief,
             'model' => $session->model,
             'git_settings' => $session->gitSettings(),
+            'build_settings' => $session->buildSettings(),
         ];
 
         $session = $this->updateSession->execute($session, $validated);
@@ -201,6 +211,9 @@ class InterrogationSessionController extends Controller
         if ($before['git_settings'] !== $session->gitSettings()) {
             $changedFields[] = 'git_settings';
         }
+        if ($before['build_settings'] !== $session->buildSettings()) {
+            $changedFields[] = 'build_settings';
+        }
 
         if ($changedFields !== []) {
             $auditLogger->recordUserAction(
@@ -216,6 +229,7 @@ class InterrogationSessionController extends Controller
                     'feature_brief' => $session->feature_brief,
                     'model' => $session->model,
                     'git_settings' => $session->gitSettings(),
+                    'build_settings' => $session->buildSettings(),
                 ],
             );
         }
@@ -1371,6 +1385,88 @@ class InterrogationSessionController extends Controller
         ], 202);
     }
 
+    public function taskDiff(
+        Request $request,
+        int $id,
+        int $taskId,
+        GitOperationsService $gitService,
+    ): JsonResponse {
+        $session = $this->findSession->execute($request->user()->id, $id);
+
+        /** @var InterrogationBuildTask|null $task */
+        $task = $session->buildTasks()->whereKey($taskId)->first();
+
+        if ($task === null) {
+            return ErrorEnvelope::make('NOT_FOUND', 'Build task not found.', 404);
+        }
+
+        $taskMeta = is_array($task->metadata_json) ? $task->metadata_json : [];
+        $baselineHead = isset($taskMeta['git_baseline_head']) ? (string) $taskMeta['git_baseline_head'] : null;
+
+        if ($baselineHead === null || $baselineHead === '') {
+            return response()->json([
+                'data' => ['available' => false, 'files' => []],
+            ]);
+        }
+
+        $worktreePath = isset($taskMeta['git_worktree_path']) ? (string) $taskMeta['git_worktree_path'] : null;
+        $diff = $gitService->getTaskDiff((string) $session->project_directory, $baselineHead, $worktreePath);
+
+        return response()->json([
+            'data' => $diff,
+        ]);
+    }
+
+    public function artefactContent(
+        Request $request,
+        int $id,
+        int $taskId,
+    ): JsonResponse {
+        $session = $this->findSession->execute($request->user()->id, $id);
+
+        /** @var InterrogationBuildTask|null $task */
+        $task = $session->buildTasks()->whereKey($taskId)->first();
+
+        if ($task === null) {
+            return ErrorEnvelope::make('NOT_FOUND', 'Build task not found.', 404);
+        }
+
+        $path = (string) $request->query('path', '');
+
+        if ($path === '') {
+            return ErrorEnvelope::make('VALIDATION_ERROR', 'The path parameter is required.', 422);
+        }
+
+        if (mb_strlen($path) > 1024) {
+            return ErrorEnvelope::make('VALIDATION_ERROR', 'The path parameter must not exceed 1024 characters.', 422);
+        }
+
+        $projectDir = rtrim((string) $session->project_directory, DIRECTORY_SEPARATOR);
+        $resolvedPath = realpath($projectDir.DIRECTORY_SEPARATOR.$path);
+
+        if ($resolvedPath === false || ! str_starts_with($resolvedPath, $projectDir.DIRECTORY_SEPARATOR)) {
+            return ErrorEnvelope::make('VALIDATION_ERROR', 'The path is outside the project directory.', 422);
+        }
+
+        if (! is_file($resolvedPath) || ! is_readable($resolvedPath)) {
+            return ErrorEnvelope::make('NOT_FOUND', 'The artefact file was not found or is not readable.', 404);
+        }
+
+        $maxSize = 512 * 1024; // 512KB
+        $size = filesize($resolvedPath);
+        $truncated = $size > $maxSize;
+        $content = file_get_contents($resolvedPath, false, null, 0, $maxSize);
+
+        return response()->json([
+            'data' => [
+                'content' => $content,
+                'truncated' => $truncated,
+                'size' => $size,
+                'path' => $path,
+            ],
+        ]);
+    }
+
     public function updateAnnotation(
         UpdateAnnotationRequest $request,
         int $id,
@@ -1819,6 +1915,7 @@ class InterrogationSessionController extends Controller
             'annotations_json' => $session->annotations_json,
             'metadata_json' => $session->metadata_json,
             'git_settings' => $session->gitSettings(),
+            'build_settings' => $session->buildSettings(),
             'task_providers' => $this->taskProviderPayloads($session),
             'tech_stacks' => $this->techStackPayloads($session),
             'error_code' => $session->error_code,
@@ -1866,6 +1963,18 @@ class InterrogationSessionController extends Controller
             'target_branch' => is_string($raw['target_branch'] ?? null) && trim($raw['target_branch']) !== ''
                 ? trim($raw['target_branch'])
                 : null,
+            'updated_at' => \Carbon\CarbonImmutable::now('UTC')->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $raw
+     * @return array<string, mixed>
+     */
+    private function normalizeBuildSettings(array $raw): array
+    {
+        return [
+            'auto_advance_tasks' => (bool) ($raw['auto_advance_tasks'] ?? true),
             'updated_at' => \Carbon\CarbonImmutable::now('UTC')->toIso8601String(),
         ];
     }

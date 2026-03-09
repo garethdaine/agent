@@ -1,5 +1,4 @@
-import { ref, watch } from 'vue';
-import { MeshStandardMaterial, CanvasTexture, Color } from 'three';
+import { CanvasTexture, Color } from 'three';
 
 const STATUS_COLORS = {
     running: new Color(0x10b981),
@@ -15,14 +14,6 @@ function findMeshByType(scene, type) {
     const results = [];
     scene.traverse((obj) => {
         if (obj.userData?.type === type) results.push(obj);
-    });
-    return results;
-}
-
-function findMeshByZoneId(scene, zoneId) {
-    const results = [];
-    scene.traverse((obj) => {
-        if (obj.userData?.zoneId === zoneId) results.push(obj);
     });
     return results;
 }
@@ -78,7 +69,7 @@ function animateCodeCanvas(ctx, canvas) {
     }
 }
 
-function updateMonitorScreen(workstation, activity, time) {
+function updateMonitorScreen(workstation, activity, _time) {
     const wsIndex = workstation.userData?.workstationIndex;
 
     workstation.traverse((child) => {
@@ -288,10 +279,7 @@ function updateToolBenches(scene, agentStates) {
 }
 
 export function useOfficeZones(scene, officeState, avatarApi) {
-    let lastAnimTime = 0;
-
     function updateZones(time) {
-        lastAnimTime = time;
         const state = officeState.value;
         if (!state || !scene) return;
 

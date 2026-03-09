@@ -169,7 +169,7 @@ onMounted(async () => {
             },
         });
 
-        const { scene } = sceneApi.start();
+        const { scene } = await sceneApi.start();
         if (!scene) {
             loading.value = false;
             return;

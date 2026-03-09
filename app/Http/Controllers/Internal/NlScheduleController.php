@@ -16,7 +16,7 @@ class NlScheduleController extends Controller
         private NlScheduleParserService $parserService
     ) {}
 
-    public function parse(ParseScheduleRequest $request): JsonResponse
+    public function store(ParseScheduleRequest $request): JsonResponse
     {
         $result = $this->parserService->parse(
             $request->user(),

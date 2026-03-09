@@ -143,10 +143,12 @@ const disableTwoFactorAuthentication = () => {
                         </p>
                     </div>
 
+                    <!-- eslint-disable-next-line vue/no-v-html -- Server-generated SVG QR code from Jetstream -->
                     <div class="mt-4 p-2 inline-block bg-white" v-html="qrCode" />
 
                     <div v-if="setupKey" class="mt-4 max-w-xl text-sm text-muted-foreground">
                         <p class="font-semibold">
+                            <!-- eslint-disable-next-line vue/no-v-html -- Server-generated 2FA setup key -->
                             Setup Key: <span v-html="setupKey"></span>
                         </p>
                     </div>

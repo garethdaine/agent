@@ -100,15 +100,56 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             $finalized = $this->finalizeTaskFromRun($session, $activeTask, $run, $writer, $policyService);
 
             if ($finalized) {
+                $gitService = app(GitOperationsService::class);
+
+                // Server-side git enforcement: branch, conventional commits, uncommitted changes
+                try {
+                    $taskMeta = is_array($activeTask->metadata_json) ? $activeTask->metadata_json : [];
+                    $baselineHead = isset($taskMeta['git_baseline_head']) ? (string) $taskMeta['git_baseline_head'] : null;
+
+                    $enforceResult = $gitService->enforceAfterTask($session, $activeTask, $baselineHead);
+
+                    foreach ($enforceResult['actions'] as $action) {
+                        $writer->appendSystem([
+                            'notice' => 'git_enforcement_'.$action['type'],
+                            'task_id' => $activeTask->id,
+                            'detail' => $action['detail'],
+                        ]);
+                    }
+
+                    foreach ($enforceResult['errors'] as $error) {
+                        $writer->appendSystem([
+                            'notice' => 'git_enforcement_error',
+                            'task_id' => $activeTask->id,
+                            'error' => $error,
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    $writer->appendSystem([
+                        'notice' => 'git_enforcement_error',
+                        'task_id' => $activeTask->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                // Detect artefacts generated during task execution
+                $this->detectAndStoreArtefacts($session, $activeTask, $gitService);
+
                 // Cleanup git worktree after task finalization
                 try {
-                    app(GitOperationsService::class)->cleanupAfterTask($session, $activeTask);
+                    $gitService->cleanupAfterTask($session, $activeTask);
                 } catch (\Throwable $e) {
                     $writer->appendSystem([
                         'notice' => 'git_worktree_cleanup_failed',
                         'task_id' => $activeTask->id,
                         'error' => $e->getMessage(),
                     ]);
+                }
+
+                if ($this->shouldPauseForTaskReview($session, $activeTask)) {
+                    $this->pauseForTaskReview($session, $activeTask, $writer);
+
+                    return;
                 }
 
                 $this->dispatchFollowUpBuildTick((int) $session->id, 1, $writer);
@@ -973,6 +1014,170 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
             'remediation' => $taskMetadata['compliance_remediation'] ?? null,
             'at' => Carbon::now('UTC')->toIso8601String(),
         ]);
+    }
+
+    private function shouldPauseForTaskReview(InterrogationSession $session, InterrogationBuildTask $task): bool
+    {
+        if ($task->status !== InterrogationBuildTask::STATUS_COMPLETED) {
+            return false;
+        }
+
+        $buildSettings = $session->buildSettings();
+
+        if ($buildSettings['auto_advance_tasks']) {
+            return false;
+        }
+
+        $hasPendingTasks = $session->buildTasks()
+            ->where('status', InterrogationBuildTask::STATUS_PENDING)
+            ->exists();
+
+        return $hasPendingTasks;
+    }
+
+    private function pauseForTaskReview(
+        InterrogationSession $session,
+        InterrogationBuildTask $task,
+        InterrogationEventWriter $writer,
+    ): void {
+        $build = $this->buildMetadata($session);
+        $build['status'] = 'paused';
+        $build['pause_reason'] = 'task_review';
+        $build['paused_at'] = Carbon::now('UTC')->toIso8601String();
+        $build['task_review_summary'] = $this->buildTaskReviewSummary($task);
+        $build['task_review_task_id'] = (int) $task->id;
+        $build['active_task_id'] = null;
+        $build['active_run_id'] = null;
+        $this->saveBuildMetadata($session, $build);
+
+        $writer->appendSystem([
+            'notice' => 'build_paused_task_review',
+            'task_id' => $task->id,
+            'sequence' => $task->sequence,
+            'title' => $task->title,
+            'at' => Carbon::now('UTC')->toIso8601String(),
+        ]);
+    }
+
+    private function buildTaskReviewSummary(InterrogationBuildTask $task): string
+    {
+        $title = (string) ($task->title ?? 'Untitled Task');
+        $description = (string) ($task->description ?? '');
+        $sequence = (int) $task->sequence;
+        $attempts = max(1, (int) $task->attempt_count);
+
+        $duration = '';
+        if ($task->started_at !== null && $task->finished_at !== null) {
+            $seconds = (int) $task->started_at->diffInSeconds($task->finished_at);
+
+            if ($seconds >= 60) {
+                $minutes = (int) floor($seconds / 60);
+                $remainingSeconds = $seconds % 60;
+                $duration = $remainingSeconds > 0
+                    ? sprintf('%dm %ds', $minutes, $remainingSeconds)
+                    : sprintf('%dm', $minutes);
+            } else {
+                $duration = sprintf('%ds', $seconds);
+            }
+        }
+
+        $lines = [];
+        $lines[] = sprintf('## Task %d Completed: %s', $sequence, $title);
+        $lines[] = '';
+
+        if ($description !== '') {
+            $lines[] = $description;
+            $lines[] = '';
+        }
+
+        $lines[] = '| Detail | Value |';
+        $lines[] = '|--------|-------|';
+        $lines[] = sprintf('| **Status** | Completed |');
+        $lines[] = sprintf('| **Attempts** | %d |', $attempts);
+
+        if ($duration !== '') {
+            $lines[] = sprintf('| **Duration** | %s |', $duration);
+        }
+
+        $lines[] = '';
+        $lines[] = 'Review the changes below before continuing to the next task.';
+
+        return implode("\n", $lines);
+    }
+
+    private function detectAndStoreArtefacts(
+        InterrogationSession $session,
+        InterrogationBuildTask $task,
+        GitOperationsService $gitService,
+    ): void {
+        try {
+            $taskMeta = is_array($task->metadata_json) ? $task->metadata_json : [];
+            $baselineHead = isset($taskMeta['git_baseline_head']) ? (string) $taskMeta['git_baseline_head'] : null;
+
+            if ($baselineHead === null || $baselineHead === '') {
+                return;
+            }
+
+            $worktreePath = isset($taskMeta['git_worktree_path']) ? (string) $taskMeta['git_worktree_path'] : null;
+            $changedFiles = $gitService->getChangedFilesSince(
+                (string) $session->project_directory,
+                $baselineHead,
+                $worktreePath,
+            );
+
+            if ($changedFiles === []) {
+                return;
+            }
+
+            $artefactDirs = ['docs/', 'reports/', 'output/', 'generated/', 'artifacts/', 'artefacts/'];
+            $artefactExtensions = ['md', 'txt', 'json', 'yaml', 'yml', 'html', 'csv', 'rst', 'xml'];
+
+            $artefacts = [];
+            foreach ($changedFiles as $filePath) {
+                $inArtefactDir = false;
+                foreach ($artefactDirs as $dir) {
+                    if (str_starts_with($filePath, $dir)) {
+                        $inArtefactDir = true;
+                        break;
+                    }
+                }
+
+                if (! $inArtefactDir) {
+                    continue;
+                }
+
+                $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+                if (! in_array($extension, $artefactExtensions, true)) {
+                    continue;
+                }
+
+                $artefacts[] = [
+                    'name' => basename($filePath),
+                    'type' => $this->classifyArtefactType($extension),
+                    'path' => $filePath,
+                    'detected_at' => Carbon::now('UTC')->toIso8601String(),
+                ];
+            }
+
+            if ($artefacts !== []) {
+                $taskMeta['artefacts'] = $artefacts;
+                $task->metadata_json = $taskMeta;
+                $task->save();
+            }
+        } catch (\Throwable) {
+            // Artefact detection is best-effort; don't block the build flow
+        }
+    }
+
+    private function classifyArtefactType(string $extension): string
+    {
+        return match ($extension) {
+            'md', 'txt', 'rst' => 'document',
+            'json', 'yaml', 'yml' => 'config',
+            'html', 'xml' => 'markup',
+            'csv' => 'data',
+            default => 'document',
+        };
     }
 
     private function queueTaskProviderStatusSync(

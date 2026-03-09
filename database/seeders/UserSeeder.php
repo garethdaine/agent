@@ -11,7 +11,7 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $adminPassword = env('ADMIN_PASSWORD');
+        $adminPassword = config('seeding.admin_password');
         if ($adminPassword) {
             User::query()->updateOrCreate(
                 ['email' => 'gareth@garethdaine.com'],
@@ -22,9 +22,9 @@ class UserSeeder extends Seeder
             );
         }
 
-        if (env('E2E_SEED_USER', false)) {
-            $email = env('TEST_USER_EMAIL', 'test@example.com');
-            $password = env('TEST_USER_PASSWORD', 'password');
+        if (config('seeding.e2e_seed_user', false)) {
+            $email = config('seeding.test_user_email', 'test@example.com');
+            $password = config('seeding.test_user_password', 'password');
             User::query()->updateOrCreate(
                 ['email' => $email],
                 [

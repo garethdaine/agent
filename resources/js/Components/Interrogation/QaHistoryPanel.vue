@@ -80,7 +80,7 @@ const answerPreview = (answerPayload) => {
             <span class="text-xs text-muted-foreground">{{ unansweredCount }} unanswered</span>
         </div>
 
-        <div class="max-h-[32rem] space-y-3 overflow-auto pr-1">
+        <div class="max-h-128 space-y-3 overflow-auto pr-1">
             <div
                 v-for="pair in qaPairs"
                 :key="pair.question.id"

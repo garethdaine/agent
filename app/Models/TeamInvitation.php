@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Laravel\Jetstream\Jetstream;
 use Laravel\Jetstream\TeamInvitation as JetstreamTeamInvitation;
@@ -20,6 +21,8 @@ use Laravel\Jetstream\TeamInvitation as JetstreamTeamInvitation;
  */
 class TeamInvitation extends JetstreamTeamInvitation
 {
+    use HasFactory;
+
     protected $fillable = [
         'email',
         'role',

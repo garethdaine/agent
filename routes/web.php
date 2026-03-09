@@ -55,7 +55,7 @@ Route::middleware([
     'onboarding',
     'license',
 ])->group(function () {
-    Route::get('/integrations/oauth/{provider}/callback', [TaskProviderOAuthController::class, 'callback'])
+    Route::get('/integrations/oauth/{provider}/callback', [TaskProviderOAuthController::class, 'store'])
         ->name('integrations.oauth.callback');
 
     // Backward compatibility for previously configured OAuth callback URLs.

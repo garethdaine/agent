@@ -132,6 +132,7 @@ final class CommandRouterRouteTest extends TestCase
         $this->assertContains('subagents', $commands);
         $this->assertContains('progress', $commands);
         $this->assertContains('skills', $commands);
-        $this->assertCount(18, $commands);
+        $this->assertContains('connector', $commands);
+        $this->assertCount(19, $commands);
     }
 }

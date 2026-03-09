@@ -1,9 +1,40 @@
 const OUTPUT_EVENT_TYPES = new Set(['stdout', 'stderr']);
 const STREAM_ENVELOPE_TYPES = new Set(['stream_event', 'assistant', 'user', 'result']);
-const STRUCTURED_ENVELOPE_MARKER_PATTERN = /"type"\s*:\s*"(?:stream_event|assistant|user|result)"|"session_id"\s*:|"parent_tool_use_id"\s*:|\[\d+\s+(?:stdout|stderr|lifecycle)\]/;
+const ROLE_ENVELOPE_TYPES = new Set(['user', 'assistant']);
+const STRUCTURED_ENVELOPE_MARKER_PATTERN = /"type"\s*:\s*"(?:stream_event|assistant|user|result)"|"role"\s*:\s*"(?:user|assistant)"|"session_id"\s*:|"parent_tool_use_id"\s*:|\[\d+\s+(?:stdout|stderr|lifecycle)\]/;
 const ENVELOPE_CARRY_LIMIT = 32_768;
 const DEDUPE_WINDOW_EVENTS = 80;
 const DEDUPE_MIN_CHARS = 24;
+
+/**
+ * Patterns matching known injected context that the AI may echo back.
+ * These are headers/blocks injected into the task markdown file before the
+ * subprocess launches (STAR preamble, engineering rules, memory context,
+ * skills).  They should be suppressed from the user-facing timeline.
+ */
+const INJECTED_CONTEXT_PATTERNS = [
+    // STAR Preamble — the instruction template (not the AI's own articulation)
+    /^##\s+Pre-Execution Goal Articulation\b/im,
+    /Before beginning any work,?\s+complete each section below/i,
+    /Now proceed with the work described below/i,
+    // Engineering Rules block
+    /^##\s+Engineering Rules\s*(\(Active\))?\s*$/im,
+    // Memory Context blocks
+    /^##\s+(?:Agent Identity|User Context|Relevant Memories)\s*$/im,
+    // Skill Context block
+    /^##\s+Available Skills\s*$/im,
+    // STAR section headers that appear as part of the preamble *instructions*
+    // (e.g. "### SITUATION\nWhat is the current state? What exists…")
+    /^###\s+(?:SITUATION|TASK|ACTION|RESULT)\s*\n+(?:What (?:is|specifically|steps)|How will completion)/im,
+];
+
+const isInjectedContextContent = (text) => {
+    if (typeof text !== 'string' || text.length < 20) {
+        return false;
+    }
+    return INJECTED_CONTEXT_PATTERNS.some((pattern) => pattern.test(text));
+};
+
 const ESCAPED_LINE_BREAK_PATTERN = /\\r\\n|\\n|\\r/g;
 const LINE_NUMBERED_SNIPPET_LINE_PATTERN = /^\s*(\d+)\s*(?:→|->|=>)\s?(.*)$/u;
 const LINE_NUMBERED_PREFIX_PATTERN = /^\s*\d+\s*\|\s?/u;
@@ -200,7 +231,10 @@ const summarizeReadExcerptPayload = (value, eventType) => {
 };
 
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
-const isStructuredEnvelopeObject = (value) => isRecord(value) && STREAM_ENVELOPE_TYPES.has(String(value.type ?? '').trim());
+const isStructuredEnvelopeObject = (value) => isRecord(value) && (
+    STREAM_ENVELOPE_TYPES.has(String(value.type ?? '').trim()) ||
+    ROLE_ENVELOPE_TYPES.has(String(value.role ?? '').trim())
+);
 
 const hasStructuredEnvelopeMarkers = (value) => {
     if (typeof value !== 'string') {
@@ -286,7 +320,7 @@ const extractJsonObjects = (text) => {
     let hasIncompleteJson = false;
 
     while (cursor < text.length) {
-        const relativeStart = text.slice(cursor).search(/[{\[]/);
+        const relativeStart = text.slice(cursor).search(/[{[]/);
         if (relativeStart === -1) {
             break;
         }
@@ -456,6 +490,13 @@ const formatLifecycleSummary = (payloadObject, fallbackTimestamp = null) => {
     if (type === 'truncation_notice') {
         const msg = String(payloadObject.message ?? '').trim();
         return msg || 'Output truncated (5MB limit)';
+    }
+
+    // Suppress internal protocol lifecycle events from user-facing output.
+    // Return empty string (not null) so the callsite's `?? rawPayload` fallback
+    // does not accidentally render the raw JSON.
+    if (type === 'noise_filtering_active' || type === 'mcp_connection_issue') {
+        return '';
     }
 
     return null;
@@ -881,6 +922,115 @@ const handleUserPayload = (context, payloadObject, formattedEntries) => {
     return true;
 };
 
+/**
+ * Summarise the `content` field of an Anthropic `tool_result` content block
+ * into a short, user-friendly string instead of dumping the raw output.
+ */
+const summarizeToolResultContent = (content) => {
+    if (content === null || content === undefined) {
+        return 'Tool result completed';
+    }
+
+    if (typeof content === 'string') {
+        const trimmed = content.trim();
+        if (trimmed === '') return 'Tool result completed';
+
+        // Short content — show as-is (e.g. file paths, short results)
+        if (trimmed.length <= 200 && !trimmed.includes('\n')) {
+            return `Result: ${trimmed}`;
+        }
+
+        // Multi-line or long — truncate
+        const firstLine = trimmed.split('\n')[0].trim();
+        if (firstLine.length <= 200) {
+            return `Result: ${firstLine}… (${trimmed.length} chars)`;
+        }
+        return `Result: ${firstLine.slice(0, 150).trimEnd()}… (${trimmed.length} chars)`;
+    }
+
+    if (Array.isArray(content)) {
+        // Content blocks array: [{type: "text", text: "..."}]
+        const texts = content
+            .filter((b) => isRecord(b) && String(b.type ?? '').trim() === 'text')
+            .map((b) => String(b.text ?? '').trim())
+            .filter((t) => t !== '');
+        if (texts.length > 0) {
+            const joined = texts.join(' ').trim();
+            if (joined.length <= 200) return `Result: ${joined}`;
+            return `Result: ${joined.slice(0, 150).trimEnd()}… (${joined.length} chars)`;
+        }
+        return 'Tool result completed';
+    }
+
+    return 'Tool result completed';
+};
+
+/**
+ * Handle Anthropic API `{role: "user", content: [...]}` payloads.
+ *
+ * These contain `tool_result` content blocks with raw tool output that should
+ * be summarised rather than displayed verbatim.
+ */
+const handleRoleUserPayload = (context, payloadObject, formattedEntries) => {
+    const contentBlocks = Array.isArray(payloadObject.content) ? payloadObject.content : [];
+
+    if (contentBlocks.length === 0) {
+        return true; // Suppress empty user payloads
+    }
+
+    const summaries = [];
+
+    for (const block of contentBlocks) {
+        if (!isRecord(block)) continue;
+
+        const blockType = String(block.type ?? '').trim();
+
+        if (blockType === 'tool_result') {
+            const isError = block.is_error === true;
+            const summary = summarizeToolResultContent(block.content);
+            summaries.push(isError ? `Error: ${summary.replace(/^Result:\s*/, '')}` : summary);
+        } else if (blockType === 'text') {
+            const text = String(block.text ?? '').trim();
+            if (text !== '' && text.length <= 240) {
+                summaries.push(text);
+            }
+        }
+    }
+
+    if (summaries.length > 0) {
+        summaries.forEach((summary, index) => {
+            formattedEntries.push(makeFormattedEntry({
+                key: `${context.key}:role-user:${index}`,
+                prefix: context.prefix,
+                payload: summary,
+                tone: 'structured',
+                format: 'pre',
+            }));
+        });
+    }
+
+    return true;
+};
+
+/**
+ * Handle Anthropic API `{role: "assistant", content: [...]}` payloads.
+ *
+ * Normalises to the `{type: "assistant", message: {...}}` shape expected by
+ * the existing `handleAssistantPayload()` handler.
+ */
+const handleRoleAssistantPayload = (context, payloadObject, formattedEntries, state) => {
+    const normalized = {
+        type: 'assistant',
+        message: {
+            content: payloadObject.content ?? [],
+            model: payloadObject.model ?? '',
+            usage: payloadObject.usage ?? {},
+        },
+    };
+
+    return handleAssistantPayload(context, normalized, formattedEntries, state);
+};
+
 const handleResultPayload = (context, payloadObject, formattedEntries) => {
     if (!isRecord(payloadObject.result)) {
         return true;
@@ -913,24 +1063,40 @@ const handleResultPayload = (context, payloadObject, formattedEntries) => {
 const handleStructuredEnvelope = (context, payloadObject, formattedEntries, state) => {
     const envelopeType = String(payloadObject.type ?? '').trim();
 
-    if (!STREAM_ENVELOPE_TYPES.has(envelopeType)) {
+    if (STREAM_ENVELOPE_TYPES.has(envelopeType)) {
+        if (envelopeType === 'stream_event') {
+            return handleStreamEventPayload(context, payloadObject, formattedEntries, state);
+        }
+
+        if (envelopeType === 'assistant') {
+            return handleAssistantPayload(context, payloadObject, formattedEntries, state);
+        }
+
+        if (envelopeType === 'user') {
+            return handleUserPayload(context, payloadObject, formattedEntries);
+        }
+
+        if (envelopeType === 'result') {
+            return handleResultPayload(context, payloadObject, formattedEntries);
+        }
+
         return false;
     }
 
-    if (envelopeType === 'stream_event') {
-        return handleStreamEventPayload(context, payloadObject, formattedEntries, state);
-    }
+    // Handle role-based envelopes (Anthropic Messages API format).
+    // These use `role` instead of `type` as the discriminator key.
+    const role = String(payloadObject.role ?? '').trim();
 
-    if (envelopeType === 'assistant') {
-        return handleAssistantPayload(context, payloadObject, formattedEntries, state);
-    }
+    if (ROLE_ENVELOPE_TYPES.has(role)) {
+        if (role === 'user') {
+            return handleRoleUserPayload(context, payloadObject, formattedEntries);
+        }
 
-    if (envelopeType === 'user') {
-        return handleUserPayload(context, payloadObject, formattedEntries);
-    }
+        if (role === 'assistant') {
+            return handleRoleAssistantPayload(context, payloadObject, formattedEntries, state);
+        }
 
-    if (envelopeType === 'result') {
-        return handleResultPayload(context, payloadObject, formattedEntries);
+        return true; // Suppress unrecognised roles
     }
 
     return false;
@@ -1053,6 +1219,11 @@ export const formatAgentRunEventEntry = (entry) => {
         const lifecyclePayload = parseJson(context.payloadRaw);
         const lifecycleSummary = formatLifecycleSummary(lifecyclePayload, context.fallbackTimestamp);
 
+        // Explicitly suppressed lifecycle types return '' — do not fall through.
+        if (lifecycleSummary === '') {
+            return null;
+        }
+
         if (lifecycleSummary) {
             return makeFormattedEntry({
                 key: context.key,
@@ -1160,6 +1331,12 @@ export const formatAgentRunEventEntry = (entry) => {
     }
 
     const markdownCandidate = stripLineNumberPrefixes(normalizedPayload);
+
+    // Suppress injected context (STAR preamble instructions, engineering
+    // rules, memory context, skills) that the AI has echoed back.
+    if (isInjectedContextContent(markdownCandidate)) {
+        return null;
+    }
 
     if ((context.eventType === 'stdout' || context.eventType === 'stderr') && looksLikeMarkdown(markdownCandidate)) {
         return makeFormattedEntry({
@@ -1394,13 +1571,24 @@ const extractContentSnapshotFromPayload = (payload) => {
         const lines = [];
         for (const item of payload) {
             if (!item || typeof item !== 'object') continue;
+
+            // Anthropic tool_result content blocks — summarise instead of
+            // dumping the raw output (which may be entire file contents).
+            const itemType = String(item.type ?? '').trim();
+            if (itemType === 'tool_result') {
+                lines.push(`• ${summarizeToolResultContent(item.content)}`);
+                continue;
+            }
+
             const rawContent = item.content ?? item.text ?? item.title ?? '';
             const content = (typeof rawContent === 'string' ? rawContent : stringifyPayload(rawContent)).trim();
             const status = String(item.status ?? '').trim().toLowerCase();
             const activeForm = String(item.activeForm ?? item.active_form ?? '').trim();
             if (content !== '') {
+                // Truncate long content values that would clutter the log
+                const truncated = content.length > 300 ? `${content.slice(0, 250).trimEnd()}… (${content.length} chars)` : content;
                 const statusLabel = status && status !== 'pending' ? ` [${status}]` : '';
-                lines.push(`• ${content}${statusLabel}`);
+                lines.push(`• ${truncated}${statusLabel}`);
             } else if (activeForm !== '') {
                 lines.push(`• ${activeForm}${status ? ` [${status}]` : ''}`);
             }
@@ -1409,12 +1597,25 @@ const extractContentSnapshotFromPayload = (payload) => {
     }
 
     if (typeof payload === 'object') {
+        // Suppress role-based envelope objects — these should have been
+        // handled by handleStructuredEnvelope already.  If they reach here,
+        // return null so they don't leak raw JSON into the timeline.
+        const role = String(payload.role ?? '').trim();
+        if (ROLE_ENVELOPE_TYPES.has(role)) {
+            return null;
+        }
+
         const content = payload.content ?? payload.text ?? payload.message;
         if (Array.isArray(content)) {
             return extractContentSnapshotFromPayload(content);
         }
         if (typeof content === 'string' && content.trim() !== '') {
-            return content.trim();
+            const trimmed = content.trim();
+            // Truncate very long content strings (e.g. raw file dumps)
+            if (trimmed.length > 300) {
+                return `${trimmed.slice(0, 250).trimEnd()}… (${trimmed.length} chars)`;
+            }
+            return trimmed;
         }
         const todos = payload.todos ?? payload.items ?? payload.tasks;
         if (Array.isArray(todos)) {
@@ -1438,7 +1639,7 @@ const NOISE_JSON_TYPES = new Set([
 ]);
 
 const NOISE_PAYLOAD_MARKERS = /"type"\s*:\s*"(?:stream_event|input_json_delta|content_block_delta|signature_delta)"/;
-const RAW_ENVELOPE_FRAGMENT_PATTERN = /"(?:tool_use_result|tool_use_id|parent_tool_use_id|session_id|uuid)"\s*:/;
+const RAW_ENVELOPE_FRAGMENT_PATTERN = /"(?:tool_use_result|tool_use_id|parent_tool_use_id|session_id|uuid|is_error)"\s*:/;
 
 const inferKindFromSummaryText = (text) => {
     const t = String(text ?? '').trim();
@@ -1558,18 +1759,41 @@ const formatStructuredEnvelopeSummary = (obj) => {
         return label;
     }
 
-    return null;
-};
-
-const safeDisplayText = (value) => {
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'string') return value;
-    if (typeof value === 'object') {
-        const extracted = extractContentSnapshotFromPayload(value) ?? formatStructuredEnvelopeSummary(value);
-        if (extracted) return extracted;
-        return '';
+    // Handle role-based envelopes (Anthropic Messages API format)
+    const role = String(obj.role ?? '').trim();
+    if (role === 'user') {
+        const contentBlocks = Array.isArray(obj.content) ? obj.content : [];
+        const toolResults = contentBlocks.filter((b) => isRecord(b) && String(b.type ?? '').trim() === 'tool_result');
+        if (toolResults.length > 0) {
+            // Show a summary of the first tool result
+            return summarizeToolResultContent(toolResults[0].content);
+        }
+        return null;
     }
-    return String(value);
+
+    if (role === 'assistant') {
+        const blocks = Array.isArray(obj.content) ? obj.content : [];
+        const usage = isRecord(obj.usage) ? obj.usage : null;
+        const outTokens = Number(usage?.output_tokens ?? NaN);
+        const tokenStr = Number.isFinite(outTokens) && outTokens > 0 ? ` (${outTokens} output tokens)` : '';
+
+        for (const block of blocks) {
+            if (!isRecord(block)) continue;
+            const blockType = String(block.type ?? '').trim();
+            if (blockType === 'tool_use') {
+                const name = String(block.name ?? '').trim();
+                return name ? `Tool call: ${name}${tokenStr}` : null;
+            }
+            if (blockType === 'text') {
+                const text = String(block.text ?? '').trim();
+                if (text.length > 0 && text.length <= 200) return text;
+                if (text.length > 200) return `${text.slice(0, 200).trimEnd()}…`;
+            }
+        }
+        return tokenStr ? `Assistant response${tokenStr}` : null;
+    }
+
+    return null;
 };
 
 const summarizeUnknownJsonPayload = (payloadObject) => {
@@ -1579,6 +1803,14 @@ const summarizeUnknownJsonPayload = (payloadObject) => {
 
     const type = String(payloadObject.type ?? '').trim();
     if (NOISE_JSON_TYPES.has(type)) {
+        return null;
+    }
+
+    // Suppress role-based envelopes — these should have been caught by
+    // formatStructuredEnvelopeSummary above.  Return null to avoid dumping
+    // raw tool_result content.
+    const role = String(payloadObject.role ?? '').trim();
+    if (ROLE_ENVELOPE_TYPES.has(role)) {
         return null;
     }
 
@@ -1817,7 +2049,14 @@ export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
         if (context.eventType === 'lifecycle') {
             const lifecyclePayload = parseJson(context.payloadRaw);
             const lifecycleType = String(lifecyclePayload?.type ?? '').trim().toLowerCase();
-            const lifecycleSummary = formatLifecycleSummary(lifecyclePayload, context.fallbackTimestamp) ?? String(context.payloadRaw ?? '').trim();
+            const rawLifecycleSummary = formatLifecycleSummary(lifecyclePayload, context.fallbackTimestamp);
+
+            // Explicitly suppressed lifecycle types return '' — skip entirely.
+            if (rawLifecycleSummary === '') {
+                return;
+            }
+
+            const lifecycleSummary = rawLifecycleSummary ?? String(context.payloadRaw ?? '').trim();
 
             if (lifecycleSummary === '') {
                 return;
@@ -2013,6 +2252,13 @@ export const buildAgentRunEventPresentation = (entries, runMetadata = {}) => {
         }
 
         if (NOISE_PAYLOAD_MARKERS.test(text)) {
+            return;
+        }
+
+        // Suppress injected context (STAR preamble, engineering rules, memory
+        // context, skills) that the AI has echoed back.  These create false
+        // positive guardrail detections and clutter the timeline.
+        if (isInjectedContextContent(text)) {
             return;
         }
 

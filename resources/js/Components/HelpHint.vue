@@ -245,7 +245,7 @@ function createTimeoutSignal(timeoutMs) {
     >
         <button
             type="button"
-            class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-400"
             :aria-label="triggerLabel"
             :aria-controls="tooltipId"
             :aria-expanded="isOpen ? 'true' : 'false'"

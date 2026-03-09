@@ -34,6 +34,14 @@ class UpdateInterrogationSessionAction
             $session->metadata_json = $metadata;
         }
 
+        if (array_key_exists('build_settings', $validated)) {
+            $metadata = is_array($session->metadata_json) ? $session->metadata_json : [];
+            $existing = is_array($metadata['build_settings'] ?? null) ? $metadata['build_settings'] : [];
+            $incoming = is_array($validated['build_settings']) ? $validated['build_settings'] : [];
+            $metadata['build_settings'] = $this->normalizeBuildSettings(array_merge($existing, $incoming));
+            $session->metadata_json = $metadata;
+        }
+
         $session->save();
 
         return $session;
@@ -56,6 +64,18 @@ class UpdateInterrogationSessionAction
             'target_branch' => is_string($raw['target_branch'] ?? null) && trim($raw['target_branch']) !== ''
                 ? trim($raw['target_branch'])
                 : null,
+            'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $raw
+     * @return array<string, mixed>
+     */
+    private function normalizeBuildSettings(array $raw): array
+    {
+        return [
+            'auto_advance_tasks' => (bool) ($raw['auto_advance_tasks'] ?? true),
             'updated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
         ];
     }

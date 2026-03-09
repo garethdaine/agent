@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import {
-    Group, Mesh, BoxGeometry, SphereGeometry, CylinderGeometry,
+    Group, Mesh, BoxGeometry, SphereGeometry,
     MeshStandardMaterial, CanvasTexture, SpriteMaterial, Sprite,
 } from 'three';
 import { AvatarAnimator, AVATAR_STATES } from '@/Support/Office/animations/avatarStateMachine.js';

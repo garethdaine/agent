@@ -49,8 +49,15 @@ class TunnelGracefulDegradationTest extends TestCase
 
     // --- Graceful degradation when feature disabled ---
 
+    private function disableTunnelFeature(): void
+    {
+        config()->set('tunnel.enabled', false);
+    }
+
     public function test_no_tunnel_errors_in_logs_when_feature_disabled(): void
     {
+        $this->disableTunnelFeature();
+
         Log::shouldReceive('error')->never();
         Log::shouldReceive('critical')->never();
         Log::makePartial();
@@ -64,6 +71,8 @@ class TunnelGracefulDegradationTest extends TestCase
 
     public function test_no_tunnel_ui_shared_props_when_disabled(): void
     {
+        $this->disableTunnelFeature();
+
         $response = $this->actingAs($this->user)->get('/dashboard');
 
         $response->assertOk();
@@ -73,6 +82,8 @@ class TunnelGracefulDegradationTest extends TestCase
 
     public function test_all_tunnel_routes_return_404_when_disabled(): void
     {
+        $this->disableTunnelFeature();
+
         $tunnelRouteNames = [
             'settings.tunnel.index',
             'settings.tunnel.wizard',

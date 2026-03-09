@@ -242,7 +242,7 @@ class DiagnosticsService
     private function checkStorage(array &$checks): void
     {
         try {
-            $path = 'diagnostics-'.uniqid().'.txt';
+            $path = 'diagnostics-'.bin2hex(random_bytes(8)).'.txt';
             Storage::disk('local')->put($path, 'ok');
             Storage::disk('local')->delete($path);
             $checks[] = [

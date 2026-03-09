@@ -140,6 +140,7 @@ const refresh = () => {
                     <!-- Pagination -->
                     <div v-if="sessions.links?.length > 3" class="border-t px-6 py-4 flex flex-wrap items-center justify-center gap-1">
                             <template v-for="(link, index) in sessions.links" :key="index">
+                                <!-- eslint-disable-next-line vue/no-v-html -- Laravel pagination labels contain HTML entities -->
                                 <Link
                                     v-if="link.url"
                                     :href="link.url"
@@ -147,6 +148,7 @@ const refresh = () => {
                                     :class="link.active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-input hover:bg-muted'"
                                     v-html="link.label"
                                 />
+                                <!-- eslint-disable-next-line vue/no-v-html -- Laravel pagination labels contain HTML entities -->
                                 <span
                                     v-else
                                     class="px-3 py-1 text-sm text-muted-foreground"

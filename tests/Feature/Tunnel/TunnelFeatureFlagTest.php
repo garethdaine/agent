@@ -15,6 +15,8 @@ class TunnelFeatureFlagTest extends TestCase
 
     public function test_tunnel_feature_flag_defaults_to_disabled(): void
     {
+        config()->set('tunnel.enabled', false);
+
         $manager = app(FeatureFlagManager::class);
 
         $this->assertFalse($manager->isEnabled(FeatureFlagManager::TUNNEL_ENABLED));

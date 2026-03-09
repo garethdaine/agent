@@ -207,6 +207,8 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::post('/interrogation/sessions/{id}/pause-build', [InterrogationSessionController::class, 'pauseBuild'])->middleware('throttle:interrogation');
             Route::post('/interrogation/sessions/{id}/resume-build', [InterrogationSessionController::class, 'resumeBuild'])->middleware('throttle:interrogation');
             Route::post('/interrogation/sessions/{id}/build/clarify', [InterrogationSessionController::class, 'clarifyBuild'])->middleware('throttle:interrogation');
+            Route::get('/interrogation/sessions/{id}/build-tasks/{taskId}/diff', [InterrogationSessionController::class, 'taskDiff'])->middleware('throttle:interrogation');
+            Route::get('/interrogation/sessions/{id}/build-tasks/{taskId}/artefact-content', [InterrogationSessionController::class, 'artefactContent'])->middleware('throttle:interrogation');
             Route::post('/interrogation/sessions/{id}/providers/{driver}/oauth/start', [InterrogationTaskProviderController::class, 'startOAuth'])->middleware('throttle:interrogation');
             Route::get('/interrogation/sessions/{id}/providers/{driver}/projects', [InterrogationTaskProviderController::class, 'projects'])->middleware('throttle:interrogation');
             Route::patch('/interrogation/sessions/{id}/providers/{driver}/settings', [InterrogationTaskProviderController::class, 'updateSettings'])->middleware('throttle:interrogation');
@@ -503,6 +505,6 @@ Route::middleware([AgentApiVersionHeader::class])
 
 // Internal API routes for NL Schedule parsing
 Route::middleware(['auth:sanctum'])->prefix('internal/api')->group(function (): void {
-    Route::post('/schedule/parse', [NlScheduleController::class, 'parse']);
+    Route::post('/schedule/parse', [NlScheduleController::class, 'store']);
     Route::get('/schedule/parse/{parseAttemptId}', [NlScheduleController::class, 'show']);
 });

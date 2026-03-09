@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\TaskCategory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -33,6 +34,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class InterrogationBuildTask extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'interrogation_session_id',
         'sequence',

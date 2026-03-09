@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Connectors\ConnectRequest;
 use App\Http\Resources\Connectors\ConnectionHealthResource;
 use App\Http\Resources\Connectors\ConnectionResource;
+use App\Models\AgentConnector;
 use App\Models\AgentConnectorConnection;
 use App\Support\Agent\FeatureFlagManager;
 use App\Support\Connectors\Auth\ApiKeyAuthManager;

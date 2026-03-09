@@ -29,7 +29,7 @@ const loadHealth = async () => {
 const statusVariant = (status) => {
     if (status === 'active') return 'default';
     if (status === 'pending_review') return 'secondary';
-    if (status === 'paused') return 'outline';
+    if (status === 'paused') return 'outline-solid';
     return 'destructive';
 };
 

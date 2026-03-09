@@ -196,4 +196,18 @@ class InterrogationSession extends Model
             'updated_at' => $git['updated_at'] ?? null,
         ];
     }
+
+    /**
+     * @return array{auto_advance_tasks: bool, updated_at: ?string}
+     */
+    public function buildSettings(): array
+    {
+        $metadata = is_array($this->metadata_json) ? $this->metadata_json : [];
+        $settings = is_array($metadata['build_settings'] ?? null) ? $metadata['build_settings'] : [];
+
+        return [
+            'auto_advance_tasks' => (bool) ($settings['auto_advance_tasks'] ?? true),
+            'updated_at' => $settings['updated_at'] ?? null,
+        ];
+    }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
@@ -20,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  */
 class DelegateeCapabilityPivot extends Pivot
 {
+    use HasFactory;
+
     protected $table = 'delegatee_capabilities_pivot';
 
     public function delegateeProfile(): BelongsTo

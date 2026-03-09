@@ -218,7 +218,7 @@ export function useOfficeRealtime() {
     function stop() {
         stopPolling();
         if (echoChannel) {
-            try { echoChannel.stopListening('.activity.changed'); } catch {}
+            try { echoChannel.stopListening('.activity.changed'); } catch { /* channel already closed */ }
             echoChannel = null;
         }
         connected.value = false;

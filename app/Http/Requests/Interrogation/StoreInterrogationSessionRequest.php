@@ -49,6 +49,9 @@ class StoreInterrogationSessionRequest extends FormRequest
             'git.branching_enabled' => ['sometimes', 'boolean'],
             'git.branch_prefix' => ['sometimes', 'nullable', 'string', 'max:50', 'regex:/^[a-zA-Z0-9\/_\-\.]*$/'],
             'git.target_branch' => ['sometimes', 'nullable', 'string', 'max:255'],
+
+            'build_settings' => ['sometimes', 'nullable', 'array'],
+            'build_settings.auto_advance_tasks' => ['sometimes', 'boolean'],
         ];
     }
 

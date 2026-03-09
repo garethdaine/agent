@@ -159,7 +159,7 @@ class ReconnectionStrategy
         }
 
         // Generate random factor between (1 - jitter%) and (1 + jitter%)
-        $jitterFactor = 1 + (mt_rand(-100, 100) / 100) * ($jitterPercent / 100);
+        $jitterFactor = 1 + (random_int(-100, 100) / 100) * ($jitterPercent / 100);
 
         return $delay * $jitterFactor;
     }

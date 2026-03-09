@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Support\Telemetry\ProjectionTable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -30,6 +31,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class RunClassification extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'run_id',
         'workflow_key',

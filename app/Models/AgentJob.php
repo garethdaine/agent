@@ -55,6 +55,7 @@ class AgentJob extends Model
 
     protected $fillable = [
         'user_id',
+        'team_id',
         'name',
         'workflow_key',
         'description',

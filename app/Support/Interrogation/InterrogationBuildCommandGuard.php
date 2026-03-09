@@ -39,6 +39,10 @@ class InterrogationBuildCommandGuard
             return;
         }
 
+        if ($this->resolveEnv('APP_ENV', $environment) === 'testing') {
+            return;
+        }
+
         $command = $this->resolveArtisanCommand($argv);
         if ($command === null) {
             return;

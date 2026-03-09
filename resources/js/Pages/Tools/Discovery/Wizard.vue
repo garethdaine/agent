@@ -1,15 +1,10 @@
 <script setup>
+import { defineAsyncComponent } from 'vue';
 import AnswerInput from '@/Components/Interrogation/AnswerInput.vue';
-import BuildPanel from '@/Components/Interrogation/BuildPanel.vue';
 import PhaseStepper from '@/Components/Interrogation/PhaseStepper.vue';
-import PlanViewer from '@/Components/Interrogation/PlanViewer.vue';
-import QaHistoryPanel from '@/Components/Interrogation/QaHistoryPanel.vue';
 import QuestionRenderer from '@/Components/Interrogation/QuestionRenderer.vue';
 import SessionStatusBadge from '@/Components/Interrogation/SessionStatusBadge.vue';
-import StatsPanel from '@/Components/Interrogation/StatsPanel.vue';
-import GuardrailsPanel from '@/Components/Interrogation/GuardrailsPanel.vue';
 import StatusCard from '@/Components/Interrogation/StatusCard.vue';
-import SummaryViewer from '@/Components/Interrogation/SummaryViewer.vue';
 import { formatInterrogationError } from '@/Components/Interrogation/errorFormatting';
 import { isAnswerableQuestionEvent } from '@/Components/Interrogation/questionPresentation';
 import Card from '@/Components/ui/Card.vue';
@@ -30,6 +25,14 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { ArrowLeft, Pause, Pencil, Play, RefreshCw, RotateCcw, Search, Settings, Trash2 } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import { confirmDialog } from '@/Support/confirmDialog';
+
+const BuildPanel = defineAsyncComponent(() => import('@/Components/Interrogation/BuildPanel.vue'));
+const PlanViewer = defineAsyncComponent(() => import('@/Components/Interrogation/PlanViewer.vue'));
+const QaHistoryPanel = defineAsyncComponent(() => import('@/Components/Interrogation/QaHistoryPanel.vue'));
+const StatsPanel = defineAsyncComponent(() => import('@/Components/Interrogation/StatsPanel.vue'));
+const GuardrailsPanel = defineAsyncComponent(() => import('@/Components/Interrogation/GuardrailsPanel.vue'));
+const ArtefactsPanel = defineAsyncComponent(() => import('@/Components/Interrogation/ArtefactsPanel.vue'));
+const SummaryViewer = defineAsyncComponent(() => import('@/Components/Interrogation/SummaryViewer.vue'));
 
 const props = defineProps({
     sessionId: {
@@ -99,6 +102,8 @@ const techStackDraft = ref({
     documentation_url: '',
 });
 let echoChannel = null;
+const echoConnected = ref(false);
+const debouncedLoadSessionTimer = ref(null);
 
 const latestQuestion = computed(() => {
     const questionEvents = events.value.filter((event) => isAnswerableQuestionEvent(event));
@@ -264,6 +269,7 @@ const buildTasks = computed(() => (Array.isArray(build.value?.tasks) ? build.val
 const buildActiveTask = computed(() => build.value?.active_task ?? null);
 const buildActiveRunMetadata = computed(() => build.value?.active_run?.metadata_json ?? {});
 const buildPanelRunEvents = computed(() => buildPanelRef.value?.activeRunEvents ?? []);
+const buildArtefacts = computed(() => build.value?.artefacts ?? []);
 const taskProviders = computed(() => (Array.isArray(session.value?.task_providers) ? session.value.task_providers : []));
 const linearProvider = computed(() => taskProviders.value.find((provider) => String(provider?.driver ?? '').toLowerCase() === 'linear') ?? null);
 const showHistoryRail = computed(() => {
@@ -597,13 +603,66 @@ const queuePlanHydrationSync = () => {
     }, 700);
 };
 
+const POLL_MS_DEFAULT = 3000;
+const LOAD_SESSION_DEBOUNCE_MS = 800;
+
+const isSignificantEvent = (event) => {
+    const type = String(event?.event_type ?? '').trim().toLowerCase();
+    const notice = String(event?.payload?.notice ?? '').trim().toLowerCase();
+
+    if (isPlanEvent(event)) {
+        return true;
+    }
+
+    if (type === 'system') {
+        const significantNotices = [
+            'build_status_changed', 'build_started', 'build_completed', 'build_failed',
+            'build_paused', 'build_resumed', 'build_paused_task_review',
+            'task_completed', 'task_failed', 'task_started', 'task_skipped',
+            'tasks_approved', 'tasks_generated', 'tasks_regenerated',
+            'phase_changed', 'session_completed', 'session_failed',
+            'plan_ready', 'plan_generated', 'plan_revised', 'plan_approved',
+            'rate_limit_detected', 'rate_limit_resolved',
+        ];
+
+        return significantNotices.includes(notice);
+    }
+
+    if (event?.payload?._truncated) {
+        return true;
+    }
+
+    return false;
+};
+
+const debouncedLoadSession = (includeEvents = false) => {
+    if (debouncedLoadSessionTimer.value !== null) {
+        clearTimeout(debouncedLoadSessionTimer.value);
+    }
+
+    debouncedLoadSessionTimer.value = setTimeout(() => {
+        debouncedLoadSessionTimer.value = null;
+        loadSession(includeEvents);
+    }, LOAD_SESSION_DEBOUNCE_MS);
+};
+
+/**
+ * Schedule polling ONLY when Echo/WebSocket is NOT connected.
+ * When Echo is active all session updates arrive via the `.session.updated`
+ * and `.phase.changed` listeners — no polling is needed.
+ */
 const schedulePoll = () => {
     clearTimeout(pollingTimer.value);
+
+    if (echoConnected.value) {
+        return; // Echo is connected — no polling.
+    }
+
     pollingTimer.value = setTimeout(async () => {
         await loadNewEvents();
         await loadSession(shouldHydratePendingPlan.value);
         schedulePoll();
-    }, 3000);
+    }, POLL_MS_DEFAULT);
 };
 
 watch(shouldHydratePendingPlan, (pending) => {
@@ -619,6 +678,11 @@ const subscribeEcho = () => {
     if (!window.Echo) {
         return;
     }
+
+    echoConnected.value = true;
+
+    // Stop polling — Echo handles all updates from here.
+    clearTimeout(pollingTimer.value);
 
     echoChannel = window.Echo.private(`interrogation.${props.sessionId}`)
         .listen('.session.updated', (event) => {
@@ -642,11 +706,16 @@ const subscribeEcho = () => {
             }
 
             if (isPlanEvent(candidate)) {
-                loadSession(true);
+                debouncedLoadSession(true);
                 queuePlanHydrationSync();
-            } else {
-                loadSession(false);
+            } else if (isSignificantEvent(candidate)) {
+                // Load session WITH events so build stats (progress,
+                // task counts) and event-derived stats (questions,
+                // answers) are always refreshed.
+                debouncedLoadSession(true);
             }
+            // Non-significant events (heartbeats, system notices, log entries)
+            // are already added to events.value above — no session reload needed.
         })
         .listen('.phase.changed', () => {
             loadSession(true);
@@ -660,6 +729,10 @@ const unsubscribeEcho = () => {
     }
 
     echoChannel = null;
+    echoConnected.value = false;
+
+    // Restart polling as a fallback now that Echo is disconnected.
+    schedulePoll();
 };
 
 const startProviderOAuth = async (driver = 'linear') => {
@@ -1406,6 +1479,10 @@ onMounted(async () => {
 onBeforeUnmount(() => {
     clearTimeout(pollingTimer.value);
     clearPlanHydrationSyncTimer();
+    if (debouncedLoadSessionTimer.value !== null) {
+        clearTimeout(debouncedLoadSessionTimer.value);
+        debouncedLoadSessionTimer.value = null;
+    }
     unsubscribeEcho();
 });
 </script>
@@ -1863,6 +1940,7 @@ onBeforeUnmount(() => {
                                     :activity="buildActivity"
                                     :actions="actionState"
                                     :disabled="busy"
+                                    :session-id="sessionId"
                                     @pause="pauseBuild"
                                     @resume="resumeBuild"
                                     @retry="startBuild({ restartFailed: true })"
@@ -1874,6 +1952,11 @@ onBeforeUnmount(() => {
 
                         <div v-if="showRightSidebar" class="xl:col-span-3 space-y-3">
                             <StatsPanel :session="session" :events="events" />
+                            <ArtefactsPanel
+                                v-if="session?.phase >= PHASE.BUILD_EXECUTION"
+                                :session-id="sessionId"
+                                :artefacts="buildArtefacts"
+                            />
                             <GuardrailsPanel
                                 v-if="session?.phase >= PHASE.BUILD_EXECUTION"
                                 :tasks="buildTasks"

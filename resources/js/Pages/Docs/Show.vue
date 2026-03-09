@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import DOMPurify from 'dompurify';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Button from '@/Components/ui/Button.vue';
 import HelpHint from '@/Components/HelpHint.vue';
@@ -538,7 +539,7 @@ function onGlobalKeydown(event) {
                                     :markdown="bodyMarkdown"
                                     :normalize="false"
                                 />
-                                <div v-else-if="bodyHtml.trim() !== ''" v-html="bodyHtml" />
+                                <div v-else-if="bodyHtml.trim() !== ''" v-html="DOMPurify.sanitize(bodyHtml)" />
                                 <p v-else class="text-sm text-muted-foreground">No markdown body is available for this entry.</p>
                             </div>
                         </article>

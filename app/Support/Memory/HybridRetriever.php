@@ -271,7 +271,7 @@ class HybridRetriever
             return MemoryEmbedding::generateContentHash($item['content']);
         }
 
-        return (string) ($item['id'] ?? uniqid());
+        return (string) ($item['id'] ?? bin2hex(random_bytes(8)));
     }
 
     /**

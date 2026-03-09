@@ -10,7 +10,7 @@ import DirectoryPickerInput from '@/Components/ui/DirectoryPickerInput.vue';
 import Textarea from '@/Components/ui/Textarea.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import Toggle from '@/Components/ui/Toggle.vue';
-import { ArrowLeft, GitBranch, RefreshCw, Search } from 'lucide-vue-next';
+import { ArrowLeft, GitBranch, RefreshCw, Search, Settings2 } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { reactive, ref, watch } from 'vue';
@@ -29,6 +29,9 @@ const form = reactive({
         branching_enabled: false,
         branch_prefix: '',
         target_branch: '',
+    },
+    build_settings: {
+        auto_advance_tasks: true,
     },
 });
 
@@ -130,6 +133,9 @@ const submit = async () => {
             branch_prefix: form.git.branch_prefix || null,
             target_branch: !form.git.branching_enabled ? (form.git.target_branch || null) : null,
         };
+        payload.build_settings = {
+            auto_advance_tasks: form.build_settings.auto_advance_tasks,
+        };
 
         const { data } = await axios.post('/agent/api/v1/interrogation/sessions', payload);
         const id = data?.data?.id;
@@ -208,7 +214,7 @@ const submit = async () => {
                                 <label class="block text-sm font-medium">Runner</label>
                                 <select
                                     v-model="form.runner_type"
-                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                                 >
                                     <option value="claude">claude</option>
                                     <option value="codex">codex</option>
@@ -222,7 +228,7 @@ const submit = async () => {
                             <select
                                 v-model="form.model"
                                 :disabled="loadingModels"
-                                class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                                class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                             >
                                 <option v-if="loadingModels" value="">Loading models...</option>
                                 <option v-for="m in availableModels" :key="m.id" :value="m.id">
@@ -244,7 +250,7 @@ const submit = async () => {
                             <label class="block text-sm font-medium">Interrogation Type</label>
                             <select
                                 v-model="form.interrogation_type"
-                                class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                class="mt-1 flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                             >
                                 <option value="feature">feature</option>
                                 <option value="general">general</option>
@@ -323,7 +329,7 @@ const submit = async () => {
                                         <select
                                             v-model="form.git.target_branch"
                                             :disabled="gitBranchesLoading"
-                                            class="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                                            class="flex h-9 w-full rounded-md border border-input bg-input-background px-3 py-1 text-sm shadow-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                                         >
                                             <option v-if="gitBranchesLoading" value="">Loading branches...</option>
                                             <option v-if="!gitBranchesLoading && gitBranches.length === 0" value="">No branches found</option>
@@ -345,6 +351,21 @@ const submit = async () => {
                                     <p v-if="validation['git.target_branch']" class="text-xs text-destructive">{{ validation['git.target_branch'][0] }}</p>
                                 </div>
                             </template>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-2">
+                                <Settings2 class="h-4 w-4 text-muted-foreground" />
+                                <label class="text-sm font-semibold">Build Execution</label>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 px-3 py-2">
+                                <div>
+                                    <p class="text-sm font-medium">Auto-advance tasks</p>
+                                    <p class="text-xs text-muted-foreground">When off, the build pauses after each task completes for you to review changes before continuing.</p>
+                                </div>
+                                <Toggle v-model="form.build_settings.auto_advance_tasks" />
+                            </div>
                         </div>
 
                         <div class="flex justify-end">

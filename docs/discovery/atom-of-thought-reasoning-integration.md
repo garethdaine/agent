@@ -12,7 +12,7 @@ Recommendation:
 - Ship **AoT-lite** in interrogation planning + build-task generation first.
 - Keep summary phase mostly unchanged (synthesis only).
 - Apply AoT at execution time only when a task is detected as compound.
-- Run in shadow/advisory mode first with A/B instrumentation before any gating.
+- Run in shadow mode first with A/B instrumentation before any gating.
 
 ## Legitimacy and Product Position
 

@@ -132,7 +132,7 @@ class ProviderRateLimiter
         $backoff = $retryAfterSeconds ?? self::DEFAULT_BACKOFF_SECONDS;
 
         // Add jitter to prevent thundering herd
-        $jitter = (int) ceil($backoff * self::JITTER_PERCENT * (mt_rand() / mt_getrandmax()));
+        $jitter = (int) ceil($backoff * self::JITTER_PERCENT * (random_int(0, 1000000) / 1000000));
         $totalBackoff = $backoff + $jitter;
 
         $blockedUntil = time() + $totalBackoff;

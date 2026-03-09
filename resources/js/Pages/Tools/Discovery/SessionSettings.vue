@@ -11,7 +11,7 @@ import Textarea from '@/Components/ui/Textarea.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import Toggle from '@/Components/ui/Toggle.vue';
-import { ArrowLeft, ExternalLink, GitBranch, RefreshCw, Search, Trash2, Plus } from 'lucide-vue-next';
+import { ArrowLeft, ExternalLink, GitBranch, RefreshCw, Search, Settings2, Trash2, Plus } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import axios from 'axios';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
@@ -58,6 +58,11 @@ const gitSaving = ref(false);
 const gitBranches = ref([]);
 const gitBranchesLoading = ref(false);
 const gitCurrentBranch = ref('');
+
+const buildSettingsForm = reactive({
+    auto_advance_tasks: true,
+});
+const buildSettingsSaving = ref(false);
 
 const techStackDraft = reactive({
     name: '',
@@ -135,6 +140,7 @@ const loadSession = async () => {
         const runnerType = String(session.value?.runner_type ?? 'claude');
         await fetchModels(runnerType);
         syncGitFormFromSession();
+        syncBuildSettingsFromSession();
         syncProviderProjectDraftFromSession();
 
         if (linearProvider.value) {
@@ -200,6 +206,11 @@ const syncGitFormFromSession = () => {
     gitForm.target_branch = String(git.target_branch ?? '');
 };
 
+const syncBuildSettingsFromSession = () => {
+    const bs = session.value?.build_settings ?? {};
+    buildSettingsForm.auto_advance_tasks = bs.auto_advance_tasks !== false;
+};
+
 const loadGitBranches = async () => {
     gitBranchesLoading.value = true;
 
@@ -244,6 +255,29 @@ const saveGitSettings = async () => {
         error.value = payload?.error?.message ?? payload?.message ?? 'Failed to update git settings.';
     } finally {
         gitSaving.value = false;
+    }
+};
+
+const saveBuildSettings = async () => {
+    buildSettingsSaving.value = true;
+    error.value = '';
+    validation.value = {};
+
+    try {
+        await axios.patch(`/agent/api/v1/interrogation/sessions/${props.sessionId}`, {
+            build_settings: {
+                auto_advance_tasks: buildSettingsForm.auto_advance_tasks,
+            },
+        });
+
+        notice.value = 'Build settings updated.';
+        await loadSession();
+    } catch (e) {
+        const payload = e?.response?.data ?? {};
+        validation.value = payload?.errors ?? payload?.error?.details ?? {};
+        error.value = payload?.error?.message ?? payload?.message ?? 'Failed to update build settings.';
+    } finally {
+        buildSettingsSaving.value = false;
     }
 };
 
@@ -690,6 +724,31 @@ watch(() => providerTeamForm.team_id, async (nextTeamId) => {
                             <div class="flex justify-end">
                                 <Button :disabled="gitSaving" @click="saveGitSettings">
                                     {{ gitSaving ? 'Saving...' : 'Save Git Settings' }}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <div class="flex items-center gap-2">
+                                <Settings2 class="h-4 w-4 text-muted-foreground" />
+                                <CardTitle>Build Execution</CardTitle>
+                            </div>
+                            <CardDescription>Control how the build progresses through tasks.</CardDescription>
+                        </CardHeader>
+                        <CardContent class="space-y-4">
+                            <div class="flex items-center justify-between gap-4 rounded-md border border-border bg-muted/50 px-3 py-2">
+                                <div>
+                                    <p class="text-sm font-medium">Auto-advance tasks</p>
+                                    <p class="text-xs text-muted-foreground">When off, the build pauses after each task completes for you to review changes before continuing.</p>
+                                </div>
+                                <Toggle v-model="buildSettingsForm.auto_advance_tasks" />
+                            </div>
+
+                            <div class="flex justify-end">
+                                <Button :disabled="buildSettingsSaving" @click="saveBuildSettings">
+                                    {{ buildSettingsSaving ? 'Saving...' : 'Save Build Settings' }}
                                 </Button>
                             </div>
                         </CardContent>

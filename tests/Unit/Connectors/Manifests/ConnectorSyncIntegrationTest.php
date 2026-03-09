@@ -45,9 +45,11 @@ class ConnectorSyncIntegrationTest extends TestCase
     {
         $result = $this->loader->sync($this->manifestsPath);
 
-        $this->assertSame(13, $result->created, 'Expected 13 connectors to be created.');
+        $expectedCount = count(glob($this->manifestsPath.'/*/connector.json'));
+        $this->assertGreaterThan(0, $expectedCount, 'Expected at least one connector manifest to exist.');
+        $this->assertSame($expectedCount, $result->created, "Expected {$expectedCount} connectors to be created.");
         $this->assertSame(0, $result->errors, 'Expected no errors during sync.');
-        $this->assertSame(13, AgentConnector::count(), 'Expected 13 AgentConnector records in database.');
+        $this->assertSame($expectedCount, AgentConnector::count(), "Expected {$expectedCount} AgentConnector records in database.");
     }
 
     public function test_synced_connectors_have_correct_categories(): void

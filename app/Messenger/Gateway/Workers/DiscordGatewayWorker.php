@@ -103,6 +103,7 @@ class DiscordGatewayWorker implements GatewayWorkerInterface
     private ?string $sessionId = null;
 
     private ?string $resumeGatewayUrl = null; // @phpstan-ignore property.onlyWritten
+
     private ?int $lastSequence = null;
 
     private ?TimerInterface $heartbeatTimer = null;
@@ -669,7 +670,7 @@ class DiscordGatewayWorker implements GatewayWorkerInterface
         }
 
         // Wait 1-5 seconds before reconnecting (per Discord docs)
-        $delay = rand(1, 5);
+        $delay = random_int(1, 5);
         $this->loop->addTimer($delay, function () {
             $this->start();
         });

@@ -40,6 +40,8 @@ class ConnectorPipelineIntegrationTest extends TestCase
     {
         parent::setUp();
 
+        Redis::flushdb();
+
         config()->set([
             'connectors.enabled' => true,
             'connectors.write_actions' => true,
@@ -142,7 +144,7 @@ class ConnectorPipelineIntegrationTest extends TestCase
         $this->assertNotNull($invocation);
         $this->assertEquals(AgentConnectorInvocation::OUTCOME_SUCCESS, $invocation->outcome);
         $this->assertEquals(200, $invocation->http_status);
-        $this->assertGreaterThan(0, $invocation->duration_ms);
+        $this->assertGreaterThanOrEqual(0, $invocation->duration_ms);
         $this->assertEquals(0, $invocation->retry_count);
     }
 

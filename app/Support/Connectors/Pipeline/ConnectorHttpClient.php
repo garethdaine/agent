@@ -60,7 +60,7 @@ class ConnectorHttpClient
             if ($this->shouldRetry($status) && $attempt < $maxAttempts - 1) {
                 $retryCount++;
                 $delay = ($backoffSeconds[$attempt] ?? end($backoffSeconds));
-                $jitter = $delay * (mt_rand(0, 100) / 1000);
+                $jitter = $delay * (random_int(0, 100) / 1000);
                 usleep((int) (($delay + $jitter) * 1_000_000));
 
                 continue;

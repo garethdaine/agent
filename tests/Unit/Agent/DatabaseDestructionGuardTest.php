@@ -23,7 +23,7 @@ class DatabaseDestructionGuardTest extends TestCase
     {
         $this->guard->enforce(
             ['php', 'artisan', 'migrate:fresh'],
-            ['DB_CONNECTION' => 'pgsql', 'DB_DATABASE' => 'agent']
+            ['AGENT_DB_ISOLATED' => '0', 'DB_CONNECTION' => 'pgsql', 'DB_DATABASE' => 'agent']
         );
 
         $this->assertTrue(true);

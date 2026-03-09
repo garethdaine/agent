@@ -55,6 +55,8 @@ class TunnelStatusApiTest extends TestCase
 
     public function test_status_returns_404_when_disabled(): void
     {
+        config()->set('tunnel.enabled', false);
+
         $response = $this->actingAs($this->user)
             ->getJson(route('api.tunnel.status'));
 

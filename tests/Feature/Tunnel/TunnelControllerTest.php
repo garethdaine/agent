@@ -61,6 +61,8 @@ class TunnelControllerTest extends TestCase
 
     public function test_index_returns_404_when_feature_disabled(): void
     {
+        config()->set('tunnel.enabled', false);
+
         $response = $this->actingAs($this->user)
             ->get(route('settings.tunnel.index'));
 

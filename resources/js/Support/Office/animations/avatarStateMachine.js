@@ -124,7 +124,7 @@ export class AvatarAnimator {
         }
     }
 
-    _animateIdle(delta) {
+    _animateIdle(_delta) {
         const bob = Math.sin(this.stateTime * 1.5) * 0.01;
         if (this._bodyRef) this._bodyRef.position.y = this._baseY.body + bob;
         if (this._headRef) this._headRef.position.y = this._baseY.head + bob * 1.2;
@@ -197,7 +197,7 @@ export class AvatarAnimator {
         this.group.rotation.y = Math.PI;
     }
 
-    _animateTyping(delta) {
+    _animateTyping(_delta) {
         this._applySittingPose();
         if (this._armsRef.left) {
             this._armsRef.left.rotation.x = -0.7 + Math.sin(this.stateTime * 12) * 0.08;
@@ -210,7 +210,7 @@ export class AvatarAnimator {
         }
     }
 
-    _animateReading(delta) {
+    _animateReading(_delta) {
         this._applySittingPose();
         if (this._headRef) {
             this._headRef.rotation.x = -0.15;
@@ -218,7 +218,7 @@ export class AvatarAnimator {
         }
     }
 
-    _animateWaiting(delta) {
+    _animateWaiting(_delta) {
         const pulse = (Math.sin(this.stateTime * 3) + 1) * 0.5;
         if (this._bodyRef?.material) {
             this._bodyRef.material.emissiveIntensity = pulse * 0.3;
@@ -228,7 +228,7 @@ export class AvatarAnimator {
         }
     }
 
-    _animateChatting(delta) {
+    _animateChatting(_delta) {
         const gesture = Math.sin(this.stateTime * 2.5);
         if (this._armsRef.left) {
             this._armsRef.left.rotation.x = -0.3 + gesture * 0.25;

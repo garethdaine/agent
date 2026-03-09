@@ -1,7 +1,5 @@
 :root {
   --font-size: 15px;
-  --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --background: 248 249 251;
   --foreground: 15 23 42;

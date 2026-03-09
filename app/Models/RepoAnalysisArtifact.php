@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -31,6 +32,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class RepoAnalysisArtifact extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'repo_analysis_session_id',
         'repo_analysis_task_id',

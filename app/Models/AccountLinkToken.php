@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -21,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class AccountLinkToken extends Model
 {
+    use HasFactory;
+
     public $incrementing = false;
 
     public $timestamps = false;
@@ -30,6 +33,7 @@ class AccountLinkToken extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
+        'token_hash',
         'connector_account_id',
         'provider_user_id',
         'issued_at',

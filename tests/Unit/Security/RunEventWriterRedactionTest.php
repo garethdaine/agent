@@ -4,28 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Security;
 
-use App\Models\AgentJobRun;
-use App\Support\Agent\RunEventWriter;
+use App\Support\Agent\OutputRedactor;
 use Tests\TestCase;
 
 class RunEventWriterRedactionTest extends TestCase
 {
     private function invokeRedact(string $payload): string
     {
-        $run = new AgentJobRun;
-        $run->id = 'test-run-id';
-        $run->metadata_json = [];
-
-        $writer = new \ReflectionClass(RunEventWriter::class);
-        $instance = $writer->newInstanceWithoutConstructor();
-
-        $runProp = $writer->getProperty('run');
-        $runProp->setValue($instance, $run);
-
-        $method = $writer->getMethod('redact');
+        $redactor = new OutputRedactor;
         $count = 0;
 
-        return $method->invokeArgs($instance, [$payload, &$count]);
+        return $redactor->redact($payload, $count);
     }
 
     public function test_email_addresses_are_redacted(): void

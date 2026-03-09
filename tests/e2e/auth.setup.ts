@@ -2,8 +2,8 @@ import { test as setup, expect } from '@playwright/test';
 
 setup('authenticate', async ({ page }) => {
   await page.goto('/login');
-  await page.locator('#email').fill(process.env.TEST_USER_EMAIL || 'test@example.com');
-  await page.locator('#password').fill(process.env.TEST_USER_PASSWORD || 'password');
+  await page.getByLabel('Email').fill(process.env.TEST_USER_EMAIL || 'test@example.com');
+  await page.getByLabel('Password').fill(process.env.TEST_USER_PASSWORD || 'password');
   await page.getByRole('button', { name: /sign in/i }).click();
   await page.waitForURL(/\/(dashboard|onboarding)/, { timeout: 15000 });
   if (page.url().includes('/onboarding')) {

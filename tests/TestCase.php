@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use RuntimeException;
 
@@ -13,11 +14,38 @@ abstract class TestCase extends BaseTestCase
     {
         $this->assertTestingEnvironmentIsSafeBeforeBoot();
 
+        // Drop the agent_projection schema before the first migrate:fresh.
+        //
+        // Laravel's db:wipe only drops tables in schemas listed in search_path
+        // (typically just "public"). The agent_projection schema — created by
+        // raw SQL migrations with CREATE TABLE IF NOT EXISTS — survives across
+        // db:wipe calls, leaving stale tables whose column definitions may
+        // differ from what the current migrations expect. This causes:
+        //   - CREATE INDEX failures on missing columns
+        //   - UniqueConstraintViolation from leftover data
+        //
+        // This runs before parent::setUp() because that is where RefreshDatabase
+        // and DatabaseTruncation trigger migrate:fresh on the very first test of
+        // a PHP process. A raw PDO connection is used because the Laravel
+        // application has not booted yet at this point.
+        //
+        // Note: this cannot be done via beforeRefreshingDatabase() because the
+        // RefreshDatabase trait's empty implementation takes precedence over any
+        // parent class method due to PHP trait resolution rules.
+        if (! RefreshDatabaseState::$migrated) {
+            $this->dropCustomSchemasForFreshMigration();
+        }
+
         parent::setUp();
 
         $this->assertTestingEnvironmentIsSafeAfterBoot();
 
         $this->ensureWorkingDirectoryBasesConfigured();
+
+        // Force null broadcaster in tests to prevent real HTTP calls to Reverb.
+        // The .env BROADCAST_CONNECTION=reverb can override phpunit.xml's
+        // force="true" setting when Herd loads .env before PHPUnit.
+        config()->set('broadcasting.default', 'null');
     }
 
     /**
@@ -33,6 +61,30 @@ abstract class TestCase extends BaseTestCase
 
         if (empty($bases)) {
             config()->set('agent.allowed_working_directory_bases', [base_path()]);
+        }
+    }
+
+    /**
+     * Ensure custom PostgreSQL enum types are dropped during migrate:fresh.
+     */
+    protected function shouldDropTypes()
+    {
+        return true;
+    }
+
+    private function dropCustomSchemasForFreshMigration(): void
+    {
+        try {
+            $dsn = sprintf(
+                'pgsql:host=%s;port=%s;dbname=%s',
+                env('TEST_DB_HOST', '127.0.0.1'),
+                env('TEST_DB_PORT', '5432'),
+                env('TEST_DB_DATABASE', 'agent_test'),
+            );
+            $pdo = new \PDO($dsn, env('TEST_DB_USERNAME', 'root'), env('TEST_DB_PASSWORD', ''));
+            $pdo->exec('DROP SCHEMA IF EXISTS agent_projection CASCADE');
+        } catch (\Throwable) {
+            // Ignore — schema may not exist or DB may be unreachable.
         }
     }
 
