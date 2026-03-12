@@ -16,6 +16,33 @@
 
 ## Current — Open Items
 
+### Interview Showcase Feature Briefs (In Progress)
+
+Assumptions and Scope Boundary
+- Scope is planning/documentation only: draft six standalone additive feature briefs in `docs/plans/`.
+- These briefs are for interview/showcase positioning and must not assume modification of existing discovery flows or current product behavior.
+- Each brief must explicitly state that AI-assisted implementation/testing should use the Codex CLI runner.
+
+Pre-Execution Goal Articulation
+- SITUATION: The product already has substantial discovery and build orchestration, but the user needs additive showcase feature briefs that map closely to No Code Sage's workflow-discovery and operational-transformation model.
+- TASK: Produce separate detailed briefs for Workflow Interrogator, Tooling Match Scorecard, Quick-Wins / Pilot Finder, Automation Risk & Exception Matrix, Ops Workflow Blueprint Generator, and Client Enablement / Co-Build Handoff Pack.
+- ACTION:
+  - [x] Inspect existing `docs/plans/` conventions.
+  - [x] Draft `workflow-interrogator-feature-brief.md`.
+  - [x] Draft `tooling-match-scorecard-feature-brief.md`.
+  - [x] Draft `quick-wins-pilot-finder-feature-brief.md`.
+  - [x] Draft `automation-risk-exception-matrix-feature-brief.md`.
+  - [x] Draft `ops-workflow-blueprint-generator-feature-brief.md`.
+  - [x] Draft `client-enablement-co-build-handoff-pack-feature-brief.md`.
+  - [x] Review all briefs for additive-only scope and Codex CLI runner instructions.
+- RESULT: Six reusable feature briefs exist in `docs/plans/` and can be referenced for implementation or interview discussion without changing current product behavior.
+
+Review
+- Added six standalone feature briefs under `docs/plans/`.
+- Verified each brief explicitly states additive-only scope.
+- Verified each brief explicitly states that AI-assisted implementation/testing should use the Codex CLI runner.
+- No product code or current feature behavior was modified.
+
 ### Session 17 Build Task 13 — Implement Canonical Cost Governance (Completed)
 
 Assumptions and Scope Boundary
