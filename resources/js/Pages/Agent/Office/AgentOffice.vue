@@ -13,7 +13,11 @@ import { useOfficeZones } from '@/Composables/Office/useOfficeZones.js';
 import { useOfficeInteraction } from '@/Composables/Office/useOfficeInteraction.js';
 import { useOfficeEnvironment } from '@/Composables/Office/useOfficeEnvironment.js';
 import OfficeDetailPanel from '@/Components/Office/OfficeDetailPanel.vue';
-import { buildOfficeFloor, buildOfficeWalls, buildZoneLabels, buildZoneFurniture, ZONE_DEFS, WORKSTATION_POSITIONS } from '@/Support/Office/officeFloorplan.js';
+import {
+    buildOfficeFloor, buildOfficeWalls, buildZoneLabels, buildZoneFurniture,
+    buildWallDecorations, buildOfficeDecorations, buildOfficeDoor, buildOutdoorEnvironment,
+    ZONE_DEFS, WORKSTATION_POSITIONS,
+} from '@/Support/Office/officeFloorplan.js';
 import { ParticleEmitter, SpeechBubble, AmbientAnimations } from '@/Support/Office/animations/visualEffects.js';
 import { Vector3 } from 'three';
 import {
@@ -29,6 +33,7 @@ const error = ref('');
 const webglUnavailable = ref(false);
 const agents = ref([]);
 const agentThoughts = ref({});
+const agentLatestOutputs = ref({});
 const activeZone = ref(null);
 
 let sceneApi = null;
@@ -39,6 +44,8 @@ let envApi = null;
 let particles = null;
 let speechBubbles = null;
 let ambientAnims = null;
+let thinkingBubbleTimer = null;
+const lastBubbleTime = {};
 const realtime = useOfficeRealtime();
 const panelVisible = ref(false);
 const panelData = ref(null);
@@ -178,6 +185,10 @@ onMounted(async () => {
         scene.add(buildOfficeFloor());
         scene.add(buildOfficeWalls());
         scene.add(buildZoneFurniture());
+        scene.add(buildWallDecorations());
+        scene.add(buildOfficeDecorations());
+        scene.add(buildOfficeDoor());
+        scene.add(buildOutdoorEnvironment());
         scene.add(buildZoneLabels());
 
         envApi = useOfficeEnvironment(sceneApi, { override: envOverride });
@@ -253,6 +264,13 @@ onMounted(async () => {
                     status: a.status,
                     text: `${a.name} — ${label}`,
                 };
+
+                if (a.status === 'idle' || a.current_activity === 'idle') {
+                    delete agentLatestOutputs.value[a.id];
+                } else if (a.status === 'running' && !agentLatestOutputs.value[a.id]) {
+                    // Seed panel "Currently" from activity label when no real output yet
+                    agentLatestOutputs.value[a.id] = label;
+                }
 
                 if (!prev || !avatarApi || !particles) return;
 
@@ -381,11 +399,61 @@ onMounted(async () => {
                 thought: true,
             });
 
+            lastBubbleTime[agent.id] = Date.now();
+            agentLatestOutputs.value[agent.id] = displayText;
+
             agentThoughts.value[agent.id] = {
                 status: agent.status,
                 text: `${agent.name} — ${displayText}`,
             };
         }, { deep: true });
+
+        // Periodic thinking bubbles for actively working agents
+        const thinkingPhrases = {
+            writing_code: ['Writing implementation...', 'Coding solution...', 'Building feature...', 'Structuring code...'],
+            analyzing: ['Examining patterns...', 'Analysing structure...', 'Inspecting codebase...', 'Checking dependencies...'],
+            reviewing: ['Reviewing changes...', 'Checking quality...', 'Evaluating approach...', 'Verifying standards...'],
+            compiling_report: ['Compiling findings...', 'Formatting report...', 'Summarising results...', 'Structuring output...'],
+            testing: ['Running test suite...', 'Checking assertions...', 'Validating behaviour...', 'Testing edge cases...'],
+            refactoring: ['Simplifying logic...', 'Improving structure...', 'Cleaning up code...', 'Optimising patterns...'],
+            debugging: ['Tracing the issue...', 'Inspecting stack trace...', 'Narrowing root cause...', 'Checking error logs...'],
+            planning: ['Mapping approach...', 'Evaluating options...', 'Designing solution...', 'Outlining steps...'],
+            working: ['Processing task...', 'Making progress...', 'Working on it...', 'Executing steps...'],
+            executing_job: ['Running job...', 'Processing request...', 'Executing commands...', 'Handling task...'],
+        };
+
+        thinkingBubbleTimer = setInterval(() => {
+            if (!avatarApi || !speechBubbles) return;
+            const state = realtime.officeState.value;
+            if (!state?.agents) return;
+
+            const now = Date.now();
+            state.agents.forEach((agent) => {
+                if (agent.status !== 'running' || agent.current_activity === 'idle') return;
+
+                // Don't show if a bubble was shown recently (within 8s)
+                const lastTime = lastBubbleTime[agent.id] || 0;
+                if (now - lastTime < 8000) return;
+
+                // Don't show if there's already an active bubble
+                if (speechBubbles.bubbles.has(agent.id)) return;
+
+                const phrases = thinkingPhrases[agent.current_activity] || thinkingPhrases.working;
+                const text = phrases[Math.floor(Math.random() * phrases.length)];
+                const group = avatarApi.getAvatarGroup(agent.id);
+                if (!group) return;
+
+                speechBubbles.show(agent.id, text, group, {
+                    duration: 4,
+                    color: '#b8c8e8',
+                    bgColor: 'rgba(20,25,50,0.88)',
+                    thought: true,
+                });
+                lastBubbleTime[agent.id] = now;
+                // Also feed into panel "Currently" section
+                agentLatestOutputs.value[agent.id] = text;
+            });
+        }, 3000);
 
         window.addEventListener('resize', sceneApi.resize);
         document.addEventListener('fullscreenchange', onFullscreenChange);
@@ -398,6 +466,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+    if (thinkingBubbleTimer) clearInterval(thinkingBubbleTimer);
     window.removeEventListener('resize', sceneApi?.resize);
     document.removeEventListener('fullscreenchange', onFullscreenChange);
     interactionApi?.detach();
@@ -583,6 +652,7 @@ onUnmounted(() => {
                     :visible="panelVisible"
                     :data="panelData"
                     :office-state="realtime.officeState.value"
+                    :agent-outputs="agentLatestOutputs"
                     @close="panelVisible = false; panelData = null"
                 />
             </template>

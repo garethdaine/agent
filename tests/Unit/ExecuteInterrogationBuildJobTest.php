@@ -103,11 +103,226 @@ class ExecuteInterrogationBuildJobTest extends TestCase
                 && (int) $job->taskId === (int) $task->id;
         });
 
+        // Build should be finalized inline on the same tick that completed
+        // the last task — no follow-up tick required.
+        $session->refresh();
+        $this->assertSame('completed', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame(InterrogationSession::STATUS_COMPLETED, (string) $session->status);
+    }
+
+    public function test_build_finalizes_inline_without_follow_up_tick_when_last_task_completes(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'running',
+        ]);
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED);
+
+        // Multiple tasks: first completed, second is the last in-progress task.
+        InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'First task',
+            'status' => InterrogationBuildTask::STATUS_COMPLETED,
+            'attempt_count' => 1,
+            'finished_at' => now(),
+        ]);
+
+        $lastTask = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 2,
+            'title' => 'Last task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
         $this->app->call([$job, 'handle']);
 
-        $session->refresh();
+        $lastTask->refresh();
+        $this->assertSame(InterrogationBuildTask::STATUS_COMPLETED, (string) $lastTask->status);
 
+        // Build should be completed without needing a follow-up tick.
+        $session->refresh();
         $this->assertSame('completed', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame(InterrogationSession::STATUS_COMPLETED, (string) $session->status);
+
+        // No follow-up build tick should have been dispatched since we finalized inline.
+        Queue::assertNotPushed(ExecuteInterrogationBuildJob::class);
+    }
+
+    public function test_paused_build_recovers_and_finalizes_when_task_run_completed(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'paused',
+            'pause_reason' => 'backup_failed',
+            'paused_at' => now()->toIso8601String(),
+            'error' => 'Database backup failed before starting task 24',
+        ]);
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED);
+
+        // First task already completed, second (last) task's run finished while paused.
+        InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'First task',
+            'status' => InterrogationBuildTask::STATUS_COMPLETED,
+            'attempt_count' => 1,
+            'finished_at' => now(),
+        ]);
+
+        $lastTask = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 2,
+            'title' => 'Last task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        // Task should be finalized.
+        $lastTask->refresh();
+        $this->assertSame(InterrogationBuildTask::STATUS_COMPLETED, (string) $lastTask->status);
+
+        // Build should be resumed from paused and then completed.
+        $session->refresh();
+        $this->assertSame('completed', data_get($session->metadata_json, 'build.status'));
+        $this->assertNull(data_get($session->metadata_json, 'build.pause_reason'));
+        $this->assertNull(data_get($session->metadata_json, 'build.paused_at'));
+        $this->assertNull(data_get($session->metadata_json, 'build.error'));
+        $this->assertSame(InterrogationSession::STATUS_COMPLETED, (string) $session->status);
+
+        // Should log the recovery event.
+        $this->assertDatabaseHas('interrogation_events', [
+            'interrogation_session_id' => $session->id,
+        ]);
+    }
+
+    public function test_paused_build_does_not_recover_when_run_still_active(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'paused',
+            'pause_reason' => 'backup_failed',
+        ]);
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_RUNNING);
+
+        InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Active task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        // Build should remain paused — run is still active.
+        $session->refresh();
+        $this->assertSame('paused', data_get($session->metadata_json, 'build.status'));
+        $this->assertSame('backup_failed', data_get($session->metadata_json, 'build.pause_reason'));
+
+        Queue::assertNotPushed(ExecuteInterrogationBuildJob::class);
+    }
+
+    public function test_paused_build_does_not_recover_when_no_in_progress_task(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'paused',
+            'pause_reason' => 'backup_failed',
+        ]);
+
+        // All tasks are completed — no in-progress task to recover.
+        InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'Done task',
+            'status' => InterrogationBuildTask::STATUS_COMPLETED,
+            'attempt_count' => 1,
+            'finished_at' => now(),
+        ]);
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        // Build should remain paused — nothing to recover.
+        $session->refresh();
+        $this->assertSame('paused', data_get($session->metadata_json, 'build.status'));
+
+        Queue::assertNotPushed(ExecuteInterrogationBuildJob::class);
+    }
+
+    public function test_paused_build_recovery_dispatches_follow_up_when_pending_tasks_remain(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, [
+            'status' => 'paused',
+            'pause_reason' => 'backup_failed',
+        ]);
+
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED);
+
+        // First task in-progress with completed run, second task still pending.
+        $firstTask = InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 1,
+            'title' => 'First task',
+            'status' => InterrogationBuildTask::STATUS_IN_PROGRESS,
+            'attempt_count' => 1,
+            'agent_job_run_id' => $run->id,
+        ]);
+
+        InterrogationBuildTask::query()->create([
+            'interrogation_session_id' => $session->id,
+            'sequence' => 2,
+            'title' => 'Pending task',
+            'status' => InterrogationBuildTask::STATUS_PENDING,
+            'attempt_count' => 0,
+        ]);
+
+        $factory = $this->mock(BuildTaskRunFactory::class);
+        $factory->shouldReceive('create')->never();
+
+        $job = new ExecuteInterrogationBuildJob((int) $session->id);
+        $this->app->call([$job, 'handle']);
+
+        // First task finalized, build resumed.
+        $firstTask->refresh();
+        $this->assertSame(InterrogationBuildTask::STATUS_COMPLETED, (string) $firstTask->status);
+
+        $session->refresh();
+        $this->assertSame('running', data_get($session->metadata_json, 'build.status'));
+        $this->assertNull(data_get($session->metadata_json, 'build.pause_reason'));
+
+        // Follow-up tick dispatched for remaining pending task.
+        Queue::assertPushed(ExecuteInterrogationBuildJob::class);
     }
 
     public function test_codex_success_without_actionable_execution_evidence_is_marked_failed(): void

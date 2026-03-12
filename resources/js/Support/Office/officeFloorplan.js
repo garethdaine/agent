@@ -5,6 +5,11 @@ import {
     createAlarmBell, createMailStation, createToolBench, createPingPongTable,
     createKitchenCounter, createWallPartition, createIdeaBoard, createScreenWall,
     createFilingCabinet,
+    createWallPicture, createWallPoster, createWallTV, createWallClock,
+    createCoffeeCup, createPaperStack, createKeyboardAndMouse,
+    createWaterCooler, createPhotocopier, createPrinter, createFloorPlant, createTrashBin,
+    createOfficeDoor,
+    createCar, createFlowerBed, createOutdoorBench, createLampPost, createParkingBollard,
 } from './models/furniture.js';
 
 const FLOOR_WIDTH = 28;
@@ -206,7 +211,31 @@ export function buildOfficeWalls() {
         FLOOR_WIDTH + 1, wallH, 0.15, southZ,
         southWindows, southWinW, 'x',
     );
-    southWallSegments.forEach(({ w, x }) => addWall(w, wallH, 0.15, x, wallH / 2, southZ));
+    southWallSegments.forEach(({ w, x }) => {
+        // Split the rightmost segment to create a door gap at x≈12
+        const doorCenterX = 12;
+        const doorW = 1.3;
+        const doorH = 2.5;
+        const segLeft = x - w / 2;
+        const segRight = x + w / 2;
+        const doorLeft = doorCenterX - doorW / 2;
+        const doorRight = doorCenterX + doorW / 2;
+
+        if (doorLeft > segLeft && doorRight < segRight) {
+            // Segment contains the door gap — split into left, above-door, and right
+            const leftW = doorLeft - segLeft;
+            addWall(leftW, wallH, 0.15, segLeft + leftW / 2, wallH / 2, southZ);
+            const rightW = segRight - doorRight;
+            addWall(rightW, wallH, 0.15, doorRight + rightW / 2, wallH / 2, southZ);
+            // Above-door segment
+            const aboveDoorH = wallH - doorH;
+            if (aboveDoorH > 0.01) {
+                addWall(doorW, aboveDoorH, 0.15, doorCenterX, doorH + aboveDoorH / 2, southZ);
+            }
+        } else {
+            addWall(w, wallH, 0.15, x, wallH / 2, southZ);
+        }
+    });
     southWindows.forEach((wx) => addWindow(wx, winY, southZ, southWinW, winH, winD));
 
     const partitions = [
@@ -354,6 +383,249 @@ export function buildZoneFurniture() {
     alarm.position.set(-8.1, 2.2, 1);
     alarm.userData.zoneId = 'escalation';
     group.add(alarm);
+
+    return group;
+}
+
+// ─── Wall Decorations ──────────────────────────────────────────
+
+export function buildWallDecorations() {
+    const group = new Group();
+    group.name = 'wallDecorations';
+
+    const halfW = FLOOR_WIDTH / 2 + 0.5;   // ±14.5
+    const halfD = FLOOR_DEPTH / 2 + 0.5;   // ±11.5
+    const wallOffset = 0.1; // offset from wall surface
+
+    // North wall (z ≈ -11.5, items face +z)
+    [
+        { fn: createWallPicture, x: -6, y: 2.0, seed: 0 },
+        { fn: createWallPicture, x: 0, y: 2.2, seed: 1 },
+        { fn: createWallPicture, x: 6, y: 1.9, seed: 2 },
+        { fn: createWallClock, x: 10, y: 2.4 },
+    ].forEach(({ fn, x, y, seed }) => {
+        const item = seed !== undefined ? fn({ seed }) : fn();
+        item.position.set(x, y, -halfD + wallOffset);
+        group.add(item);
+    });
+
+    // South wall (z ≈ 11.5, items face -z) — rotate π on Y
+    [
+        { fn: createWallPoster, x: -4, y: 2.0, seed: 0 },
+        { fn: createWallTV, x: 0, y: 2.0 },
+        { fn: createWallPoster, x: 4, y: 2.1, seed: 1 },
+    ].forEach(({ fn, x, y, seed }) => {
+        const item = seed !== undefined ? fn({ seed }) : fn();
+        item.position.set(x, y, halfD - wallOffset);
+        item.rotation.y = Math.PI;
+        group.add(item);
+    });
+
+    // East wall (x ≈ 14.5, items face -x) — rotate -π/2 on Y
+    [
+        { fn: createWallPicture, z: -4, y: 2.0, seed: 3 },
+        { fn: createWallPoster, z: 0, y: 2.1, seed: 2 },
+        { fn: createWallPicture, z: 4, y: 1.8, seed: 4 },
+    ].forEach(({ fn, z, y, seed }) => {
+        const item = seed !== undefined ? fn({ seed }) : fn();
+        item.position.set(halfW - wallOffset, y, z);
+        item.rotation.y = -Math.PI / 2;
+        group.add(item);
+    });
+
+    // West wall (x ≈ -14.5, items face +x) — rotate π/2 on Y
+    [
+        { fn: createWallTV, z: -6, y: 2.0 },
+        { fn: createWallPoster, z: 2, y: 2.0, seed: 3 },
+        { fn: createWallClock, z: 8, y: 2.3 },
+    ].forEach(({ fn, z, y, seed }) => {
+        const item = seed !== undefined ? fn({ seed }) : fn();
+        item.position.set(-halfW + wallOffset, y, z);
+        item.rotation.y = Math.PI / 2;
+        group.add(item);
+    });
+
+    return group;
+}
+
+// ─── Office Decorations (floor items + desk clutter) ───────────
+
+export function buildOfficeDecorations() {
+    const group = new Group();
+    group.name = 'officeDecorations';
+
+    // Floor plants — spread around zone edges
+    const plantPositions = [
+        { x: -7.5, z: -6, h: 1.1 },
+        { x: 12.5, z: -6, h: 0.9 },
+        { x: -7.5, z: 5, h: 1.0 },
+        { x: 13, z: 4.5, h: 1.2 },
+        { x: -12.5, z: 9, h: 0.8 },
+        { x: 5.5, z: 9, h: 1.0 },
+    ];
+    plantPositions.forEach(({ x, z, h }) => {
+        const plant = createFloorPlant({ height: h });
+        plant.position.set(x, 0, z);
+        group.add(plant);
+    });
+
+    // Water cooler — near break room
+    const cooler = createWaterCooler();
+    cooler.position.set(8, 0, 8.5);
+    group.add(cooler);
+
+    // Photocopier — corridor area
+    const copier = createPhotocopier();
+    copier.position.set(-8.5, 0, -0.5);
+    copier.rotation.y = Math.PI / 2;
+    group.add(copier);
+
+    // Printer — near workstations
+    const printer = createPrinter();
+    printer.position.set(5.5, 0, -5.5);
+    group.add(printer);
+
+    // Trash bins
+    const bin1 = createTrashBin();
+    bin1.position.set(12, 0, 9);
+    group.add(bin1);
+
+    const bin2 = createTrashBin();
+    bin2.position.set(-5, 0, 8.5);
+    group.add(bin2);
+
+    // Desk clutter — keyboards on all desks, cups & papers on some
+    WORKSTATION_POSITIONS.forEach((pos, i) => {
+        // Keyboard + mouse on every desk (on desk surface at y≈0.76)
+        const kb = createKeyboardAndMouse();
+        kb.position.set(pos.x - 0.15, 0.76, pos.z + 0.08);
+        group.add(kb);
+
+        // Coffee cup — ~40% of desks (deterministic)
+        if ((i * 7 + 3) % 5 < 2) {
+            const cup = createCoffeeCup();
+            cup.position.set(pos.x + 0.45, 0.76, pos.z - 0.15);
+            group.add(cup);
+        }
+
+        // Paper stack — ~35% of desks
+        if ((i * 11 + 1) % 6 < 2) {
+            const papers = createPaperStack();
+            papers.position.set(pos.x + 0.35, 0.76, pos.z + 0.2);
+            group.add(papers);
+        }
+    });
+
+    return group;
+}
+
+// ─── Office Door ───────────────────────────────────────────────
+
+export function buildOfficeDoor() {
+    const group = new Group();
+    group.name = 'officeDoor';
+
+    const door = createOfficeDoor({ open: true });
+    door.position.set(12, 0, FLOOR_DEPTH / 2 + 0.5);
+    group.add(door);
+
+    return group;
+}
+
+// ─── Outdoor Environment ───────────────────────────────────────
+
+export function buildOutdoorEnvironment() {
+    const group = new Group();
+    group.name = 'outdoorEnvironment';
+
+    // Parking lot ground plane
+    const parkingGeom = new PlaneGeometry(16, 14);
+    const parkingMat = new MeshStandardMaterial({ color: 0x444444, side: DoubleSide });
+    const parking = new Mesh(parkingGeom, parkingMat);
+    parking.rotation.x = -Math.PI / 2;
+    parking.position.set(23, 0.001, -1);
+    parking.receiveShadow = true;
+    group.add(parking);
+
+    // Parking lines (white strips)
+    const lineMat = new MeshStandardMaterial({ color: 0xdddddd });
+    for (let i = 0; i < 5; i++) {
+        const lineGeom = new PlaneGeometry(0.08, 5);
+        const line = new Mesh(lineGeom, lineMat);
+        line.rotation.x = -Math.PI / 2;
+        line.position.set(16.5 + i * 3.5, 0.003, -1);
+        group.add(line);
+    }
+
+    // Walkway — connecting door to parking
+    const walkGeom = new PlaneGeometry(3, 4);
+    const walkMat = new MeshStandardMaterial({ color: 0x777777, side: DoubleSide });
+    const walk = new Mesh(walkGeom, walkMat);
+    walk.rotation.x = -Math.PI / 2;
+    walk.position.set(14, 0.002, 13);
+    walk.receiveShadow = true;
+    group.add(walk);
+
+    // Cars — 4 in a 2×2 grid
+    const carColors = [0x3366aa, 0xcc3333, 0x222222, 0xdddddd];
+    const carPositions = [
+        { x: 19, z: -4 }, { x: 19, z: 2 },
+        { x: 25, z: -4 }, { x: 25, z: 2 },
+    ];
+    carPositions.forEach(({ x, z }, i) => {
+        const car = createCar({ color: carColors[i] });
+        car.position.set(x, 0, z);
+        car.rotation.y = Math.PI / 2;
+        group.add(car);
+    });
+
+    // Flower beds — along the building exterior (north side)
+    [-4, 2, 8].forEach((x, i) => {
+        const bed = createFlowerBed({ seed: i });
+        bed.position.set(x, 0, -13);
+        group.add(bed);
+    });
+
+    // Additional flower beds along south wall near door
+    [8, 14].forEach((x, i) => {
+        const bed = createFlowerBed({ seed: i + 3, width: 1.2, depth: 0.5 });
+        bed.position.set(x, 0, 13);
+        group.add(bed);
+    });
+
+    // Outdoor benches
+    const bench1 = createOutdoorBench();
+    bench1.position.set(0, 0, -14);
+    group.add(bench1);
+
+    const bench2 = createOutdoorBench();
+    bench2.position.set(16, 0, 4);
+    bench2.rotation.y = Math.PI / 2;
+    group.add(bench2);
+
+    // Lamp posts
+    const lamp1 = createLampPost();
+    lamp1.position.set(16, 0, -7);
+    group.add(lamp1);
+
+    const lamp2 = createLampPost();
+    lamp2.position.set(30, 0, -7);
+    group.add(lamp2);
+
+    const lamp3 = createLampPost();
+    lamp3.position.set(23, 0, 6);
+    group.add(lamp3);
+
+    // Bollards marking parking boundary
+    const bollardPositions = [
+        { x: 15.5, z: -7 }, { x: 15.5, z: -3 },
+        { x: 15.5, z: 1 }, { x: 15.5, z: 5 },
+    ];
+    bollardPositions.forEach(({ x, z }) => {
+        const b = createParkingBollard();
+        b.position.set(x, 0, z);
+        group.add(b);
+    });
 
     return group;
 }

@@ -33,6 +33,8 @@ class RuntimeSession extends Model
         'title',
         'workspace_root',
         'browser_persistence_mode',
+        'browser_profile_name',
+        'browser_cdp_endpoint',
         'tool_auto_approvals',
         'started_at',
         'ended_at',
@@ -59,6 +61,20 @@ class RuntimeSession extends Model
             'security_config_json' => 'array',
             'file_provenance' => 'array',
         ];
+    }
+
+    public function hasPersistentBrowserProfile(): bool
+    {
+        return $this->browser_persistence_mode === BrowserPersistenceMode::Persistent
+            && $this->browser_profile_name !== null
+            && $this->browser_profile_name !== '';
+    }
+
+    public function hasCdpConnection(): bool
+    {
+        return $this->browser_persistence_mode === BrowserPersistenceMode::Cdp
+            && $this->browser_cdp_endpoint !== null
+            && $this->browser_cdp_endpoint !== '';
     }
 
     public function isToolAutoApproved(string $toolName): bool

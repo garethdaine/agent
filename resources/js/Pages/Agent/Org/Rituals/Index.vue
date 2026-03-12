@@ -14,7 +14,7 @@ import TableCell from '@/Components/ui/TableCell.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
-import { Calendar, Plus, ArrowLeft, Play, Pause, RefreshCw, Archive, ArchiveRestore, Eye, AlertTriangle, Bot } from 'lucide-vue-next';
+import { Calendar, Plus, ArrowLeft, Play, Pause, RefreshCw, Archive, ArchiveRestore, Eye, Pencil, AlertTriangle, Bot } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 import { confirmDialog } from '@/Support/confirmDialog';
 
@@ -214,6 +214,12 @@ onMounted(loadRituals);
                                                 <Button variant="outline" size="sm">
                                                     <Eye class="mr-1 h-3 w-3" />
                                                     View
+                                                </Button>
+                                            </Link>
+                                            <Link :href="route('org.rituals.edit', ritual.id)">
+                                                <Button variant="outline" size="sm" :disabled="!!ritual.archived_at">
+                                                    <Pencil class="mr-1 h-3 w-3" />
+                                                    Edit
                                                 </Button>
                                             </Link>
                                             <Button

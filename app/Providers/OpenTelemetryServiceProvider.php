@@ -58,7 +58,7 @@ class OpenTelemetryServiceProvider extends ServiceProvider
         $this->app->terminating(function () {
             try {
                 $provider = $this->app->make(TracerProviderInterface::class);
-                if ($provider instanceof TracerProvider) {
+                if ($provider instanceof TracerProvider) { // @phpstan-ignore instanceof.alwaysTrue
                     $provider->shutdown();
                 }
             } catch (\Throwable) {

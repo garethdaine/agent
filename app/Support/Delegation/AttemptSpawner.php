@@ -143,8 +143,16 @@ class AttemptSpawner
 
         $lines = [];
 
+        // Resolve soul with memory core block fallbacks (graceful when memory is unavailable)
+        try {
+            $soulResolver = app(\App\Support\Memory\SoulResolver::class);
+            $resolvedSoul = $soulResolver->resolve($profile->getSoul(), $task->graph->user_id);
+        } catch (\Throwable) {
+            $resolvedSoul = $profile->getSoul();
+        }
+
         // Prepend soul/identity section if configured
-        $soulLines = $this->buildSoulSection($profile->getSoul());
+        $soulLines = $this->buildSoulSection($resolvedSoul);
         if ($soulLines !== []) {
             array_push($lines, ...$soulLines);
         }

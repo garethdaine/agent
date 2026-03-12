@@ -33,6 +33,142 @@ const showCreateProfileModal = ref(false);
 
 const isEditing = computed(() => props.graphId != null);
 
+/**
+ * Compute hierarchical positions for a DAG of delegation tasks.
+ * Root tasks (no dependencies) are placed at the top, dependents below.
+ * A task's depth is the length of the longest path from any root to it,
+ * ensuring it always appears below ALL of its dependencies.
+ * Separate connected components are laid out side by side, largest first.
+ */
+function computeDagPositions(nodesList, edgesList) {
+    if (nodesList.length === 0) return new Map();
+
+    const NODE_W = 220;
+    const GAP_X = 40;
+    const GAP_Y = 140;
+    const PADDING = 80;
+    const COMPONENT_GAP = 80;
+
+    // edges: source = dependency, target = dependent task
+    const incomingOf = new Map();   // task → [tasks it depends on]
+    const outgoingOf = new Map();   // task → [tasks that depend on it]
+    nodesList.forEach((n) => {
+        incomingOf.set(n.id, []);
+        outgoingOf.set(n.id, []);
+    });
+    edgesList.forEach((e) => {
+        incomingOf.get(e.target)?.push(e.source);
+        outgoingOf.get(e.source)?.push(e.target);
+    });
+
+    // Find connected components via undirected BFS
+    const adjacency = new Map();
+    nodesList.forEach((n) => adjacency.set(n.id, []));
+    edgesList.forEach((e) => {
+        adjacency.get(e.source)?.push(e.target);
+        adjacency.get(e.target)?.push(e.source);
+    });
+
+    const visited = new Set();
+    const components = [];
+    nodesList.forEach((n) => {
+        if (visited.has(n.id)) return;
+        const component = [];
+        const q = [n.id];
+        visited.add(n.id);
+        while (q.length > 0) {
+            const id = q.shift();
+            component.push(id);
+            for (const neighbor of adjacency.get(id) ?? []) {
+                if (!visited.has(neighbor)) {
+                    visited.add(neighbor);
+                    q.push(neighbor);
+                }
+            }
+        }
+        components.push(component);
+    });
+
+    components.sort((a, b) => b.length - a.length);
+
+    const positions = new Map();
+    let offsetX = PADDING;
+
+    for (const component of components) {
+        const compSet = new Set(component);
+
+        // Compute depth using longest-path from roots (handles DAG fan-in)
+        const depthOf = new Map();
+        const roots = component.filter((id) => {
+            const inc = incomingOf.get(id) ?? [];
+            return inc.filter((dep) => compSet.has(dep)).length === 0;
+        });
+
+        // BFS topological traversal — each node's depth = max(parent depths) + 1
+        const inDegree = new Map();
+        component.forEach((id) => {
+            const inc = (incomingOf.get(id) ?? []).filter((dep) => compSet.has(dep));
+            inDegree.set(id, inc.length);
+        });
+
+        const queue = [...roots];
+        roots.forEach((id) => depthOf.set(id, 0));
+        let maxDepth = 0;
+
+        while (queue.length > 0) {
+            const id = queue.shift();
+            const d = depthOf.get(id);
+            for (const child of (outgoingOf.get(id) ?? []).filter((c) => compSet.has(c))) {
+                const newDepth = d + 1;
+                if (!depthOf.has(child) || newDepth > depthOf.get(child)) {
+                    depthOf.set(child, newDepth);
+                    if (newDepth > maxDepth) maxDepth = newDepth;
+                }
+                const remaining = inDegree.get(child) - 1;
+                inDegree.set(child, remaining);
+                if (remaining <= 0) {
+                    queue.push(child);
+                }
+            }
+        }
+
+        // Orphans within component
+        component.forEach((id) => {
+            if (!depthOf.has(id)) depthOf.set(id, 0);
+        });
+
+        // Group by depth
+        const levels = new Map();
+        component.forEach((id) => {
+            const d = depthOf.get(id);
+            if (!levels.has(d)) levels.set(d, []);
+            levels.get(d).push(id);
+        });
+
+        // Widest level in this component
+        let maxLevelWidth = 0;
+        levels.forEach((ids) => {
+            const w = ids.length * NODE_W + (ids.length - 1) * GAP_X;
+            if (w > maxLevelWidth) maxLevelWidth = w;
+        });
+
+        // Position nodes within this component
+        levels.forEach((ids, d) => {
+            const y = PADDING + d * GAP_Y;
+            const levelWidth = ids.length * NODE_W + (ids.length - 1) * GAP_X;
+            const startX = offsetX + (maxLevelWidth - levelWidth) / 2;
+
+            ids.forEach((id, i) => {
+                positions.set(id, { x: startX + i * (NODE_W + GAP_X), y });
+            });
+        });
+
+        offsetX += maxLevelWidth + COMPONENT_GAP;
+    }
+
+    return positions;
+}
+
 const loadDelegatees = async () => {
     try {
         const { data } = await axios.get('/agent/api/v1/delegation/delegatee-profiles');
@@ -70,10 +206,27 @@ const loadGraph = async () => {
         const delegateeMap = new Map();
         delegateeProfiles.value.forEach((p) => delegateeMap.set(p.id, p.name));
 
+        // Build edges first so we can compute hierarchical positions
+        const edgeList = [];
+        tasks.forEach((t) => {
+            (t.depends_on_task_ids ?? []).forEach((depId) => {
+                edgeList.push({
+                    id: `e${depId}-${t.id}`,
+                    source: String(depId),
+                    target: String(t.id),
+                    sourceHandle: 'bottom-source',
+                    targetHandle: 'top-target',
+                });
+            });
+        });
+
+        const stubNodes = tasks.map((t) => ({ id: String(t.id) }));
+        const posMap = computeDagPositions(stubNodes, edgeList);
+
         nodes.value = tasks.map((t, i) => ({
             id: String(t.id),
             type: 'delegationTask',
-            position: { x: 100 + i * 220, y: 100 },
+            position: posMap.get(String(t.id)) ?? { x: 100 + i * 220, y: 100 },
             data: {
                 label: t.name,
                 status: t.status,
@@ -85,16 +238,6 @@ const loadGraph = async () => {
                 ...t,
             },
         }));
-        const edgeList = [];
-        tasks.forEach((t) => {
-            (t.depends_on_task_ids ?? []).forEach((depId) => {
-                edgeList.push({
-                    id: `e${depId}-${t.id}`,
-                    source: String(depId),
-                    target: String(t.id),
-                });
-            });
-        });
         edges.value = edgeList;
     } catch (e) {
         error.value = e?.response?.data?.error?.message ?? 'Failed to load graph.';
@@ -226,6 +369,7 @@ const saveDraft = async () => {
                     prompt: '',
                 },
                 depends_on: dependsOn,
+                assigned_delegatee_profile_id: n.data?.assigned_delegatee_profile_id ?? null,
             };
         });
         const payload = {
@@ -390,6 +534,7 @@ watch(
                     v-model:nodes="nodes"
                     v-model:edges="edges"
                     :edit-mode="true"
+                    :fit-view="true"
                     :node-types="nodeTypes"
                     @nodes-change="onNodesChange"
                     @edges-change="onEdgesChange"

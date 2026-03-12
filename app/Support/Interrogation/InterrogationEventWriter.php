@@ -16,6 +16,7 @@ use Stringable;
 class InterrogationEventWriter
 {
     private int $nextSequence; // @phpstan-ignore property.onlyWritten
+
     public function __construct(private InterrogationSession $session)
     {
         $this->nextSequence = (int) (InterrogationEvent::query()

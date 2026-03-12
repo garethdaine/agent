@@ -73,13 +73,19 @@ class DelegationGraphBuilder
             // Create all task records
             foreach ($tasks as $taskData) {
                 $isRoot = empty($taskData['depends_on'] ?? []);
-                $taskModels[$taskData['name']] = DelegationTask::create([
+                $taskAttrs = [
                     'delegation_graph_id' => $graph->id,
                     'name' => $taskData['name'],
                     'contract_json' => $taskData['contract'] ?? [],
                     'sequence_order' => $sequenceOrders[$taskData['name']],
                     'status' => $isRoot ? DelegationTask::STATUS_READY : DelegationTask::STATUS_PENDING,
-                ]);
+                ];
+
+                if (! empty($taskData['assigned_delegatee_profile_id'])) {
+                    $taskAttrs['assigned_delegatee_profile_id'] = $taskData['assigned_delegatee_profile_id'];
+                }
+
+                $taskModels[$taskData['name']] = DelegationTask::create($taskAttrs);
             }
 
             // Create dependency records
@@ -113,6 +119,7 @@ class DelegationGraphBuilder
                     'name' => $task['name'],
                     'contract' => $task['contract'] ?? [],
                     'depends_on' => $task['depends_on'] ?? [],
+                    'assigned_delegatee_profile_id' => $task['assigned_delegatee_profile_id'] ?? null,
                 ];
             }, $input['tasks']);
         }
@@ -126,6 +133,7 @@ class DelegationGraphBuilder
                 'name' => $task['name'],
                 'contract' => $task['contract'] ?? [],
                 'depends_on' => $prevName !== null ? [$prevName] : [],
+                'assigned_delegatee_profile_id' => $task['assigned_delegatee_profile_id'] ?? null,
             ];
             $prevName = $task['name'];
         }

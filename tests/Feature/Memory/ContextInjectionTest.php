@@ -9,8 +9,8 @@ use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\User;
 use App\Support\Memory\CoreMemoryManager;
-use App\Support\Memory\HybridRetriever;
 use App\Support\Memory\MemoryContextBuilder;
+use App\Support\Memory\SoulResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Mockery;
@@ -24,6 +24,7 @@ use Tests\TestCase;
  * - Original task path transiently overridden (not persisted)
  * - MEMORY_API_BASE_URL added to environment
  * - Injection failure does not block execution
+ * - Context includes memory API instructions instead of memory dump
  */
 class ContextInjectionTest extends TestCase
 {
@@ -86,13 +87,9 @@ class ContextInjectionTest extends TestCase
             ['actor' => 'user']
         );
 
-        // Mock HybridRetriever to avoid database queries
-        $mockRetriever = Mockery::mock(HybridRetriever::class);
-        $mockRetriever->shouldReceive('retrieve')->andReturn([]);
-        $this->app->instance(HybridRetriever::class, $mockRetriever);
-
-        // Create a real MemoryContextBuilder
-        $builder = new MemoryContextBuilder($coreMemoryManager, $mockRetriever);
+        // Create a real SoulResolver-backed MemoryContextBuilder
+        $soulResolver = app(SoulResolver::class);
+        $builder = new MemoryContextBuilder($soulResolver);
         $this->app->instance(MemoryContextBuilder::class, $builder);
 
         // Build context should succeed
@@ -123,12 +120,8 @@ class ContextInjectionTest extends TestCase
             ['actor' => 'user']
         );
 
-        // Mock HybridRetriever
-        $mockRetriever = Mockery::mock(HybridRetriever::class);
-        $mockRetriever->shouldReceive('retrieve')->andReturn([]);
-        $this->app->instance(HybridRetriever::class, $mockRetriever);
-
-        $builder = new MemoryContextBuilder($coreMemoryManager, $mockRetriever);
+        $soulResolver = app(SoulResolver::class);
+        $builder = new MemoryContextBuilder($soulResolver);
 
         // Build context (this would be done transiently during job execution)
         $contextPath = $builder->buildContext($this->run);
@@ -194,12 +187,11 @@ class ContextInjectionTest extends TestCase
     {
         config(['memory.enabled' => false]);
 
-        // Mock both dependencies since CoreMemoryManager can't be resolved when disabled
-        $mockCoreMemory = Mockery::mock(CoreMemoryManager::class);
-        $mockRetriever = Mockery::mock(HybridRetriever::class);
-        $mockRetriever->shouldReceive('retrieve')->never();
+        // Mock SoulResolver since CoreMemoryManager can't be resolved when disabled
+        $mockSoulResolver = Mockery::mock(SoulResolver::class);
+        $mockSoulResolver->shouldReceive('resolve')->never();
 
-        $builder = new MemoryContextBuilder($mockCoreMemory, $mockRetriever);
+        $builder = new MemoryContextBuilder($mockSoulResolver);
 
         $contextPath = $builder->buildContext($this->run);
 
@@ -211,11 +203,8 @@ class ContextInjectionTest extends TestCase
      */
     public function test_context_path_follows_storage_pattern(): void
     {
-        $coreMemoryManager = app(CoreMemoryManager::class);
-        $mockRetriever = Mockery::mock(HybridRetriever::class);
-        $mockRetriever->shouldReceive('retrieve')->andReturn([]);
-
-        $builder = new MemoryContextBuilder($coreMemoryManager, $mockRetriever);
+        $soulResolver = app(SoulResolver::class);
+        $builder = new MemoryContextBuilder($soulResolver);
 
         $contextPath = $builder->buildContext($this->run);
 
@@ -235,9 +224,14 @@ class ContextInjectionTest extends TestCase
 
     /**
      * Test that wrapper markdown format matches specification.
+     *
+     * Now uses SoulResolver for identity instead of direct CoreMemoryManager,
+     * and includes memory API instructions instead of retrieved memories.
      */
     public function test_wrapper_markdown_format_matches_specification(): void
     {
+        config(['memory.api_enabled' => true]);
+
         $coreMemoryManager = app(CoreMemoryManager::class);
         $coreMemoryManager->set(
             $this->user->id,
@@ -254,29 +248,19 @@ class ContextInjectionTest extends TestCase
             ['actor' => 'user']
         );
 
-        $mockRetriever = Mockery::mock(HybridRetriever::class);
-        $mockRetriever->shouldReceive('retrieve')->andReturn([
-            [
-                'id' => 1,
-                'content' => 'Relevant memory content',
-                'source' => 'keyword',
-                'classification' => 'internal',
-                'rrf_score' => 0.5,
-            ],
-        ]);
-
-        $builder = new MemoryContextBuilder($coreMemoryManager, $mockRetriever);
+        $soulResolver = app(SoulResolver::class);
+        $builder = new MemoryContextBuilder($soulResolver);
 
         $contextPath = $builder->buildContext($this->run);
         $content = File::get($contextPath);
 
         // Verify structure matches:
         // ## Agent Identity
-        // {agent_persona}
+        // {personality from resolved soul}
         // ## User Context
-        // {user_profile}
-        // ## Relevant Memories
-        // {memories}
+        // {user_context from resolved soul}
+        // ## Memory Access
+        // {API instructions}
         // ---
         // {original_task}
 
@@ -284,21 +268,38 @@ class ContextInjectionTest extends TestCase
         $this->assertStringContainsString('Helpful assistant', $content);
         $this->assertStringContainsString('## User Context', $content);
         $this->assertStringContainsString('Developer profile', $content);
-        $this->assertStringContainsString('## Relevant Memories', $content);
-        $this->assertStringContainsString('Relevant memory content', $content);
+        $this->assertStringContainsString('## Memory Access', $content);
+        $this->assertStringContainsString('MEMORY_API_BASE_URL', $content);
         $this->assertStringContainsString('---', $content);
         $this->assertStringContainsString('# Test Task', $content);
 
         // Verify order
         $identityPos = strpos($content, '## Agent Identity');
         $userPos = strpos($content, '## User Context');
-        $memoriesPos = strpos($content, '## Relevant Memories');
+        $memoryPos = strpos($content, '## Memory Access');
         $separatorPos = strpos($content, '---');
         $taskPos = strpos($content, '# Test Task');
 
         $this->assertLessThan($userPos, $identityPos);
-        $this->assertLessThan($memoriesPos, $userPos);
-        $this->assertLessThan($separatorPos, $memoriesPos);
+        $this->assertLessThan($memoryPos, $userPos);
+        $this->assertLessThan($separatorPos, $memoryPos);
         $this->assertLessThan($taskPos, $separatorPos);
+    }
+
+    /**
+     * Test that memory API section is omitted when api_enabled is false.
+     */
+    public function test_memory_api_section_omitted_when_api_disabled(): void
+    {
+        config(['memory.api_enabled' => false]);
+
+        $soulResolver = app(SoulResolver::class);
+        $builder = new MemoryContextBuilder($soulResolver);
+
+        $contextPath = $builder->buildContext($this->run);
+        $content = File::get($contextPath);
+
+        $this->assertStringNotContainsString('## Memory Access', $content);
+        $this->assertStringNotContainsString('MEMORY_API_BASE_URL', $content);
     }
 }

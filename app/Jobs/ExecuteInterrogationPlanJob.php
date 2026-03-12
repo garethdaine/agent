@@ -951,7 +951,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
      * @param  array<string, mixed>  $planCandidate
      * @return array<string, mixed>|null Null on pass/exhausted; review payload on revise
      */
-    private function runAdversarialReview( // @phpstan-ignore method.unused
+    private function runAdversarialReview(// @phpstan-ignore method.unused
         InterrogationSession $session,
         array $planCandidate,
         InterrogationEventWriter $writer

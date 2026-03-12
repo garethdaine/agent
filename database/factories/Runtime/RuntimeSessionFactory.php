@@ -59,4 +59,20 @@ class RuntimeSessionFactory extends Factory
             'mode' => RuntimeMode::Full,
         ]);
     }
+
+    public function withBrowserProfile(string $profileName = 'test-profile'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'browser_persistence_mode' => BrowserPersistenceMode::Persistent,
+            'browser_profile_name' => $profileName,
+        ]);
+    }
+
+    public function withCdpEndpoint(string $endpoint = 'ws://localhost:9222/devtools/browser/test'): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'browser_persistence_mode' => BrowserPersistenceMode::Cdp,
+            'browser_cdp_endpoint' => $endpoint,
+        ]);
+    }
 }

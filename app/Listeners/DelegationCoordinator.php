@@ -191,12 +191,27 @@ class DelegationCoordinator
 
     /**
      * Make dependent tasks ready if all their dependencies are satisfied.
+     *
+     * Respects max_fan_out_per_node to limit how many immediate dependents
+     * of a single task are transitioned to READY simultaneously. This mitigates
+     * group size degradation identified by Berdoz et al. (2026).
+     *
+     * Remaining dependents stay PENDING and are picked up by subsequent
+     * spawnReadyTasks() calls or the PENDING sweep in spawnReadyTasks().
      */
     private function makeReadyDependents(DelegationTask $task): void
     {
         $dependents = $task->dependents()->with('dependencies')->get();
+        $maxFanOut = $task->graph->metadata_json['max_fan_out_per_node']
+            ?? config('delegation.max_fan_out_per_node', 3);
+
+        $readied = 0;
 
         foreach ($dependents as $dependent) {
+            if ($readied >= $maxFanOut) {
+                break; // Remaining stay PENDING, picked up by next cycle
+            }
+
             // Check if all dependencies of this dependent are succeeded
             $allDependenciesSatisfied = $dependent->dependencies // @phpstan-ignore property.notFound
                 ->every(fn ($dep) => $dep->status === DelegationTask::STATUS_SUCCEEDED);
@@ -206,16 +221,24 @@ class DelegationCoordinator
             }
 
             // Transition to ready if currently pending
-            $this->taskTransition->transition(
+            $transitioned = $this->taskTransition->transition(
                 $dependent->id, // @phpstan-ignore property.notFound
                 [DelegationTask::STATUS_PENDING],
                 DelegationTask::STATUS_READY
             );
+
+            if ($transitioned) {
+                $readied++;
+            }
         }
     }
 
     /**
      * Spawn ready tasks respecting max_parallel_tasks.
+     *
+     * Also sweeps for PENDING tasks whose dependencies are all satisfied
+     * but were not transitioned to READY due to fan-out capping. This ensures
+     * no tasks are permanently stuck in PENDING after a fan-out limit.
      */
     private function spawnReadyTasks(?DelegationGraph $graph): void
     {
@@ -244,6 +267,40 @@ class DelegationCoordinator
 
         foreach ($readyTasks as $task) {
             $this->assignAndSpawn($task); // @phpstan-ignore argument.type
+            $slotsAvailable--;
+        }
+
+        // Sweep: promote PENDING tasks whose deps are all satisfied (fan-out overflow)
+        if ($slotsAvailable > 0) {
+            $pendingTasks = $graph->tasks()
+                ->where('status', DelegationTask::STATUS_PENDING)
+                ->with('dependencies')
+                ->orderBy('sequence_order')
+                ->get();
+
+            foreach ($pendingTasks as $pending) {
+                if ($slotsAvailable <= 0) {
+                    break;
+                }
+
+                $allSatisfied = $pending->dependencies
+                    ->every(fn ($dep) => $dep->status === DelegationTask::STATUS_SUCCEEDED);
+
+                if (! $allSatisfied) {
+                    continue;
+                }
+
+                $transitioned = $this->taskTransition->transition(
+                    $pending->id,
+                    [DelegationTask::STATUS_PENDING],
+                    DelegationTask::STATUS_READY
+                );
+
+                if ($transitioned) {
+                    $this->assignAndSpawn($pending->fresh());
+                    $slotsAvailable--;
+                }
+            }
         }
     }
 

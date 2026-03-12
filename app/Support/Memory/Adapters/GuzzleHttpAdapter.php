@@ -55,8 +55,16 @@ abstract class GuzzleHttpAdapter
         $this->baseUrl = $baseUrl;
         $this->timeout = $timeout;
 
+        // Guzzle's base_uri follows RFC 3986 resolution rules:
+        // Without a trailing slash, relative URIs with a leading slash replace the
+        // entire path. e.g. 'https://api.openai.com/v1' + '/embeddings' resolves
+        // to 'https://api.openai.com/embeddings' (losing /v1).
+        // A trailing slash ensures the path is treated as a directory, so
+        // 'https://api.openai.com/v1/' + 'embeddings' → 'https://api.openai.com/v1/embeddings'.
+        $normalizedBaseUrl = rtrim($baseUrl, '/').'/';
+
         $this->client = new Client([
-            'base_uri' => $baseUrl,
+            'base_uri' => $normalizedBaseUrl,
             'timeout' => $timeout,
             'connect_timeout' => 5,
             'http_errors' => true,
@@ -82,6 +90,10 @@ abstract class GuzzleHttpAdapter
      */
     protected function post(string $endpoint, array $payload): ?array
     {
+        // Strip leading slash so Guzzle resolves against base_uri correctly.
+        // '/embeddings' would replace the entire path; 'embeddings' appends to it.
+        $endpoint = ltrim($endpoint, '/');
+
         return $this->request('POST', $endpoint, ['json' => $payload]);
     }
 

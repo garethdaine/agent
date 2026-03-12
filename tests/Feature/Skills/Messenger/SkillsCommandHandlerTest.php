@@ -66,7 +66,7 @@ class SkillsCommandHandlerTest extends TestCase
         $this->enableLibraryFlag();
 
         $handler = app(SkillsCommandHandler::class);
-        $result = $handler->handle($this->owner, ['install', 'output-fact-checker']);
+        $result = $handler->handle($this->owner, ['install', 'financial-compliance-check']);
 
         $this->assertTrue($result->success);
         $this->assertStringContainsString('confirm', strtolower($result->message));
@@ -80,7 +80,7 @@ class SkillsCommandHandlerTest extends TestCase
         $this->enableLibraryFlag();
 
         $handler = app(SkillsCommandHandler::class);
-        $result = $handler->handle($this->owner, ['install', 'output-fact-checker', '--confirmed']);
+        $result = $handler->handle($this->owner, ['install', 'financial-compliance-check', '--confirmed']);
 
         // The install will fail because no actual library file exists, but the flow should attempt it
         // This tests the confirmation bypass path

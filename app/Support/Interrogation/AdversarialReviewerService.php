@@ -141,18 +141,26 @@ final class AdversarialReviewerService
     private function buildSummaryReviewPrompt(array $context): string
     {
         return sprintf(
-            "You are an adversarial reviewer validating a requirements summary.\n\n".
+            "You are a criteria-based evaluator assessing the quality of a requirements summary.\n\n".
+            "## Evaluation Rubric\n\n".
+            "Evaluate the summary candidate against these criteria:\n".
+            "1. **Completeness**: Does the summary cover all requirements from the feature brief and Q&A?\n".
+            "2. **Consistency**: Are there contradictions between the summary and the discovery findings?\n".
+            "3. **Clarity**: Are all requirements unambiguous and precisely defined?\n".
+            "4. **Testability**: Can each acceptance criterion be mechanically verified?\n".
+            "5. **Coverage**: Are edge cases, error scenarios, and boundary conditions addressed?\n\n".
             "## Context\n\n".
             "### Feature Brief\n%s\n\n".
             "### Q&A Transcript\n%s\n\n".
             "### Discovery Findings\n%s\n\n".
             "### Summary Candidate\n%s\n\n".
             "## Instructions\n\n".
-            "Review the summary candidate against the brief, Q&A, and findings.\n".
-            "Identify: missing requirements, contradictions, ambiguities, weak acceptance criteria.\n".
-            "Return verdict: pass (if acceptable), revise (if needs changes), or needs_clarification (if user input needed).\n".
-            "For needs_clarification, provide max 3 focused questions.\n".
-            'Include confidence score 0-1 and cite evidence for issues.',
+            "Score the candidate against each rubric criterion. Then return:\n".
+            "- verdict: pass (all criteria met), revise (gaps found), or needs_clarification (user input needed)\n".
+            "- issues: array of specific gaps, each citing the rubric criterion violated (max 5)\n".
+            "- confidence: 0-1 float reflecting evaluation certainty\n".
+            "- For needs_clarification: max 3 focused questions.\n".
+            'Cite specific evidence from the context for every issue raised.',
             $context['brief'] ?? '',
             is_array($context['qa_transcript'] ?? null) ? json_encode($context['qa_transcript'], JSON_PRETTY_PRINT) : ($context['qa_transcript'] ?? ''),
             json_encode($context['discovery_findings'] ?? [], JSON_PRETTY_PRINT),
@@ -168,18 +176,26 @@ final class AdversarialReviewerService
     private function buildPlanReviewPrompt(array $context): string
     {
         return sprintf(
-            "You are an adversarial reviewer validating an implementation plan.\n\n".
+            "You are a criteria-based evaluator assessing the quality of an implementation plan.\n\n".
+            "## Evaluation Rubric\n\n".
+            "Evaluate the plan candidate against these criteria:\n".
+            "1. **Scope Coverage**: Does the plan address every requirement from the locked summary?\n".
+            "2. **Summary Alignment**: Are there contradictions between the plan and the approved summary?\n".
+            "3. **Task Decomposition**: Are tasks well-defined, appropriately sized, and independently verifiable?\n".
+            "4. **Dependency Correctness**: Are task dependencies complete and acyclic? Are blocking paths identified?\n".
+            "5. **Risk Mitigation**: Are failure modes, edge cases, and rollback strategies addressed?\n\n".
             "## Context\n\n".
             "### Feature Brief\n%s\n\n".
             "### Locked Summary\n%s\n\n".
             "### Q&A Transcript\n%s\n\n".
             "### Plan Candidate\n%s\n\n".
             "## Instructions\n\n".
-            "Review the plan against the locked summary and context.\n".
-            "Identify: missing scope, contradictions with summary, weak tasks, unresolved dependencies.\n".
-            "Return verdict: pass (if acceptable) or revise (if needs changes).\n".
+            "Score the candidate against each rubric criterion. Then return:\n".
+            "- verdict: pass (all criteria met) or revise (gaps found)\n".
+            "- issues: array of specific gaps, each citing the rubric criterion violated (max 5)\n".
+            "- confidence: 0-1 float reflecting evaluation certainty\n".
             "Do NOT return needs_clarification for plan review.\n".
-            'Include confidence score 0-1 and cite evidence for issues.',
+            'Cite specific evidence from the context for every issue raised.',
             $context['brief'] ?? '',
             json_encode($context['locked_summary'] ?? [], JSON_PRETTY_PRINT),
             is_array($context['qa_transcript'] ?? null) ? json_encode($context['qa_transcript'], JSON_PRETTY_PRINT) : ($context['qa_transcript'] ?? ''),

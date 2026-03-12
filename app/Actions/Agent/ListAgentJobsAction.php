@@ -42,7 +42,7 @@ class ListAgentJobsAction
             });
         }
 
-        if (isset($filters['is_enabled']) && $filters['is_enabled'] !== null) {
+        if (isset($filters['is_enabled'])) {
             $query->where('is_enabled', $filters['is_enabled']);
         }
 

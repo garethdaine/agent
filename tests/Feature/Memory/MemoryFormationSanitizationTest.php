@@ -27,7 +27,7 @@ class MemoryFormationSanitizationTest extends TestCase
             'File', 'Function', 'Class', 'API', 'Error', 'Dependency',
         ]]);
 
-        $this->sanitizer = new EntitySanitizer();
+        $this->sanitizer = new EntitySanitizer;
     }
 
     public function test_cypher_injection_in_entity_name_is_rejected(): void
@@ -152,10 +152,10 @@ class MemoryFormationSanitizationTest extends TestCase
         $maliciousNames = [
             "test' OR 1=1",
             'test" OR 1=1',
-            "test\\ MATCH (n) DELETE n",
-            "test`; DROP",
-            "test{injection}",
-            "test[0]",
+            'test\\ MATCH (n) DELETE n',
+            'test`; DROP',
+            'test{injection}',
+            'test[0]',
         ];
 
         foreach ($maliciousNames as $name) {

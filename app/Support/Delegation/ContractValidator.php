@@ -16,6 +16,8 @@ use App\Models\DelegationCapability;
  * - Either prompt or task_markdown_path must be present (not both)
  * - verification_strategy.automated_check.check_profile must exist in config
  * - verification_strategy.human_approval.timeout_hours <= 4
+ * - verification_strategy.acceptance_criteria[].type must be valid
+ * - Each criterion must have required keys for its type
  *
  * Conditions for Correctness:
  * - DelegationCapability model must have 'slug' column and 'active' scope
@@ -49,6 +51,7 @@ class ContractValidator
         $errors = array_merge($errors, $this->validateCriticality($contractJson));
         $errors = array_merge($errors, $this->validatePromptOrPath($contractJson));
         $errors = array_merge($errors, $this->validateVerificationStrategy($contractJson));
+        $errors = array_merge($errors, $this->validateAcceptanceCriteria($contractJson));
 
         if (count($errors) > 0) {
             return ValidationResult::failed($errors, $warnings);
@@ -174,6 +177,53 @@ class ContractValidator
 
             if ($timeout > self::MAX_HUMAN_APPROVAL_TIMEOUT_HOURS) {
                 $errors[] = 'human_approval timeout_hours cannot exceed 4';
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Validate acceptance criteria in the verification strategy.
+     *
+     * Each criterion must have a valid type and the required keys for that type.
+     *
+     * @param  array<string, mixed>  $contractJson
+     * @return array<int, string>
+     */
+    private function validateAcceptanceCriteria(array $contractJson): array
+    {
+        $criteria = $contractJson['verification_strategy']['acceptance_criteria'] ?? [];
+        if (empty($criteria)) {
+            return [];
+        }
+
+        $errors = [];
+        $validTypes = ['file_exists', 'schema_validates', 'command_succeeds', 'output_contains'];
+        $requiredKeys = [
+            'file_exists' => ['path'],
+            'schema_validates' => ['path', 'schema'],
+            'command_succeeds' => ['command'],
+            'output_contains' => ['path', 'key', 'value'],
+        ];
+
+        foreach ($criteria as $i => $criterion) {
+            if (! isset($criterion['type'])) {
+                $errors[] = "Acceptance criterion {$i}: missing 'type'";
+
+                continue;
+            }
+
+            if (! in_array($criterion['type'], $validTypes, true)) {
+                $errors[] = "Acceptance criterion {$i}: unknown type '{$criterion['type']}'";
+
+                continue;
+            }
+
+            foreach ($requiredKeys[$criterion['type']] ?? [] as $key) {
+                if (! isset($criterion[$key])) {
+                    $errors[] = "Acceptance criterion {$i} ({$criterion['type']}): missing '{$key}'";
+                }
             }
         }
 

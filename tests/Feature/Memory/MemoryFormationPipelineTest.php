@@ -14,6 +14,7 @@ use App\Models\Runtime\RuntimeTurn;
 use App\Models\User;
 use App\Support\Memory\Contracts\EmbeddingProvider;
 use App\Support\Memory\Contracts\ExtractionProvider;
+use App\Support\Memory\MemoryAdapterFactory;
 use App\Support\Memory\MemoryFormationPipeline;
 use App\Support\Memory\Neo4jGraphStore;
 use App\Support\Memory\WorkingMemoryBuffer;
@@ -640,6 +641,312 @@ class MemoryFormationPipelineTest extends TestCase
         // Should still succeed - graceful degradation
         $this->assertTrue($result->success);
         $this->assertTrue($result->graphSkipped);
+    }
+
+    /**
+     * Test that extraction failover is used when primary provider returns empty.
+     *
+     * When the primary ExtractionProvider returns an empty array (which may
+     * indicate an API failure like 429 insufficient_quota), the pipeline
+     * should try the failover provider via MemoryAdapterFactory.
+     */
+    public function test_uses_failover_provider_when_primary_extraction_returns_empty(): void
+    {
+        $buffer = app(WorkingMemoryBuffer::class);
+        $buffer->append($this->run->id, 'user', 'John from Acme Corp called about the API');
+
+        // Primary provider returns empty (simulates API failure like 429)
+        $primaryProvider = Mockery::mock(ExtractionProvider::class);
+        $primaryProvider->shouldReceive('extractEntities')->once()->andReturn([]);
+        $primaryProvider->shouldReceive('getProviderName')->andReturn('openai');
+
+        // Failover provider returns entities
+        $failoverProvider = Mockery::mock(ExtractionProvider::class);
+        $failoverProvider->shouldReceive('extractEntities')
+            ->once()
+            ->andReturn([
+                ['type' => 'Person', 'name' => 'John', 'confidence' => 0.95],
+                ['type' => 'Organization', 'name' => 'Acme Corp', 'confidence' => 0.9],
+            ]);
+        $failoverProvider->shouldReceive('scoreImportance')->andReturn(0.7);
+        $failoverProvider->shouldReceive('getProviderName')->andReturn('anthropic');
+
+        // Adapter factory returns the failover provider
+        $adapterFactory = Mockery::mock(MemoryAdapterFactory::class);
+        $adapterFactory->shouldReceive('getFailoverProvider')
+            ->once()
+            ->with($this->user->id, 'openai')
+            ->andReturn($failoverProvider);
+
+        $embeddingProvider = Mockery::mock(EmbeddingProvider::class);
+        $embeddingProvider->shouldReceive('supportsEmbeddings')->andReturn(true);
+        $embeddingProvider->shouldReceive('embed')->andReturn(array_fill(0, 1536, 0.1));
+        $embeddingProvider->shouldReceive('getProviderName')->andReturn('mock');
+
+        $graphStore = Mockery::mock(Neo4jGraphStore::class);
+        $graphStore->shouldReceive('healthCheck')->andReturn(true);
+        $graphStore->shouldReceive('storeEntities')
+            ->once()
+            ->with($this->user->id, Mockery::on(fn ($entities) => count($entities) === 2 && $entities[0]['name'] === 'John'));
+        $graphStore->shouldReceive('storeRelationships')->andReturn();
+
+        $pipeline = new MemoryFormationPipeline(
+            $buffer,
+            $primaryProvider,
+            $embeddingProvider,
+            $graphStore,
+            $adapterFactory
+        );
+
+        $result = $pipeline->process($this->run);
+
+        $this->assertTrue($result->success);
+        $this->assertEquals(2, $result->entitiesStored);
+    }
+
+    /**
+     * Test that extraction failover is used when primary provider throws an exception.
+     *
+     * When the primary throws, the pipeline should try failover before giving up.
+     */
+    public function test_uses_failover_provider_when_primary_extraction_throws(): void
+    {
+        $buffer = app(WorkingMemoryBuffer::class);
+        $buffer->append($this->run->id, 'user', 'Deploy the API to production');
+
+        // Primary provider throws (simulates API error)
+        $primaryProvider = Mockery::mock(ExtractionProvider::class);
+        $primaryProvider->shouldReceive('extractEntities')
+            ->once()
+            ->andThrow(new \RuntimeException('429 insufficient_quota'));
+        $primaryProvider->shouldReceive('getProviderName')->andReturn('openai');
+
+        // Failover provider returns entities
+        $failoverProvider = Mockery::mock(ExtractionProvider::class);
+        $failoverProvider->shouldReceive('extractEntities')
+            ->once()
+            ->andReturn([
+                ['type' => 'Concept', 'name' => 'API', 'confidence' => 0.85],
+            ]);
+        $failoverProvider->shouldReceive('scoreImportance')->andReturn(0.6);
+        $failoverProvider->shouldReceive('getProviderName')->andReturn('anthropic');
+
+        $adapterFactory = Mockery::mock(MemoryAdapterFactory::class);
+        $adapterFactory->shouldReceive('getFailoverProvider')
+            ->once()
+            ->with($this->user->id, 'openai')
+            ->andReturn($failoverProvider);
+
+        $embeddingProvider = Mockery::mock(EmbeddingProvider::class);
+        $embeddingProvider->shouldReceive('supportsEmbeddings')->andReturn(true);
+        $embeddingProvider->shouldReceive('embed')->andReturn(array_fill(0, 1536, 0.1));
+        $embeddingProvider->shouldReceive('getProviderName')->andReturn('mock');
+
+        $graphStore = Mockery::mock(Neo4jGraphStore::class);
+        $graphStore->shouldReceive('healthCheck')->andReturn(true);
+        $graphStore->shouldReceive('storeEntities')->once();
+        $graphStore->shouldReceive('storeRelationships')->andReturn();
+
+        $pipeline = new MemoryFormationPipeline(
+            $buffer,
+            $primaryProvider,
+            $embeddingProvider,
+            $graphStore,
+            $adapterFactory
+        );
+
+        $result = $pipeline->process($this->run);
+
+        $this->assertTrue($result->success);
+        $this->assertEquals(1, $result->entitiesStored);
+    }
+
+    /**
+     * Test that pipeline proceeds with empty entities when failover also returns empty.
+     */
+    public function test_proceeds_with_empty_entities_when_both_providers_return_empty(): void
+    {
+        $buffer = app(WorkingMemoryBuffer::class);
+        $buffer->append($this->run->id, 'user', 'Hello');
+
+        $primaryProvider = Mockery::mock(ExtractionProvider::class);
+        $primaryProvider->shouldReceive('extractEntities')->once()->andReturn([]);
+        $primaryProvider->shouldReceive('getProviderName')->andReturn('openai');
+
+        $failoverProvider = Mockery::mock(ExtractionProvider::class);
+        $failoverProvider->shouldReceive('extractEntities')->once()->andReturn([]);
+        $failoverProvider->shouldReceive('getProviderName')->andReturn('anthropic');
+
+        $adapterFactory = Mockery::mock(MemoryAdapterFactory::class);
+        $adapterFactory->shouldReceive('getFailoverProvider')
+            ->once()
+            ->with($this->user->id, 'openai')
+            ->andReturn($failoverProvider);
+
+        $embeddingProvider = Mockery::mock(EmbeddingProvider::class);
+        $embeddingProvider->shouldReceive('supportsEmbeddings')->andReturn(true);
+        $embeddingProvider->shouldReceive('embed')->andReturn(array_fill(0, 1536, 0.1));
+        $embeddingProvider->shouldReceive('getProviderName')->andReturn('mock');
+
+        $graphStore = Mockery::mock(Neo4jGraphStore::class);
+        $graphStore->shouldReceive('healthCheck')->andReturn(true);
+        $graphStore->shouldReceive('storeEntities')->never(); // No entities to store
+        $graphStore->shouldReceive('storeRelationships')->never();
+
+        $pipeline = new MemoryFormationPipeline(
+            $buffer,
+            $primaryProvider,
+            $embeddingProvider,
+            $graphStore,
+            $adapterFactory
+        );
+
+        $result = $pipeline->process($this->run);
+
+        $this->assertTrue($result->success);
+        $this->assertEquals(0, $result->entitiesStored);
+    }
+
+    /**
+     * Test that no failover is attempted when no adapter factory is provided.
+     */
+    public function test_no_failover_without_adapter_factory(): void
+    {
+        $buffer = app(WorkingMemoryBuffer::class);
+        $buffer->append($this->run->id, 'user', 'Hello');
+
+        // Primary returns empty, no factory → no failover attempted
+        $primaryProvider = Mockery::mock(ExtractionProvider::class);
+        $primaryProvider->shouldReceive('extractEntities')->once()->andReturn([]);
+        $primaryProvider->shouldReceive('scoreImportance')->andReturn(0.5);
+        $primaryProvider->shouldReceive('getProviderName')->andReturn('openai');
+
+        $embeddingProvider = Mockery::mock(EmbeddingProvider::class);
+        $embeddingProvider->shouldReceive('embed')->andReturn(array_fill(0, 1536, 0.1));
+        $embeddingProvider->shouldReceive('getProviderName')->andReturn('mock');
+
+        $graphStore = Mockery::mock(Neo4jGraphStore::class);
+        $graphStore->shouldReceive('healthCheck')->andReturn(true);
+        $graphStore->shouldReceive('storeEntities')->never();
+        $graphStore->shouldReceive('storeRelationships')->never();
+
+        // No adapter factory passed (5th param is null by default)
+        $pipeline = new MemoryFormationPipeline(
+            $buffer,
+            $primaryProvider,
+            $embeddingProvider,
+            $graphStore
+        );
+
+        $result = $pipeline->process($this->run);
+
+        $this->assertTrue($result->success);
+        $this->assertEquals(0, $result->entitiesStored);
+    }
+
+    /**
+     * Test that failover switches the extraction provider for importance scoring.
+     *
+     * When failover succeeds, scoreImportance should use the failover provider
+     * rather than the primary that failed.
+     */
+    public function test_failover_switches_provider_for_importance_scoring(): void
+    {
+        $buffer = app(WorkingMemoryBuffer::class);
+        $buffer->append($this->run->id, 'user', 'Critical: Deploy API to production');
+
+        // Primary returns empty (API failure)
+        $primaryProvider = Mockery::mock(ExtractionProvider::class);
+        $primaryProvider->shouldReceive('extractEntities')->once()->andReturn([]);
+        // scoreImportance should NOT be called on primary
+        $primaryProvider->shouldReceive('scoreImportance')->never();
+        $primaryProvider->shouldReceive('getProviderName')->andReturn('openai');
+
+        // Failover returns entities and handles scoring
+        $failoverProvider = Mockery::mock(ExtractionProvider::class);
+        $failoverProvider->shouldReceive('extractEntities')
+            ->once()
+            ->andReturn([
+                ['type' => 'Concept', 'name' => 'API', 'confidence' => 0.9],
+            ]);
+        $failoverProvider->shouldReceive('scoreImportance')
+            ->once()
+            ->andReturn(0.8);
+        $failoverProvider->shouldReceive('getProviderName')->andReturn('anthropic');
+
+        $adapterFactory = Mockery::mock(MemoryAdapterFactory::class);
+        $adapterFactory->shouldReceive('getFailoverProvider')
+            ->once()
+            ->with($this->user->id, 'openai')
+            ->andReturn($failoverProvider);
+
+        $embeddingProvider = Mockery::mock(EmbeddingProvider::class);
+        $embeddingProvider->shouldReceive('supportsEmbeddings')->andReturn(true);
+        $embeddingProvider->shouldReceive('embed')->andReturn(array_fill(0, 1536, 0.1));
+        $embeddingProvider->shouldReceive('getProviderName')->andReturn('mock');
+
+        $graphStore = Mockery::mock(Neo4jGraphStore::class);
+        $graphStore->shouldReceive('healthCheck')->andReturn(true);
+        $graphStore->shouldReceive('storeEntities')->once();
+        $graphStore->shouldReceive('storeRelationships')->andReturn();
+
+        $pipeline = new MemoryFormationPipeline(
+            $buffer,
+            $primaryProvider,
+            $embeddingProvider,
+            $graphStore,
+            $adapterFactory
+        );
+
+        $result = $pipeline->process($this->run);
+
+        $this->assertTrue($result->success);
+        $this->assertEquals(1, $result->entitiesStored);
+    }
+
+    /**
+     * Test that pipeline does not attempt failover when primary succeeds.
+     */
+    public function test_no_failover_when_primary_succeeds(): void
+    {
+        $buffer = app(WorkingMemoryBuffer::class);
+        $buffer->append($this->run->id, 'user', 'John from Acme Corp');
+
+        $primaryProvider = Mockery::mock(ExtractionProvider::class);
+        $primaryProvider->shouldReceive('extractEntities')
+            ->once()
+            ->andReturn([
+                ['type' => 'Person', 'name' => 'John', 'confidence' => 0.95],
+            ]);
+        $primaryProvider->shouldReceive('scoreImportance')->andReturn(0.7);
+        $primaryProvider->shouldReceive('getProviderName')->andReturn('openai');
+
+        // Adapter factory should NOT be called for failover
+        $adapterFactory = Mockery::mock(MemoryAdapterFactory::class);
+        $adapterFactory->shouldReceive('getFailoverProvider')->never();
+
+        $embeddingProvider = Mockery::mock(EmbeddingProvider::class);
+        $embeddingProvider->shouldReceive('supportsEmbeddings')->andReturn(true);
+        $embeddingProvider->shouldReceive('embed')->andReturn(array_fill(0, 1536, 0.1));
+        $embeddingProvider->shouldReceive('getProviderName')->andReturn('mock');
+
+        $graphStore = Mockery::mock(Neo4jGraphStore::class);
+        $graphStore->shouldReceive('healthCheck')->andReturn(true);
+        $graphStore->shouldReceive('storeEntities')->once();
+        $graphStore->shouldReceive('storeRelationships')->andReturn();
+
+        $pipeline = new MemoryFormationPipeline(
+            $buffer,
+            $primaryProvider,
+            $embeddingProvider,
+            $graphStore,
+            $adapterFactory
+        );
+
+        $result = $pipeline->process($this->run);
+
+        $this->assertTrue($result->success);
+        $this->assertEquals(1, $result->entitiesStored);
     }
 
     /**

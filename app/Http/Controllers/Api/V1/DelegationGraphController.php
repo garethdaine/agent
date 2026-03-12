@@ -51,7 +51,7 @@ class DelegationGraphController extends Controller
             $sort = 'created_at';
         }
 
-        $data = collect($graphs->items())->map(fn (DelegationGraph $graph): array => $this->transformGraph($graph, false))->values(); // @phpstan-ignore argument.type
+        $data = collect($graphs->items())->map(fn (DelegationGraph $graph): array => $this->transformGraph($graph, false))->values();
 
         return response()->json([
             'data' => $data,
@@ -429,6 +429,7 @@ class DelegationGraphController extends Controller
                 'name' => $task->name,
                 'contract' => $task->contract_json ?? [],
                 'depends_on' => $task->dependencies->pluck('name')->toArray(),
+                'assigned_delegatee_profile_id' => $task->assigned_delegatee_profile_id,
             ];
         }
 

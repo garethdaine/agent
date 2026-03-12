@@ -8,20 +8,19 @@ use App\Models\AgentJob;
 use App\Models\AgentJobRun;
 use App\Models\User;
 use App\Support\Memory\CoreMemoryManager;
-use App\Support\Memory\HybridRetriever;
 use App\Support\Memory\MemoryContextBuilder;
+use App\Support\Memory\SoulResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
-use Mockery;
 use Tests\TestCase;
 
 /**
  * Tests for MemoryContextBuilder wrapper markdown generation.
  *
  * Verifies:
- * - Generates wrapper markdown with agent_persona section
- * - Includes user_profile section
- * - Includes relevant memories from HybridRetriever
+ * - Generates wrapper markdown with agent identity section (via SoulResolver)
+ * - Includes user context section (via SoulResolver)
+ * - Includes memory API instructions when api_enabled
  * - Calculates token budget correctly (5% - 10% margin)
  * - Clamps to floor 1000, ceiling 8000
  * - Truncates context to budget
@@ -71,11 +70,11 @@ class MemoryContextBuilderTest extends TestCase
     }
 
     /**
-     * Test that wrapper markdown includes agent_persona section.
+     * Test that wrapper markdown includes agent identity section from SoulResolver.
      */
     public function test_generates_wrapper_with_agent_persona_section(): void
     {
-        // Create agent persona block
+        // Create agent persona block (SoulResolver will use this as fallback)
         $this->coreMemoryManager->set(
             $this->user->id,
             'agent_persona',
@@ -84,7 +83,7 @@ class MemoryContextBuilderTest extends TestCase
             ['actor' => 'user']
         );
 
-        $builder = $this->createBuilderWithMockedRetriever([]);
+        $builder = $this->createBuilder();
 
         $contextPath = $builder->buildContext($this->run);
 
@@ -97,11 +96,11 @@ class MemoryContextBuilderTest extends TestCase
     }
 
     /**
-     * Test that wrapper markdown includes user_profile section.
+     * Test that wrapper markdown includes user context section from SoulResolver.
      */
     public function test_generates_wrapper_with_user_profile_section(): void
     {
-        // Create user profile block
+        // Create user profile block (SoulResolver will use this as fallback)
         $this->coreMemoryManager->set(
             $this->user->id,
             'user_profile',
@@ -110,7 +109,7 @@ class MemoryContextBuilderTest extends TestCase
             ['actor' => 'user']
         );
 
-        $builder = $this->createBuilderWithMockedRetriever([]);
+        $builder = $this->createBuilder();
 
         $contextPath = $builder->buildContext($this->run);
 
@@ -121,36 +120,40 @@ class MemoryContextBuilderTest extends TestCase
     }
 
     /**
-     * Test that wrapper includes relevant memories from HybridRetriever.
+     * Test that wrapper includes memory API instructions when api_enabled.
      */
-    public function test_includes_relevant_memories_from_hybrid_retriever(): void
+    public function test_includes_memory_api_instructions_when_enabled(): void
     {
-        $memories = [
-            [
-                'id' => 1,
-                'content' => 'Previously discussed database migrations.',
-                'source' => 'keyword',
-                'classification' => 'internal',
-                'rrf_score' => 0.5,
-            ],
-            [
-                'id' => 2,
-                'content' => 'Worked on API authentication last week.',
-                'source' => 'semantic',
-                'classification' => 'internal',
-                'rrf_score' => 0.3,
-            ],
-        ];
+        config(['memory.api_enabled' => true]);
 
-        $builder = $this->createBuilderWithMockedRetriever($memories);
+        $builder = $this->createBuilder();
 
         $contextPath = $builder->buildContext($this->run);
 
         $this->assertNotNull($contextPath);
         $content = File::get($contextPath);
-        $this->assertStringContainsString('## Relevant Memories', $content);
-        $this->assertStringContainsString('Previously discussed database migrations.', $content);
-        $this->assertStringContainsString('Worked on API authentication last week.', $content);
+        $this->assertStringContainsString('## Memory Access', $content);
+        $this->assertStringContainsString('MEMORY_API_BASE_URL', $content);
+        $this->assertStringContainsString('POST /retrieve', $content);
+        $this->assertStringContainsString('GET /core-blocks', $content);
+        $this->assertStringContainsString('PUT /core-blocks/{key}', $content);
+    }
+
+    /**
+     * Test that memory API section is omitted when api_enabled is false.
+     */
+    public function test_omits_memory_api_section_when_disabled(): void
+    {
+        config(['memory.api_enabled' => false]);
+
+        $builder = $this->createBuilder();
+
+        $contextPath = $builder->buildContext($this->run);
+
+        $this->assertNotNull($contextPath);
+        $content = File::get($contextPath);
+        $this->assertStringNotContainsString('## Memory Access', $content);
+        $this->assertStringNotContainsString('MEMORY_API_BASE_URL', $content);
     }
 
     /**
@@ -171,7 +174,7 @@ class MemoryContextBuilderTest extends TestCase
             'memory.context_injection.default_context_window' => 200000,
         ]);
 
-        $builder = $this->createBuilderWithMockedRetriever([]);
+        $builder = $this->createBuilder();
 
         $budget = $builder->calculateTokenBudget();
 
@@ -196,7 +199,7 @@ class MemoryContextBuilderTest extends TestCase
             'memory.context_injection.default_context_window' => 10000,
         ]);
 
-        $builder = $this->createBuilderWithMockedRetriever([]);
+        $builder = $this->createBuilder();
 
         $budget = $builder->calculateTokenBudget();
 
@@ -221,7 +224,7 @@ class MemoryContextBuilderTest extends TestCase
             'memory.context_injection.default_context_window' => 500000,
         ]);
 
-        $builder = $this->createBuilderWithMockedRetriever([]);
+        $builder = $this->createBuilder();
 
         $budget = $builder->calculateTokenBudget();
 
@@ -233,17 +236,16 @@ class MemoryContextBuilderTest extends TestCase
      */
     public function test_truncates_context_to_budget(): void
     {
-        // Create a very long memory that exceeds budget
-        $longContent = str_repeat('This is a very long memory entry. ', 500);
-        $memories = [
-            [
-                'id' => 1,
-                'content' => $longContent,
-                'source' => 'keyword',
-                'classification' => 'internal',
-                'rrf_score' => 0.5,
-            ],
-        ];
+        // Create a very long persona that would exceed budget
+        $longPersona = str_repeat('This is a very long persona entry. ', 500);
+
+        $this->coreMemoryManager->set(
+            $this->user->id,
+            'agent_persona',
+            $longPersona,
+            null,
+            ['actor' => 'user']
+        );
 
         config([
             'memory.context_injection.budget_percent' => 5,
@@ -254,7 +256,7 @@ class MemoryContextBuilderTest extends TestCase
             'memory.context_injection.default_context_window' => 200000,
         ]);
 
-        $builder = $this->createBuilderWithMockedRetriever($memories);
+        $builder = $this->createBuilder();
 
         $contextPath = $builder->buildContext($this->run);
 
@@ -265,8 +267,8 @@ class MemoryContextBuilderTest extends TestCase
         // Original task content should always be included at the end
         $this->assertStringContainsString('# Original Task', $content);
 
-        // Verify the memory content is truncated (not all of it is included)
-        $this->assertLessThan(strlen($longContent), strlen($content));
+        // Verify the content is truncated (not all of it is included)
+        $this->assertLessThan(strlen($longPersona), strlen($content));
     }
 
     /**
@@ -274,7 +276,7 @@ class MemoryContextBuilderTest extends TestCase
      */
     public function test_stores_file_in_correct_path_pattern(): void
     {
-        $builder = $this->createBuilderWithMockedRetriever([]);
+        $builder = $this->createBuilder();
 
         $contextPath = $builder->buildContext($this->run);
 
@@ -291,7 +293,7 @@ class MemoryContextBuilderTest extends TestCase
      */
     public function test_includes_original_task_content_at_end(): void
     {
-        $builder = $this->createBuilderWithMockedRetriever([]);
+        $builder = $this->createBuilder();
 
         $contextPath = $builder->buildContext($this->run);
 
@@ -315,7 +317,7 @@ class MemoryContextBuilderTest extends TestCase
     public function test_handles_missing_core_memory_blocks(): void
     {
         // Don't create any core memory blocks
-        $builder = $this->createBuilderWithMockedRetriever([]);
+        $builder = $this->createBuilder();
 
         $contextPath = $builder->buildContext($this->run);
 
@@ -328,9 +330,9 @@ class MemoryContextBuilderTest extends TestCase
     }
 
     /**
-     * Test that wrapper handles empty retriever results.
+     * Test that wrapper handles empty memory when no core blocks exist.
      */
-    public function test_handles_empty_retriever_results(): void
+    public function test_handles_empty_core_blocks(): void
     {
         $this->coreMemoryManager->set(
             $this->user->id,
@@ -340,7 +342,7 @@ class MemoryContextBuilderTest extends TestCase
             ['actor' => 'user']
         );
 
-        $builder = $this->createBuilderWithMockedRetriever([]);
+        $builder = $this->createBuilder();
 
         $contextPath = $builder->buildContext($this->run);
 
@@ -359,7 +361,7 @@ class MemoryContextBuilderTest extends TestCase
     {
         config(['memory.enabled' => false]);
 
-        $builder = $this->createBuilderWithMockedRetriever([]);
+        $builder = $this->createBuilder();
 
         $contextPath = $builder->buildContext($this->run);
 
@@ -367,20 +369,12 @@ class MemoryContextBuilderTest extends TestCase
     }
 
     /**
-     * Create a MemoryContextBuilder with a mocked HybridRetriever.
-     *
-     * @param  array<array{id: int|string, content: string, source: string, classification: string, rrf_score: float}>  $memories
+     * Create a MemoryContextBuilder with SoulResolver.
      */
-    private function createBuilderWithMockedRetriever(array $memories): MemoryContextBuilder
+    private function createBuilder(): MemoryContextBuilder
     {
-        // Mock the HybridRetriever
-        $retriever = Mockery::mock(HybridRetriever::class);
-        $retriever->shouldReceive('retrieve')
-            ->andReturn($memories);
+        $soulResolver = app(SoulResolver::class);
 
-        return new MemoryContextBuilder(
-            $this->coreMemoryManager,
-            $retriever
-        );
+        return new MemoryContextBuilder($soulResolver);
     }
 }

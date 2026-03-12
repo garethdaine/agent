@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Support\Delegation\Verification;
 
-use App\Models\DelegateeProfile;
 use App\Models\DelegationAttempt;
 use App\Models\DelegationTask;
 use App\Models\DelegationVerificationResult;

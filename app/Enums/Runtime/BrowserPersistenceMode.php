@@ -8,4 +8,5 @@ enum BrowserPersistenceMode: string
 {
     case Ephemeral = 'ephemeral';
     case Persistent = 'persistent';
+    case Cdp = 'cdp';
 }

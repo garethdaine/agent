@@ -106,4 +106,23 @@ class OrgAgentProfile extends Model
     {
         return $query->where('user_id', $userId);
     }
+
+    /**
+     * Get the soul/identity configuration for this org agent profile.
+     *
+     * Matches the pattern from ConnectorAccount::getSoul() and DelegateeProfile::getSoul().
+     *
+     * @return array{name: string|null, personality: string|null, system_prompt: string|null, user_context: string|null}
+     */
+    public function getSoul(): array
+    {
+        $soul = $this->soul_json ?? [];
+
+        return [
+            'name' => $soul['name'] ?? null,
+            'personality' => $soul['personality'] ?? null,
+            'system_prompt' => $soul['system_prompt'] ?? null,
+            'user_context' => $soul['user_context'] ?? null,
+        ];
+    }
 }

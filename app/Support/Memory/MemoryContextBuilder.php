@@ -14,10 +14,14 @@ use Illuminate\Support\Str;
  * Builds wrapper markdown context for agent runs with memory injection.
  *
  * Generates a wrapper file that prepends memory context to the original task:
- * - Agent identity (agent_persona core block)
- * - User context (user_profile core block)
- * - Relevant memories (from HybridRetriever)
+ * - Agent identity (resolved via SoulResolver with memory core block fallback)
+ * - User context (resolved via SoulResolver with memory core block fallback)
+ * - Memory API instructions (so CLI agents can query memory on-the-fly)
  * - Original task content
+ *
+ * This builder does NOT dump retrieved memories into context. Instead, it tells
+ * CLI agents about the memory API endpoint (MEMORY_API_BASE_URL env var) so they
+ * can query memory on-the-fly when needed.
  *
  * Token budget calculation:
  * 1. Base: 5% of context window (default 200k)
@@ -29,8 +33,7 @@ use Illuminate\Support\Str;
 class MemoryContextBuilder
 {
     public function __construct(
-        private readonly CoreMemoryManager $coreMemoryManager,
-        private readonly HybridRetriever $hybridRetriever
+        private readonly SoulResolver $soulResolver,
     ) {}
 
     /**
@@ -104,40 +107,33 @@ class MemoryContextBuilder
 
         $userId = $job->user_id;
 
-        // Get core memory blocks
-        $agentPersona = $this->coreMemoryManager->get($userId, 'agent_persona');
-        $userProfile = $this->coreMemoryManager->get($userId, 'user_profile');
-
         // Get original task content
         $originalContent = $this->getOriginalTaskContent($job->task_markdown_path);
 
-        // Calculate token budget for memory section
+        // Calculate token budget for identity + instructions section
         $tokenBudget = $this->calculateTokenBudget();
         $charBudget = $tokenBudget * ($this->getCharsPerToken());
 
-        // Retrieve relevant memories using query from task content
-        $query = $this->extractQueryFromTask($originalContent);
-        $memories = $this->retrieveRelevantMemories($userId, $query);
+        // Resolve identity via SoulResolver (memory core blocks serve as defaults)
+        $resolvedSoul = $this->soulResolver->resolve(null, $userId);
 
         // Build wrapper markdown sections
         $sections = [];
 
-        // Agent Identity section
-        if ($agentPersona !== null && $agentPersona->content_text !== null) {
-            $sections[] = "## Agent Identity\n\n".$agentPersona->content_text;
+        // Agent Identity section (from resolved soul)
+        if (! empty($resolvedSoul['personality'])) {
+            $sections[] = "## Agent Identity\n\n".$resolvedSoul['personality'];
         }
 
-        // User Context section
-        if ($userProfile !== null && $userProfile->content_text !== null) {
-            $sections[] = "## User Context\n\n".$userProfile->content_text;
+        // User Context section (from resolved soul)
+        if (! empty($resolvedSoul['user_context'])) {
+            $sections[] = "## User Context\n\n".$resolvedSoul['user_context'];
         }
 
-        // Relevant Memories section
-        if (! empty($memories)) {
-            $memoriesSection = $this->formatMemoriesSection($memories, $charBudget);
-            if ($memoriesSection !== '') {
-                $sections[] = "## Relevant Memories\n\n".$memoriesSection;
-            }
+        // Memory API instructions (instead of dumping retrieved memories)
+        $memorySection = $this->buildMemoryApiSection();
+        if ($memorySection !== null) {
+            $sections[] = $memorySection;
         }
 
         // Truncate sections to fit budget if needed
@@ -162,6 +158,26 @@ class MemoryContextBuilder
     }
 
     /**
+     * Build the memory API instructions section for CLI agents.
+     *
+     * Tells CLI agents about the memory API endpoint so they can query
+     * memory on-the-fly rather than receiving a bulk context dump.
+     */
+    private function buildMemoryApiSection(): ?string
+    {
+        if (! config('memory.api_enabled')) {
+            return null;
+        }
+
+        return "## Memory Access\n\n"
+            ."You have access to a 4-layer memory system via the MEMORY_API_BASE_URL environment variable.\n"
+            ."- POST /retrieve — Search past conversations and learned facts\n"
+            ."- GET /core-blocks — Read persistent memory blocks\n"
+            ."- PUT /core-blocks/{key} — Update operational blocks (task_state, active_goals)\n"
+            .'Query memory when you need context about past work.';
+    }
+
+    /**
      * Get the original task content from the task markdown path.
      */
     private function getOriginalTaskContent(?string $taskPath): string
@@ -171,82 +187,6 @@ class MemoryContextBuilder
         }
 
         return File::get($taskPath);
-    }
-
-    /**
-     * Extract a query string from the task content for memory retrieval.
-     *
-     * Uses the first 500 characters as a query to find relevant memories.
-     */
-    private function extractQueryFromTask(string $content): string
-    {
-        // Strip markdown headers and extract meaningful text
-        $text = preg_replace('/^#+\s+/m', '', $content);
-        $text = preg_replace('/\s+/', ' ', $text);
-        $text = trim($text);
-
-        // Use first 500 chars as query
-        return mb_substr($text, 0, 500);
-    }
-
-    /**
-     * Retrieve relevant memories using hybrid search.
-     *
-     * @return array<array{id: int|string, content: string, source: string, classification: string, rrf_score: float}>
-     */
-    private function retrieveRelevantMemories(int $userId, string $query): array
-    {
-        if (empty(trim($query))) {
-            return [];
-        }
-
-        try {
-            return $this->hybridRetriever->retrieve($userId, $query, [
-                'limit' => 10,
-                'classification' => ['public', 'internal'],
-            ]);
-        } catch (\Throwable $e) {
-            Log::debug('MemoryContextBuilder: Failed to retrieve memories', [
-                'user_id' => $userId,
-                'error' => $e->getMessage(),
-            ]);
-
-            return [];
-        }
-    }
-
-    /**
-     * Format memories into a markdown section.
-     *
-     * @param  array<array{id: int|string, content: string, source: string, classification: string, rrf_score: float}>  $memories
-     * @param  int  $charBudget  Character budget for memory section
-     */
-    private function formatMemoriesSection(array $memories, int $charBudget): string
-    {
-        $lines = [];
-        $currentLength = 0;
-
-        foreach ($memories as $memory) {
-            $content = $memory['content'] ?? ''; // @phpstan-ignore nullCoalesce.offset
-            $line = '- '.$content;
-
-            // Check if adding this line would exceed budget
-            $lineLength = mb_strlen($line) + 1; // +1 for newline
-            if ($currentLength + $lineLength > $charBudget) {
-                // Try to add a truncated version if we have some space
-                $remainingSpace = $charBudget - $currentLength;
-                if ($remainingSpace > 50) { // Only add if we have meaningful space
-                    $truncatedContent = mb_substr($content, 0, $remainingSpace - 10).'...';
-                    $lines[] = '- '.$truncatedContent;
-                }
-                break;
-            }
-
-            $lines[] = $line;
-            $currentLength += $lineLength;
-        }
-
-        return implode("\n", $lines);
     }
 
     /**

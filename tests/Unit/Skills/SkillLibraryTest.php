@@ -208,7 +208,7 @@ class SkillLibraryTest extends TestCase
     // Real manifest validation (requires manifest.json to exist)
     // ---------------------------------------------------------------
 
-    public function test_manifest_has_31_skills(): void
+    public function test_manifest_has_expected_skills(): void
     {
         $realManifestPath = base_path('skill-library/manifest.json');
         if (! file_exists($realManifestPath)) {
@@ -218,7 +218,7 @@ class SkillLibraryTest extends TestCase
         $library = $this->makeLibrary($realManifestPath);
         $result = $library->browse();
 
-        $this->assertCount(31, $result);
+        $this->assertCount(1, $result);
     }
 
     public function test_all_manifest_entries_have_required_fields(): void

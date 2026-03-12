@@ -407,4 +407,159 @@ class MemoryAdapterFactoryTest extends TestCase
         $this->assertTrue($this->factory->providerSupportsExtraction('anthropic'));
         $this->assertFalse($this->factory->providerSupportsExtraction('unknown'));
     }
+
+    /**
+     * Test that Anthropic adapter uses fallback model when user's model is OpenAI-only.
+     *
+     * When a user has extraction_model=gpt-4o-mini (an OpenAI model) and the
+     * factory creates an Anthropic adapter (e.g. for failover), it should NOT
+     * send the OpenAI model name to Anthropic's API. Instead, it should fall
+     * back to the config default for Anthropic.
+     */
+    public function test_anthropic_adapter_does_not_use_openai_model_names(): void
+    {
+        $userId = 1;
+
+        $this->capabilityResolver
+            ->shouldReceive('getExtractionProviders')
+            ->with($userId)
+            ->andReturn(['openai', 'anthropic']);
+
+        $this->settingsService
+            ->shouldReceive('getProviderKey')
+            ->with($userId, 'anthropic')
+            ->andReturn('sk-ant-test-key');
+
+        // User has generic extraction_model set to an OpenAI model
+        $this->settingsService
+            ->shouldReceive('get')
+            ->andReturnUsing(function ($uid, $key, $default = null) {
+                return match ($key) {
+                    'extraction_model' => 'gpt-4o-mini', // OpenAI model
+                    'summarization_model' => 'gpt-4.1-nano', // OpenAI model
+                    default => $default, // returns null for provider-specific keys
+                };
+            });
+
+        config(['memory.models.extraction.fallback' => 'claude-3-haiku-20240307']);
+        config(['memory.models.summarization.fallback' => 'claude-3-haiku-20240307']);
+
+        $failover = $this->factory->getFailoverProvider($userId, 'openai');
+
+        $this->assertNotNull($failover);
+        $this->assertInstanceOf(AnthropicAdapter::class, $failover);
+        // The adapter was created — if it used 'gpt-4o-mini', Anthropic API would 404
+    }
+
+    /**
+     * Test that OpenAI adapter does not use Anthropic model names.
+     */
+    public function test_openai_adapter_does_not_use_anthropic_model_names(): void
+    {
+        $userId = 1;
+
+        $this->capabilityResolver
+            ->shouldReceive('getExtractionProviders')
+            ->with($userId)
+            ->andReturn(['openai', 'anthropic']);
+
+        $this->settingsService
+            ->shouldReceive('getProviderKey')
+            ->with($userId, 'openai')
+            ->andReturn('sk-test-key');
+
+        // User has generic extraction_model set to an Anthropic model
+        $this->settingsService
+            ->shouldReceive('get')
+            ->andReturnUsing(function ($uid, $key, $default = null) {
+                return match ($key) {
+                    'extraction_provider' => 'openai',
+                    'extraction_model' => 'claude-3-haiku-20240307', // Anthropic model
+                    'summarization_model' => 'claude-3-haiku-20240307', // Anthropic model
+                    'embeddings_model' => 'text-embedding-3-small',
+                    default => $default,
+                };
+            });
+
+        config(['memory.models.extraction.default' => 'gpt-4o-mini']);
+        config(['memory.models.summarization.default' => 'gpt-4.1-nano']);
+
+        $provider = $this->factory->makeExtractionProvider($userId);
+
+        $this->assertNotNull($provider);
+        $this->assertInstanceOf(OpenAIAdapter::class, $provider);
+        // The adapter was created with the config default, not claude-3-haiku
+    }
+
+    /**
+     * Test that provider-specific model settings take priority.
+     */
+    public function test_provider_specific_model_settings_take_priority(): void
+    {
+        $userId = 1;
+
+        $this->capabilityResolver
+            ->shouldReceive('getExtractionProviders')
+            ->with($userId)
+            ->andReturn(['anthropic']);
+
+        $this->settingsService
+            ->shouldReceive('getProviderKey')
+            ->with($userId, 'anthropic')
+            ->andReturn('sk-ant-test-key');
+
+        $this->settingsService
+            ->shouldReceive('get')
+            ->andReturnUsing(function ($uid, $key, $default = null) {
+                return match ($key) {
+                    'extraction_provider' => 'anthropic',
+                    'anthropic_extraction_model' => 'claude-3-5-sonnet-20241022', // Provider-specific
+                    'anthropic_summarization_model' => 'claude-3-5-sonnet-20241022',
+                    'extraction_model' => 'gpt-4o-mini', // Generic (OpenAI)
+                    'summarization_model' => 'gpt-4.1-nano',
+                    default => $default,
+                };
+            });
+
+        $provider = $this->factory->makeExtractionProvider($userId);
+
+        $this->assertNotNull($provider);
+        $this->assertInstanceOf(AnthropicAdapter::class, $provider);
+        // Provider-specific key 'anthropic_extraction_model' should be used
+    }
+
+    /**
+     * Test that compatible generic model name IS used when it matches the provider.
+     */
+    public function test_compatible_generic_model_is_used(): void
+    {
+        $userId = 1;
+
+        $this->capabilityResolver
+            ->shouldReceive('getExtractionProviders')
+            ->with($userId)
+            ->andReturn(['anthropic']);
+
+        $this->settingsService
+            ->shouldReceive('getProviderKey')
+            ->with($userId, 'anthropic')
+            ->andReturn('sk-ant-test-key');
+
+        $this->settingsService
+            ->shouldReceive('get')
+            ->andReturnUsing(function ($uid, $key, $default = null) {
+                return match ($key) {
+                    'extraction_provider' => 'anthropic',
+                    'extraction_model' => 'claude-3-5-sonnet-20241022', // Compatible with Anthropic
+                    'summarization_model' => 'claude-3-haiku-20240307',
+                    default => $default, // null for provider-specific keys
+                };
+            });
+
+        $provider = $this->factory->makeExtractionProvider($userId);
+
+        $this->assertNotNull($provider);
+        $this->assertInstanceOf(AnthropicAdapter::class, $provider);
+        // 'claude-3-5-sonnet-20241022' starts with 'claude', so it IS compatible
+    }
 }

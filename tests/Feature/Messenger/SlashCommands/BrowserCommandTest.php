@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Messenger\SlashCommands;
 
+use App\Enums\Runtime\BrowserPersistenceMode;
+use App\Enums\Runtime\RuntimeSessionStatus;
 use App\Messenger\SlashCommands\BrowserCommandHandler;
+use App\Models\ChatSession;
+use App\Models\Runtime\RuntimeSession;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -108,5 +112,160 @@ final class BrowserCommandTest extends TestCase
 
         $this->assertTrue($result->success);
         $this->assertStringContainsString('Browser sidecar is ready', $result->message);
+    }
+
+    // --- profile command ---
+
+    #[Test]
+    public function browser_profile_sets_persistent_mode(): void
+    {
+        config()->set('runtime.browser.profiles_base_path', sys_get_temp_dir().'/browser-profiles-test-'.uniqid());
+        $user = User::factory()->create();
+        $chatSession = ChatSession::factory()->create(['user_id' => $user->id]);
+        $session = RuntimeSession::factory()->create([
+            'user_id' => $user->id,
+            'status' => RuntimeSessionStatus::Active,
+            'chat_session_id' => $chatSession->id,
+        ]);
+
+        $handler = new BrowserCommandHandler;
+        $result = $handler->handle($user, ['profile', 'twitter'], $chatSession->id);
+
+        $this->assertTrue($result->success);
+        $this->assertStringContainsString('twitter', $result->message);
+        $this->assertEquals('profile', $result->data['action']);
+        $this->assertEquals('persistent', $result->data['persistence_mode']);
+
+        $session->refresh();
+        $this->assertEquals(BrowserPersistenceMode::Persistent, $session->browser_persistence_mode);
+        $this->assertEquals('twitter', $session->browser_profile_name);
+        $this->assertNull($session->browser_cdp_endpoint);
+    }
+
+    #[Test]
+    public function browser_profile_requires_name_argument(): void
+    {
+        $user = User::factory()->create();
+
+        $handler = new BrowserCommandHandler;
+        $result = $handler->handle($user, ['profile']);
+
+        $this->assertFalse($result->success);
+        $this->assertStringContainsString('Usage:', $result->message);
+    }
+
+    #[Test]
+    public function browser_profile_fails_without_active_session(): void
+    {
+        $user = User::factory()->create();
+
+        $handler = new BrowserCommandHandler;
+        $result = $handler->handle($user, ['profile', 'twitter']);
+
+        $this->assertFalse($result->success);
+        $this->assertStringContainsString('No active runtime session', $result->message);
+    }
+
+    // --- profiles command ---
+
+    #[Test]
+    public function browser_profiles_lists_user_profiles(): void
+    {
+        config()->set('runtime.browser.profiles_base_path', sys_get_temp_dir().'/browser-profiles-test-'.uniqid());
+        $user = User::factory()->create();
+
+        $handler = new BrowserCommandHandler;
+        $result = $handler->handle($user, ['profiles']);
+
+        $this->assertTrue($result->success);
+        $this->assertEquals([], $result->data['profiles']);
+    }
+
+    // --- cdp command ---
+
+    #[Test]
+    public function browser_cdp_sets_cdp_mode(): void
+    {
+        $user = User::factory()->create();
+        $chatSession = ChatSession::factory()->create(['user_id' => $user->id]);
+        $session = RuntimeSession::factory()->create([
+            'user_id' => $user->id,
+            'status' => RuntimeSessionStatus::Active,
+            'chat_session_id' => $chatSession->id,
+        ]);
+
+        $handler = new BrowserCommandHandler;
+        $result = $handler->handle($user, ['cdp', 'ws://localhost:9222/devtools/browser/abc'], $chatSession->id);
+
+        $this->assertTrue($result->success);
+        $this->assertEquals('cdp', $result->data['action']);
+        $this->assertEquals('cdp', $result->data['persistence_mode']);
+
+        $session->refresh();
+        $this->assertEquals(BrowserPersistenceMode::Cdp, $session->browser_persistence_mode);
+        $this->assertEquals('ws://localhost:9222/devtools/browser/abc', $session->browser_cdp_endpoint);
+        $this->assertNull($session->browser_profile_name);
+    }
+
+    #[Test]
+    public function browser_cdp_validates_websocket_url(): void
+    {
+        $user = User::factory()->create();
+        $chatSession = ChatSession::factory()->create(['user_id' => $user->id]);
+        RuntimeSession::factory()->create([
+            'user_id' => $user->id,
+            'status' => RuntimeSessionStatus::Active,
+            'chat_session_id' => $chatSession->id,
+        ]);
+
+        $handler = new BrowserCommandHandler;
+        $result = $handler->handle($user, ['cdp', 'http://localhost:9222'], $chatSession->id);
+
+        $this->assertFalse($result->success);
+        $this->assertStringContainsString('ws://', $result->message);
+    }
+
+    #[Test]
+    public function browser_cdp_requires_endpoint_argument(): void
+    {
+        $user = User::factory()->create();
+
+        $handler = new BrowserCommandHandler;
+        $result = $handler->handle($user, ['cdp']);
+
+        $this->assertFalse($result->success);
+        $this->assertStringContainsString('Usage:', $result->message);
+    }
+
+    // --- headed command ---
+
+    #[Test]
+    public function browser_headed_reports_current_state(): void
+    {
+        config()->set('runtime.browser.headed', false);
+        $user = User::factory()->create();
+
+        $handler = new BrowserCommandHandler;
+        $result = $handler->handle($user, ['headed']);
+
+        $this->assertTrue($result->success);
+        $this->assertEquals('headed', $result->data['action']);
+        $this->assertFalse($result->data['headed']);
+    }
+
+    // --- usage includes new commands ---
+
+    #[Test]
+    public function browser_usage_includes_new_commands(): void
+    {
+        $user = User::factory()->create();
+
+        $handler = new BrowserCommandHandler;
+        $result = $handler->handle($user, []);
+
+        $this->assertStringContainsString('profile', $result->message);
+        $this->assertStringContainsString('profiles', $result->message);
+        $this->assertStringContainsString('cdp', $result->message);
+        $this->assertStringContainsString('headed', $result->message);
     }
 }

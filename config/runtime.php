@@ -61,11 +61,11 @@ return [
 
     'modes' => [
         'safe' => [
-            'capabilities' => ['read', 'query', 'browser_snapshot'],
+            'capabilities' => ['read', 'query', 'browser_snapshot', 'vault_read', 'memory_read'],
             'approvals_required' => [],
         ],
         'standard' => [
-            'capabilities' => ['read', 'write', 'query', 'browser_snapshot', 'browser_action', 'runtime_command'],
+            'capabilities' => ['read', 'write', 'query', 'browser_snapshot', 'browser_action', 'runtime_command', 'vault_read', 'vault_retrieve', 'memory_read', 'memory_write'],
             'approvals_required' => ['mutations'],
         ],
         'full' => [
@@ -127,6 +127,18 @@ return [
         'headed' => (bool) env('AGENT_BROWSER_HEADED', false),
         'timeout' => (int) env('AGENT_BROWSER_TIMEOUT', 60),
         'session_name' => env('AGENT_BROWSER_SESSION'),
+
+        // Persistent profile settings
+        'profiles_base_path' => env('AGENT_BROWSER_PROFILES_PATH', storage_path('app/browser-profiles')),
+        'auto_headed_for_persistent' => (bool) env('AGENT_BROWSER_AUTO_HEADED', true),
+
+        // CDP (Chrome DevTools Protocol) connection settings
+        'cdp_endpoint' => env('AGENT_BROWSER_CDP_ENDPOINT'),
+        'auto_connect' => (bool) env('AGENT_BROWSER_AUTO_CONNECT', false),
+
+        // Custom browser executable and launch arguments
+        'executable_path' => env('AGENT_BROWSER_EXECUTABLE_PATH'),
+        'args' => env('AGENT_BROWSER_ARGS'),
     ],
 
     /*

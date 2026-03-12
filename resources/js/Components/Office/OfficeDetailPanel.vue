@@ -11,6 +11,7 @@ const props = defineProps({
     visible: { type: Boolean, default: false },
     data: { type: Object, default: null },
     officeState: { type: Object, default: null },
+    agentOutputs: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(['close']);
@@ -76,6 +77,11 @@ const panelDescription = computed(() => {
 const agentDetail = computed(() => {
     if (props.data?.type !== 'agent' || !props.officeState?.agents) return null;
     return props.officeState.agents.find((a) => a.id === props.data.agentId);
+});
+
+const agentLatestOutput = computed(() => {
+    if (!props.data?.agentId || !props.agentOutputs) return null;
+    return props.agentOutputs[props.data.agentId] || null;
 });
 
 const linkedRoute = computed(() => {
@@ -158,7 +164,7 @@ const state = computed(() => props.officeState);
     >
         <div
             v-if="visible && data"
-            class="absolute right-4 top-4 bottom-20 w-[22rem] rounded-xl border border-border/50 bg-background/95 backdrop-blur-md shadow-2xl overflow-hidden flex flex-col z-10"
+            class="absolute right-4 top-6 bottom-24 w-[22rem] rounded-xl border border-border/50 bg-background/95 backdrop-blur-md shadow-2xl overflow-hidden flex flex-col z-10"
         >
             <!-- Header -->
             <div class="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30">
@@ -207,6 +213,13 @@ const state = computed(() => props.officeState);
                             Activity
                         </div>
                         <div class="text-sm text-foreground capitalize">{{ agentDetail.current_activity?.replace(/_/g, ' ') || 'Idle' }}</div>
+                        <div
+                            v-if="agentLatestOutput && agentDetail.status === 'running'"
+                            class="mt-2 pt-2 border-t border-border/30"
+                        >
+                            <div class="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-1">Currently</div>
+                            <div class="text-xs text-muted-foreground leading-relaxed">{{ agentLatestOutput }}</div>
+                        </div>
                     </div>
 
                     <div v-if="agentDetail.current_run" class="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-2">

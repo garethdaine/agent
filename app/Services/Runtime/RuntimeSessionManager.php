@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Support\Agent\AuditLogger;
 use App\Support\Agent\FeatureFlagManager;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class RuntimeSessionManager
@@ -47,6 +48,31 @@ class RuntimeSessionManager
     ): RuntimeSession {
         $this->enforceConcurrentLimit($user, $connector);
 
+        $persistenceMode = BrowserPersistenceMode::from(
+            $options['browser_persistence'] ?? config('runtime.browser.default_persistence')
+        );
+
+        // Auto-resolve profile name for persistent mode
+        $profileName = $options['browser_profile_name'] ?? null;
+        if ($persistenceMode === BrowserPersistenceMode::Persistent && ($profileName === null || $profileName === '')) {
+            $profileName = app(BrowserProfileResolver::class)
+                ->resolveDefaultProfileName($user, $connector);
+        }
+
+        // CDP endpoint: from options or global config
+        $cdpEndpoint = $options['browser_cdp_endpoint'] ?? null;
+        if ($persistenceMode === BrowserPersistenceMode::Cdp && ($cdpEndpoint === null || $cdpEndpoint === '')) {
+            $cdpEndpoint = config('runtime.browser.cdp_endpoint');
+        }
+
+        // Enforce mutual exclusivity: CDP wins over profile
+        if ($persistenceMode === BrowserPersistenceMode::Cdp) {
+            $profileName = null;
+        }
+        if ($persistenceMode !== BrowserPersistenceMode::Cdp) {
+            $cdpEndpoint = null;
+        }
+
         $session = RuntimeSession::create([
             'user_id' => $user->id,
             'chat_session_id' => $options['chat_session_id'] ?? null,
@@ -54,9 +80,9 @@ class RuntimeSessionManager
             'mode' => RuntimeMode::from($options['mode'] ?? config('runtime.default_mode')),
             'title' => $options['title'] ?? null,
             'workspace_root' => $options['workspace_root'] ?? null,
-            'browser_persistence_mode' => BrowserPersistenceMode::from(
-                $options['browser_persistence'] ?? config('runtime.browser.default_persistence')
-            ),
+            'browser_persistence_mode' => $persistenceMode,
+            'browser_profile_name' => $profileName,
+            'browser_cdp_endpoint' => $cdpEndpoint,
             'started_at' => now(),
         ]);
 
@@ -217,6 +243,9 @@ class RuntimeSessionManager
     /**
      * Get existing active session for this chat or create a new one.
      *
+     * Uses an atomic lock to prevent duplicate session creation when multiple
+     * queue workers process messages for the same chat concurrently.
+     *
      * @param  array  $options  Same as createSession (title, workspace_root, mode, etc.)
      */
     public function getOrCreateSessionForChat(
@@ -225,15 +254,23 @@ class RuntimeSessionManager
         ConnectorAccount $connector,
         array $options = []
     ): RuntimeSession {
-        $existing = $this->getActiveSessionForChat($user, $chatSessionId);
+        $lockKey = "runtime_session_create:{$user->id}:{$chatSessionId}";
 
-        if ($existing !== null) {
-            return $existing;
-        }
+        /** @var RuntimeSession $session */
+        $session = Cache::lock($lockKey, 10)->block(5, function () use ($user, $chatSessionId, $connector, $options) {
+            // Re-check inside the lock to prevent TOCTOU race
+            $existing = $this->getActiveSessionForChat($user, $chatSessionId);
 
-        $options['chat_session_id'] = $chatSessionId;
+            if ($existing !== null) {
+                return $existing;
+            }
 
-        return $this->createSession($user, $options, $connector);
+            $options['chat_session_id'] = $chatSessionId;
+
+            return $this->createSession($user, $options, $connector);
+        });
+
+        return $session;
     }
 
     /**

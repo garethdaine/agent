@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Contracts\OrchestrationPolicyServiceContract;
 use App\Events\AgentJobRunFinished;
 use App\Events\DelegationGraphCompleted;
+use App\Events\DelegationGraphStalled;
 use App\Events\DelegationTaskVerified;
 use App\Events\InterrogationPhaseChanged;
 use App\Events\Org\OrgRitualEscalationTimedOut;
@@ -27,6 +28,7 @@ use App\Listeners\Messenger\SendRitualRunCompletedNotification;
 use App\Listeners\Org\RitualCouncilDeliberationListener;
 use App\Listeners\Org\RitualPhaseOutputCaptureListener;
 use App\Listeners\Org\RitualRunCompletionListener;
+use App\Listeners\StalledGraphHandler;
 use App\Models\AgentAuditLog;
 use App\Models\AgentJob;
 use App\Models\AgentJobRun;
@@ -56,9 +58,11 @@ use App\Services\Credentials\CredentialsManager;
 use App\Services\Credentials\OAuthTokenService;
 use App\Services\Runtime\Adapters\AgentApiToolAdapter;
 use App\Services\Runtime\Adapters\BrowserToolAdapter;
+use App\Services\Runtime\Adapters\CredentialToolAdapter;
 use App\Services\Runtime\Adapters\DiscoveryToolAdapter;
 use App\Services\Runtime\Adapters\FsToolAdapter;
 use App\Services\Runtime\Adapters\McpToolAdapter;
+use App\Services\Runtime\Adapters\MemoryToolAdapter;
 use App\Services\Runtime\Adapters\RuntimeToolAdapter;
 use App\Services\Runtime\Adapters\WebToolAdapter;
 use App\Services\Runtime\ToolGateway;
@@ -155,7 +159,16 @@ class AppServiceProvider extends ServiceProvider
         $gateway->register($this->app->make(BrowserToolAdapter::class));
         $gateway->register($this->app->make(DiscoveryToolAdapter::class));
         $gateway->register($this->app->make(AgentApiToolAdapter::class));
+        $gateway->register($this->app->make(CredentialToolAdapter::class));
         $gateway->register($this->app->make(McpToolAdapter::class));
+
+        // Memory tool adapter is conditionally registered — resolving its dependencies
+        // requires the memory feature flag to be enabled (CoreMemoryManager throws otherwise).
+        try {
+            $gateway->register($this->app->make(MemoryToolAdapter::class));
+        } catch (\RuntimeException) {
+            // Memory system disabled — adapter not registered, tool won't appear in LLM schemas.
+        }
 
         Route::pattern('workflowKey', WorkflowKey::routePattern());
         Route::pattern('workflow_key', WorkflowKey::routePattern());
@@ -178,6 +191,7 @@ class AppServiceProvider extends ServiceProvider
         $events->listen(DelegationTaskVerified::class, RitualPhaseOutputCaptureListener::class);
 
         // System event messenger notifications
+        $events->listen(DelegationGraphStalled::class, StalledGraphHandler::class);
         $events->listen(DelegationGraphCompleted::class, SendRitualRunCompletedNotification::class);
         $events->listen(DelegationTaskVerified::class, SendDelegationTaskFailedNotification::class);
         $events->listen(AgentJobRunFinished::class, SendAgentJobFinishedNotification::class);

@@ -32,7 +32,7 @@ class ConnectorLibraryController extends Controller
             'category' => $request->filled('category') ? $request->validated('category') : null,
             'industry' => $request->filled('industry') ? $request->validated('industry') : null,
             'status' => $request->validated('status'),
-            'team_id' => $team?->id,
+            'team_id' => $team?->id !== null ? (string) $team->id : null,
         ]);
 
         return ConnectorResource::collection($connectors);

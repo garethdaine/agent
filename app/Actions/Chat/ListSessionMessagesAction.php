@@ -14,6 +14,7 @@ class ListSessionMessagesAction
      */
     public function execute(ChatSession $session, int $limit = 30): Collection
     {
+        /** @var Collection<int, \App\Models\ChatMessage> */
         return $session->messages()
             ->orderByDesc('created_at')
             ->limit(min($limit, 200))

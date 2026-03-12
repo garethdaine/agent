@@ -80,7 +80,7 @@ class InterrogationSessionController extends Controller
         );
 
         /** @var \Illuminate\Support\Collection<int, InterrogationSession> $items */
-        $items = collect($sessions->items());
+        $items = collect(array_values($sessions->items()));
         $data = $items
             ->map(fn (InterrogationSession $session): array => $this->transformSession($session, false))
             ->values();
@@ -2284,7 +2284,6 @@ class InterrogationSessionController extends Controller
         return true;
     }
 
-    /** @phpstan-ignore method.unused */
     /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>

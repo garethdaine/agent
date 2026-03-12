@@ -8,10 +8,10 @@ use App\DTOs\Messenger\OutboundPayload;
 use App\Enums\Messenger\ApprovalMode;
 use App\Jobs\Compliance\LessonExtractionJob;
 use App\Jobs\Messenger\CompactionJob;
-use App\Jobs\Runtime\ResumeRuntimeTurnJob;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\ConnectorAccount;
+use App\Models\CredentialVault;
 use App\Models\Runtime\RuntimeSession;
 use App\Services\Messenger\CompactionService;
 use App\Services\Runtime\MessengerRuntimeOrchestrator;
@@ -108,7 +108,7 @@ class ProcessRuntimeTurnJob implements ShouldQueue
             $runnerTypeOverride = (string) $account->config['runner_type'];
         }
 
-        $systemPrompt = $account !== null ? $this->buildSystemPromptFromSoul($account) : null;
+        $systemPrompt = $account !== null ? $this->buildSystemPromptFromSoul($account, $session) : null;
         $approvalMode = $account?->getApprovalMode() ?? ApprovalMode::Autonomous;
 
         Log::info('ProcessRuntimeTurnJob: Starting turn', [
@@ -299,9 +299,16 @@ class ProcessRuntimeTurnJob implements ShouldQueue
         }
     }
 
-    private function buildSystemPromptFromSoul(ConnectorAccount $account): string
+    private function buildSystemPromptFromSoul(ConnectorAccount $account, RuntimeSession $session): string
     {
-        $soul = $account->getSoul();
+        // Resolve soul with memory core block fallbacks (graceful when memory is unavailable)
+        try {
+            $soulResolver = app(\App\Support\Memory\SoulResolver::class);
+            $soul = $soulResolver->resolve($account->getSoul(), $session->user_id);
+        } catch (\Throwable) {
+            $soul = $account->getSoul();
+        }
+
         $parts = [];
 
         $name = $soul['name'] ?? null;
@@ -326,7 +333,234 @@ class ProcessRuntimeTurnJob implements ShouldQueue
 
         $parts[] = "You have access to agent-browser for browser automation. Run it via Bash.\n\n".MessengerRuntimeOrchestrator::browserInstructions();
 
+        // Inject session-specific browser context
+        $browserContext = $this->buildBrowserSessionContext($session);
+        if ($browserContext !== null) {
+            $parts[] = $browserContext;
+        }
+
+        // Inject persistent credential vault instructions
+        $vaultSection = $this->buildVaultPromptSection($account);
+        if ($vaultSection !== null) {
+            $parts[] = $vaultSection;
+        }
+
+        // Inject memory tool awareness
+        $memorySection = $this->buildMemoryPromptSection();
+        if ($memorySection !== null) {
+            $parts[] = $memorySection;
+        }
+
         return implode("\n\n", $parts);
+    }
+
+    /**
+     * Build memory tool instructions for the system prompt.
+     *
+     * Only included when the memory feature flag is enabled, giving
+     * agents awareness of the memory tool and its operations.
+     */
+    private function buildMemoryPromptSection(): ?string
+    {
+        if (! app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
+            return null;
+        }
+
+        return "## Memory\n\n"
+            ."You have a \"memory\" tool for persistent memory access.\n"
+            .'Operations: search_memories, get_core_block, set_core_block, '
+            ."list_core_blocks, get_entities, recall_conversations.\n"
+            .'Use memory proactively to maintain context across conversations. '
+            .'Store important task state and goals in operational core blocks.';
+    }
+
+    /**
+     * Build session-specific browser context for the system prompt.
+     *
+     * Tells the agent what browser mode is active (persistent profile, CDP,
+     * or ephemeral) so it can adapt its behavior accordingly.
+     */
+    private function buildBrowserSessionContext(RuntimeSession $session): ?string
+    {
+        if ($session->hasPersistentBrowserProfile()) {
+            return implode("\n", [
+                '## Active Browser Session: Persistent Profile',
+                '',
+                "This session uses a persistent browser profile (\"{$session->browser_profile_name}\").",
+                'Cookies, localStorage, and login sessions are preserved across turns and restarts.',
+                'If you have already logged into a site in a previous turn, you should still be logged in.',
+                'The $AGENT_BROWSER_PROFILE environment variable is pre-configured — agent-browser will use it automatically.',
+                'You do NOT need to pass --profile manually.',
+                '',
+                'The browser runs in headed (visible) mode so the user can see what you are doing.',
+                '',
+                'IMPORTANT: If a site blocks you with bot detection (X/Twitter, LinkedIn, etc.), persistent profiles',
+                'still use Playwright Chromium which can be fingerprinted. Recommend the user switch to CDP mode',
+                'by running `/browser cdp <ws://...>` which connects to their real Chrome browser instead.',
+            ]);
+        }
+
+        if ($session->hasCdpConnection()) {
+            $endpoint = $session->browser_cdp_endpoint;
+            $port = $this->extractCdpPortFromEndpoint($endpoint);
+            $connectTarget = $port !== null ? (string) $port : $endpoint;
+
+            return implode("\n", [
+                '## Active Browser Session: CDP Connection (Real Chrome)',
+                '',
+                "The user's Chrome is running with remote debugging on port {$connectTarget}.",
+                'agent-browser (the browser sidecar) can connect to it via CDP to reuse existing login sessions.',
+                '',
+                'CRITICAL: You MUST use the `connect` command FIRST to attach to Chrome before any other command:',
+                "  agent-browser connect {$connectTarget}",
+                '',
+                'After connecting, Chrome\'s existing tabs become available:',
+                '  agent-browser tab list          # see Chrome\'s open tabs with their indices',
+                '  agent-browser tab 1             # switch to an existing tab (e.g. one already logged into X)',
+                '  agent-browser get url            # confirm which page you\'re on',
+                '  agent-browser snapshot -i        # interact with the page',
+                '',
+                'To open a NEW page in Chrome (shares cookies/sessions with existing tabs):',
+                '  agent-browser tab new',
+                '  agent-browser open https://x.com',
+                '',
+                'WARNING: Do NOT use `--cdp` flag (e.g. `agent-browser --cdp 9222 open x.com`).',
+                'The --cdp flag creates an ISOLATED context with NO cookies from Chrome.',
+                'Always use `connect` command instead — it attaches to Chrome\'s existing context.',
+                '',
+                'This is the recommended mode for sites with bot detection (X/Twitter, LinkedIn, etc.)',
+                'because it uses the real Chrome with genuine TLS fingerprint and existing login sessions.',
+            ]);
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract the port number from a CDP WebSocket URL.
+     *
+     * E.g. "ws://localhost:9222/devtools/browser/abc123" → 9222
+     */
+    private function extractCdpPortFromEndpoint(string $endpoint): ?int
+    {
+        if (ctype_digit($endpoint)) {
+            return (int) $endpoint;
+        }
+
+        // parse_url may not handle ws:// scheme, so try http:// substitution
+        $httpUrl = (string) preg_replace('/^wss?:/', 'http:', $endpoint);
+        $parsed = parse_url($httpUrl);
+
+        return isset($parsed['port']) ? (int) $parsed['port'] : null;
+    }
+
+    /**
+     * Build the vault section for the system prompt.
+     *
+     * Lists available credentials (metadata only, no secrets) and provides
+     * instructions for retrieving secrets at runtime via the vault API.
+     */
+    private function buildVaultPromptSection(ConnectorAccount $account): ?string
+    {
+        try {
+            $user = $account->user;
+            if ($user === null) {
+                return null;
+            }
+
+            $credentials = CredentialVault::query()
+                ->where('user_id', $user->id)
+                ->forRuntime()
+                ->get();
+
+            if ($credentials->isEmpty()) {
+                return null;
+            }
+
+            $lines = [
+                '## Persistent Credential Vault',
+                '',
+                '**VAULT-FIRST RULE: When asked to "log in" to ANY website or service, ALWAYS check this vault FIRST before attempting manual login or using browser `auth` commands.**',
+                '',
+                'Your user has a credential vault with stored credentials. These are PERSISTENT (not session-scoped) and survive across sessions.',
+                'The browser `auth save/login/list` commands are SESSION-SCOPED and separate from this vault.',
+                '',
+                '### Available Credentials:',
+            ];
+
+            $grouped = $credentials->groupBy('credential_type');
+
+            foreach ($grouped as $type => $creds) {
+                $typeLabel = match ($type) {
+                    'login' => 'Website Logins',
+                    'api_key' => 'API Keys',
+                    'ssh_key' => 'SSH Keys',
+                    'oauth_token' => 'OAuth Tokens',
+                    default => ucfirst((string) $type),
+                };
+                $lines[] = "**{$typeLabel}:**";
+
+                foreach ($creds as $cred) {
+                    $detail = "- {$cred->name} ({$cred->provider})";
+                    if ($cred->url) {
+                        $detail .= " — URL: {$cred->url}";
+                    }
+                    $modeLabel = match ($cred->approval_mode) {
+                        'autonomous' => '[auto-approved]',
+                        'supervised' => '[may need approval]',
+                        'restricted' => '[restricted]',
+                        default => '',
+                    };
+                    $detail .= " {$modeLabel}";
+                    $lines[] = $detail;
+                }
+                $lines[] = '';
+            }
+
+            $lines[] = '### Retrieving Credentials:';
+            $lines[] = 'Use curl via Bash to retrieve credential secrets from the vault API:';
+            $lines[] = '';
+            $lines[] = '```bash';
+            $lines[] = '# List all available credentials (metadata only)';
+            $lines[] = 'curl -s -X POST "$VAULT_API_BASE/list_credentials" -H "Authorization: Bearer $VAULT_TOKEN" -H "Content-Type: application/json"';
+            $lines[] = '';
+            $lines[] = '# Get login credentials for a URL (for browser automation)';
+            $lines[] = 'curl -s -X POST "$VAULT_API_BASE/get_login_for_url" -H "Authorization: Bearer $VAULT_TOKEN" -H "Content-Type: application/json" -d \'{"url":"https://example.com"}\'';
+            $lines[] = '';
+            $lines[] = '# Get API key by provider name';
+            $lines[] = 'curl -s -X POST "$VAULT_API_BASE/get_api_key" -H "Authorization: Bearer $VAULT_TOKEN" -H "Content-Type: application/json" -d \'{"provider":"stripe"}\'';
+            $lines[] = '';
+            $lines[] = '# Get any credential by provider/type';
+            $lines[] = 'curl -s -X POST "$VAULT_API_BASE/get_credential" -H "Authorization: Bearer $VAULT_TOKEN" -H "Content-Type: application/json" -d \'{"provider":"aws","type":"ssh_key"}\'';
+            $lines[] = '```';
+            $lines[] = '';
+            $lines[] = 'The $VAULT_API_BASE and $VAULT_TOKEN environment variables are pre-configured.';
+            $lines[] = '### Login Workflow (step-by-step):';
+            $lines[] = '1. **Check vault**: Call `get_login_for_url` with the target site URL';
+            $lines[] = '2. **If found**: Retrieve the username + password from the vault response';
+            $lines[] = '3. **Open the site**: Use `browser open <login_url>`';
+            $lines[] = '4. **Fill the form**: Use `browser snapshot -i` to find form fields, then `browser fill @ref <value>` for each field';
+            $lines[] = '5. **Submit**: Click the login/submit button';
+            $lines[] = '6. **Verify**: Take a screenshot or snapshot to confirm login succeeded';
+            $lines[] = '';
+            $lines[] = 'Alternatively, use `browser auth save <name> --url <url> --username <user> --password <pass>` then `browser auth login <name>` to auto-fill credentials.';
+            $lines[] = '';
+            $lines[] = 'If no vault credentials match, tell the user: "I don\'t have stored credentials for this site. Would you like to add them to the vault?"';
+            $lines[] = '';
+            $lines[] = '### CRITICAL SECURITY RULE:';
+            $lines[] = '**NEVER include credential values (passwords, API keys, tokens, secrets, or usernames) in your responses to the user.**';
+            $lines[] = 'Credentials are for PROGRAMMATIC USE ONLY — pass them directly to tools (browser auth, curl, etc.).';
+            $lines[] = 'If the user asks for a credential value, respond: "For security, I cannot display credentials in chat. I can use them programmatically for you."';
+            $lines[] = 'NEVER echo, quote, display, or reference the actual value of any secret in any message.';
+
+            return implode("\n", $lines);
+        } catch (\Throwable $e) {
+            Log::warning('ProcessRuntimeTurnJob: Failed to build vault prompt section', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     /**

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Services\Runtime;
 
 use App\Enums\Messenger\ApprovalMode;
+use App\Enums\Runtime\BrowserPersistenceMode;
 use App\Enums\Runtime\RuntimeMode;
 use App\Enums\Security\InjectionAction;
 use App\Models\Runtime\RuntimeSession;
 use App\Services\Credentials\CredentialsManager;
+use App\Services\Credentials\VaultRuntimeTokenService;
 use App\Services\Security\InjectionDetectionEngine;
 use App\Services\Security\SecurityEventLogger;
 use App\Support\Agent\EngineeringRulesInjector;
@@ -111,9 +113,13 @@ class CliRuntimeExecutor
                 array_filter($parentEnv, static fn ($_, string $k): bool => ! str_starts_with($k, 'ANTHROPIC_'), ARRAY_FILTER_USE_BOTH),
                 ['ANTHROPIC_API_KEY' => $apiKey]
             );
-            if (config('runtime.browser.headed', false)) {
-                $env['AGENT_BROWSER_HEADED'] = '1';
-            }
+            // Inject browser profile, CDP, and headed env vars so the CLI agent
+            // passes the correct flags when invoking agent-browser.
+            $this->injectBrowserEnv($env, $session);
+
+            // Inject vault runtime access token so the CLI agent can retrieve
+            // persistent credentials via the vault API endpoint.
+            $this->injectVaultEnv($env, $session);
 
             // Suppress session-nesting marker env vars so the child CLI does
             // not refuse to start. Setting the value to false makes Symfony
@@ -355,5 +361,160 @@ class CliRuntimeExecutor
         }
 
         return $decoded;
+    }
+
+    /**
+     * Inject browser profile, CDP, and headed environment variables.
+     *
+     * The CLI sub-agent invokes agent-browser via Bash; these env vars
+     * ensure the correct --profile, --cdp, --headed, or --auto-connect
+     * flags are picked up by agent-browser natively.
+     *
+     * @param  array<string, mixed>  $env
+     */
+    private function injectBrowserEnv(array &$env, RuntimeSession $session): void
+    {
+        try {
+            $persistenceMode = $session->browser_persistence_mode;
+
+            Log::channel('runtime')->info('CliRuntimeExecutor: Browser env injection', [
+                'session_id' => $session->id,
+                'persistence_mode' => $persistenceMode?->value,
+                'profile_name' => $session->browser_profile_name,
+                'cdp_endpoint' => $session->browser_cdp_endpoint,
+                'has_persistent_profile' => $session->hasPersistentBrowserProfile(),
+                'has_cdp' => $session->hasCdpConnection(),
+            ]);
+
+            // Persistent profile: inject profile path
+            if ($persistenceMode === BrowserPersistenceMode::Persistent
+                && $session->browser_profile_name !== null
+                && $session->browser_profile_name !== '') {
+                $user = $session->user;
+                if ($user !== null) {
+                    $resolver = app(BrowserProfileResolver::class);
+                    $profilePath = $resolver->resolveProfilePath($user, $session->browser_profile_name);
+                    $resolver->ensureProfileDirectory($profilePath);
+                    $env['AGENT_BROWSER_PROFILE'] = $profilePath;
+                }
+            }
+
+            // CDP endpoint: agent-browser has no AGENT_BROWSER_CDP env var.
+            // The --cdp flag creates an ISOLATED context (no cookies from Chrome).
+            // Instead, enable auto-connect so agent-browser discovers Chrome's debugging port,
+            // and the system prompt instructs the agent to use `connect <port>` command
+            // which attaches to Chrome's existing context with active login sessions.
+            if ($persistenceMode === BrowserPersistenceMode::Cdp
+                && $session->browser_cdp_endpoint !== null
+                && $session->browser_cdp_endpoint !== '') {
+                $env['AGENT_BROWSER_AUTO_CONNECT'] = '1';
+            }
+
+            // Auto-connect: discover running Chrome instance (global config)
+            if (config('runtime.browser.auto_connect', false)) {
+                $env['AGENT_BROWSER_AUTO_CONNECT'] = '1';
+            }
+
+            // Headed mode: persistent auto-headed or global config
+            $headed = false;
+            if ($persistenceMode === BrowserPersistenceMode::Persistent
+                && $session->browser_profile_name !== null
+                && config('runtime.browser.auto_headed_for_persistent', true)) {
+                $headed = true;
+            }
+            if (config('runtime.browser.headed', false)) {
+                $headed = true;
+            }
+            if ($headed) {
+                $env['AGENT_BROWSER_HEADED'] = '1';
+            }
+
+            // Custom executable path (e.g. separate Chromium install to avoid macOS singleton conflict)
+            $executablePath = config('runtime.browser.executable_path');
+            if ($executablePath !== null && $executablePath !== '') {
+                $env['AGENT_BROWSER_EXECUTABLE_PATH'] = $executablePath;
+            }
+
+            // Custom browser launch args (comma-separated Chromium flags)
+            // When headed mode is active, inject flags to help Chromium coexist with Chrome on macOS
+            $args = config('runtime.browser.args');
+            if ($args !== null && $args !== '') {
+                $env['AGENT_BROWSER_ARGS'] = $args;
+            } elseif ($headed) {
+                // Default coexistence flags for headed mode:
+                // --no-first-run: skip first-run dialog
+                // --no-default-browser-check: skip default browser prompt
+                // --disable-background-networking: reduce background activity
+                $env['AGENT_BROWSER_ARGS'] = '--no-first-run,--no-default-browser-check,--disable-background-networking';
+            }
+        } catch (\Throwable $e) {
+            Log::channel('runtime')->warning('CliRuntimeExecutor: Failed to inject browser env', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Extract the port number from a CDP WebSocket URL.
+     *
+     * E.g. "ws://localhost:9222/devtools/browser/abc123" → 9222
+     *      "ws://127.0.0.1:9222" → 9222
+     *      "9222" → 9222
+     */
+    private function extractCdpPort(string $endpoint): ?int
+    {
+        // Already a plain port number
+        if (ctype_digit($endpoint)) {
+            return (int) $endpoint;
+        }
+
+        // Parse ws:// or wss:// URL
+        $parsed = parse_url($endpoint);
+        if ($parsed !== false && isset($parsed['port'])) {
+            return (int) $parsed['port'];
+        }
+
+        // Try http:// prefix for parse_url (ws:// may not parse correctly in all PHP versions)
+        $httpUrl = preg_replace('/^wss?:/', 'http:', $endpoint);
+        if ($httpUrl !== null) {
+            $parsed = parse_url($httpUrl);
+            if ($parsed !== false && isset($parsed['port'])) {
+                return (int) $parsed['port'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Inject vault runtime environment variables so the CLI agent can retrieve
+     * persistent credentials via curl.
+     *
+     * @param  array<string, mixed>  $env
+     */
+    private function injectVaultEnv(array &$env, RuntimeSession $session): void
+    {
+        try {
+            $user = $session->user;
+            if ($user === null) {
+                return;
+            }
+
+            $appUrl = rtrim((string) config('app.url', 'http://localhost'), '/');
+            $vaultBase = $appUrl.'/agent/api/v1/runtime/vault';
+
+            $tokenService = app(VaultRuntimeTokenService::class);
+            $ttl = (int) config('runtime.cli.timeout_seconds', 1800);
+            $token = $tokenService->generate($user, (string) $session->id, $ttl);
+
+            $env['VAULT_API_BASE'] = $vaultBase;
+            $env['VAULT_TOKEN'] = $token;
+        } catch (\Throwable $e) {
+            Log::channel('runtime')->warning('CliRuntimeExecutor: Failed to inject vault env', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

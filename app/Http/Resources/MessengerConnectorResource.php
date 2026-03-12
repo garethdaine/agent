@@ -44,7 +44,7 @@ class MessengerConnectorResource extends JsonResource
             'sessions_count' => $this->whenCounted('sessions'),
             'is_connected' => $this->isConnected(),
             'is_local_mode' => $this->isLocalMode(),
-            'runtime_state' => $this->runtime_state?->value ?? 'disconnected',
+            'runtime_state' => $this->runtime_state?->value, // @phpstan-ignore nullsafe.neverNull
             'runtime_error_message' => $this->runtime_error_message,
             'last_health_check_at' => $this->last_health_check_at?->toIso8601String(),
         ];

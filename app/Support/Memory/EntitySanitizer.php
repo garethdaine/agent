@@ -88,7 +88,7 @@ class EntitySanitizer
             }
 
             // Deduplicate by type+name (keep first occurrence)
-            $dedupeKey = $type . '::' . $name;
+            $dedupeKey = $type.'::'.$name;
             if (isset($seen[$dedupeKey])) {
                 continue;
             }

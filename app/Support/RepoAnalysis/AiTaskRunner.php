@@ -39,7 +39,7 @@ class AiTaskRunner
 
         $bridgeSession = $this->bridgeSession($session);
         $adapter = $this->adapterFactory->make($runnerType);
-        $systemPrompt = $this->systemPrompt($task);
+        $systemPrompt = $this->systemPrompt($session, $task);
         $taskPrompt = $this->taskPrompt($session, $task, $snapshot);
         $command = $adapter->buildSummaryCommand($bridgeSession, $taskPrompt, $systemPrompt);
         $environment = $adapter->buildEnvironment($bridgeSession);
@@ -244,15 +244,20 @@ class AiTaskRunner
             ."\n```";
     }
 
-    private function systemPrompt(RepoAnalysisTask $task): string
+    private function systemPrompt(RepoAnalysisSession $session, RepoAnalysisTask $task): string
     {
         $sectionTitle = (string) data_get($task->metadata_json, 'section_title', $task->analyzer_name);
 
-        return 'You are a staff-level repository analyst. '
+        $prompt = 'You are a staff-level repository analyst. '
             .'Analyze the codebase step-by-step and produce factual, human-readable documentation. '
             .'Focus section: '.$sectionTitle.'. '
             .'Use only evidence from the repository context and direct file inspection. '
             .'When uncertain, state assumptions explicitly.';
+
+        // Memory context injection (non-blocking)
+        $injector = app(\App\Support\Memory\MemoryContextInjector::class);
+
+        return $injector->inject($prompt, (int) $session->user_id, $task->analyzer_name, maxChars: 1000);
     }
 
     /**

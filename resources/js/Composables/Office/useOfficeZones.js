@@ -23,7 +23,8 @@ function updateDeskLamp(workstation, status) {
     workstation.traverse((child) => {
         if (child.isMesh && child.material?.emissive) {
             const geom = child.geometry?.parameters;
-            if (geom && geom.width < 0.5 && geom.height < 0.4 && geom.depth < 0.02) {
+            if (geom && geom.width < 0.5 && geom.height < 0.4 && geom.depth < 0.02
+                && !(geom.depth < 0.01 && geom.width > 0.3)) {
                 child.material.emissive.copy(color);
                 child.material.emissiveIntensity = status === 'running' ? 0.5 : 0.2;
             }
@@ -48,23 +49,51 @@ function getOrCreateMonitorCanvas(workstationIndex) {
     return { canvas, ctx, texture };
 }
 
-function animateCodeCanvas(ctx, canvas) {
-    const imgData = ctx.getImageData(0, 1, canvas.width, canvas.height - 1);
+function animateCodeCanvas(ctx, canvas, activity) {
+    // Scroll existing content up; faster for debugging/testing
+    const scrollSpeed = (activity === 'debugging' || activity === 'testing') ? 3 : 2;
+    const imgData = ctx.getImageData(0, scrollSpeed, canvas.width, canvas.height - scrollSpeed);
     ctx.putImageData(imgData, 0, 0);
 
-    ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(0, canvas.height - 1, canvas.width, 1);
+    // Clear new rows with dark background
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, canvas.height - scrollSpeed, canvas.width, scrollSpeed);
 
-    if (Math.random() < 0.7) {
-        const indent = Math.floor(Math.random() * 5) * 8;
-        const lineLen = 10 + Math.floor(Math.random() * 60);
-        const hue = Math.random() < 0.3 ? '#66dd88' : Math.random() < 0.5 ? '#88aaff' : '#aaddaa';
-        ctx.fillStyle = hue;
-        ctx.fillRect(indent, canvas.height - 1, lineLen, 1);
+    // Activity-specific colour palettes
+    const palettes = {
+        reviewing: ['#88aaff', '#66ccff', '#aaccff', '#ff8866'],
+        analyzing: ['#88aaff', '#66ccff', '#aaccff', '#ffcc44'],
+        compiling_report: ['#ffaa44', '#ffcc66', '#ffffff', '#88ccff'],
+        debugging: ['#ff6666', '#ff8844', '#ffcc44', '#88ff88'],
+        testing: ['#66dd88', '#44cc66', '#ffcc44', '#ff6666'],
+        default: ['#66dd88', '#88aaff', '#aaddaa', '#dd8844'],
+    };
+    const palette = palettes[activity] || palettes.default;
 
-        if (Math.random() < 0.3) {
-            ctx.fillStyle = '#dd8844';
-            ctx.fillRect(indent + lineLen + 4, canvas.height - 1, 15 + Math.floor(Math.random() * 20), 1);
+    // Generate 2-3 code lines per frame (thicker for visibility at 3D scale)
+    const lineCount = 1 + Math.floor(Math.random() * 2);
+    for (let line = 0; line < lineCount; line++) {
+        const y = canvas.height - scrollSpeed + line;
+        if (y >= canvas.height) break;
+
+        if (Math.random() < 0.8) {
+            const indent = Math.floor(Math.random() * 4) * 10;
+            const lineLen = 15 + Math.floor(Math.random() * 55);
+            ctx.fillStyle = palette[Math.floor(Math.random() * palette.length)];
+            // Draw 2px tall lines for better visibility
+            ctx.fillRect(indent, y, lineLen, 2);
+
+            // Secondary token
+            if (Math.random() < 0.5) {
+                ctx.fillStyle = palette[Math.floor(Math.random() * palette.length)];
+                ctx.fillRect(indent + lineLen + 5, y, 12 + Math.floor(Math.random() * 30), 2);
+            }
+
+            // Occasional cursor blink
+            if (Math.random() < 0.2) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(indent + lineLen + 2, y, 3, 2);
+            }
         }
     }
 }
@@ -79,13 +108,17 @@ function updateMonitorScreen(workstation, activity, _time) {
                 const screenActiveActivities = [
                     'writing_code', 'analyzing', 'reviewing', 'compiling_report',
                     'testing', 'refactoring', 'debugging', 'planning',
-                    'working', 'executing_job',
+                    'working', 'executing_job', 'running', 'finishing',
+                    'reading', 'chatting',
                 ];
                 if (screenActiveActivities.includes(activity) && wsIndex !== undefined) {
                     const mc = getOrCreateMonitorCanvas(wsIndex);
-                    animateCodeCanvas(mc.ctx, mc.canvas);
+                    animateCodeCanvas(mc.ctx, mc.canvas, activity);
                     mc.texture.needsUpdate = true;
                     child.material.map = mc.texture;
+                    // Set base color to white so texture colors render unmodified
+                    // (PBR multiplies map × color, so dark base color makes texture invisible)
+                    child.material.color.setHex(0xffffff);
                     const screenColor = activity === 'reviewing' || activity === 'analyzing'
                         ? new Color(0x0088ff)
                         : activity === 'compiling_report'
@@ -94,9 +127,11 @@ function updateMonitorScreen(workstation, activity, _time) {
                                 ? new Color(0xff4444)
                                 : new Color(0x00ff44);
                     child.material.emissive.copy(screenColor);
-                    child.material.emissiveIntensity = 0.3;
+                    child.material.emissiveIntensity = 0.15;
                 } else {
                     child.material.map = null;
+                    // Restore dark base color when no texture
+                    child.material.color.setHex(0x001a0a);
                     const color = activity === 'waiting'
                         ? new Color(0xffaa00)
                         : new Color(0x003322);

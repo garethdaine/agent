@@ -10,7 +10,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class ListInterrogationSessionsAction
 {
     /**
-     * @return LengthAwarePaginator<InterrogationSession>
+     * @return LengthAwarePaginator<int, InterrogationSession>
      */
     public function execute(
         int $userId,
@@ -51,7 +51,7 @@ class ListInterrogationSessionsAction
 
         $perPage = min(100, max(1, $perPage));
 
-        /** @var LengthAwarePaginator<InterrogationSession> */
+        /** @var LengthAwarePaginator<int, InterrogationSession> */
         return $query->latest()->paginate($perPage)->withQueryString();
     }
 }

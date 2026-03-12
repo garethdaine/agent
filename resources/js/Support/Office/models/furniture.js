@@ -328,6 +328,327 @@ export function createIdeaBoard() {
     return g;
 }
 
+// ─── Wall Decorations ───────────────────────────────────────────
+
+export function createWallPicture(options = {}) {
+    const { width = 0.5, height = 0.4, frameColor = 0x5c3d1a, canvasColor } = options;
+    const g = new Group();
+    g.userData = { type: 'wallPicture' };
+    // Frame
+    addBox(g, width + 0.06, height + 0.06, 0.03, mat(frameColor), 0, 0, 0);
+    // Canvas — deterministic color from options or warm random
+    const colors = [0x2e5984, 0x6b3a2a, 0x2a5a3a, 0x5a3a5e, 0x8a6530, 0x3a4a6a];
+    const cc = canvasColor ?? colors[Math.floor(options.seed ?? 0) % colors.length];
+    addBox(g, width, height, 0.005, mat(cc), 0, 0, -0.018);
+    // Highlight strip (abstract art feel)
+    const stripColor = [0xddaa44, 0xcc6644, 0x44aacc, 0x88bb66][(options.seed ?? 0) % 4];
+    addBox(g, width * 0.6, height * 0.08, 0.002, mat(stripColor), 0, height * 0.1, -0.02);
+    return g;
+}
+
+export function createWallPoster(options = {}) {
+    const { width = 0.4, height = 0.6, accentColor } = options;
+    const g = new Group();
+    g.userData = { type: 'wallPoster' };
+    const accents = [0x3b82f6, 0xef4444, 0x10b981, 0xf59e0b, 0x8b5cf6];
+    const ac = accentColor ?? accents[(options.seed ?? 0) % accents.length];
+    // White border
+    addBox(g, width + 0.04, height + 0.04, 0.005, mat(0xeeeeee), 0, 0, 0);
+    // Poster face
+    addBox(g, width, height, 0.003, mat(ac), 0, 0, -0.004);
+    // Text line placeholders
+    addBox(g, width * 0.5, 0.02, 0.001, mat(0xffffff), 0, -height * 0.3, -0.006);
+    addBox(g, width * 0.3, 0.015, 0.001, mat(0xffffff), 0, -height * 0.35, -0.006);
+    return g;
+}
+
+export function createWallTV(options = {}) {
+    const { width = 0.7, height = 0.45 } = options;
+    const g = new Group();
+    g.userData = { type: 'wallTV' };
+    // Casing
+    addBox(g, width + 0.04, height + 0.04, 0.04, mat(0x1a1a1a), 0, 0, 0);
+    // Screen
+    addBox(g, width, height, 0.005,
+        mat(0x001122, { emissive: 0x002244, emissiveIntensity: 0.15 }),
+        0, 0, -0.023);
+    // Stand arm (wall mount bracket)
+    addBox(g, 0.08, 0.08, 0.06, mat(0x333333), 0, 0, 0.04);
+    return g;
+}
+
+export function createWallClock() {
+    const g = new Group();
+    g.userData = { type: 'wallClock' };
+    // Body
+    addCylinder(g, 0.13, 0.13, 0.03, mat(0x333333, { metalness: 0.5 }), 0, 0, 0);
+    // Face
+    addCylinder(g, 0.11, 0.11, 0.005, mat(0xf5f5f0), 0, 0, -0.016);
+    // Center dot
+    addSphere(g, 0.01, mat(0x222222), 0, 0, -0.02);
+    // Hour hand (simplified)
+    addBox(g, 0.01, 0.06, 0.003, mat(0x222222), 0, 0.03, -0.022);
+    // Minute hand
+    addBox(g, 0.008, 0.08, 0.003, mat(0x222222), 0.02, 0.02, -0.022);
+    return g;
+}
+
+// ─── Desk Items ─────────────────────────────────────────────────
+
+export function createCoffeeCup(options = {}) {
+    const { color = 0xeeeeee } = options;
+    const g = new Group();
+    g.userData = { type: 'coffeeCup' };
+    addCylinder(g, 0.03, 0.025, 0.08, mat(color), 0, 0.04, 0);
+    // Coffee inside
+    addCylinder(g, 0.026, 0.026, 0.01, mat(0x3b1a05), 0, 0.075, 0);
+    // Handle — small torus approximation via box
+    addBox(g, 0.015, 0.04, 0.02, mat(color), 0.035, 0.04, 0);
+    return g;
+}
+
+export function createPaperStack() {
+    const g = new Group();
+    g.userData = { type: 'paperStack' };
+    for (let i = 0; i < 4; i++) {
+        const slight = (i % 2 === 0) ? 0.003 : -0.003;
+        addBox(g, 0.12, 0.005, 0.15, mat(0xf5f5f0), slight, 0.003 + i * 0.005, 0);
+    }
+    return g;
+}
+
+export function createKeyboardAndMouse() {
+    const g = new Group();
+    g.userData = { type: 'keyboardMouse' };
+    // Keyboard
+    addBox(g, 0.28, 0.01, 0.1, mat(0x2a2a2a), 0, 0.005, 0);
+    // Keys texture approximation — lighter strip
+    addBox(g, 0.24, 0.003, 0.08, mat(0x3a3a3a), 0, 0.012, 0);
+    // Mouse
+    addBox(g, 0.04, 0.02, 0.06, mat(0x2a2a2a), 0.2, 0.01, 0);
+    return g;
+}
+
+// ─── Floor-Standing Items ───────────────────────────────────────
+
+export function createWaterCooler() {
+    const g = new Group();
+    g.userData = { type: 'waterCooler' };
+    // Cabinet
+    addBox(g, 0.3, 0.8, 0.3, mat(0xdddddd), 0, 0.4, 0);
+    // Bottle (translucent blue)
+    addCylinder(g, 0.1, 0.1, 0.35, new MeshPhysicalMaterial({
+        color: 0x88ccff, transparent: true, opacity: 0.35, roughness: 0.1,
+    }), 0, 0.98, 0);
+    addCylinder(g, 0.04, 0.1, 0.05, mat(0xcccccc), 0, 0.78, 0);
+    // Tap
+    addBox(g, 0.03, 0.05, 0.04, mat(0x888888, { metalness: 0.6 }), 0.12, 0.6, -0.12);
+    return g;
+}
+
+export function createPhotocopier() {
+    const g = new Group();
+    g.userData = { type: 'photocopier' };
+    // Body
+    addBox(g, 0.6, 0.7, 0.55, mat(0xcccccc), 0, 0.35, 0);
+    // Top scanner bed
+    addBox(g, 0.55, 0.04, 0.5, mat(0x888888), 0, 0.72, 0);
+    // Paper tray
+    addBox(g, 0.3, 0.03, 0.35, mat(0xbbbbbb), 0, 0.15, -0.32);
+    // Output tray
+    addBox(g, 0.3, 0.02, 0.15, mat(0xbbbbbb), 0, 0.55, -0.35);
+    // Small screen
+    addBox(g, 0.12, 0.08, 0.01, mat(0x113322, { emissive: 0x224433, emissiveIntensity: 0.2 }),
+        -0.18, 0.76, -0.2);
+    // Paper sheets in tray
+    addBox(g, 0.25, 0.015, 0.3, mat(0xf5f5f0), 0, 0.165, -0.32);
+    return g;
+}
+
+export function createPrinter() {
+    const g = new Group();
+    g.userData = { type: 'printer' };
+    // Body
+    addBox(g, 0.45, 0.25, 0.4, mat(0x444444), 0, 0.125, 0);
+    // Top lid
+    addBox(g, 0.44, 0.02, 0.38, mat(0x555555), 0, 0.26, 0);
+    // Output tray
+    addBox(g, 0.25, 0.01, 0.12, mat(0x555555), 0, 0.18, -0.26);
+    // Status LED
+    addSphere(g, 0.01, mat(0x00ff00, { emissive: 0x00ff00, emissiveIntensity: 0.5 }),
+        0.18, 0.22, -0.19);
+    return g;
+}
+
+export function createFloorPlant(options = {}) {
+    const { height = 1.0, leafColor = 0x2d7a2d } = options;
+    const g = new Group();
+    g.userData = { type: 'floorPlant' };
+    // Pot
+    addCylinder(g, 0.12, 0.1, 0.2, mat(0xb35c2a), 0, 0.1, 0);
+    // Soil
+    addCylinder(g, 0.11, 0.11, 0.03, mat(0x3a2510), 0, 0.21, 0);
+    // Stem
+    addCylinder(g, 0.015, 0.02, height * 0.5, mat(0x3a5a2a), 0, 0.22 + height * 0.25, 0);
+    // Leaf clusters
+    const leafH = 0.22 + height * 0.5;
+    const lm = mat(leafColor);
+    addSphere(g, height * 0.18, lm, 0, leafH + height * 0.1, 0);
+    addSphere(g, height * 0.14, lm, 0.08, leafH, 0.06);
+    addSphere(g, height * 0.14, lm, -0.07, leafH, -0.05);
+    addSphere(g, height * 0.12, lm, 0.04, leafH + height * 0.18, -0.04);
+    return g;
+}
+
+export function createTrashBin() {
+    const g = new Group();
+    g.userData = { type: 'trashBin' };
+    addCylinder(g, 0.13, 0.11, 0.45, mat(0x555555, { metalness: 0.4 }), 0, 0.225, 0);
+    // Rim
+    addCylinder(g, 0.135, 0.135, 0.02, mat(0x666666, { metalness: 0.5 }), 0, 0.46, 0);
+    return g;
+}
+
+// ─── Door ───────────────────────────────────────────────────────
+
+export function createOfficeDoor(options = {}) {
+    const { width = 1.0, height = 2.4, open = true } = options;
+    const g = new Group();
+    g.userData = { type: 'officeDoor' };
+    // Frame (three sides)
+    const frameMat = mat(0x444455, { metalness: 0.3 });
+    addBox(g, 0.08, height, 0.12, frameMat, -width / 2 - 0.04, height / 2, 0);
+    addBox(g, 0.08, height, 0.12, frameMat, width / 2 + 0.04, height / 2, 0);
+    addBox(g, width + 0.16, 0.08, 0.12, frameMat, 0, height + 0.04, 0);
+    // Door panel
+    const doorPanel = new Group();
+    const panelMat = mat(0x6b4226);
+    const panel = new Mesh(new BoxGeometry(width, height, 0.06), panelMat);
+    panel.position.set(width / 2, height / 2, 0);
+    panel.castShadow = true;
+    doorPanel.add(panel);
+    // Handle
+    const handleMat = mat(0xccccaa, { metalness: 0.7 });
+    const handle = new Mesh(new BoxGeometry(0.03, 0.12, 0.06), handleMat);
+    handle.position.set(width * 0.85, height * 0.45, -0.05);
+    doorPanel.add(handle);
+    // Pivot at left edge of door
+    doorPanel.position.set(-width / 2, 0, 0);
+    if (open) doorPanel.rotation.y = -Math.PI * 0.45; // ~80° open
+    g.add(doorPanel);
+    return g;
+}
+
+// ─── Outdoor Items ──────────────────────────────────────────────
+
+export function createCar(options = {}) {
+    const { color = 0x3366aa } = options;
+    const g = new Group();
+    g.userData = { type: 'car' };
+    const bodyMat = mat(color, { metalness: 0.6, roughness: 0.35 });
+    // Body lower
+    addBox(g, 2.0, 0.55, 4.2, bodyMat, 0, 0.45, 0);
+    // Cabin upper
+    addBox(g, 1.7, 0.5, 2.2, bodyMat, 0, 0.95, -0.3);
+    // Windshield
+    const glassMaterial = new MeshPhysicalMaterial({
+        color: 0x88ccff, transparent: true, opacity: 0.3, roughness: 0.1,
+    });
+    addBox(g, 1.6, 0.45, 0.02, glassMaterial, 0, 0.95, 0.78);
+    // Rear window
+    addBox(g, 1.6, 0.4, 0.02, glassMaterial, 0, 0.95, -1.38);
+    // Wheels
+    const wheelMat = mat(0x222222);
+    const wheelPositions = [
+        [-0.9, 0.2, 1.3], [0.9, 0.2, 1.3],
+        [-0.9, 0.2, -1.3], [0.9, 0.2, -1.3],
+    ];
+    wheelPositions.forEach(([x, y, z]) => {
+        addCylinder(g, 0.2, 0.2, 0.15, wheelMat, x, y, z);
+    });
+    // Headlights
+    addSphere(g, 0.06, mat(0xffffcc, { emissive: 0xffffaa, emissiveIntensity: 0.1 }),
+        -0.7, 0.45, 2.1);
+    addSphere(g, 0.06, mat(0xffffcc, { emissive: 0xffffaa, emissiveIntensity: 0.1 }),
+        0.7, 0.45, 2.1);
+    // Tail lights
+    addSphere(g, 0.05, mat(0xff2200, { emissive: 0xff0000, emissiveIntensity: 0.1 }),
+        -0.7, 0.45, -2.1);
+    addSphere(g, 0.05, mat(0xff2200, { emissive: 0xff0000, emissiveIntensity: 0.1 }),
+        0.7, 0.45, -2.1);
+    return g;
+}
+
+export function createFlowerBed(options = {}) {
+    const { width = 1.5, depth = 0.6, flowerColor } = options;
+    const g = new Group();
+    g.userData = { type: 'flowerBed' };
+    // Soil bed
+    addBox(g, width, 0.2, depth, mat(0x3a2510), 0, 0.1, 0);
+    // Border
+    addBox(g, width + 0.08, 0.25, 0.04, mat(0x654321), 0, 0.125, -depth / 2 - 0.02);
+    addBox(g, width + 0.08, 0.25, 0.04, mat(0x654321), 0, 0.125, depth / 2 + 0.02);
+    addBox(g, 0.04, 0.25, depth + 0.08, mat(0x654321), -width / 2 - 0.02, 0.125, 0);
+    addBox(g, 0.04, 0.25, depth + 0.08, mat(0x654321), width / 2 + 0.02, 0.125, 0);
+    // Flowers
+    const flowerColors = [0xff6699, 0xff4444, 0xffcc33, 0xff88cc, 0xaa44ff, 0xff9933];
+    const fc = flowerColor ?? flowerColors[(options.seed ?? 0) % flowerColors.length];
+    const greenMat = mat(0x2d7a2d);
+    for (let i = 0; i < 7; i++) {
+        const fx = -width / 2 + 0.15 + (i / 7) * (width - 0.3);
+        const fz = (i % 2 === 0) ? 0.08 : -0.08;
+        // Stem
+        addCylinder(g, 0.008, 0.008, 0.15, greenMat, fx, 0.28, fz);
+        // Flower head
+        const fCol = flowerColors[(i + (options.seed ?? 0)) % flowerColors.length];
+        addSphere(g, 0.04, mat(fCol), fx, 0.38, fz);
+    }
+    return g;
+}
+
+export function createOutdoorBench() {
+    const g = new Group();
+    g.userData = { type: 'outdoorBench' };
+    const woodMat = mat(0x8b6b3d);
+    const metalLeg = mat(0x444444, { metalness: 0.6 });
+    // Seat slats
+    addBox(g, 1.2, 0.04, 0.15, woodMat, 0, 0.42, 0.08);
+    addBox(g, 1.2, 0.04, 0.15, woodMat, 0, 0.42, -0.08);
+    // Back slats
+    addBox(g, 1.2, 0.04, 0.12, woodMat, 0, 0.62, -0.2);
+    addBox(g, 1.2, 0.04, 0.12, woodMat, 0, 0.82, -0.2);
+    // Legs
+    addBox(g, 0.05, 0.42, 0.35, metalLeg, -0.5, 0.21, -0.05);
+    addBox(g, 0.05, 0.42, 0.35, metalLeg, 0.5, 0.21, -0.05);
+    // Back supports
+    addBox(g, 0.05, 0.5, 0.05, metalLeg, -0.5, 0.67, -0.2);
+    addBox(g, 0.05, 0.5, 0.05, metalLeg, 0.5, 0.67, -0.2);
+    return g;
+}
+
+export function createLampPost() {
+    const g = new Group();
+    g.userData = { type: 'lampPost' };
+    // Pole
+    addCylinder(g, 0.04, 0.06, 3.0, mat(0x555555, { metalness: 0.5 }), 0, 1.5, 0);
+    // Arm
+    addBox(g, 0.5, 0.03, 0.03, mat(0x555555, { metalness: 0.5 }), 0.25, 2.95, 0);
+    // Light
+    addSphere(g, 0.12, mat(0xffeeaa, { emissive: 0xffdd88, emissiveIntensity: 0.6 }),
+        0.5, 2.85, 0);
+    return g;
+}
+
+export function createParkingBollard() {
+    const g = new Group();
+    g.userData = { type: 'bollard' };
+    addCylinder(g, 0.06, 0.06, 0.6, mat(0x555555, { metalness: 0.5 }), 0, 0.3, 0);
+    // Reflective band
+    addCylinder(g, 0.065, 0.065, 0.06, mat(0xffcc00, { emissive: 0xffaa00, emissiveIntensity: 0.2 }),
+        0, 0.5, 0);
+    return g;
+}
+
 export function createScreenWall(options = {}) {
     const { screens = 4, width = 4 } = options;
     const g = new Group();

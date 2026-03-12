@@ -17,7 +17,7 @@ import TableCell from '@/Components/ui/TableCell.vue';
 import Badge from '@/Components/ui/Badge.vue';
 import Button from '@/Components/ui/Button.vue';
 import Skeleton from '@/Components/ui/Skeleton.vue';
-import { ArrowLeft, Play, Pause, RefreshCw, Bot } from 'lucide-vue-next';
+import { ArrowLeft, Play, Pause, Pencil, RefreshCw, Bot } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
@@ -143,6 +143,12 @@ onMounted(loadRitual);
                             </div>
 
                             <div class="flex flex-wrap gap-2">
+                                <Link :href="route('org.rituals.edit', ritualId)">
+                                    <Button variant="outline">
+                                        <Pencil class="mr-2 h-4 w-4" />
+                                        Edit
+                                    </Button>
+                                </Link>
                                 <Button @click="runNow">
                                     <Play class="mr-2 h-4 w-4" />
                                     Run Now

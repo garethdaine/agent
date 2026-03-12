@@ -63,7 +63,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onClickOutside
 <template>
     <div
         :class="[
-            'group relative rounded-lg border px-3 py-2 min-w-[140px] shadow-sm',
+            'group relative rounded-lg border px-3 py-2 w-[200px] shadow-sm',
             statusClass,
         ]"
     >

@@ -22,6 +22,31 @@ return [
     'escalation_criticality_threshold' => 'high',
     'transient_error_codes' => ['TIMEOUT', 'RATE_LIMIT', 'CONNECTION_*'],
     'non_transient_error_codes' => ['INVALID_OUTPUT', 'PERMISSION_DENIED'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stall Detection (Byzantine Liveness Failure Mitigation)
+    |--------------------------------------------------------------------------
+    |
+    | Detects graphs with active tasks that are not progressing. Based on
+    | Berdoz et al. (2026) finding that LLM agents fail via liveness
+    | (stalling) rather than incorrect convergence.
+    |
+    */
+    'stall_detection_enabled' => (bool) env('DELEGATION_STALL_DETECTION_ENABLED', true),
+    'stall_detection_threshold_minutes' => (int) env('DELEGATION_STALL_THRESHOLD_MINUTES', 15),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fan-Out Control (Group Size Degradation Mitigation)
+    |--------------------------------------------------------------------------
+    |
+    | Limits how many immediate dependents of a single task can be spawned
+    | simultaneously. Prevents consensus degradation from large fan-out.
+    | Can be overridden per-graph via metadata_json['max_fan_out_per_node'].
+    |
+    */
+    'max_fan_out_per_node' => (int) env('DELEGATION_MAX_FAN_OUT_PER_NODE', 3),
     'ai_critic_default_prompt_template' => 'Review the following task output and determine if it meets the acceptance criteria. Provide your verdict as JSON with fields: verdict (passed/failed), issues (array), confidence (0-1 float), reasoning (string).',
 
     /*

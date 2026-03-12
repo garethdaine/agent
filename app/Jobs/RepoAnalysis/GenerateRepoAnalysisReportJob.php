@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Jobs\RepoAnalysis;
 
+use App\Jobs\Memory\RepoAnalysisMemoryFormationJob;
 use App\Models\RepoAnalysisReport;
 use App\Models\RepoAnalysisSession;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\RepoAnalysis\EventWriter;
 use App\Support\RepoAnalysis\ExportService;
 use App\Support\RepoAnalysis\RepoAnalysisExecutionOrchestrator;
@@ -14,6 +16,7 @@ use App\Support\RepoAnalysis\SessionStateTransitionService;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class GenerateRepoAnalysisReportJob implements ShouldQueue
@@ -109,6 +112,18 @@ class GenerateRepoAnalysisReportJob implements ShouldQueue
                 $session->error_code = null;
                 $session->error_summary = null;
                 $session->save();
+            }
+
+            // Dispatch memory formation for the completed repo analysis session (non-blocking)
+            try {
+                if (app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
+                    RepoAnalysisMemoryFormationJob::dispatch($session->id)->onQueue('memory-formation');
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed to dispatch repo analysis memory formation', [
+                    'session_id' => $session->id,
+                    'error' => $e->getMessage(),
+                ]);
             }
         } catch (Throwable $throwable) {
             $errorCode = $throwable instanceof \InvalidArgumentException

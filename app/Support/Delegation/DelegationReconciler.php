@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Delegation;
 
+use App\Events\DelegationGraphStalled;
 use App\Events\DelegationTaskVerified;
 use App\Models\AgentJobRun;
 use App\Models\DelegationAttempt;
@@ -18,7 +19,8 @@ use Carbon\Carbon;
  * Handles:
  * - Expired human approval verification results
  * - Blocked tasks awaiting delegatee assignment
- * - Stuck running graphs
+ * - Stuck running graphs (all tasks terminal, graph still running)
+ * - Stalled running graphs (active tasks not progressing — liveness failure)
  * - Graceful cancellation timeout enforcement
  *
  * Runs every 2 minutes via delegation:reconcile command.
@@ -37,6 +39,7 @@ class DelegationReconciler
         $this->handleExpiredHumanApprovals();
         $this->retryBlockedTasks();
         $this->handleStuckGraphs();
+        $this->handleStalledGraphs();
         $this->enforceGracefulCancellationTimeout();
     }
 
@@ -198,6 +201,55 @@ class DelegationReconciler
                     'finished_at' => now(),
                 ]);
             }
+        }
+    }
+
+    /**
+     * Detect and handle stalled running graphs.
+     *
+     * Unlike handleStuckGraphs() which finds graphs where all tasks are terminal,
+     * this detects graphs where tasks ARE active but NOT progressing — a liveness
+     * failure pattern identified by Berdoz et al. (2026).
+     *
+     * Fires DelegationGraphStalled event which triggers the StalledGraphHandler
+     * to attempt recovery and notify the graph owner.
+     */
+    private function handleStalledGraphs(): void
+    {
+        if (! config('delegation.stall_detection_enabled', true)) {
+            return;
+        }
+
+        $thresholdMinutes = config('delegation.stall_detection_threshold_minutes', 15);
+        $cutoff = now()->subMinutes($thresholdMinutes);
+
+        $activeTaskStatuses = [
+            DelegationTask::STATUS_RUNNING,
+            DelegationTask::STATUS_ASSIGNED,
+            DelegationTask::STATUS_READY,
+            DelegationTask::STATUS_VERIFYING,
+        ];
+
+        // Find RUNNING graphs that have active tasks
+        $runningGraphs = DelegationGraph::query()
+            ->where('status', DelegationGraph::STATUS_RUNNING)
+            ->whereHas('tasks', fn ($q) => $q->whereIn('status', $activeTaskStatuses))
+            ->with(['tasks' => fn ($q) => $q->whereIn('status', $activeTaskStatuses)])
+            ->get();
+
+        foreach ($runningGraphs as $graph) {
+            $activeTasks = $graph->tasks;
+
+            // Check if the most recently updated active task is older than threshold
+            $latestUpdate = $activeTasks->max('updated_at');
+            if ($latestUpdate === null || Carbon::parse($latestUpdate)->isAfter($cutoff)) {
+                continue; // Graph is making progress, not stalled
+            }
+
+            // Calculate how long since last progress
+            $stalledMinutes = (int) Carbon::parse($latestUpdate)->diffInMinutes(now());
+
+            event(new DelegationGraphStalled($graph, $activeTasks, $stalledMinutes));
         }
     }
 

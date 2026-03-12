@@ -148,7 +148,27 @@ const inferStrategyValueType = (value) => {
 };
 
 const normalizeArrayMapRows = (value) => {
-    const entries = Object.entries(value ?? {});
+    if (value === null || value === undefined) {
+        return [];
+    }
+
+    // Plain string → single row with the string as the key and no values
+    if (typeof value === 'string') {
+        return value.trim() ? [{ key: value.trim(), values_csv: '' }] : [];
+    }
+
+    // Plain array → each element becomes a row key
+    if (Array.isArray(value)) {
+        return value
+            .filter((item) => item !== null && item !== undefined && String(item).trim() !== '')
+            .map((item) => ({
+                key: String(item).trim(),
+                values_csv: '',
+            }));
+    }
+
+    // Object/map → expected format {key: [values]}
+    const entries = Object.entries(value);
     if (entries.length === 0) {
         return [];
     }
@@ -162,7 +182,30 @@ const normalizeArrayMapRows = (value) => {
 };
 
 const normalizeStrategyRows = (value) => {
-    const entries = Object.entries(value ?? {});
+    if (value === null || value === undefined) {
+        return [];
+    }
+
+    // Plain string → single row with key "strategy" and the string as the value
+    if (typeof value === 'string') {
+        return value.trim()
+            ? [{ key: 'strategy', value_type: 'string', value: value.trim() }]
+            : [];
+    }
+
+    // Plain array → each element becomes a row with auto-generated key
+    if (Array.isArray(value)) {
+        return value
+            .filter((item) => item !== null && item !== undefined && String(item).trim() !== '')
+            .map((item, index) => ({
+                key: `rule_${index + 1}`,
+                value_type: inferStrategyValueType(item),
+                value: String(item),
+            }));
+    }
+
+    // Object/map → expected format {key: value}
+    const entries = Object.entries(value);
     if (entries.length === 0) {
         return [];
     }

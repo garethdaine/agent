@@ -36,12 +36,47 @@ class AutomatedCheckStep
         DelegationAttempt $attempt,
         array $stepConfig
     ): VerificationStepResult {
-        $checkProfile = $stepConfig['check_profile'] ?? null;
         $stepOrder = $stepConfig['step_order'] ?? 0;
+
+        // Determine working directory
+        $workingDirectory = $task->metadata_json['working_directory']
+            ?? $attempt->profile->working_directory
+            ?? base_path();
+
+        // 1. Run acceptance criteria first if defined in contract
+        $criteria = $task->contract_json['verification_strategy']['acceptance_criteria'] ?? [];
+        if (! empty($criteria)) {
+            $criteriaResult = app(AcceptanceCriteriaValidator::class)->validate($criteria, $workingDirectory);
+            if (! $criteriaResult->allPassed) {
+                return $this->recordResult(
+                    $task,
+                    $attempt,
+                    $stepOrder,
+                    VerificationStepResult::failed([
+                        'acceptance_criteria' => $criteriaResult->toArray(),
+                    ])
+                );
+            }
+        }
+
+        // 2. Then run check profile commands
+        $checkProfile = $stepConfig['check_profile'] ?? null;
 
         // Get commands from the check profile
         $commands = config("delegation.check_profiles.{$checkProfile}");
         if ($commands === null) {
+            // If no check profile but acceptance criteria passed, that's a pass
+            if (! empty($criteria)) {
+                return $this->recordResult(
+                    $task,
+                    $attempt,
+                    $stepOrder,
+                    VerificationStepResult::passed([
+                        'acceptance_criteria' => $criteriaResult->toArray(),
+                    ])
+                );
+            }
+
             return $this->recordResult(
                 $task,
                 $attempt,
@@ -51,11 +86,6 @@ class AutomatedCheckStep
                 ])
             );
         }
-
-        // Determine working directory
-        $workingDirectory = $task->metadata_json['working_directory']
-            ?? $attempt->profile->working_directory
-            ?? base_path();
 
         // Execute commands sequentially
         $commandResults = [];
@@ -81,6 +111,9 @@ class AutomatedCheckStep
         }
 
         $evidence = ['commands' => $commandResults];
+        if (! empty($criteria)) {
+            $evidence['acceptance_criteria'] = $criteriaResult->toArray();
+        }
 
         if ($allPassed) {
             return $this->recordResult(

@@ -52,6 +52,7 @@ use App\Http\Controllers\Api\V1\ServiceManagerController;
 use App\Http\Controllers\Api\V1\Skills\SkillController;
 use App\Http\Controllers\Api\V1\Skills\SkillDashboardController;
 use App\Http\Controllers\Api\V1\SystemDirectoryPickerController;
+use App\Http\Controllers\Api\V1\VaultRuntimeController;
 use App\Http\Controllers\Api\V1\WorkflowCostController;
 use App\Http\Controllers\Api\V1\WorkflowEscalationController;
 use App\Http\Controllers\Api\V1\WorkflowGateTransitionController;
@@ -80,6 +81,10 @@ Route::middleware([AgentApiVersionHeader::class])
 
         Route::post('/n8n/webhook', \App\Http\Controllers\Api\V1\N8nWebhookController::class)
             ->middleware(\App\Http\Middleware\VerifyN8nSignature::class);
+
+        // Vault runtime access (token-authenticated, no Sanctum)
+        Route::post('/runtime/vault/{operation}', VaultRuntimeController::class)
+            ->name('vault.runtime');
 
         // OAuth callback route (no auth required — external redirect)
         Route::get('/connectors/callback', Connectors\ConnectorOAuthCallbackController::class)
@@ -143,6 +148,13 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::get('/credentials', [CredentialsController::class, 'index']);
             Route::post('/credentials', [CredentialsController::class, 'store'])->middleware('throttle:agent-mutations');
             Route::delete('/credentials', [CredentialsController::class, 'destroy'])->middleware('throttle:agent-mutations');
+
+            Route::get('/credentials/vault', [CredentialsController::class, 'vaultIndex']);
+            Route::post('/credentials/vault', [CredentialsController::class, 'vaultStore'])->middleware('throttle:agent-mutations');
+            Route::get('/credentials/vault/{id}', [CredentialsController::class, 'vaultShow']);
+            Route::put('/credentials/vault/{id}', [CredentialsController::class, 'vaultUpdate'])->middleware('throttle:agent-mutations');
+            Route::delete('/credentials/vault/{id}', [CredentialsController::class, 'vaultDestroy'])->middleware('throttle:agent-mutations');
+            Route::post('/credentials/vault/{id}/rotate', [CredentialsController::class, 'vaultRotate'])->middleware('throttle:agent-mutations');
 
             Route::get('/security/audit', [SecurityAuditController::class, 'index']);
             Route::get('/diagnostics', [DiagnosticsController::class, 'index']);

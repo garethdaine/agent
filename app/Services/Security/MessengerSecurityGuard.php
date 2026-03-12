@@ -26,6 +26,7 @@ class MessengerSecurityGuard
         private readonly ContentSanitizer $contentSanitizer,
         private readonly SecurityConfigProvider $configProvider,
         private readonly SecurityEventLogger $eventLogger,
+        private readonly CredentialRedactor $credentialRedactor = new CredentialRedactor,
     ) {}
 
     public function scanAttachment(string $content, RuntimeMode $mode, ?int $accountId = null): SanitizationResult
@@ -114,6 +115,12 @@ class MessengerSecurityGuard
 
         // Neutralize javascript: links in markdown
         $sanitized = str_replace('](javascript:', '](blocked:', $sanitized);
+
+        // Redact credential values (passwords, API keys, tokens, etc.)
+        // Defence-in-depth: even if the agent includes secrets in its response,
+        // they must never reach the user via chat.
+        $redactionResult = $this->credentialRedactor->redact($sanitized);
+        $sanitized = $redactionResult['content'];
 
         return $sanitized;
     }

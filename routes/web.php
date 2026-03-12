@@ -462,6 +462,8 @@ Route::middleware([
             ->name('org.rituals.create');
         Route::get('/rituals/{id}', fn (string $id) => Inertia::render('Agent/Org/Rituals/Show', ['ritualId' => $id]))
             ->name('org.rituals.show');
+        Route::get('/rituals/{id}/edit', fn (string $id) => Inertia::render('Agent/Org/Rituals/Edit', ['ritualId' => $id]))
+            ->name('org.rituals.edit');
         Route::get('/rituals/{ritualId}/runs/{runId}', fn (string $ritualId, string $runId) => Inertia::render('Agent/Org/Rituals/RunDetail', [
             'ritualId' => $ritualId,
             'runId' => $runId,

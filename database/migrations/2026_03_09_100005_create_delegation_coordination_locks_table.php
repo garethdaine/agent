@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,7 +16,15 @@ return new class extends Migration
 
         Schema::create('delegation_coordination_locks', function (Blueprint $table) {
             $table->id();
+            $table->string('resource_type');
+            $table->string('resource_id');
+            $table->foreignId('holder_delegation_task_id')->constrained('delegation_tasks')->cascadeOnDelete();
+            $table->timestamp('acquired_at');
+            $table->timestamp('expires_at');
+            $table->string('lock_type')->default('exclusive');
             $table->timestamps();
+
+            $table->index(['resource_type', 'resource_id']);
         });
     }
 

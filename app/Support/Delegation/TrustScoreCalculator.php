@@ -77,7 +77,7 @@ class TrustScoreCalculator
         $total = $runs->count();
 
         if ($total === 0) {
-            return new StarMetrics(0, 0, 0, 0, 0, 0, 0, [], 0);
+            return new StarMetrics(0, 0, 0, 0, 0, 0, 0, 0.0, [], 0);
         }
 
         $starCompleted = 0;
@@ -85,6 +85,7 @@ class TrustScoreCalculator
         $retrySuccessful = 0;
         $retryAttempted = 0;
         $failureModes = ['type_1' => 0, 'type_2' => 0, 'type_3' => 0];
+        $timeoutCount = 0;
 
         // STAR component tracking
         $situationCorrectCount = 0;
@@ -115,6 +116,13 @@ class TrustScoreCalculator
             if (isset($metadata['failure_mode_hint']['type'])) {
                 $type = 'type_'.$metadata['failure_mode_hint']['type'];
                 $failureModes[$type] = ($failureModes[$type] ?? 0) + 1;
+            }
+
+            // Track liveness failures (timeouts, force-kills, stalls)
+            $errorCode = $metadata['error_code'] ?? ($run->error_code ?? null);
+            if ($run->status === AgentJobRun::STATUS_FAILED &&
+                in_array($errorCode, ['TIMEOUT', 'FORCE_KILLED', 'CANCELLATION_TIMEOUT', 'STALL_DETECTED'], true)) {
+                $timeoutCount++;
             }
 
             // Extract STAR component correctness from metadata
@@ -151,6 +159,7 @@ class TrustScoreCalculator
             resultCorrectRate: $resultCorrectRate,
             firstPassSuccessRate: ($successful - $retrySuccessful) / max(1, $total - $retryAttempted),
             recoveryRate: $retryAttempted > 0 ? $retrySuccessful / $retryAttempted : 0,
+            livenessRate: ($total - $timeoutCount) / $total,
             failureModeDistribution: array_map(fn ($c) => $c / max(1, $total), $failureModes),
             sampleSize: $total
         );
@@ -218,12 +227,14 @@ class TrustScoreCalculator
 
     private function buildTrustScore(StarMetrics $metrics, string $source): TrustScore
     {
-        // Score formula from spec
+        // Score formula — includes liveness rate to penalise timeout-prone
+        // delegatees more aggressively per Berdoz et al. (2026) findings
         $baseScore =
-            $metrics->starCompletionRate * 0.15 +
-            $metrics->taskCorrectRate * 0.35 +
-            $metrics->firstPassSuccessRate * 0.30 +
-            $metrics->recoveryRate * 0.20;
+            $metrics->starCompletionRate * 0.10 +
+            $metrics->taskCorrectRate * 0.30 +
+            $metrics->firstPassSuccessRate * 0.25 +
+            $metrics->recoveryRate * 0.15 +
+            $metrics->livenessRate * 0.20;
 
         $penalty = ($metrics->failureModeDistribution['type_1'] ?? 0) * 0.15;
         $finalScore = max(0, min(1, $baseScore - $penalty));
@@ -242,6 +253,7 @@ class TrustScoreCalculator
                 'task_correct' => $metrics->taskCorrectRate,
                 'first_pass_success' => $metrics->firstPassSuccessRate,
                 'recovery' => $metrics->recoveryRate,
+                'liveness' => $metrics->livenessRate,
             ],
             sampleSize: $metrics->sampleSize,
             source: $source

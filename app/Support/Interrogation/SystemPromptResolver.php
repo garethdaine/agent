@@ -60,6 +60,10 @@ class SystemPromptResolver
             ]);
         }
 
+        // Memory context injection (non-blocking)
+        $injector = app(\App\Support\Memory\MemoryContextInjector::class);
+        $result = $injector->inject($result, (int) $session->user_id, $session->feature_brief);
+
         return $result;
     }
 

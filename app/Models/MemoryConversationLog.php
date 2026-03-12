@@ -22,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $classification
  * @property \Carbon\CarbonInterface|null $created_at
  * @property string|null $runtime_session_id
+ * @property string|null $source_type
+ * @property string|null $source_id
  * @property-read \App\Models\User|null $user
  * @property-read \App\Models\AgentJobRun|null $run
  * @property-read \App\Models\AgentJob|null $job
@@ -38,6 +40,8 @@ class MemoryConversationLog extends Model
         'run_id',
         'job_id',
         'runtime_session_id',
+        'source_type',
+        'source_id',
         'role',
         'content',
         'sequence',
@@ -45,6 +49,13 @@ class MemoryConversationLog extends Model
         'classification',
         'created_at',
     ];
+
+    /**
+     * Source type constants for generic source identification.
+     */
+    public const SOURCE_INTERROGATION = 'interrogation_session';
+
+    public const SOURCE_REPO_ANALYSIS = 'repo_analysis_session';
 
     /**
      * The name of the "updated at" column.
@@ -231,5 +242,24 @@ class MemoryConversationLog extends Model
             ->forRun($runId)
             ->ordered()
             ->get();
+    }
+
+    /**
+     * Scope to filter by generic source type and source id.
+     */
+    public function scopeForSource(Builder $query, string $sourceType, string $sourceId): void
+    {
+        $query->where('source_type', $sourceType)->where('source_id', $sourceId);
+    }
+
+    /**
+     * Get the next sequence number for a generic source.
+     */
+    public static function getNextSequenceForSource(string $sourceType, string $sourceId): int
+    {
+        return (int) static::query()
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->max('sequence') + 1;
     }
 }

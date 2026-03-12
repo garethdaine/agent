@@ -14,7 +14,7 @@ class ListDocumentationEntriesAction
      */
     public function execute(string $query = '', string $domain = '', string $section = '', string $locale = 'en', int $limit = 200): Collection
     {
-        return DocumentationEntry::query()
+        return DocumentationEntry::query() // @phpstan-ignore return.type
             ->where('locale', $locale)
             ->where('status', 'published')
             ->when($domain !== '', fn ($builder) => $builder->where('domain', $domain))

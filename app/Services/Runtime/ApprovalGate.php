@@ -38,6 +38,7 @@ class ApprovalGate
         'agent_api.run_now',
         'agent_api.stop_run',
         'discovery.start',
+        'memory.set_core_block',
     ];
 
     /**

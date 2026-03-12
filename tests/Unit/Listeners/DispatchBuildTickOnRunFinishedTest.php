@@ -107,20 +107,64 @@ class DispatchBuildTickOnRunFinishedTest extends TestCase
         Queue::assertNotPushed(ExecuteInterrogationBuildJob::class);
     }
 
-    public function test_does_not_dispatch_when_build_is_paused(): void
+    public function test_dispatches_tick_when_build_is_paused(): void
     {
         Queue::fake();
 
         $user = User::factory()->create();
-        $session = $this->makeSession($user, ['status' => 'paused', 'pause_reason' => 'rate_limit']);
-        $run = $this->makeRun($user, AgentJobRun::STATUS_FAILED, [
+        $session = $this->makeSession($user, ['status' => 'paused', 'pause_reason' => 'backup_failed']);
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
             'metadata_json' => [
                 'interrogation_build_task_id' => 999,
                 'interrogation_session_id' => $session->id,
             ],
         ]);
 
-        $event = new AgentJobRunFinished($run, AgentJobRun::STATUS_FAILED);
+        $event = new AgentJobRunFinished($run, AgentJobRun::STATUS_SUCCEEDED);
+        $listener = new DispatchBuildTickOnRunFinished;
+        $listener->handle($event);
+
+        // Paused builds should receive a tick so recovery can attempt to
+        // finalize the task whose run just completed.
+        Queue::assertPushed(ExecuteInterrogationBuildJob::class, function (ExecuteInterrogationBuildJob $job) use ($session): bool {
+            return $job->sessionId === (int) $session->id;
+        });
+    }
+
+    public function test_does_not_dispatch_when_build_is_completed(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, ['status' => 'completed']);
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'interrogation_build_task_id' => 999,
+                'interrogation_session_id' => $session->id,
+            ],
+        ]);
+
+        $event = new AgentJobRunFinished($run, AgentJobRun::STATUS_SUCCEEDED);
+        $listener = new DispatchBuildTickOnRunFinished;
+        $listener->handle($event);
+
+        Queue::assertNotPushed(ExecuteInterrogationBuildJob::class);
+    }
+
+    public function test_does_not_dispatch_when_build_is_failed(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $session = $this->makeSession($user, ['status' => 'failed']);
+        $run = $this->makeRun($user, AgentJobRun::STATUS_SUCCEEDED, [
+            'metadata_json' => [
+                'interrogation_build_task_id' => 999,
+                'interrogation_session_id' => $session->id,
+            ],
+        ]);
+
+        $event = new AgentJobRunFinished($run, AgentJobRun::STATUS_SUCCEEDED);
         $listener = new DispatchBuildTickOnRunFinished;
         $listener->handle($event);
 

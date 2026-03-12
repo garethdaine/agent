@@ -26,6 +26,7 @@ class PairingController extends Controller
             'per_page' => (int) $request->input('per_page', 50),
         ]);
 
+        /** @var \Illuminate\Pagination\LengthAwarePaginator<int, MessengerIdentityLink> $paginator */
         return response()->json([
             'data' => $paginator->through(fn (MessengerIdentityLink $link) => [
                 'id' => $link->id,

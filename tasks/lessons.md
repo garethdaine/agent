@@ -11,6 +11,22 @@ Use this file to capture correction-driven lessons.
 - Applied in:
 
 ## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User correction on interview showcase feature scoping
+- Correction: User clarified that any interview-oriented showcase idea must be a new additive feature that can reuse existing subsystems but must not modify current discovery behavior or existing features.
+- Pattern: When brainstorming adjacent capabilities in a mature product area, it is easy to default to enhancing the nearest existing subsystem instead of respecting a strict additive-only scope.
+- Prevention rule: Before proposing or implementing showcase work, explicitly classify it as either additive feature, extension, or modification. If the user requires additive-only scope, do not alter current flows, prompts, or UI behavior; build behind a new route, mode, or bounded module.
+- Applied in: Switched from “improve current interrogation flow” to “new standalone discovery/workflow feature options” before any implementation.
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User correction on Workflow Interrogator question model
+- Correction: User clarified that the Workflow Interrogator must not be finite in total scope; it may generate finite batches per round, but must continue interrogating until assumptions and ambiguity are eliminated, following the shared Requirements Interrogator process.
+- Pattern: Translating an iterative interrogation process into a single finite decision graph over-constrains discovery and weakens ambiguity closure.
+- Prevention rule: For discovery/interrogation products, distinguish between bounded per-round question sets and the overall interrogation loop. If the goal is zero assumptions, the outer loop must remain open-ended until explicit closure criteria are met.
+- Applied in: Reframed Workflow Interrogator as an iterative batch-based interrogation engine with repeated ambiguity detection and follow-up rounds.
+
+## Entry
 - Date: 2026-03-03
 - Source (job run id / interrogation session id): User correction on interrogation dedupe implementation approach
 - Correction: User rejected a hard-coded, domain-specific question bank tied to one discovery run (Phase 1 governance), and required a run-agnostic solution.

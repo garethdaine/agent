@@ -56,7 +56,9 @@ class DelegationTaskController extends Controller
         $perPage = min(100, max(1, (int) $request->integer('per_page', 50)));
         $tasks = $query->with(['attempts', 'verificationResults', 'assignedProfile'])->paginate($perPage)->withQueryString();
 
-        $data = collect($tasks->items())->map(fn (DelegationTask $task): array => $this->transformTask($task))->values();
+        /** @var \Illuminate\Support\Collection<int, DelegationTask> $items */
+        $items = collect($tasks->items());
+        $data = $items->map(fn (DelegationTask $task): array => $this->transformTask($task))->values();
 
         return response()->json([
             'data' => $data,
@@ -90,6 +92,7 @@ class DelegationTaskController extends Controller
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
         }
 
+        /** @var DelegationTask|null $task */
         $task = $graph->tasks()
             ->with(['attempts', 'verificationResults', 'assignedProfile', 'dependencies', 'dependents'])
             ->find($taskId);
@@ -111,7 +114,8 @@ class DelegationTaskController extends Controller
             return ErrorEnvelope::make('NOT_FOUND', 'Graph not found.', 404);
         }
 
-        $task = $graph->tasks()->find($taskId); // @phpstan-ignore method.notFound
+        /** @var DelegationTask|null $task */
+        $task = $graph->tasks()->find($taskId);
 
         if ($task === null) {
             return ErrorEnvelope::make('NOT_FOUND', 'Task not found.', 404);
@@ -146,13 +150,14 @@ class DelegationTaskController extends Controller
             action: 'delegation_verification.resolve',
             targetType: 'delegation_verification_result',
             targetId: (int) $verificationResult->id,
-            ownerUserId: (int) $graph->user_id, // @phpstan-ignore property.notFound
+            ownerUserId: (int) $graph->user_id,
             changedFields: ['verdict', 'finished_at'],
             before: $before,
             after: ['verdict' => $newVerdict],
         );
 
         // Fire event for pipeline continuation.
+        /** @var DelegationAttempt|null $attempt */
         $attempt = $verificationResult->attempt
             ?? $task->attempts()->latest('id')->first();
 

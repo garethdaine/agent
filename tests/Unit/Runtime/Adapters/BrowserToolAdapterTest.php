@@ -279,6 +279,181 @@ class BrowserToolAdapterTest extends TestCase
         Process::assertRan(fn ($process) => $process->timeout === 120);
     }
 
+    // --- persistent profile & CDP ---
+
+    public function test_execute_includes_profile_flag_for_persistent_session(): void
+    {
+        $binary = $this->createFakeBinary('');
+        config([
+            'runtime.browser.sidecar_binary' => $binary,
+            'runtime.browser.headed' => false,
+            'runtime.browser.auto_headed_for_persistent' => false,
+            'runtime.browser.session_name' => null,
+            'runtime.browser.auto_connect' => false,
+            'runtime.browser.denied_commands' => [],
+            'runtime.browser.profiles_base_path' => sys_get_temp_dir().'/browser-profiles-test-'.uniqid(),
+        ]);
+
+        Process::fake([
+            '*' => Process::result(output: 'ok', exitCode: 0),
+        ]);
+
+        $context = $this->createContextWithBrowserProfile('twitter');
+        $this->adapter->execute($context, ['command' => 'open https://x.com']);
+
+        Process::assertRan(function ($process) {
+            $cmd = $process->command;
+
+            return in_array('--profile', $cmd, true)
+                && in_array('open', $cmd, true);
+        });
+    }
+
+    public function test_execute_cdp_session_pre_connects_then_runs_command(): void
+    {
+        $binary = $this->createFakeBinary('');
+        config([
+            'runtime.browser.sidecar_binary' => $binary,
+            'runtime.browser.denied_commands' => [],
+        ]);
+
+        Process::fake([
+            '*' => Process::result(output: 'ok', exitCode: 0),
+        ]);
+
+        $context = $this->createContextWithCdp('ws://localhost:9222/devtools/browser/abc');
+        $this->adapter->execute($context, ['command' => 'open https://x.com']);
+
+        // First call: pre-connect to Chrome via CDP (port extracted from ws:// URL)
+        Process::assertRan(function ($process) {
+            $cmd = $process->command;
+
+            return in_array('connect', $cmd, true)
+                && in_array('9222', $cmd, true);
+        });
+
+        // Second call: actual command (no --cdp flag — daemon uses connected Chrome)
+        Process::assertRan(function ($process) {
+            $cmd = $process->command;
+
+            return in_array('open', $cmd, true)
+                && in_array('https://x.com', $cmd, true)
+                && ! in_array('--cdp', $cmd, true);
+        });
+    }
+
+    public function test_execute_cdp_excludes_headed_and_profile_flags(): void
+    {
+        $binary = $this->createFakeBinary('');
+        config([
+            'runtime.browser.sidecar_binary' => $binary,
+            'runtime.browser.headed' => true,
+            'runtime.browser.session_name' => 'my-session',
+            'runtime.browser.denied_commands' => [],
+        ]);
+
+        Process::fake([
+            '*' => Process::result(output: 'ok', exitCode: 0),
+        ]);
+
+        $context = $this->createContextWithCdp('ws://localhost:9222/devtools/browser/abc');
+        $this->adapter->execute($context, ['command' => 'snapshot -i']);
+
+        // The actual command should not have headed, profile, or session flags
+        Process::assertRan(function ($process) {
+            $cmd = $process->command;
+
+            return in_array('snapshot', $cmd, true)
+                && ! in_array('--headed', $cmd, true)
+                && ! in_array('--profile', $cmd, true)
+                && ! in_array('--session', $cmd, true)
+                && ! in_array('--cdp', $cmd, true);
+        });
+    }
+
+    public function test_execute_persistent_profile_auto_enables_headed(): void
+    {
+        $binary = $this->createFakeBinary('');
+        config([
+            'runtime.browser.sidecar_binary' => $binary,
+            'runtime.browser.headed' => false,
+            'runtime.browser.auto_headed_for_persistent' => true,
+            'runtime.browser.session_name' => null,
+            'runtime.browser.auto_connect' => false,
+            'runtime.browser.denied_commands' => [],
+            'runtime.browser.profiles_base_path' => sys_get_temp_dir().'/browser-profiles-test-'.uniqid(),
+        ]);
+
+        Process::fake([
+            '*' => Process::result(output: 'ok', exitCode: 0),
+        ]);
+
+        $context = $this->createContextWithBrowserProfile('test-profile');
+        $this->adapter->execute($context, ['command' => 'open https://example.com']);
+
+        Process::assertRan(function ($process) {
+            $cmd = $process->command;
+
+            return in_array('--headed', $cmd, true)
+                && in_array('--profile', $cmd, true);
+        });
+    }
+
+    public function test_execute_persistent_profile_respects_auto_headed_config_off(): void
+    {
+        $binary = $this->createFakeBinary('');
+        config([
+            'runtime.browser.sidecar_binary' => $binary,
+            'runtime.browser.headed' => false,
+            'runtime.browser.auto_headed_for_persistent' => false,
+            'runtime.browser.session_name' => null,
+            'runtime.browser.auto_connect' => false,
+            'runtime.browser.denied_commands' => [],
+            'runtime.browser.profiles_base_path' => sys_get_temp_dir().'/browser-profiles-test-'.uniqid(),
+        ]);
+
+        Process::fake([
+            '*' => Process::result(output: 'ok', exitCode: 0),
+        ]);
+
+        $context = $this->createContextWithBrowserProfile('test-profile');
+        $this->adapter->execute($context, ['command' => 'open https://example.com']);
+
+        Process::assertRan(function ($process) {
+            $cmd = $process->command;
+
+            return ! in_array('--headed', $cmd, true)
+                && in_array('--profile', $cmd, true);
+        });
+    }
+
+    public function test_execute_ephemeral_session_has_no_profile_or_cdp_flags(): void
+    {
+        $binary = $this->createFakeBinary('');
+        config([
+            'runtime.browser.sidecar_binary' => $binary,
+            'runtime.browser.headed' => false,
+            'runtime.browser.session_name' => null,
+            'runtime.browser.auto_connect' => false,
+            'runtime.browser.denied_commands' => [],
+        ]);
+
+        Process::fake([
+            '*' => Process::result(output: 'ok', exitCode: 0),
+        ]);
+
+        $context = $this->createContext(RuntimeMode::Standard);
+        $this->adapter->execute($context, ['command' => 'open https://example.com']);
+
+        Process::assertRan(function ($process) {
+            $cmd = $process->command;
+
+            return ! in_array('--profile', $cmd, true)
+                && ! in_array('--cdp', $cmd, true)
+                && ! in_array('--headed', $cmd, true);
+        });
+    }
+
     // --- helpers ---
 
     private function createContext(RuntimeMode $mode): RuntimeContext
@@ -293,6 +468,44 @@ class BrowserToolAdapterTest extends TestCase
             user: $user,
             mode: $mode,
             policy: config("runtime.modes.{$mode->value}"),
+            workspaceRoot: '/tmp',
+        );
+    }
+
+    private function createContextWithBrowserProfile(string $profileName): RuntimeContext
+    {
+        $user = User::factory()->make();
+        $session = RuntimeSession::factory()->withBrowserProfile($profileName)->make([
+            'mode' => RuntimeMode::Standard,
+            'workspace_root' => '/tmp',
+        ]);
+        $turn = RuntimeTurn::factory()->make();
+
+        return new RuntimeContext(
+            session: $session,
+            turn: $turn,
+            user: $user,
+            mode: RuntimeMode::Standard,
+            policy: config('runtime.modes.standard'),
+            workspaceRoot: '/tmp',
+        );
+    }
+
+    private function createContextWithCdp(string $endpoint): RuntimeContext
+    {
+        $user = User::factory()->make();
+        $session = RuntimeSession::factory()->withCdpEndpoint($endpoint)->make([
+            'mode' => RuntimeMode::Standard,
+            'workspace_root' => '/tmp',
+        ]);
+        $turn = RuntimeTurn::factory()->make();
+
+        return new RuntimeContext(
+            session: $session,
+            turn: $turn,
+            user: $user,
+            mode: RuntimeMode::Standard,
+            policy: config('runtime.modes.standard'),
             workspaceRoot: '/tmp',
         );
     }

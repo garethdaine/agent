@@ -28,7 +28,7 @@ const pendingChangeset = ref(null);
 
 /**
  * Compute hierarchical positions for org nodes.
- * Roots (no parent) are placed at the bottom, leaves at the top.
+ * Roots (no parent / managers) are placed at the top, leaves (subordinates) below.
  * Separate connected components are laid out side by side, largest first.
  */
 function computeHierarchicalPositions(nodesList, edgesList) {
@@ -128,7 +128,7 @@ function computeHierarchicalPositions(nodesList, edgesList) {
 
         // Position nodes within this component
         levels.forEach((ids, d) => {
-            const row = maxDepth - d;
+            const row = d;
             const y = PADDING + row * GAP_Y;
             const levelWidth = ids.length * NODE_W + (ids.length - 1) * GAP_X;
             const startX = offsetX + (maxLevelWidth - levelWidth) / 2;
@@ -164,8 +164,8 @@ const loadAgentsAndDelegatees = async () => {
                     id: `e-${a.id}-${managerId}`,
                     source: a.id,
                     target: managerId,
-                    sourceHandle: 'bottom-source',
-                    targetHandle: 'top-target',
+                    sourceHandle: 'top-source',
+                    targetHandle: 'bottom-target',
                 });
             }
         });
@@ -289,8 +289,8 @@ const onAgentConfigUpdate = (data) => {
                 id: `e-${id}-${newParent}`,
                 source: id,
                 target: newParent,
-                sourceHandle: 'bottom-source',
-                targetHandle: 'top-target',
+                sourceHandle: 'top-source',
+                targetHandle: 'bottom-target',
             });
         }
 
@@ -483,8 +483,8 @@ const onPreviewChangeset = (changeset) => {
                     id: `nl-edge-${Date.now()}-${Math.random()}`,
                     source: entry.payload.subordinate_agent_id,
                     target: entry.payload.manager_agent_id,
-                    sourceHandle: 'bottom-source',
-                    targetHandle: 'top-target',
+                    sourceHandle: 'top-source',
+                    targetHandle: 'bottom-target',
                     style: { stroke: '#22c55e', strokeDasharray: '5 5' },
                 });
             } else if (entry.operation === 'remove') {

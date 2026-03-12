@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Contracts\OrchestrationPolicyServiceContract;
+use App\Jobs\Memory\InterrogationMemoryFormationJob;
 use App\Models\AgentJobRun;
 use App\Models\AgentRunEvent;
 use App\Models\InterrogationBuildTask;
 use App\Models\InterrogationSession;
+use App\Support\Agent\FeatureFlagManager;
 use App\Support\Interrogation\BuildExecutionBackupService;
 use App\Support\Interrogation\BuildTaskRunFactory;
 use App\Support\Interrogation\GitOperationsService;
@@ -16,6 +18,7 @@ use App\Support\Interrogation\InterrogationEventWriter;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class ExecuteInterrogationBuildJob implements ShouldQueue
 {
@@ -44,6 +47,12 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
 
         $writer = new InterrogationEventWriter($session);
         $build = $this->buildMetadata($session);
+
+        if (($build['status'] ?? null) === 'paused') {
+            $this->attemptPausedBuildRecovery($session, $writer, $policyService);
+
+            return;
+        }
 
         if (($build['status'] ?? null) !== 'running') {
             return;
@@ -148,6 +157,23 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
 
                 if ($this->shouldPauseForTaskReview($session, $activeTask)) {
                     $this->pauseForTaskReview($session, $activeTask, $writer);
+
+                    return;
+                }
+
+                // Finalize the build inline when no tasks remain, rather than
+                // relying exclusively on a follow-up tick dispatch.  This
+                // eliminates the window where a queue failure between task
+                // completion and the follow-up tick could stall the build.
+                $hasRemainingWork = $session->buildTasks()
+                    ->whereIn('status', [
+                        InterrogationBuildTask::STATUS_PENDING,
+                        InterrogationBuildTask::STATUS_IN_PROGRESS,
+                    ])
+                    ->exists();
+
+                if (! $hasRemainingWork) {
+                    $this->finalizeBuildLifecycle($session, $writer);
 
                     return;
                 }
@@ -262,6 +288,75 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         ]);
     }
 
+    /**
+     * When the build is paused but an in-progress task's run has reached a
+     * terminal state, finalize that task and — if no work remains — complete
+     * the build.  This prevents a permanent stall when a per-task backup
+     * failure pauses the build while the task's run was already in-flight.
+     */
+    private function attemptPausedBuildRecovery(
+        InterrogationSession $session,
+        InterrogationEventWriter $writer,
+        OrchestrationPolicyServiceContract $policyService,
+    ): void {
+        /** @var InterrogationBuildTask|null $activeTask */
+        $activeTask = $session->buildTasks()
+            ->with('run')
+            ->where('status', InterrogationBuildTask::STATUS_IN_PROGRESS)
+            ->orderBy('sequence')
+            ->first();
+
+        if ($activeTask === null) {
+            return;
+        }
+
+        $run = $activeTask->run;
+
+        if ($run === null || in_array((string) $run->status, AgentJobRun::ACTIVE_STATUSES, true)) {
+            return;
+        }
+
+        // The task's run has completed while the build was paused.
+        // Resume the build to 'running' so we can finalize normally.
+        $build = $this->buildMetadata($session);
+        $build['status'] = 'running';
+        $build['pause_reason'] = null;
+        $build['paused_at'] = null;
+        $build['error'] = null;
+        $this->saveBuildMetadata($session, $build);
+
+        $writer->appendSystem([
+            'notice' => 'build_resumed_from_paused_recovery',
+            'task_id' => $activeTask->id,
+            'run_id' => $run->id,
+            'run_status' => (string) $run->status,
+            'at' => Carbon::now('UTC')->toIso8601String(),
+        ]);
+
+        // Finalize the task using the standard path.
+        $finalized = $this->finalizeTaskFromRun($session, $activeTask, $run, $writer, $policyService);
+
+        if (! $finalized) {
+            return;
+        }
+
+        // Check for remaining work.
+        $hasRemainingWork = $session->buildTasks()
+            ->whereIn('status', [
+                InterrogationBuildTask::STATUS_PENDING,
+                InterrogationBuildTask::STATUS_IN_PROGRESS,
+            ])
+            ->exists();
+
+        if (! $hasRemainingWork) {
+            $this->finalizeBuildLifecycle($session, $writer);
+
+            return;
+        }
+
+        $this->dispatchFollowUpBuildTick((int) $session->id, 1, $writer);
+    }
+
     private function finalizeBuildLifecycle(InterrogationSession $session, InterrogationEventWriter $writer): void
     {
         /** @var \Illuminate\Database\Eloquent\Collection<int, InterrogationBuildTask> $tasks */
@@ -326,6 +421,18 @@ class ExecuteInterrogationBuildJob implements ShouldQueue
         $session->error_code = null;
         $session->error_summary = null;
         $session->save();
+
+        // Dispatch memory formation for the completed interrogation session (non-blocking)
+        try {
+            if (app(FeatureFlagManager::class)->enabled(FeatureFlagManager::MEMORY_ENABLED)) {
+                InterrogationMemoryFormationJob::dispatch($session->id)->onQueue('memory-formation');
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to dispatch interrogation memory formation', [
+                'session_id' => $session->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         $writer->appendSystem([
             'notice' => 'build_completed',

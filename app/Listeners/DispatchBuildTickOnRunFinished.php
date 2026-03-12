@@ -47,7 +47,13 @@ class DispatchBuildTickOnRunFinished implements ShouldQueue
             ? ($sessionMeta['build']['status'] ?? null)
             : null;
 
-        if ($buildStatus !== 'running') {
+        // Dispatch for both 'running' and 'paused' builds.  A build may
+        // be paused (e.g. backup_failed) while its task run was already
+        // in-flight.  If that run completes, the build tick needs a chance
+        // to finalize the task and potentially complete the build.
+        // Terminal statuses ('completed', 'failed') are excluded since
+        // those builds have already been finalized.
+        if (! in_array($buildStatus, ['running', 'paused'], true)) {
             return;
         }
 

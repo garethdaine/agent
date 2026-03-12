@@ -275,28 +275,32 @@ class MemoryAdapterFactory
     /**
      * Create an OpenAI adapter with user's model settings.
      *
+     * Uses provider-specific setting keys (openai_extraction_model) first,
+     * then falls back to generic keys (extraction_model) if compatible,
+     * then falls back to config defaults.
+     *
      * @param  int  $userId  User ID for settings lookup
      * @param  string  $apiKey  OpenAI API key
      * @return OpenAIAdapter Configured adapter
      */
     private function createOpenAIAdapter(int $userId, string $apiKey): OpenAIAdapter
     {
-        $extractionModel = $this->settingsService->get(
-            $userId,
-            'extraction_model',
-            config('memory.models.extraction.default', 'gpt-4o-mini')
+        $defaultExtraction = config('memory.models.extraction.default', 'gpt-4o-mini');
+        $defaultSummarization = config('memory.models.summarization.default', 'gpt-4.1-nano');
+        $defaultEmbeddings = config('memory.models.embeddings.default', 'text-embedding-3-small');
+
+        $extractionModel = $this->resolveModelForProvider(
+            $userId, 'openai', 'extraction_model', $defaultExtraction
         );
 
-        $summarizationModel = $this->settingsService->get(
-            $userId,
-            'summarization_model',
-            config('memory.models.summarization.default', 'gpt-4.1-nano')
+        $summarizationModel = $this->resolveModelForProvider(
+            $userId, 'openai', 'summarization_model', $defaultSummarization
         );
 
         $embeddingsModel = $this->settingsService->get(
             $userId,
             'embeddings_model',
-            config('memory.models.embeddings.default', 'text-embedding-3-small')
+            $defaultEmbeddings
         );
 
         return new OpenAIAdapter(
@@ -310,22 +314,25 @@ class MemoryAdapterFactory
     /**
      * Create an Anthropic adapter with user's model settings.
      *
+     * Uses provider-specific setting keys (anthropic_extraction_model) first,
+     * then falls back to generic keys (extraction_model) only if the model
+     * is compatible with Anthropic, then falls back to config defaults.
+     *
      * @param  int  $userId  User ID for settings lookup
      * @param  string  $apiKey  Anthropic API key
      * @return AnthropicAdapter Configured adapter
      */
     private function createAnthropicAdapter(int $userId, string $apiKey): AnthropicAdapter
     {
-        $extractionModel = $this->settingsService->get(
-            $userId,
-            'extraction_model',
-            config('memory.models.extraction.fallback', 'claude-3-haiku-20240307')
+        $defaultExtraction = config('memory.models.extraction.fallback', 'claude-3-haiku-20240307');
+        $defaultSummarization = config('memory.models.summarization.fallback', 'claude-3-haiku-20240307');
+
+        $extractionModel = $this->resolveModelForProvider(
+            $userId, 'anthropic', 'extraction_model', $defaultExtraction
         );
 
-        $summarizationModel = $this->settingsService->get(
-            $userId,
-            'summarization_model',
-            config('memory.models.summarization.fallback', 'claude-3-haiku-20240307')
+        $summarizationModel = $this->resolveModelForProvider(
+            $userId, 'anthropic', 'summarization_model', $defaultSummarization
         );
 
         return new AnthropicAdapter(
@@ -333,5 +340,60 @@ class MemoryAdapterFactory
             $extractionModel,
             $summarizationModel
         );
+    }
+
+    /**
+     * Resolve a model setting for a specific provider.
+     *
+     * Checks in order:
+     * 1. Provider-specific setting (e.g. 'anthropic_extraction_model')
+     * 2. Generic setting (e.g. 'extraction_model') — only if compatible with provider
+     * 3. Config default
+     *
+     * This prevents sending OpenAI model names (gpt-4o-mini) to Anthropic's API
+     * or vice versa when the user has a generic model setting configured.
+     *
+     * @param  int  $userId  User ID for settings lookup
+     * @param  string  $provider  Provider name ('openai' or 'anthropic')
+     * @param  string  $settingKey  Generic setting key (e.g. 'extraction_model')
+     * @param  string  $default  Config default value
+     * @return string Resolved model name
+     */
+    private function resolveModelForProvider(int $userId, string $provider, string $settingKey, string $default): string
+    {
+        // 1. Check provider-specific setting
+        $providerSpecific = $this->settingsService->get($userId, "{$provider}_{$settingKey}");
+        if ($providerSpecific !== null) {
+            return $providerSpecific;
+        }
+
+        // 2. Check generic setting, but only use it if compatible with this provider
+        $generic = $this->settingsService->get($userId, $settingKey);
+        if ($generic !== null && $this->isModelCompatibleWithProvider($generic, $provider)) {
+            return $generic;
+        }
+
+        // 3. Fall back to config default
+        return $default;
+    }
+
+    /**
+     * Check if a model name is compatible with a provider.
+     *
+     * Uses simple prefix heuristics:
+     * - OpenAI models: gpt-*, o1-*, text-embedding-*, davinci-*, etc.
+     * - Anthropic models: claude-*
+     *
+     * @param  string  $model  Model name
+     * @param  string  $provider  Provider name
+     * @return bool True if model appears compatible
+     */
+    private function isModelCompatibleWithProvider(string $model, string $provider): bool
+    {
+        return match ($provider) {
+            'anthropic' => str_starts_with($model, 'claude'),
+            'openai' => ! str_starts_with($model, 'claude'),
+            default => true,
+        };
     }
 }

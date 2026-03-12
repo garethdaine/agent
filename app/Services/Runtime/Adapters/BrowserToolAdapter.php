@@ -7,6 +7,8 @@ namespace App\Services\Runtime\Adapters;
 use App\DTOs\Runtime\RuntimeContext;
 use App\DTOs\Runtime\ToolResult;
 use App\Enums\Runtime\RuntimeMode;
+use App\Models\Runtime\RuntimeSession;
+use App\Services\Runtime\BrowserProfileResolver;
 use Illuminate\Support\Facades\Process;
 
 class BrowserToolAdapter extends AbstractToolAdapter
@@ -55,7 +57,7 @@ class BrowserToolAdapter extends AbstractToolAdapter
                 'Scrolling: scroll up|down|left|right [px], scrollintoview <sel>',
                 'JavaScript: eval <js>',
                 'Info: get text <sel>, get url, get title, console, errors, network requests',
-                'Auth vault: auth save <name> --url <url> --username <user> --password <pass>, auth login <name>',
+                'Browser auth (session-scoped): auth save <name> --url <url> --username <user> --password <pass>, auth login <name>',
                 'Tabs: tab new, tab list, tab close, tab <n>',
                 'Cookies: cookies get, cookies set --url <url> --domain <d> ..., cookies clear',
                 '',
@@ -127,7 +129,7 @@ class BrowserToolAdapter extends AbstractToolAdapter
             );
         }
 
-        $cmd = $this->buildCommand($binary, $tokens);
+        $cmd = $this->buildCommand($binary, $tokens, $context);
         $timeout = (int) config('runtime.browser.timeout', 60);
 
         try {
@@ -177,24 +179,91 @@ class BrowserToolAdapter extends AbstractToolAdapter
     /**
      * Build the full CLI command array for Process execution.
      *
+     * Reads per-session browser settings (profile, CDP, headed) from the
+     * RuntimeContext, falling back to global config values.
+     *
      * @param  array<int, string>  $tokens  Tokenized command arguments
      * @return array<int, string>
      */
-    private function buildCommand(string $binary, array $tokens): array
+    private function buildCommand(string $binary, array $tokens, RuntimeContext $context): array
     {
         $cmd = [$binary];
+        $session = $context->session;
 
-        if (config('runtime.browser.headed', false)) {
+        // CDP mode: use `connect` command to attach to Chrome's existing context.
+        // The --cdp flag creates an ISOLATED context (no cookies), so we use the
+        // `connect` command which shares Chrome's default context with login sessions.
+        // The daemon remembers the connection, so connect is idempotent.
+        if ($session->hasCdpConnection()) {
+            $cdpTarget = (string) ($this->extractCdpPort($session->browser_cdp_endpoint)
+                ?? $session->browser_cdp_endpoint);
+
+            // Pre-connect to Chrome (idempotent — harmless if already connected)
+            Process::timeout(10)->run([$binary, 'connect', $cdpTarget]);
+
+            // Then run the actual command (daemon uses the connected Chrome)
+            return array_merge($cmd, $tokens);
+        }
+
+        // Auto-connect mode: auto-discover a running Chrome instance
+        if (config('runtime.browser.auto_connect', false)) {
+            $cmd[] = '--auto-connect';
+
+            return array_merge($cmd, $tokens);
+        }
+
+        // Headed mode: per-session or global
+        if ($this->resolveHeadedMode($session)) {
             $cmd[] = '--headed';
         }
 
-        $session = config('runtime.browser.session_name');
-        if ($session !== null && $session !== '') {
+        // Persistent profile: pass --profile with resolved filesystem path
+        if ($session->hasPersistentBrowserProfile()) {
+            $resolver = app(BrowserProfileResolver::class);
+            $profilePath = $resolver->resolveProfilePath($context->user, $session->browser_profile_name);
+            $resolver->ensureProfileDirectory($profilePath);
+
+            $cmd[] = '--profile';
+            $cmd[] = $profilePath;
+        }
+
+        // Custom executable path (e.g. separate Chromium to avoid macOS singleton conflict)
+        $executablePath = config('runtime.browser.executable_path');
+        if ($executablePath !== null && $executablePath !== '') {
+            $cmd[] = '--executable-path';
+            $cmd[] = $executablePath;
+        }
+
+        // Custom browser launch args (comma-separated Chromium flags)
+        $args = config('runtime.browser.args');
+        if ($args !== null && $args !== '') {
+            $cmd[] = '--args';
+            $cmd[] = $args;
+        }
+
+        // Session name (existing behavior, fallback for non-profile persistence)
+        $sessionName = config('runtime.browser.session_name');
+        if ($sessionName !== null && $sessionName !== '') {
             $cmd[] = '--session';
-            $cmd[] = $session;
+            $cmd[] = $sessionName;
         }
 
         return array_merge($cmd, $tokens);
+    }
+
+    /**
+     * Determine whether the browser should run in headed (visible) mode.
+     */
+    private function resolveHeadedMode(RuntimeSession $session): bool
+    {
+        // Persistent profiles auto-enable headed mode for initial login
+        if ($session->hasPersistentBrowserProfile()
+            && config('runtime.browser.auto_headed_for_persistent', true)) {
+            return true;
+        }
+
+        // Global config fallback
+        return (bool) config('runtime.browser.headed', false);
     }
 
     /**
@@ -249,6 +318,24 @@ class BrowserToolAdapter extends AbstractToolAdapter
         }
 
         return $tokens;
+    }
+
+    /**
+     * Extract the port number from a CDP WebSocket URL.
+     *
+     * E.g. "ws://localhost:9222/devtools/browser/abc123" → 9222
+     *      "9222" → 9222
+     */
+    private function extractCdpPort(string $endpoint): ?int
+    {
+        if (ctype_digit($endpoint)) {
+            return (int) $endpoint;
+        }
+
+        $httpUrl = (string) preg_replace('/^wss?:/', 'http:', $endpoint);
+        $parsed = parse_url($httpUrl);
+
+        return isset($parsed['port']) ? (int) $parsed['port'] : null;
     }
 
     private function duration(int $startTime): int

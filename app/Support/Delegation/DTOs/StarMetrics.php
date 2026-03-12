@@ -14,6 +14,7 @@ readonly class StarMetrics
         public float $resultCorrectRate,
         public float $firstPassSuccessRate,
         public float $recoveryRate,
+        public float $livenessRate,
         public array $failureModeDistribution,
         public int $sampleSize,
     ) {}
