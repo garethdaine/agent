@@ -7,14 +7,19 @@ namespace App\Support\Interrogation\Adapters;
 use App\Models\InterrogationSession;
 use App\Support\Agent\DatabaseIsolationEnvironment;
 use RuntimeException;
+use Symfony\Component\Process\Process;
 
 class CodexAdapter extends AbstractBuildAdapter
 {
+    private ?string $pendingLastMessagePath = null;
+
     /**
      * @return array<int, string>
      */
     public function buildDiscoveryCommand(InterrogationSession $session, string $discoveryPrompt, string $systemPrompt): array
     {
+        $this->pendingLastMessagePath = null;
+
         return [
             ...$this->baseExecCommand(),
             '--json',
@@ -27,19 +32,7 @@ class CodexAdapter extends AbstractBuildAdapter
      */
     public function buildQuestionCommand(InterrogationSession $session, string $userMessage, string $systemPrompt): array
     {
-        $command = $this->baseExecCommand();
-
-        if (is_string($session->cli_session_id) && $session->cli_session_id !== '') {
-            $command[] = 'resume';
-            $command[] = $session->cli_session_id;
-        }
-
-        $command[] = '--json';
-        $command[] = '--output-schema';
-        $command[] = $this->schemaFilePath('question', $this->codexQuestionSchema());
-        $command[] = $this->composePrompt($systemPrompt, $userMessage);
-
-        return $command;
+        return $this->buildStructuredCommand($session, 'question', $this->codexQuestionSchema(), $userMessage, $systemPrompt);
     }
 
     /**
@@ -47,19 +40,7 @@ class CodexAdapter extends AbstractBuildAdapter
      */
     public function buildQuestionBankCommand(InterrogationSession $session, string $userMessage, string $systemPrompt): array
     {
-        $command = $this->baseExecCommand();
-
-        if (is_string($session->cli_session_id) && $session->cli_session_id !== '') {
-            $command[] = 'resume';
-            $command[] = $session->cli_session_id;
-        }
-
-        $command[] = '--json';
-        $command[] = '--output-schema';
-        $command[] = $this->schemaFilePath('question-bank', $this->codexQuestionBankSchema());
-        $command[] = $this->composePrompt($systemPrompt, $userMessage);
-
-        return $command;
+        return $this->buildStructuredCommand($session, 'question-bank', $this->codexQuestionBankSchema(), $userMessage, $systemPrompt);
     }
 
     /**
@@ -67,19 +48,7 @@ class CodexAdapter extends AbstractBuildAdapter
      */
     public function buildSummaryCommand(InterrogationSession $session, string $summaryPrompt, string $systemPrompt): array
     {
-        $command = $this->baseExecCommand();
-
-        if (is_string($session->cli_session_id) && $session->cli_session_id !== '') {
-            $command[] = 'resume';
-            $command[] = $session->cli_session_id;
-        }
-
-        $command[] = '--json';
-        $command[] = '--output-schema';
-        $command[] = $this->schemaFilePath('summary', $this->summarySchema());
-        $command[] = $this->composePrompt($systemPrompt, $summaryPrompt);
-
-        return $command;
+        return $this->buildStructuredCommand($session, 'summary', $this->summarySchema(), $summaryPrompt, $systemPrompt);
     }
 
     /**
@@ -87,19 +56,7 @@ class CodexAdapter extends AbstractBuildAdapter
      */
     public function buildPlanCommand(InterrogationSession $session, string $planningPrompt, string $systemPrompt): array
     {
-        $command = $this->baseExecCommand();
-
-        if (is_string($session->cli_session_id) && $session->cli_session_id !== '') {
-            $command[] = 'resume';
-            $command[] = $session->cli_session_id;
-        }
-
-        $command[] = '--json';
-        $command[] = '--output-schema';
-        $command[] = $this->schemaFilePath('plan', $this->codexPlanSchema());
-        $command[] = $this->composePrompt($systemPrompt, $planningPrompt);
-
-        return $command;
+        return $this->buildStructuredCommand($session, 'plan', $this->codexPlanSchema(), $planningPrompt, $systemPrompt);
     }
 
     /**
@@ -107,19 +64,7 @@ class CodexAdapter extends AbstractBuildAdapter
      */
     public function buildBuildTasksCommand(InterrogationSession $session, string $prompt, string $systemPrompt): array
     {
-        $command = $this->baseExecCommand();
-
-        if (is_string($session->cli_session_id) && $session->cli_session_id !== '') {
-            $command[] = 'resume';
-            $command[] = $session->cli_session_id;
-        }
-
-        $command[] = '--json';
-        $command[] = '--output-schema';
-        $command[] = $this->schemaFilePath('build-tasks', $this->codexBuildTasksSchema());
-        $command[] = $this->composePrompt($systemPrompt, $prompt);
-
-        return $command;
+        return $this->buildStructuredCommand($session, 'build-tasks', $this->codexBuildTasksSchema(), $prompt, $systemPrompt);
     }
 
     /**
@@ -127,6 +72,8 @@ class CodexAdapter extends AbstractBuildAdapter
      */
     public function buildReconstructCommand(InterrogationSession $session, string $conversationHistory, string $systemPrompt): array
     {
+        $this->pendingLastMessagePath = null;
+
         return [
             ...$this->baseExecCommand(),
             '--json',
@@ -134,6 +81,38 @@ class CodexAdapter extends AbstractBuildAdapter
             $this->schemaFilePath('question', $this->codexQuestionSchema()),
             $this->composePrompt($systemPrompt, $conversationHistory),
         ];
+    }
+
+    public function collectProcessOutput(Process $process): string
+    {
+        $stdout = (string) $process->getOutput();
+        $capturePath = $this->pendingLastMessagePath;
+        $this->pendingLastMessagePath = null;
+
+        if (! is_string($capturePath) || $capturePath === '') {
+            return $stdout;
+        }
+
+        $captured = '';
+
+        if (is_file($capturePath)) {
+            $contents = @file_get_contents($capturePath);
+            if (is_string($contents)) {
+                $captured = trim($contents);
+            }
+
+            @unlink($capturePath);
+        }
+
+        if ($captured === '') {
+            return $stdout;
+        }
+
+        if (trim($stdout) === '' || str_contains($stdout, $captured)) {
+            return $stdout === '' ? $captured : $stdout;
+        }
+
+        return rtrim($stdout).PHP_EOL.$captured;
     }
 
     private function composePrompt(string $systemPrompt, string $userPrompt): string
@@ -148,6 +127,41 @@ class CodexAdapter extends AbstractBuildAdapter
         return "Follow the SYSTEM instructions exactly.\n\n"
             ."<SYSTEM>\n{$system}\n</SYSTEM>\n\n"
             ."<USER_REQUEST>\n{$user}\n</USER_REQUEST>";
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function buildStructuredCommand(
+        InterrogationSession $session,
+        string $schemaName,
+        string $schema,
+        string $userPrompt,
+        string $systemPrompt,
+    ): array {
+        $this->pendingLastMessagePath = null;
+
+        $command = $this->baseExecCommand();
+        $isResume = is_string($session->cli_session_id) && $session->cli_session_id !== '';
+
+        if ($isResume) {
+            $command[] = 'resume';
+            $command[] = $session->cli_session_id;
+        }
+
+        $command[] = '--json';
+
+        if ($isResume) {
+            $command[] = '--output-last-message';
+            $command[] = $this->lastMessageCapturePath($schemaName);
+        } else {
+            $command[] = '--output-schema';
+            $command[] = $this->schemaFilePath($schemaName, $schema);
+        }
+
+        $command[] = $this->composePrompt($systemPrompt, $userPrompt);
+
+        return $command;
     }
 
     /**
@@ -677,6 +691,23 @@ class CodexAdapter extends AbstractBuildAdapter
                 throw new RuntimeException('Unable to write Codex schema file: '.$path);
             }
         }
+
+        return $path;
+    }
+
+    private function lastMessageCapturePath(string $name): string
+    {
+        $directory = storage_path('framework/interrogation-output');
+        if (! is_dir($directory) && ! @mkdir($directory, 0775, true) && ! is_dir($directory)) {
+            throw new RuntimeException('Unable to create Codex output directory: '.$directory);
+        }
+
+        $path = tempnam($directory, 'codex-'.$name.'-');
+        if (! is_string($path) || $path === '') {
+            throw new RuntimeException('Unable to create Codex last-message capture file.');
+        }
+
+        $this->pendingLastMessagePath = $path;
 
         return $path;
     }

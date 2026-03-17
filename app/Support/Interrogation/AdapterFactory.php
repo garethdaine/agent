@@ -6,6 +6,7 @@ namespace App\Support\Interrogation;
 
 use App\Support\Interrogation\Adapters\ClaudeAdapter;
 use App\Support\Interrogation\Adapters\CodexAdapter;
+use App\Support\Interrogation\Adapters\CustomAdapter;
 use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 use InvalidArgumentException;
 
@@ -16,6 +17,7 @@ class AdapterFactory
         $adapter = match ($runnerType) {
             'claude' => app(ClaudeAdapter::class),
             'codex' => app(CodexAdapter::class),
+            'custom' => app(CustomAdapter::class),
             default => throw new InvalidArgumentException(sprintf('Unsupported interrogation runner type: %s', $runnerType)),
         };
 

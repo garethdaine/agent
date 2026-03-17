@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Interrogation\Contracts;
 
 use App\Models\InterrogationSession;
+use Symfony\Component\Process\Process;
 
 interface InterrogationRunnerAdapter
 {
@@ -77,4 +78,6 @@ interface InterrogationRunnerAdapter
      * @return array<string, string|bool>
      */
     public function buildEnvironment(InterrogationSession $session): array;
+
+    public function collectProcessOutput(Process $process): string;
 }

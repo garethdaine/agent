@@ -6,6 +6,7 @@ use App\Models\AgentJobRun;
 use App\Models\DelegationGraph;
 use App\Models\InterrogationSession;
 use App\Models\RepoAnalysisSession;
+use App\Models\WorkflowInterrogationSession;
 use Illuminate\Support\Facades\Broadcast;
 
 // Register the /broadcasting/auth endpoint for private channel authentication.
@@ -22,6 +23,13 @@ Broadcast::channel('user.{userId}', function ($user, $userId) {
 
 Broadcast::channel('interrogation.{sessionId}', function ($user, $sessionId) {
     return InterrogationSession::query()
+        ->whereKey((int) $sessionId)
+        ->where('user_id', (int) $user->id)
+        ->exists();
+});
+
+Broadcast::channel('workflow-interrogation.{sessionId}', function ($user, $sessionId) {
+    return WorkflowInterrogationSession::query()
         ->whereKey((int) $sessionId)
         ->where('user_id', (int) $user->id)
         ->exists();

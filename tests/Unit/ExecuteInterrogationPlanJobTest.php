@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\Interrogation\AdapterFactory;
 use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 class ExecuteInterrogationPlanJobTest extends TestCase
@@ -21,7 +22,7 @@ class ExecuteInterrogationPlanJobTest extends TestCase
     {
         $session = $this->planningSession();
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $adapter->shouldReceive('buildPlanCommand')
             ->once()
             ->andReturn(['php', '-r', 'fwrite(STDERR, "revision command failed"); exit(1);']);
@@ -59,7 +60,7 @@ class ExecuteInterrogationPlanJobTest extends TestCase
     {
         $session = $this->planningSession();
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $adapter->shouldReceive('buildPlanCommand')
             ->once()
             ->andReturn(['php', '-r', 'fwrite(STDERR, "plan command failed"); exit(1);']);
@@ -90,7 +91,7 @@ class ExecuteInterrogationPlanJobTest extends TestCase
         $session->cli_session_id = 'resume-session-id';
         $session->save();
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $adapter->shouldReceive('buildPlanCommand')
             ->once()
             ->withArgs(function (InterrogationSession $sessionArg): bool {
@@ -137,7 +138,7 @@ class ExecuteInterrogationPlanJobTest extends TestCase
 
         $session = $this->planningSession('codex');
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $adapter->shouldReceive('buildPlanCommand')
             ->once()
             ->withArgs(function (
@@ -197,7 +198,7 @@ class ExecuteInterrogationPlanJobTest extends TestCase
         ];
         $session->save();
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $adapter->shouldReceive('buildPlanCommand')
             ->once()
             ->andReturn(['php', '-r', 'echo json_encode(["plan_markdown" => "I\'m revising the plan against the locked baseline now.", "sections" => [], "risks" => [], "assumptions" => []]);']);
@@ -255,7 +256,7 @@ class ExecuteInterrogationPlanJobTest extends TestCase
         ];
         $session->save();
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $buildCall = 0;
         $adapter->shouldReceive('buildPlanCommand')
             ->twice()
@@ -343,7 +344,7 @@ class ExecuteInterrogationPlanJobTest extends TestCase
 
         $session = $this->planningSession('codex');
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $buildCall = 0;
         $adapter->shouldReceive('buildPlanCommand')
             ->twice()
@@ -404,6 +405,16 @@ class ExecuteInterrogationPlanJobTest extends TestCase
 
         $this->assertStringContainsString('app/Support/Interrogation/Adapters/CodexAdapter.php', (string) data_get($session->plan_json, 'plan_markdown'));
         $this->assertSame('idle', (string) data_get($session->metadata_json, 'plan.generation_status'));
+    }
+
+    private function mockAdapter(): InterrogationRunnerAdapter
+    {
+        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter->shouldReceive('collectProcessOutput')
+            ->byDefault()
+            ->andReturnUsing(static fn (Process $process): string => (string) $process->getOutput());
+
+        return $adapter;
     }
 
     private function planningSession(string $runnerType = 'claude'): InterrogationSession

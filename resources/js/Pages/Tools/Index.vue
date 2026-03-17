@@ -6,7 +6,7 @@ import CardTitle from '@/Components/ui/CardTitle.vue';
 import CardDescription from '@/Components/ui/CardDescription.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import { Search, MessageSquare, Brain, GitBranchPlus, Puzzle, Wrench } from 'lucide-vue-next';
+import { Search, MessageSquare, Brain, GitBranchPlus, Puzzle, Wrench, Waypoints } from 'lucide-vue-next';
 import HelpHint from '@/Components/HelpHint.vue';
 
 const props = defineProps({
@@ -31,6 +31,13 @@ const baseTools = [
         title: 'Interactive discovery wizard',
         description: 'Guide AI-led requirements interrogation and generate summaries/plans.',
         icon: Search,
+    },
+    {
+        route: 'tools.workflow-interrogator.index',
+        category: 'Workflow Interrogator',
+        title: 'Iterative workflow discovery',
+        description: 'Interrogate operational workflows in finite batches until ambiguity is exhausted, then generate an action plan.',
+        icon: Waypoints,
     },
     {
         route: 'tools.messenger.index',

@@ -88,6 +88,51 @@
     owner: docs-team
     locale: en
 
+- ui_key: workflow-interrogator.index
+  short_text: Standalone workflow discovery sessions that iterate until ambiguity is exhausted.
+  severity: info
+  learn_more_slug: tools-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - tools.workflow-interrogator.index
+  setting_keys:
+    - agent.tools_enabled
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: workflow-interrogator.create
+  short_text: Capture company and workflow context before the first interrogation batch is generated.
+  severity: info
+  learn_more_slug: tools-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - tools.workflow-interrogator.create
+  setting_keys:
+    - agent.tools_enabled
+  metadata:
+    owner: docs-team
+    locale: en
+
+- ui_key: workflow-interrogator.wizard
+  short_text: Review each generated batch, answer it in sequence, then continue until the workflow is clear enough to plan.
+  severity: info
+  learn_more_slug: tools-overview
+  links:
+    - label: Laravel Docs
+      url: https://laravel.com/docs/12.x
+  route_names:
+    - tools.workflow-interrogator.wizard
+  setting_keys:
+    - agent.tools_enabled
+  metadata:
+    owner: docs-team
+    locale: en
+
 - ui_key: backups.settings
   short_text: Backup policy and retention behavior.
   severity: info

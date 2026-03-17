@@ -98,7 +98,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
 
             $plan = null;
             if ($process->getExitCode() === 0) {
-                $plan = $adapter->parsePlanResponse((string) $process->getOutput());
+                $plan = $adapter->parsePlanResponse($adapter->collectProcessOutput($process));
             }
 
             $shouldRetryWithoutResume = is_string($planningSession->cli_session_id) // @phpstan-ignore booleanAnd.leftAlwaysFalse, booleanAnd.alwaysFalse
@@ -118,7 +118,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
 
                 $fallbackPlan = null;
                 if ($fallbackProcess->getExitCode() === 0) {
-                    $fallbackPlan = $adapter->parsePlanResponse((string) $fallbackProcess->getOutput());
+                    $fallbackPlan = $adapter->parsePlanResponse($adapter->collectProcessOutput($fallbackProcess));
                 }
 
                 if ($fallbackProcess->getExitCode() === 0 && $fallbackPlan !== null) {
@@ -244,7 +244,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                     continue;
                 }
 
-                $retryPlan = $adapter->parsePlanResponse((string) $retryProcess->getOutput());
+                $retryPlan = $adapter->parsePlanResponse($adapter->collectProcessOutput($retryProcess));
                 if (! is_array($retryPlan)) {
                     continue;
                 }
@@ -311,7 +311,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                         break;
                     }
 
-                    $qualityPlan = $adapter->parsePlanResponse((string) $qualityProcess->getOutput());
+                    $qualityPlan = $adapter->parsePlanResponse($adapter->collectProcessOutput($qualityProcess));
                     if (! is_array($qualityPlan)) {
                         break;
                     }
@@ -386,7 +386,7 @@ class ExecuteInterrogationPlanJob implements ShouldQueue
                     );
 
                     if ($revisionRetryProcess->getExitCode() === 0) {
-                        $revisionRetryPlan = $adapter->parsePlanResponse((string) $revisionRetryProcess->getOutput());
+                        $revisionRetryPlan = $adapter->parsePlanResponse($adapter->collectProcessOutput($revisionRetryProcess));
                         if (is_array($revisionRetryPlan)) {
                             $plan = $planPayloadNormalizer->normalize($revisionRetryPlan);
                             $planValidation = $planPayloadGuard->validate($plan);

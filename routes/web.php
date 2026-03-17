@@ -189,6 +189,20 @@ Route::middleware([
         ]);
     })->name('tools.discovery.session.settings');
 
+    Route::get('/tools/workflow-interrogator', function () {
+        return Inertia::render('Tools/WorkflowInterrogator/Index');
+    })->name('tools.workflow-interrogator.index');
+
+    Route::get('/tools/workflow-interrogator/create', function () {
+        return Inertia::render('Tools/WorkflowInterrogator/Create');
+    })->name('tools.workflow-interrogator.create');
+
+    Route::get('/tools/workflow-interrogator/{id}', function (int $id) {
+        return Inertia::render('Tools/WorkflowInterrogator/Wizard', [
+            'sessionId' => $id,
+        ]);
+    })->name('tools.workflow-interrogator.wizard');
+
     Route::get('/tools/backups/settings', function () {
         return Inertia::render('Tools/Backups/Settings');
     })->name('tools.backups.settings');

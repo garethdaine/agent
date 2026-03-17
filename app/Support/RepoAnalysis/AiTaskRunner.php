@@ -62,7 +62,7 @@ class AiTaskRunner
         $stdoutBuffer = $this->consumeStreamChunk($adapter, $writer, $session, $task, $stdoutBuffer, $process->getIncrementalOutput(), $latestCliSessionId, true);
         $stderrBuffer = $this->consumeStreamChunk($adapter, $writer, $session, $task, $stderrBuffer, $process->getIncrementalErrorOutput(), $latestCliSessionId, true);
 
-        $stdout = (string) $process->getOutput();
+        $stdout = $adapter->collectProcessOutput($process);
         $stderr = (string) $process->getErrorOutput();
 
         if ((int) ($process->getExitCode() ?? 1) !== 0) {

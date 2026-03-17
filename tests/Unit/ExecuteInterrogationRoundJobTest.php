@@ -13,6 +13,7 @@ use App\Support\Interrogation\AdapterFactory;
 use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 class ExecuteInterrogationRoundJobTest extends TestCase
@@ -25,7 +26,7 @@ class ExecuteInterrogationRoundJobTest extends TestCase
         $session->cli_session_id = '019c4d5e-7f04-7231-85e5-9c4f3e00c5f3';
         $session->save();
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $adapter->shouldReceive('buildQuestionCommand')
             ->once()
             ->withArgs(function (InterrogationSession $sessionArg): bool {
@@ -112,7 +113,7 @@ class ExecuteInterrogationRoundJobTest extends TestCase
             'event_ts' => now('UTC'),
         ]);
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $buildQuestionCommandCalls = 0;
         $adapter->shouldReceive('buildQuestionCommand')
             ->andReturnUsing(function () use (&$buildQuestionCommandCalls): array {
@@ -237,7 +238,7 @@ class ExecuteInterrogationRoundJobTest extends TestCase
             'event_ts' => now('UTC'),
         ]);
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $buildQuestionCommandCalls = 0;
         $adapter->shouldReceive('buildQuestionCommand')
             ->andReturnUsing(function () use (&$buildQuestionCommandCalls): array {
@@ -342,7 +343,7 @@ class ExecuteInterrogationRoundJobTest extends TestCase
             'event_ts' => now('UTC'),
         ]);
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $adapter->shouldReceive('buildQuestionCommand')
             ->twice()
             ->andReturn(
@@ -453,7 +454,7 @@ class ExecuteInterrogationRoundJobTest extends TestCase
         ]);
 
         $commandCalls = 0;
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $adapter->shouldReceive('buildQuestionCommand')
             ->times(3)
             ->andReturnUsing(function (InterrogationSession $sessionArg) use (&$commandCalls): array {
@@ -561,7 +562,7 @@ class ExecuteInterrogationRoundJobTest extends TestCase
             'event_ts' => now('UTC'),
         ]);
 
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $adapter->shouldReceive('buildQuestionCommand')
             ->twice()
             ->andReturn(
@@ -667,7 +668,7 @@ class ExecuteInterrogationRoundJobTest extends TestCase
         ]);
 
         $commandCalls = 0;
-        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter = $this->mockAdapter();
         $adapter->shouldReceive('buildQuestionCommand')
             ->times(4)
             ->andReturnUsing(function (InterrogationSession $sessionArg) use (&$commandCalls): array {
@@ -964,6 +965,19 @@ class ExecuteInterrogationRoundJobTest extends TestCase
         );
 
         Queue::assertPushed(ExecuteInterrogationSummaryJob::class);
+    }
+
+    /**
+     * @param  array<string, mixed>  $metadata
+     */
+    private function mockAdapter(): InterrogationRunnerAdapter
+    {
+        $adapter = $this->mock(InterrogationRunnerAdapter::class);
+        $adapter->shouldReceive('collectProcessOutput')
+            ->byDefault()
+            ->andReturnUsing(static fn (Process $process): string => (string) $process->getOutput());
+
+        return $adapter;
     }
 
     /**

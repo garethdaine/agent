@@ -15,7 +15,7 @@ class RunnerModelsController
     public function __invoke(Request $request): JsonResponse
     {
         $request->validate([
-            'runner_type' => ['required', 'string', 'in:claude,codex'],
+            'runner_type' => ['required', 'string', 'in:claude,codex,custom'],
         ]);
 
         $runnerType = (string) $request->input('runner_type');
@@ -28,7 +28,10 @@ class RunnerModelsController
 
         $result = match ($runnerType) {
             'claude' => $this->fetchClaudeModels(),
-            'codex' => $this->fetchCodexModels(),
+            // Codex CLI model availability does not map cleanly to the generic OpenAI models API.
+            // Use the curated CLI-aligned catalog for session creation so the picker matches the local runner.
+            'codex' => $this->fallbackModels('codex'),
+            'custom' => $this->fallbackModels('custom'),
             default => null,
         };
 
@@ -93,50 +96,6 @@ class RunnerModelsController
     }
 
     /**
-     * @return array{data: list<array{id: string, name: string}>, default: string}|null
-     */
-    private function fetchCodexModels(): ?array
-    {
-        $apiKey = config('runtime.llm.openai.api_key', '');
-        if (trim((string) $apiKey) === '') {
-            return null;
-        }
-
-        try {
-            $response = Http::timeout(10)
-                ->withToken($apiKey)
-                ->get('https://api.openai.com/v1/models');
-
-            if (! $response->successful()) {
-                Log::warning('RunnerModelsController: OpenAI models API returned '.$response->status());
-
-                return null;
-            }
-
-            $body = $response->json();
-            $models = [];
-
-            foreach (($body['data'] ?? []) as $model) {
-                $id = trim((string) ($model['id'] ?? ''));
-                if ($id === '') {
-                    continue;
-                }
-                $models[] = ['id' => $id, 'name' => $id];
-            }
-
-            usort($models, fn (array $a, array $b): int => strcmp($a['name'], $b['name']));
-
-            $default = trim((string) config('agent.runner_models.codex', 'gpt-5.3-codex'));
-
-            return ['data' => $models, 'default' => $default];
-        } catch (\Throwable $e) {
-            Log::warning('RunnerModelsController: OpenAI models API error', ['error' => $e->getMessage()]);
-
-            return null;
-        }
-    }
-
-    /**
      * @return array{data: list<array{id: string, name: string}>, default: string}
      */
     private function fallbackModels(string $runnerType): array
@@ -154,13 +113,23 @@ class RunnerModelsController
             ];
         }
 
+        if ($runnerType === 'custom') {
+            return [
+                'data' => [],
+                'default' => '',
+            ];
+        }
+
         $default = trim((string) config('agent.runner_models.codex', 'gpt-5.3-codex'));
 
         return [
             'data' => [
                 ['id' => 'gpt-5.3-codex', 'name' => 'GPT-5.3 Codex'],
-                ['id' => 'o3', 'name' => 'o3'],
-                ['id' => 'o4-mini', 'name' => 'o4-mini'],
+                ['id' => 'gpt-5.4', 'name' => 'GPT-5.4'],
+                ['id' => 'gpt-5.1-codex-max', 'name' => 'GPT-5.1 Codex Max'],
+                ['id' => 'gpt-5.2-codex', 'name' => 'GPT-5.2 Codex'],
+                ['id' => 'gpt-5.2', 'name' => 'GPT-5.2'],
+                ['id' => 'gpt-5.1-codex-mini', 'name' => 'GPT-5.1 Codex Mini'],
             ],
             'default' => $default,
         ];

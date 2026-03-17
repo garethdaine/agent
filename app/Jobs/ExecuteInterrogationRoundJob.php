@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\Models\InterrogationEvent;
 use App\Models\InterrogationSession;
 use App\Support\Interrogation\AdapterFactory;
+use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
 use App\Support\Interrogation\ConversationReconstructor;
 use App\Support\Interrogation\InterrogationEventWriter;
 use App\Support\Interrogation\InterrogationQuestionBankGenerator;
@@ -140,6 +141,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             $systemPrompt = $promptResolver->resolveForPhase($session, 'interrogation');
             $roundPrompt = $this->buildRoundPromptWithAnsweredContext($session, $this->userMessage, $questionPayloadGuard);
             $questionResult = $this->runAndParseQuestion(
+                $adapter,
                 $adapter->buildQuestionCommand($session, $roundPrompt, $systemPrompt),
                 (string) $session->project_directory,
                 $adapter->buildEnvironment($session),
@@ -152,6 +154,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                 $freshSession->cli_session_id = null;
 
                 $questionResult = $this->runAndParseQuestion(
+                    $adapter,
                     $adapter->buildQuestionCommand($freshSession, $roundPrompt, $systemPrompt),
                     (string) $session->project_directory,
                     $adapter->buildEnvironment($freshSession),
@@ -164,6 +167,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
             if ($questionResult['exit_code'] !== 0 || $questionResult['parsed'] === null) {
                 $history = $reconstructor->reconstruct($session);
                 $reconstructed = $this->runAndParseQuestion(
+                    $adapter,
                     $adapter->buildReconstructCommand($session, $history, $systemPrompt),
                     (string) $session->project_directory,
                     $adapter->buildEnvironment($session),
@@ -214,6 +218,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                     .'Do not return process-status narration about resuming, loading, locating, or workspace/session state.';
 
                 $repaired = $this->runAndParseQuestion(
+                    $adapter,
                     $adapter->buildQuestionCommand($session, $repairPrompt, $systemPrompt),
                     (string) $session->project_directory,
                     $adapter->buildEnvironment($session),
@@ -266,6 +271,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                     .'Return is_complete=false and progress_estimate<100.';
 
                 $repaired = $this->runAndParseQuestion(
+                    $adapter,
                     $adapter->buildQuestionCommand($session, $completionRepairPrompt, $systemPrompt),
                     (string) $session->project_directory,
                     $adapter->buildEnvironment($session),
@@ -316,6 +322,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                     $duplicateResolved = false;
 
                     $repaired = $this->runAndParseQuestion(
+                        $adapter,
                         $adapter->buildQuestionCommand($session, $duplicateRepairPrompt, $systemPrompt),
                         (string) $session->project_directory,
                         $adapter->buildEnvironment($session),
@@ -342,6 +349,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                         $freshSession->cli_session_id = null;
 
                         $repairedWithoutResume = $this->runAndParseQuestion(
+                            $adapter,
                             $adapter->buildQuestionCommand($freshSession, $duplicateRepairPrompt, $systemPrompt),
                             (string) $session->project_directory,
                             $adapter->buildEnvironment($freshSession),
@@ -371,6 +379,7 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
                         $recoveryPrompt = $this->buildDuplicateRecoveryPrompt($session, $questionPayloadGuard, $duplicateContext);
 
                         $recoveryResult = $this->runAndParseQuestion(
+                            $adapter,
                             $adapter->buildQuestionCommand($freshSession, $recoveryPrompt, $systemPrompt),
                             (string) $session->project_directory,
                             $adapter->buildEnvironment($freshSession),
@@ -557,13 +566,18 @@ class ExecuteInterrogationRoundJob implements ShouldQueue
      * @param  callable(string):array<string,mixed>|null  $parser
      * @return array{exit_code:int,stdout:string,stderr:string,parsed:array<string,mixed>|null}
      */
-    private function runAndParseQuestion(array $command, string $cwd, array $env, callable $parser): array // @phpstan-ignore parameter.phpDocType
-    {
+    private function runAndParseQuestion(
+        InterrogationRunnerAdapter $adapter,
+        array $command,
+        string $cwd,
+        array $env,
+        callable $parser,
+    ): array { // @phpstan-ignore parameter.phpDocType
         $process = new Process($command, $cwd, $env);
         $process->setTimeout(600);
         $process->run();
 
-        $stdout = (string) $process->getOutput();
+        $stdout = $adapter->collectProcessOutput($process);
         $stderr = (string) $process->getErrorOutput();
 
         return [

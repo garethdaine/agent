@@ -12,6 +12,62 @@ Use this file to capture correction-driven lessons.
 
 ## Entry
 - Date: 2026-03-12
+- Source (job run id / interrogation session id): User report of Codex CLI `resume` rejecting `--output-schema`
+- Correction: Current Codex CLI only supports `--output-schema` for fresh `exec`; `exec resume` must use `--output-last-message`, and the application must read the captured final message instead of assuming structured stdout alone.
+- Pattern: CLI contracts can diverge between fresh and resumed execution modes, and code that treats them as interchangeable will fail only on resumed sessions after appearing stable in fresh runs.
+- Prevention rule: For external CLI adapters, verify subcommand-specific flags with the live CLI help before reusing a fresh-run contract for resume/retry flows. Where output transports differ, normalize process output at the adapter boundary instead of scattering mode-specific parsing across jobs.
+- Applied in: `CodexAdapter`, interrogation/plan/summary/build-task consumers, Workflow Interrogator runner client, repo-analysis AI task runner, and Codex adapter command tests.
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User report of duplicate-key failure on persisted workflow interrogation questions
+- Correction: Workflow Interrogator questions cannot assume the runner will always return a populated `question_id`; the server must derive a stable canonical key from `decision_axis` or prompt text before persisting batch questions.
+- Pattern: Even with a documented prompt contract, model outputs drift at the field level. Persisted storage paths that depend on one field being present can fail hard on otherwise-usable question objects.
+- Prevention rule: Any AI-generated object stored under a uniqueness constraint must be canonicalized server-side before persistence. For workflow question batches, derive a stable key when `question_id` is missing and add duplicate-safe fallback suffixing within the batch.
+- Applied in: `WorkflowInterrogatorRunnerClient` question normalization, `WorkflowInterrogationBatchStore` storage fallback, and runner-client regression tests.
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User correction on Workflow Interrogator question transport
+- Correction: Generated questions, options, and submitted answers must be stored in the database and retrieved through the API; websocket broadcasts must not carry large batch payloads as the primary transport.
+- Pattern: Treating large structured interrogation batches as event payloads or session metadata works for prototypes but fails under real broadcast limits and duplicates source-of-truth state across transport layers.
+- Prevention rule: For iterative workflow/discovery products, persist generated batches and answers as first-class records before layering realtime. Broadcast only lightweight invalidation or status payloads, and let the API remain the source of truth for full batch content.
+- Applied in: Workflow Interrogator batch/question/answer tables, presenter/controller retrieval, lightweight broadcast payloads, and wizard refetch behavior.
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User report of Workflow Interrogator `ROUND_GENERATION_FAILED` on streamed round output
+- Correction: The runner can emit a valid streamed round batch inside `item.completed -> agent_message -> item.text` with only `questions`, and Workflow Interrogator must not reject that just because `ambiguity_report` and `summary` are omitted.
+- Pattern: Tight parser contracts that require the full ideal JSON object can fail on otherwise-usable streamed model output, especially for iterative round generation where only the question batch is operationally required.
+- Prevention rule: For iterative interrogation rounds, accept any payload that contains a valid question batch on a recognized transport envelope and normalize missing non-essential wrapper fields server-side instead of failing the session.
+- Applied in: `app/Support/WorkflowInterrogator/WorkflowInterrogatorRunnerClient.php` and `tests/Unit/WorkflowInterrogator/WorkflowInterrogatorRunnerClientTest.php`.
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User correction on Workflow Interrogator scope framing
+- Correction: User clarified that Workflow Interrogator is not supposed to inspect codebases by default; it should work from the brief first, with the selected working folder as supporting context only.
+- Pattern: Reusing discovery-style prompt language from adjacent features can accidentally pull a new workflow tool toward repo/code inspection even when the product intent is broader operational interrogation.
+- Prevention rule: For new workflow/discovery surfaces, restate the product’s primary evidence sources explicitly in the prompt and UI copy. If the brief is primary, do not inherit codebase-first instructions from adjacent tools.
+- Applied in: Workflow Interrogator prompt copy, create-screen copy, and working-folder semantics.
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User enhancement request for Workflow Interrogator context uploads
+- Correction: User requested that Workflow Interrogator sessions support uploaded files/images as additional context and that the runner use them.
+- Pattern: New discovery flows often ship with typed form fields only, leaving out the unstructured artifacts users actually rely on during real discovery.
+- Prevention rule: When building a context-heavy interrogation surface, check early whether users need file/image attachments and make them part of the session model rather than assuming all context fits in form text.
+- Applied in: Workflow Interrogator session attachment design and prompt-context expansion.
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User correction on Workflow Interrogator failed-session UX
+- Correction: User reported that an interrogation run failed and the UI did not display anything useful in the main panel.
+- Pattern: When a new wizard flow only handles setup, processing, batch, summary, and completion states, an early failure can fall through to an effectively blank workspace even though structured error state exists.
+- Prevention rule: Any multi-phase wizard must include an explicit failed-state surface before release. If a session can fail before content exists, render the persisted `error_summary`/`error_code` prominently and provide the nearest safe recovery action.
+- Applied in: Workflow Interrogator wizard failed-state rendering and accompanying parser hardening work.
+
+## Entry
+- Date: 2026-03-12
 - Source (job run id / interrogation session id): User correction on interview showcase feature scoping
 - Correction: User clarified that any interview-oriented showcase idea must be a new additive feature that can reuse existing subsystems but must not modify current discovery behavior or existing features.
 - Pattern: When brainstorming adjacent capabilities in a mature product area, it is easy to default to enhancing the nearest existing subsystem instead of respecting a strict additive-only scope.
@@ -25,6 +81,22 @@ Use this file to capture correction-driven lessons.
 - Pattern: Translating an iterative interrogation process into a single finite decision graph over-constrains discovery and weakens ambiguity closure.
 - Prevention rule: For discovery/interrogation products, distinguish between bounded per-round question sets and the overall interrogation loop. If the goal is zero assumptions, the outer loop must remain open-ended until explicit closure criteria are met.
 - Applied in: Reframed Workflow Interrogator as an iterative batch-based interrogation engine with repeated ambiguity detection and follow-up rounds.
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User correction on current Codex model availability for session creation
+- Correction: User flagged that the session-creation model choices were stale and needed to reflect the latest current Codex-capable models.
+- Pattern: Hard-coded model defaults and fallback lists drift quickly and can make a newly built feature look outdated even when the live API path is correct.
+- Prevention rule: Any UI that exposes model selection must avoid relying on stale hard-coded defaults. Keep the default model and fallback list aligned with current official provider docs, and verify current product naming before changing model ids.
+- Applied in: `config/agent.php`, `app/Http/Controllers/Api/V1/RunnerModelsController.php`, Codex default-model UI constants, and targeted fallback-model tests.
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User correction on Workflow Interrogator runner selection
+- Correction: User clarified that Codex-only was a development/build constraint, not a product constraint. In the app, Workflow Interrogator sessions must support `codex`, `claude`, and `custom`.
+- Pattern: Internal implementation preferences can leak into product behavior when building a new bounded feature quickly.
+- Prevention rule: Separate build-time execution preferences from user-facing product capabilities. Before locking a UI or request contract to one runner, confirm whether the constraint is operational or product-facing.
+- Applied in: Workflow Interrogator request validation, session persistence, runner model lookup, adapter selection, and custom-runner support path.
 
 ## Entry
 - Date: 2026-03-03
@@ -692,3 +764,35 @@ To bypass this check, unset the CLAUDECODE environment variable.
 - Task: Messenger Turn
 - Category: chat
 - Runner: messenger
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User correction on Workflow Interrogator runner selection
+- Correction: Codex was only the required runner for AI-assisted implementation/testing during development. In the product, Workflow Interrogator sessions must allow `claude`, `codex`, or `custom` and must not be described as Codex-only.
+- Pattern: Build-time constraints can leak into product copy, class names, and defaults, creating false platform restrictions even when the execution path is already flexible.
+- Prevention rule: When a user distinguishes build-time tooling constraints from product behavior, reflect that split everywhere: validation, storage, execution seams, UI copy, and class naming. Do not leave Codex-first wording in product surfaces unless the runtime is genuinely Codex-only.
+- Applied in: `app/Support/WorkflowInterrogator/WorkflowInterrogatorRunnerClient.php`, `app/Providers/AppServiceProvider.php`, `resources/js/Pages/Tools/WorkflowInterrogator/Create.vue`, `tasks/todo.md`
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User correction on Codex model picker accuracy
+- Correction: The Codex session model picker must reflect the locally installed Codex CLI `/models` offerings, not a generic OpenAI API model list or stale documentation-based fallback.
+- Pattern: CLI-backed runner model catalogs can diverge from provider API model catalogs; using the provider list for a CLI picker produces incorrect options and wrong defaults.
+- Prevention rule: For CLI-backed runners, source the picker from a CLI-aligned catalog and verify against the installed CLI experience before changing defaults. Do not assume provider API `/models` output matches interactive CLI availability.
+- Applied in: `app/Http/Controllers/Api/V1/RunnerModelsController.php`, `config/agent.php`, `resources/js/Pages/Agent/Jobs/Partials/JobForm.vue`, `resources/js/Pages/Agent/Monitor/Index.vue`, `app/Console/Commands/AgentBenchmarkSloCommand.php`, `tests/Feature/Api/RunnerModelsControllerTest.php`
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User report of Workflow Interrogator 30-second timeout and missing Horizon jobs
+- Correction: Long-running Workflow Interrogator runner calls must never execute inline inside API controllers. They must dispatch onto the interrogation queue so Horizon can process them asynchronously.
+- Pattern: Reusing synchronous proof-of-concept controller code for runner-backed features causes request timeouts, hides work from Horizon, and leaves the UI with no reliable in-progress state.
+- Prevention rule: Any runner invocation that can exceed normal web request limits must be queued from day one. Controllers should only validate, persist queued state, dispatch jobs, and return immediately.
+- Applied in: `app/Http/Controllers/Api/V1/WorkflowInterrogationSessionController.php`, `app/Support/WorkflowInterrogator/WorkflowInterrogationExecutionService.php`, `app/Jobs/GenerateWorkflowInterrogationRoundJob.php`, `app/Jobs/GenerateWorkflowInterrogationPlanJob.php`, `resources/js/Pages/Tools/WorkflowInterrogator/Wizard.vue`
+
+## Entry
+- Date: 2026-03-12
+- Source (job run id / interrogation session id): User correction on Workflow Interrogator polling
+- Correction: When the app already has Reverb/Echo private-channel patterns for live session updates, new workflow surfaces should follow that system instead of adding polling.
+- Pattern: Fast tactical fixes can drift away from existing realtime architecture, causing flicker, unnecessary API churn, and inconsistent UX across tools.
+- Prevention rule: Before adding polling to a new long-running workflow surface, inspect existing broadcast channels, events, and wizard subscription patterns. If a matching realtime system already exists, extend it instead of inventing a polling loop.
+- Applied in: `app/Events/WorkflowInterrogationSessionUpdated.php`, `app/Support/WorkflowInterrogator/WorkflowInterrogationEventWriter.php`, `app/Support/WorkflowInterrogator/WorkflowInterrogationPresenter.php`, `resources/js/Pages/Tools/WorkflowInterrogator/Wizard.vue`, `routes/channels.php`

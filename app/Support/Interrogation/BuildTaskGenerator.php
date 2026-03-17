@@ -203,7 +203,7 @@ class BuildTaskGenerator
         $process->setTimeout($timeoutSeconds);
         $process->run();
         $parsed = $process->getExitCode() === 0
-            ? $adapter->parseBuildTasksResponse((string) $process->getOutput())
+            ? $adapter->parseBuildTasksResponse($adapter->collectProcessOutput($process))
             : null;
 
         if (
@@ -223,7 +223,7 @@ class BuildTaskGenerator
             $fallback->run();
 
             $fallbackParsed = $fallback->getExitCode() === 0
-                ? $adapter->parseBuildTasksResponse((string) $fallback->getOutput())
+                ? $adapter->parseBuildTasksResponse($adapter->collectProcessOutput($fallback))
                 : null;
 
             if ($fallback->getExitCode() === 0 && is_array($fallbackParsed) && is_array($fallbackParsed['tasks'] ?? null) && $fallbackParsed['tasks'] !== []) {

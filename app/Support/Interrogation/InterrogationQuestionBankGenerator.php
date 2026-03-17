@@ -35,7 +35,7 @@ class InterrogationQuestionBankGenerator
             return null;
         }
 
-        $parsed = $adapter->parseQuestionBankResponse((string) $process->getOutput());
+        $parsed = $adapter->parseQuestionBankResponse($adapter->collectProcessOutput($process));
         if (! is_array($parsed)) {
             return null;
         }

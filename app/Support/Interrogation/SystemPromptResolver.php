@@ -61,8 +61,16 @@ class SystemPromptResolver
         }
 
         // Memory context injection (non-blocking)
-        $injector = app(\App\Support\Memory\MemoryContextInjector::class);
-        $result = $injector->inject($result, (int) $session->user_id, $session->feature_brief);
+        try {
+            $injector = app(\App\Support\Memory\MemoryContextInjector::class);
+            $result = $injector->inject($result, (int) $session->user_id, $session->feature_brief);
+        } catch (\Throwable $e) {
+            Log::warning('Memory context injection failed for interrogation', [
+                'session_id' => $session->id,
+                'phase' => $phase,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $result;
     }

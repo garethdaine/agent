@@ -106,7 +106,7 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
             $retriedWithoutResume = false;
 
             if ($process->getExitCode() === 0) {
-                $summary = $adapter->parseSummaryResponse((string) $process->getOutput());
+                $summary = $adapter->parseSummaryResponse($adapter->collectProcessOutput($process));
             }
 
             if ($summary === null) {
@@ -118,7 +118,7 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
                 $retriedWithoutResume = true;
 
                 if ($fallbackProcess->getExitCode() === 0) {
-                    $summary = $adapter->parseSummaryResponse((string) $fallbackProcess->getOutput());
+                    $summary = $adapter->parseSummaryResponse($adapter->collectProcessOutput($fallbackProcess));
                     $process = $fallbackProcess;
                 } else {
                     $process = $fallbackProcess;
@@ -163,7 +163,7 @@ class ExecuteInterrogationSummaryJob implements ShouldQueue
 
                     $retryProcess = $this->runSummaryProcess($adapter, $retrySession, $retryPrompt, $systemPrompt);
                     if ($retryProcess->getExitCode() === 0) {
-                        $retrySummary = $adapter->parseSummaryResponse((string) $retryProcess->getOutput());
+                        $retrySummary = $adapter->parseSummaryResponse($adapter->collectProcessOutput($retryProcess));
                         if (is_array($retrySummary)) {
                             $summary = $summaryPayloadNormalizer->normalize($retrySummary);
                             $summary = $this->preserveUnrequestedRevisionFields($baselineSummary, $summary);

@@ -90,6 +90,8 @@ use App\Support\Interrogation\ReviewerContextBuilder;
 use App\Support\Interrogation\ReviewerPayloadGuard;
 use App\Support\Interrogation\ReviewerPayloadNormalizer;
 use App\Support\Observability\LlmTelemetry;
+use App\Support\WorkflowInterrogator\Contracts\WorkflowInterrogatorClient;
+use App\Support\WorkflowInterrogator\WorkflowInterrogatorRunnerClient;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
@@ -145,6 +147,7 @@ class AppServiceProvider extends ServiceProvider
         ));
 
         $this->app->singleton(LlmTelemetry::class);
+        $this->app->singleton(WorkflowInterrogatorClient::class, WorkflowInterrogatorRunnerClient::class);
     }
 
     /**

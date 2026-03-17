@@ -6,6 +6,7 @@ namespace Tests\Unit;
 
 use App\Models\InterrogationSession;
 use App\Support\Interrogation\Adapters\CodexAdapter;
+use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 class InterrogationCodexAdapterCommandTest extends TestCase
@@ -126,11 +127,19 @@ class InterrogationCodexAdapterCommandTest extends TestCase
         $resumeIndex = array_search('resume', $command, true);
         $this->assertSame((int) $execIndex + 1, $resumeIndex);
         $this->assertSame('session-123', $command[(int) $resumeIndex + 1] ?? null);
+        $this->assertNotContains('--output-schema', $command);
+
+        $outputFlagIndex = array_search('--output-last-message', $command, true);
+        $this->assertNotFalse($outputFlagIndex);
+
+        $capturePath = $command[(int) $outputFlagIndex + 1] ?? null;
+        $this->assertIsString($capturePath);
+        $this->assertStringContainsString('/storage/framework/interrogation-output/', $capturePath);
     }
 
     public function test_question_command_includes_configured_codex_model_flag(): void
     {
-        config()->set('agent.interrogation.codex_model', 'gpt-5.3-codex');
+        config()->set('agent.interrogation.codex_model', 'gpt-5.2-codex');
 
         $adapter = new CodexAdapter;
         $session = (new InterrogationSession)->forceFill(['id' => 99, 'cli_session_id' => null]);
@@ -139,7 +148,7 @@ class InterrogationCodexAdapterCommandTest extends TestCase
 
         $modelFlagIndex = array_search('--model', $command, true);
         $this->assertNotFalse($modelFlagIndex);
-        $this->assertSame('gpt-5.3-codex', $command[(int) $modelFlagIndex + 1] ?? null);
+        $this->assertSame('gpt-5.2-codex', $command[(int) $modelFlagIndex + 1] ?? null);
     }
 
     public function test_question_command_composes_system_prompt_into_user_prompt(): void
@@ -154,6 +163,31 @@ class InterrogationCodexAdapterCommandTest extends TestCase
         $this->assertStringContainsString('System prompt', $finalPrompt);
         $this->assertStringContainsString('<USER_REQUEST>', $finalPrompt);
         $this->assertStringContainsString('User prompt', $finalPrompt);
+    }
+
+    public function test_collect_process_output_appends_captured_last_message_for_resume_commands(): void
+    {
+        $adapter = new CodexAdapter;
+        $session = (new InterrogationSession)->forceFill(['id' => 99, 'cli_session_id' => 'session-123']);
+
+        $command = $adapter->buildQuestionCommand($session, 'Ask next question', 'system');
+        $outputFlagIndex = array_search('--output-last-message', $command, true);
+
+        $this->assertNotFalse($outputFlagIndex);
+
+        $capturePath = $command[(int) $outputFlagIndex + 1] ?? null;
+        $this->assertIsString($capturePath);
+
+        file_put_contents($capturePath, '{"question_text":"Captured question","answer_type":"freetext","progress_estimate":10,"reasoning":"Captured."}');
+
+        $process = new Process(['php', '-r', 'fwrite(STDOUT, json_encode(["type" => "thread.started", "thread_id" => "t-1"]).PHP_EOL);']);
+        $process->run();
+
+        $output = $adapter->collectProcessOutput($process);
+
+        $this->assertStringContainsString('"thread.started"', $output);
+        $this->assertStringContainsString('"Captured question"', $output);
+        $this->assertFileDoesNotExist($capturePath);
     }
 
     public function test_parse_question_response_extracts_json_from_codex_agent_message_event(): void

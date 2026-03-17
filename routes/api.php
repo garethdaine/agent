@@ -57,6 +57,7 @@ use App\Http\Controllers\Api\V1\WorkflowCostController;
 use App\Http\Controllers\Api\V1\WorkflowEscalationController;
 use App\Http\Controllers\Api\V1\WorkflowGateTransitionController;
 use App\Http\Controllers\Api\V1\WorkflowGovernanceController;
+use App\Http\Controllers\Api\V1\WorkflowInterrogationSessionController;
 use App\Http\Controllers\Api\V1\WorkflowReliabilityController;
 use App\Http\Controllers\Docs\DiagnosticsController as DocsDiagnosticsController;
 use App\Http\Controllers\Internal\NlScheduleController;
@@ -234,6 +235,19 @@ Route::middleware([AgentApiVersionHeader::class])
             Route::post('/interrogation/sessions/{id}/export-plan', [InterrogationSessionController::class, 'exportPlan'])->middleware('throttle:interrogation');
 
             Route::get('/interrogation/runner-models', RunnerModelsController::class);
+
+            Route::get('/workflow-interrogator/sessions', [WorkflowInterrogationSessionController::class, 'index']);
+            Route::post('/workflow-interrogator/sessions', [WorkflowInterrogationSessionController::class, 'store'])
+                ->middleware('throttle:agent-mutations');
+            Route::get('/workflow-interrogator/sessions/{id}', [WorkflowInterrogationSessionController::class, 'show']);
+            Route::get('/workflow-interrogator/sessions/{id}/attachments/{attachmentId}/download', [WorkflowInterrogationSessionController::class, 'downloadAttachment'])
+                ->name('api.workflow-interrogator.attachments.download');
+            Route::post('/workflow-interrogator/sessions/{id}/start', [WorkflowInterrogationSessionController::class, 'start'])
+                ->middleware('throttle:agent-mutations');
+            Route::post('/workflow-interrogator/sessions/{id}/submit-batch', [WorkflowInterrogationSessionController::class, 'submitBatch'])
+                ->middleware('throttle:agent-mutations');
+            Route::post('/workflow-interrogator/sessions/{id}/generate-plan', [WorkflowInterrogationSessionController::class, 'generatePlan'])
+                ->middleware('throttle:agent-mutations');
 
             Route::get('/interrogation/settings', [InterrogationSettingsController::class, 'index']);
             Route::get('/interrogation/settings/{key}', [InterrogationSettingsController::class, 'show']);

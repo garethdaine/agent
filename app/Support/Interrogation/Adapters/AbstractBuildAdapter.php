@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Interrogation\Adapters;
 
 use App\Support\Interrogation\Contracts\InterrogationRunnerAdapter;
+use Symfony\Component\Process\Process;
 
 abstract class AbstractBuildAdapter implements InterrogationRunnerAdapter
 {
@@ -201,6 +202,11 @@ abstract class AbstractBuildAdapter implements InterrogationRunnerAdapter
         }
 
         return array_values(array_unique($items));
+    }
+
+    public function collectProcessOutput(Process $process): string
+    {
+        return (string) $process->getOutput();
     }
 
     /**
